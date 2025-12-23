@@ -1,0 +1,8 @@
+biome.jsonc
+turbo.json
+lib
+docs
+.claude
+.husky
+.turbo
+coverage

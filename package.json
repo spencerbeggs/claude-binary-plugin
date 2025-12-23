@@ -1,0 +1,78 @@
+{
+	"name": "claude-binary-plugin",
+	"version": "0.0.0",
+	"engineStrict": true,
+	"engines": {
+		"bun": ">=1.3.5"
+	},
+	"bin": {
+		"claude-binary-plugin": "./bin/cli.js"
+	},
+	"scripts": {
+		"build": "turbo run compile",
+		"compile": "bun lib/scripts/build.mts",
+		"test": "bun test",
+		"prepare": "husky",
+		"test:ai": "CLAUDE_DEBUG=false CLAUDECODE=1 bun test",
+		"typecheck": "tsgo --noEmit"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./schemas": "./src/schemas.ts",
+		"./mocks": "./src/mocks.ts",
+		"./builder": "./src/builder.ts",
+		"./pipeline": "./src/pipeline.ts",
+		"./pipeline-types": "./src/pipeline-types.ts",
+		"./pipeline-runtime": "./src/pipeline-runtime.ts",
+		"./command-args": "./src/command-args.ts",
+		"./command-runtime": "./src/command-runtime.ts",
+		"./debug-logger": "./src/debug-logger.ts",
+		"./env-codecs": "./src/env-codecs.ts",
+		"./session-registry": "./src/session-registry.ts",
+		"./otel": "./src/otel/index.ts",
+		"./otel/sidecar": "./src/otel/sidecar/main.ts"
+	},
+	"dependencies": {
+		"@opentelemetry/api": "^1.9.0",
+		"@opentelemetry/api-logs": "^0.208.0",
+		"@opentelemetry/exporter-logs-otlp-http": "^0.208.0",
+		"@opentelemetry/exporter-metrics-otlp-http": "^0.208.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+		"@opentelemetry/resources": "^2.2.0",
+		"@opentelemetry/sdk-logs": "^0.208.0",
+		"@opentelemetry/sdk-metrics": "^2.2.0",
+		"@opentelemetry/sdk-trace-base": "^2.2.0",
+		"@opentelemetry/sdk-trace-node": "^2.2.0",
+		"@opentelemetry/semantic-conventions": "^1.38.0",
+		"zod": "^4.2.1"
+	},
+	"devDependencies": {
+		"@types/bun": "1.3.5",
+		"@typescript/native-preview": "7.0.0-dev.20251220.1",
+		"husky": "^9.1.7",
+		"markdownlint-cli2": "^0.20.0",
+		"markdownlint-cli2-formatter-codequality": "^0.0.7",
+		"turbo": "^2.7.1",
+		"workspace-tools": "^0.40.2"
+	},
+	"packageManager": "bun@1.3.5",
+	"devEngines": {
+		"runtime": [
+			{
+				"name": "bun",
+				"version": "1.3.5",
+				"onFail": "ignore"
+			},
+			{
+				"name": "node",
+				"version": "24.11.0",
+				"onFail": "ignore"
+			}
+		],
+		"packageManager": {
+			"name": "bun",
+			"version": "1.3.5",
+			"onFail": "ignore"
+		}
+	}
+}

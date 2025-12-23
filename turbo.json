@@ -1,0 +1,26 @@
+{
+	"$schema": "https://turborepo.com/schema.v2.json",
+	"globalPassThroughEnv": [],
+	"tasks": {
+		"build": {
+			"dependsOn": ["typecheck", "compile"],
+			"inputs": ["$TURBO_DEFAULTS$", "bun.lock", "src/**/*.ts"]
+		},
+		"compile": {
+			"dependsOn": ["typecheck"],
+			"inputs": ["src/**", "lib/scripts/build.mts", "bun.lock", "bunfig.toml", "tsconfig.json"],
+			"outputs": ["bin/**"]
+		},
+		"test": {
+			"cache": false,
+			"dependsOn": ["build"]
+		},
+		"test:ai": {
+			"cache": false,
+			"dependsOn": ["build"]
+		},
+		"typecheck": {
+			"inputs": ["src/**", "tsconfig.json"]
+		}
+	}
+}
