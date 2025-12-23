@@ -11,6 +11,7 @@
 	"scripts": {
 		"build": "turbo run compile",
 		"compile": "bun lib/scripts/build.mts",
+		"ci:test": "bun test",
 		"test": "bun test",
 		"prepare": "husky",
 		"test:ai": "CLAUDE_DEBUG=false CLAUDECODE=1 bun test",
