@@ -6,3 +6,4 @@ docs
 .husky
 .turbo
 coverage
+dist
