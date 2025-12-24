@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { copyFile, mkdir, rm } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { Glob } from "bun";
 
@@ -41,7 +42,11 @@ type Target = PublishTarget | TargetShorthand;
 interface PublishConfig {
 	/** Directory to publish from */
 	directory?: string;
-	/** Whether to symlink the directory during local development (pnpm) */
+	/**
+	 * Whether to symlink the directory during local development.
+	 * Note: This field is not used by BunPackage but is included for
+	 * compatibility with package managers like pnpm that read this field.
+	 */
 	linkDirectory?: boolean;
 	/** Default access level */
 	access?: "public" | "restricted";
@@ -233,7 +238,7 @@ export class BunPackage {
 
 		// Process each target
 		for (const target of targets) {
-			await this.processTarget(target);
+			await this.processTarget(target, targets);
 		}
 
 		console.log(`✅ Built ${targets.length} target(s) successfully`);
@@ -309,8 +314,19 @@ export class BunPackage {
 	 */
 	private async loadPackageJson(): Promise<void> {
 		const pkgPath = join(this.root, "package.json");
-		const content = await Bun.file(pkgPath).text();
-		this.packageJson = JSON.parse(content) as PackageJson;
+		try {
+			const content = await Bun.file(pkgPath).text();
+			this.packageJson = JSON.parse(content) as PackageJson;
+
+			if (!this.packageJson.name || !this.packageJson.version) {
+				throw new Error("package.json must have 'name' and 'version' fields");
+			}
+		} catch (error) {
+			if (error instanceof SyntaxError) {
+				throw new Error(`Invalid JSON in ${pkgPath}: ${error.message}`);
+			}
+			throw error;
+		}
 	}
 
 	/**
@@ -367,24 +383,26 @@ export class BunPackage {
 	/**
 	 * Process a single publish target
 	 */
-	private async processTarget(target: ResolvedTarget): Promise<void> {
+	private async processTarget(target: ResolvedTarget, allTargets: ResolvedTarget[]): Promise<void> {
 		// Skip if directory is root (no copying needed)
 		if (target.directory === this.root) {
-			console.log(`📁 Target "${target.registry || target.protocol}" uses root directory, skipping copy`);
+			console.log(
+				`📁 Target "${target.registry || target.protocol}" (${target.access}) uses root directory, skipping copy`,
+			);
 			return;
 		}
 
 		const targetName = target.registry?.replace(/^https?:\/\//, "").replace(/\/$/, "") || target.protocol;
-		console.log(`📁 Processing target: ${targetName} → ${target.directory}`);
+		console.log(`📁 Processing target: ${targetName} (${target.access}) → ${target.directory}`);
 
 		// Clean and create target directory
 		if (existsSync(target.directory)) {
-			await Bun.$`rm -rf ${target.directory}`;
+			await rm(target.directory, { recursive: true, force: true });
 		}
-		await Bun.$`mkdir -p ${target.directory}`;
+		await mkdir(target.directory, { recursive: true });
 
 		// Copy files respecting .npmignore
-		await this.copyFiles(target.directory);
+		await this.copyFiles(target.directory, allTargets);
 
 		// Transform and write package.json
 		await this.writePackageJson(target);
@@ -395,12 +413,12 @@ export class BunPackage {
 	/**
 	 * Copy files to target directory, respecting ignore patterns
 	 */
-	private async copyFiles(targetDir: string): Promise<void> {
+	private async copyFiles(targetDir: string, allTargets: ResolvedTarget[]): Promise<void> {
 		const allFiles = await this.getAllFiles();
 		const filesToCopy = allFiles.filter((file) => !this.shouldIgnore(file));
 
 		// Filter out all dist directories
-		const allTargetDirs = this.resolveTargets()
+		const allTargetDirs = allTargets
 			.map((t) => t.directory)
 			.filter((d) => d !== this.root)
 			.map((d) => d.replace(this.root, "").replace(/^\//, ""));
@@ -415,10 +433,10 @@ export class BunPackage {
 			const destDir = dirname(destPath);
 
 			if (!existsSync(destDir)) {
-				await Bun.$`mkdir -p ${destDir}`;
+				await mkdir(destDir, { recursive: true });
 			}
 
-			await Bun.$`cp ${sourcePath} ${destPath}`;
+			await copyFile(sourcePath, destPath);
 		}
 	}
 
