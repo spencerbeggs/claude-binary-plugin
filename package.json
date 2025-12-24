@@ -88,7 +88,7 @@
 			{
 				"protocol": "npm",
 				"registry": "https://npm.pkg.github.com/",
-				"directory": "dist/npm",
+				"directory": ".",
 				"access": "public",
 				"provenance": true
 			}
