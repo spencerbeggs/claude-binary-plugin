@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { chmod, copyFile, mkdir, rm } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { Glob } from "bun";
 
@@ -188,6 +188,12 @@ interface BunPackageOptions {
 	minify?: boolean;
 	/** Build target for binaries */
 	target?: "bun" | "node" | "browser";
+	/**
+	 * Link a target for local development after build.
+	 * Accepts a shorthand ("npm", "github", "jsr") or registry URL.
+	 * Runs `bun unlink` in root, then `bun link` in the target directory.
+	 */
+	link?: TargetShorthand;
 }
 
 /**
@@ -242,6 +248,51 @@ export class BunPackage {
 		}
 
 		console.log(`✅ Built ${targets.length} target(s) successfully`);
+
+		// Link target for local development if requested
+		if (this.options.link) {
+			await this.linkTarget(this.options.link, targets);
+		}
+	}
+
+	/**
+	 * Link a target directory for local development
+	 */
+	private async linkTarget(link: TargetShorthand, targets: ResolvedTarget[]): Promise<void> {
+		// Find matching target
+		const expanded = expandShorthand(link);
+		const matchingTarget = targets.find((t) => {
+			if (expanded.registry && t.registry === expanded.registry) return true;
+			if (expanded.directory && t.directory.endsWith(expanded.directory)) return true;
+			return false;
+		});
+
+		if (!matchingTarget) {
+			console.log(`⚠️  No target found matching "${link}" for linking`);
+			return;
+		}
+
+		console.log(`🔗 Linking ${matchingTarget.directory}...`);
+
+		// Remove existing global symlink directly (bun unlink only works from the linked dir)
+		const globalLinkPath = join(
+			process.env.HOME ?? "",
+			".local/share/bun/install/global/node_modules",
+			this.packageJson.name,
+		);
+		try {
+			await rm(globalLinkPath, { force: true });
+		} catch {
+			// Doesn't exist, that's fine
+		}
+
+		// Link from target directory
+		const result = await Bun.$`bun link`.cwd(matchingTarget.directory).nothrow();
+		if (result.exitCode !== 0) {
+			console.error(`   ✗ Failed to link: ${result.stderr.toString()}`);
+			return;
+		}
+		console.log(`   ✓ Linked ${this.packageJson.name}`);
 	}
 
 	/**
@@ -376,7 +427,7 @@ export class BunPackage {
 			}
 
 			const outPath = join(outdir, outname);
-			await Bun.$`chmod +x ${outPath}`;
+			await chmod(outPath, 0o755);
 		}
 	}
 

@@ -9,7 +9,8 @@
 		"claude-binary-plugin": "./bin/cli.js"
 	},
 	"scripts": {
-		"build": "turbo run compile",
+		"build": "bun lib/scripts/build.mts",
+		"build:turbo": "turbo run compile",
 		"compile": "bun lib/scripts/build.mts",
 		"ci:build": "turbo run compile",
 		"ci:test": "bun test",

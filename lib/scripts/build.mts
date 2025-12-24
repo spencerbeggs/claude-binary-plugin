@@ -4,6 +4,7 @@ await BunPackage.create({
 	bin: {
 		"src/cli/index.ts": "bin/cli.js",
 	},
+	link: "npm",
 	packageJson({ pkg, target }) {
 		// Scope the package name for GitHub Packages
 		if (target.registry === "https://npm.pkg.github.com/") {
