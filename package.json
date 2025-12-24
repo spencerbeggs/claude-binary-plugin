@@ -86,7 +86,20 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public",
-		"targets": ["npm", "github"]
+		"targets": [
+			{
+				"protocol": "npm",
+				"registry": "https://npm.pkg.github.com/",
+				"directory": "dist/npm",
+				"access": "public",
+				"provenance": true
+			},
+			{
+				"protocol": "npm",
+				"directory": "dist/npm",
+				"access": "public",
+				"registry": "https://registry.savvyweb.dev/"
+			}
+		]
 	}
 }
