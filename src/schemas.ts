@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { parseHookEvent, PreToolUseEventSchema } from "@savvy-web/bun-hooks/schemas";
+ * import { parseHookEvent, PreToolUseEventSchema } from "claude-binary-plugin/schemas";
  *
  * // Parse any hook event (discriminated union)
  * const event = parseHookEvent(jsonString);

@@ -11,7 +11,7 @@
  * - Event/log emitters
  * - Metric recording functions
  *
- * The sidecar binary entry point is at `@savvy-web/bun-hooks/otel/sidecar`.
+ * The sidecar binary entry point is at `claude-binary-plugin/otel/sidecar`.
  *
  * @module
  */

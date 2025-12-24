@@ -268,7 +268,7 @@ export async function runMockedCommand(args: string[], mainFn: () => Promise<voi
  *
  * @example
  * ```ts
- * import { mockIO, resetMockIO, runMockedHook } from "@savvy-web/bun-hooks/mocks";
+ * import { mockIO, resetMockIO, runMockedHook } from "claude-binary-plugin/mocks";
  * import { main } from "./my-hook.js";
  *
  * afterEach(() => resetMockIO());
@@ -559,7 +559,7 @@ export interface MockEnvContext {
  *
  * @example
  * ```typescript
- * import { mockEnv, type MockEnvContext } from "@savvy-web/bun-hooks/mocks";
+ * import { mockEnv, type MockEnvContext } from "claude-binary-plugin/mocks";
  *
  * describe("MyTest", () => {
  *   let env: MockEnvContext;
@@ -769,7 +769,7 @@ export interface FatalErrorResult {
  *
  * @example
  * ```ts
- * import { testFatalErrorHandler } from "@savvy-web/bun-hooks/mocks";
+ * import { testFatalErrorHandler } from "claude-binary-plugin/mocks";
  * import { handleFatalError } from "./my-cmd.cmd.js";
  *
  * describe("handleFatalError", () => {

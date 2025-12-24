@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { pathArg, fileArg, dirArg, globArg } from "@savvy-web/bun-hooks/command-args";
+ * import { pathArg, fileArg, dirArg, globArg } from "claude-binary-plugin/command-args";
  * import { z } from "zod";
  *
  * const lintArgs = z.object({

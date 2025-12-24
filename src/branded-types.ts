@@ -9,7 +9,7 @@
 * @example
 
 * ```ts
-* import { FilePath, ConfigPath, toFilePath, toConfigPath } from "@savvy-web/bun-hooks";
+* import { FilePath, ConfigPath, toFilePath, toConfigPath } from "claude-binary-plugin";
 *
 * const userFile: FilePath = toFilePath("/home/user/code.ts");
 * const config: ConfigPath = toConfigPath("/etc/biome.json");

@@ -8,7 +8,7 @@
  *
  * @example
  * ```typescript
- * import { SessionRegistry } from "@savvy-web/bun-hooks/session-registry";
+ * import { SessionRegistry } from "claude-binary-plugin/session-registry";
  *
  * // Register a session during SessionStart
  * SessionRegistry.register({

@@ -52,6 +52,9 @@
 		"@opentelemetry/semantic-conventions": "^1.38.0",
 		"zod": "^4.2.1"
 	},
+	"peerDependencies": {
+		"zod": "^4.2.1"
+	},
 	"devDependencies": {
 		"@commitlint/cli": "^20.2.0",
 		"@commitlint/config-conventional": "^20.2.0",

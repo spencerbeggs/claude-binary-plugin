@@ -307,7 +307,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
 	const commandRuntimeImport = hasPipelineCmds
-		? `import { runCommand as runCommandPipeline, emptyArgsSchema } from "@savvy-web/bun-hooks/command-runtime";`
+		? `import { runCommand as runCommandPipeline, emptyArgsSchema } from "claude-binary-plugin/command-runtime";`
 		: "";
 
 	return `#!/usr/bin/env bun
@@ -320,8 +320,8 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { runPipeline, runRawHandler, createEnvClass, handleUnknownHook } from "@savvy-web/bun-hooks/pipeline-runtime";
-import { setPluginInfo } from "@savvy-web/bun-hooks/otel";
+import { runPipeline, runRawHandler, createEnvClass, handleUnknownHook } from "claude-binary-plugin/pipeline-runtime";
+import { setPluginInfo } from "claude-binary-plugin/otel";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -338,7 +338,7 @@ const EnvClass = createEnvClass(pluginConfig.prefix, pluginConfig.schema, PLUGIN
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
-  const { main } = await import("@savvy-web/bun-hooks/otel/sidecar");
+  const { main } = await import("claude-binary-plugin/otel/sidecar");
   main();
 }
 
@@ -859,7 +859,7 @@ export function generatePluginEntrypoint(
  */
 
 import { parseArgs } from "node:util";
-import { setPluginInfo } from "@savvy-web/bun-hooks/otel";
+import { setPluginInfo } from "claude-binary-plugin/otel";
 
 // Plugin metadata - compiled constants
 const PLUGIN_NAME = "${pluginName}";
@@ -867,7 +867,7 @@ const PLUGIN_VERSION = "${pluginVersion}";
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
- const { main } = await import("@savvy-web/bun-hooks/otel/sidecar");
+ const { main } = await import("claude-binary-plugin/otel/sidecar");
  main();
 }
 
@@ -1109,7 +1109,7 @@ export async function syncPluginToCache(config: PersistLocalConfig): Promise<boo
 
 * ```ts
 * // plugins/workflow/build.ts - Declarative configuration (recommended)
-* import { buildPlugin } from "@savvy-web/bun-hooks/builder";
+* import { buildPlugin } from "claude-binary-plugin/builder";
 *
 * await buildPlugin({
 * rootDir: import.meta.dir,

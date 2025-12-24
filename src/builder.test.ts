@@ -896,7 +896,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 		expect(entrypoint).toContain('import pluginDefinition from "./my-plugin.ts"');
 
 		// Check that it imports the pipeline runtime
-		expect(entrypoint).toContain("@savvy-web/bun-hooks/pipeline-runtime");
+		expect(entrypoint).toContain("claude-binary-plugin/pipeline-runtime");
 
 		// Check that it has the correct hook cases
 		expect(entrypoint).toContain('case "SessionStart/project-context"');
@@ -1004,7 +1004,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		expect(entrypoint).toContain("--sidecar");
 		expect(entrypoint).toContain("runSidecar");
-		expect(entrypoint).toContain("@savvy-web/bun-hooks/otel/sidecar");
+		expect(entrypoint).toContain("claude-binary-plugin/otel/sidecar");
 	});
 
 	test("calls setPluginInfo with plugin name and version", () => {

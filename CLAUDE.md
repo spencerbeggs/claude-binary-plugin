@@ -1,347 +1,221 @@
-# Claude Plugin Marketplace
+# CLAUDE.md
 
-A monorepo for building Claude Code plugins, hooks, and extensions using the Bun runtime.
+This file provides guidance to Claude Code (claude.ai/code) when working
+with code in this repository.
 
-## Project Structure
+## Key References
 
-```text
-claude-tools/
-├── pkgs/                    # Shared packages (Bun workspaces)
-│   ├── bun-hooks/           # @savvy-web/bun-hooks - Plugin SDK & pipeline runtime
-│   └── lint-utils/          # @savvy-web/lint-utils - Linting types & formatters
-├── plugins/                 # Claude Code plugins
-│   ├── workflow/            # Workflow automation plugin
-│   └── bun-plugin-builder/  # Plugin development toolkit
-├── .claude-plugin/          # Plugin marketplace manifest
-│   └── marketplace.json     # Plugin registry configuration
-└── types/                   # Global type declarations
-```
+For deeper context, reference these files:
 
-## Plugins
+**Documentation:**
 
-| Plugin                                                      | Description                                              |
-| ----------------------------------------------------------- | -------------------------------------------------------- |
-| [workflow](plugins/workflow/CLAUDE.md)                      | Workflow automation for linting, testing, and PR reviews |
-| [bun-plugin-builder](plugins/bun-plugin-builder/CLAUDE.md)  | Development toolkit for building Claude Code plugins     |
+- @docs/ARCHITECTURE.md - Complete system architecture, data flow, build
+  system, command runtime, OTEL sidecar spawning and handshake
+- @docs/SCHEMA.md - OTEL telemetry schema, event types, attributes, metrics
 
-### Validate Plugins
+**Core Source Files:**
+
+- @src/pipeline.ts - `ClaudeBinaryPlugin.create()` factory and type inference
+- @src/pipeline-runtime.ts - `runPipeline()` execution and response mapping
+- @src/builder.ts - `buildPlugin()` compilation and entrypoint generation
+- @src/plugin-env.ts - `BunPluginEnv` base class for environment management
+- @src/command-runtime.ts - `runCommand()` for CLI command execution
+- @src/session-registry.ts - SQLite session lookup for state persistence
+- @src/schemas.ts - Zod schemas for Claude Code hook event inputs
+- @src/otel/client.ts - Sidecar client for fire-and-forget telemetry
+- @src/otel/constants.ts - OTEL attribute and metric name constants
+
+## Overview
+
+`claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
+that compile to single-file Bun executables. It provides a declarative
+pipeline system for defining hooks and commands with Zod-validated
+inputs/outputs, OpenTelemetry observability, and type-safe environment
+management.
+
+## Development Commands
 
 ```bash
-# Validate marketplace (from repo root)
-claude plugin validate .claude-plugin/marketplace.json
+# Install dependencies
+bun install
 
-# Validate individual plugin (from plugin directory)
-claude plugin validate .claude-plugin/plugin.json
+# Run tests (LLM-formatted output)
+bun run test:ai
+
+# Run tests (verbose)
+bun run test
+
+# Type check
+bun run typecheck
+
+# Lint and format
+bun run lint:fix
+
+# Build (compiles the package)
+bun run build
 ```
 
-## Plugin Architecture
-
-Claude Code plugins are compiled Bun binaries that handle hook events. The SDK provides
-a **declarative pipeline system** for defining plugins.
+## Architecture
 
 ### Three-Layer Plugin Model
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 1: Input (from Claude Code)                          │
-│  ─────────────────────────────────────────────────────────  │
 │  Hook events: SessionStart, PreToolUse, PostToolUse, etc.   │
 │  Passed as JSON via stdin to the plugin binary              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Layer 2: Options (user-configurable)                        │
-│  ─────────────────────────────────────────────────────────  │
-│  Zod schema validates env vars with PLUGIN_PREFIX_*          │
-│  Example: SAVVY_WORKFLOW_SKIP_PREFLIGHT=true                 │
+│  Layer 2: Options (user-configurable)                       │
+│  Zod schema validates env vars with {PREFIX}_*              │
+│  Example: SAVVY_WORKFLOW_DEBUG=true                         │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Layer 3: Computed (detection/setup results)                 │
-│  ─────────────────────────────────────────────────────────  │
-│  setup() runs at SessionStart, detects environment           │
-│  Results persisted to CLAUDE_ENV_FILE for all hooks          │
+│  Layer 3: State (computed at SessionStart)                  │
+│  setup() runs once, detects environment                     │
+│  Results persisted to CLAUDE_ENV_FILE for all hooks         │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Hook Handlers                                               │
-│  ─────────────────────────────────────────────────────────  │
-│  Pure functions: ({ input, options, env }) => output         │
-│  Zod-validated outputs ensure type safety                    │
+│  Hook Handlers                                              │
+│  Pure functions: ({ input, options, env }) => output        │
+│  Zod-validated outputs ensure type safety                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Plugin Definition Pattern
+### Key Modules
+
+| Export Path | Purpose |
+| ----------- | ------- |
+| `claude-binary-plugin` | Core types, events, builders |
+| `claude-binary-plugin/pipeline` | Plugin factory, handler types |
+| `claude-binary-plugin/pipeline-runtime` | Runtime execution |
+| `claude-binary-plugin/builder` | Build system |
+| `claude-binary-plugin/otel` | OpenTelemetry client |
+| `claude-binary-plugin/otel/sidecar` | OTEL sidecar entry |
+| `claude-binary-plugin/mocks` | Test utilities |
+
+### Source File Organization
+
+- `src/index.ts` - Hook event classes, response builders, type exports
+- `src/pipeline.ts` - Plugin config types, `ClaudeBinaryPlugin.create()`
+- `src/pipeline-runtime.ts` - `runPipeline()`, response mapping
+- `src/pipeline-types.ts` - Output schemas per hook type
+- `src/builder.ts` - `buildPlugin()`, entrypoint generation
+- `src/plugin-env.ts` - `BunPluginEnv` base class
+- `src/schemas.ts` - Zod schemas for hook event inputs
+- `src/otel/` - OpenTelemetry integration
+
+### Data Flow
+
+1. Claude Code invokes plugin binary with hook event JSON on stdin
+2. Plugin runtime parses input with Zod schema (`src/schemas.ts`)
+3. Environment loaded via `BunPluginEnv` (options + state)
+4. Handler called with `{ input, options, env }` context
+5. Handler returns pipeline output with `status`, `action`, `summary`
+6. Runtime validates output, emits OTEL telemetry
+7. JSON response written to stdout, process exits
+
+### Hook Types
+
+| Event | When | Capability |
+| ----- | ---- | ---------- |
+| `SessionStart` | Session begins | Add context, run setup() |
+| `SessionEnd` | Session ends | Cleanup only |
+| `PreToolUse` | Before tool | Allow/deny/modify input |
+| `PostToolUse` | After tool | Add context or block |
+| `Stop` | Agent stopping | Block with reason |
+| `SubagentStop` | Subagent stopping | Block with reason |
+| `UserPromptSubmit` | User submits | Add context or block |
+| `PermissionRequest` | Permission needed | Auto-allow/deny |
+
+### Pipeline Output Types
+
+All handlers must return a pipeline output object:
 
 ```typescript
-// plugin.ts - Declarative plugin definition
-import { ClaudeBinaryPlugin } from "@savvy-web/bun-hooks/pipeline";
-import { z } from "zod";
+{
+  status: "executed" | "skipped" | "disabled" | "cached" |
+          "error" | "timeout";
+  summary: string;           // Human-readable log message
+  action?: "allow" | "deny" | "ask" | "block" |
+           "continue" | "modify" | "context" | "none";
+  validation?: "passed" | "fixed" | "failed" | "warning";
+  claudeContext?: string;    // Detailed context for Claude
+  reason?: string;           // Concise reason for decisions
+  userMessage?: string;      // Message shown in terminal
+  updatedInput?: Record<string, unknown>;  // Modified input
+  metrics?: Record<string, number>;        // Custom metrics
+}
+```
 
-const plugin = ClaudeBinaryPlugin.create({
-  prefix: "MY_PLUGIN",  // Env var prefix: MY_PLUGIN_*
+## Code Conventions
 
-  // Layer 2: Options schema
-  schema: z.object({
-    DEBUG: z.string().default("false").transform(v => v === "true"),
-    MODE: z.enum(["strict", "relaxed"]).default("strict"),
-  }),
+### Bun Runtime
 
-  // Layer 3: Computed values (runs at SessionStart)
-  setup: async ({ env }) => {
-    // env: { projectDir, pluginDir, pluginEnvFile } - sealed, read-only
-    const detection = await runDetectionPipeline();
-    return {
-      // Return only state (env is merged automatically by runtime)
-      detection,
-      packageManager: detection.packageManager,
-    };
-  },
+- Use `bun` instead of `node` for all runtime operations
+- Use `Bun.file()` for file I/O, `Bun.$` for shell commands
+- Use `bun:test` for testing, not jest or vitest
+- Bun auto-loads `.env` files - don't use dotenv
 
-  // Hook definitions
-  hooks: {
-    SessionStart: [{
-      name: "context",
-      description: "Provides project context",
-      pipeline: "./hooks/context.hook.ts",
-    }],
-    PreToolUse: [{
-      name: "security",
-      tools: ["Bash", "Write"],  // Only run for these tools
-      pipeline: "./hooks/security.hook.ts",
-    }],
-  },
+### TypeScript
 
-  // Build options
-  bytecode: true,
-  persistLocal: true,
+- Uses Biome for linting and formatting (tabs, 120 char lines)
+- Import extensions required (`.js` for TypeScript files)
+- Type-only imports must use `import type`
+- Uses `tsgo` (native TypeScript) for type checking
+
+### Testing Patterns
+
+```typescript
+// Environment mocking
+import { mockEnv } from "claude-binary-plugin/mocks";
+
+let env: MockEnvContext;
+beforeEach(() => {
+  env = mockEnv(
+    { CLAUDE_PROJECT_DIR: "/tmp/test" },
+    { clearPrefix: "MY_PLUGIN_" }
+  );
 });
+afterEach(() => env.restore());
 
-// Export types for hook files
-export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
-export default plugin;
+// Shell executor injection for subprocess mocking
+const mockShell = async () => ({
+  exitCode: 0,
+  stdout: "v22.0.0",
+  stderr: ""
+});
+const result = await detectVersion(mockShell);
 ```
 
-### Hook Handler Pattern
+## OTEL Telemetry
 
-```typescript
-// hooks/security.hook.ts
-import type { Pipeline } from "../plugin.js";
-import type { PreToolUseOutput } from "@savvy-web/bun-hooks/pipeline";
+The SDK includes an OpenTelemetry sidecar for metrics and events:
 
-const ALLOW: PreToolUseOutput = { permissionDecision: "allow" };
+- Sidecar spawned at SessionStart if `CLAUDE_CODE_OTEL_ENDPOINT` set
+- Hooks communicate via Unix domain socket (IPC)
+- Events include hook execution, validation errors, decisions
+- Metrics track hook duration, tool usage, context consumption
 
-const handler: Pipeline["PreToolUse"] = ({ input, options, env }) => {
-  // input: PreToolUseEvent (tool_name, tool_input, etc.)
-  // options: { DEBUG: boolean, MODE: "strict" | "relaxed" }
-  // env: BaseEnv & State { projectDir, pluginDir, pluginEnvFile, detection, ... }
-
-  if (input.tool_name === "Bash" && env.detection.gitRepo) {
-    // Check for dangerous commands
-  }
-
-  return ALLOW;
-};
-
-export default handler;
-```
-
-### Hook Event Types
-
-| Event               | When                      | Can Do                                    |
-| ------------------- | ------------------------- | ----------------------------------------- |
-| `SessionStart`      | Session begins            | Add context                               |
-| `SessionEnd`        | Session ends              | Cleanup only                              |
-| `PreToolUse`        | Before tool executes      | Allow/deny/modify input                   |
-| `PostToolUse`       | After tool completes      | Add context or block further work         |
-| `Stop`              | Agent about to stop       | Block with reason (run tests, etc.)       |
-| `SubagentStop`      | Subagent about to stop    | Block with reason                         |
-| `UserPromptSubmit`  | User submits prompt       | Add context or block                      |
-| `PermissionRequest` | Permission needed         | Auto-allow/deny                           |
+See `docs/SCHEMA.md` for the complete telemetry schema specification.
 
 ## Environment Variables
 
 ### Claude Code Provided
 
-- `CLAUDE_PLUGIN_ROOT` - Path to the plugin directory
-- `CLAUDE_PROJECT_DIR` - Path to the user's project
-- `CLAUDE_ENV_FILE` - Path to session env file (for computed vars)
+- `CLAUDE_PLUGIN_ROOT` - Plugin directory path
+- `CLAUDE_PROJECT_DIR` - User's project directory
+- `CLAUDE_ENV_FILE` - Session env file path (for persisted vars)
+- `CLAUDE_SESSION_ID` - Session UUID
 
-### Plugin Conventions
+### OTEL Configuration
 
-Plugins use a prefix for their env vars:
-
-- `SAVVY_WORKFLOW_*` - Workflow plugin options
-- Custom plugins define their own prefix in `ClaudeBinaryPlugin.create({ prefix: "..." })`
-
-## Code Quality
-
-Uses Biome for linting and formatting:
-
-- Tabs for indentation
-- 120 character line width
-- Import extensions required (.js)
-- Type-only imports separated
-
-## Bun Runtime
-
-Default to using Bun instead of Node.js.
-
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install`
-- Use `bun run <script>` instead of `npm run <script>`
-- Bun automatically loads .env, so don't use dotenv.
-
-## APIs
-
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
-
-## Testing
-
-Use `bun run test:ai` to run tests.
-
-```ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
-```
-
-### Testing Patterns
-
-#### Fake Timers
-
-```ts
-import { test, expect, setSystemTime, beforeEach, afterEach } from "bun:test";
-
-beforeEach(() => {
-  setSystemTime(new Date("2024-01-15T10:00:00Z"));
-});
-
-afterEach(() => {
-  setSystemTime(); // Reset to real time
-});
-
-test("time-dependent logic", () => {
-  expect(new Date().toISOString()).toBe("2024-01-15T10:00:00.000Z");
-});
-```
-
-#### Module Mocking
-
-```ts
-import { mock, test, expect } from "bun:test";
-
-// Mock before importing the module that uses it
-mock.module("shellcheck", () => ({
-  shellcheck: mock(async () => ({
-    exitCode: 0,
-    stdout: Buffer.from("[]"),
-    stderr: Buffer.from(""),
-  })),
-}));
-
-import { runShellcheck } from "./my-module.js";
-```
-
-#### Shell Executor Dependency Injection
-
-For functions that spawn subprocesses via `Bun.$`, use dependency injection:
-
-```ts
-// Implementation
-export interface ShellResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-}
-
-export type ShellExecutor = (cmd: string) => Promise<ShellResult>;
-
-export const defaultShellExecutor: ShellExecutor = async (cmd: string) => {
-  const result = await $`${{ raw: cmd }}`.quiet().nothrow();
-  return {
-    exitCode: result.exitCode,
-    stdout: result.stdout.toString().trim(),
-    stderr: result.stderr.toString().trim(),
-  };
-};
-
-export async function detectVersion(
-  shell: ShellExecutor = defaultShellExecutor
-): Promise<string> {
-  const result = await shell("node --version");
-  return result.exitCode === 0 ? result.stdout : "unknown";
-}
-```
-
-```ts
-// Test
-import { test, expect } from "bun:test";
-import { detectVersion } from "./my-module.js";
-
-test("detects version with mock", async () => {
-  const mockShell = async () => ({ exitCode: 0, stdout: "v22.0.0", stderr: "" });
-  const result = await detectVersion(mockShell);
-  expect(result).toBe("v22.0.0");
-});
-```
-
-#### Using @savvy-web/bun-hooks Mocks
-
-```ts
-import { afterEach, beforeEach, describe, test } from "bun:test";
-import type { MockEnvContext } from "@savvy-web/bun-hooks/mocks";
-import { mockEnv } from "@savvy-web/bun-hooks/mocks";
-
-describe("MyTest", () => {
-  let env: MockEnvContext;
-
-  beforeEach(() => {
-    env = mockEnv(
-      { CLAUDE_PROJECT_DIR: "/tmp/test" },
-      { clearPrefix: "SAVVY_WORKFLOW_" },
-    );
-  });
-
-  afterEach(() => {
-    env.restore();
-  });
-
-  test("uses mocked env", () => {
-    expect(Bun.env.CLAUDE_PROJECT_DIR).toBe("/tmp/test");
-  });
-});
-```
-
-## Frontend
-
-Use HTML imports with `Bun.serve()`. Don't use `vite`.
-
-```ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => new Response(JSON.stringify({ id: req.params.id })),
-    },
-  },
-  development: { hmr: true, console: true }
-})
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
+- `CLAUDE_CODE_OTEL_ENDPOINT` - OTLP HTTP endpoint
+- `CLAUDE_CODE_OTEL_HEADERS` - Auth headers for endpoint
+- `CLAUDE_CODE_OTEL_SIDECAR_SOCKET` - Custom socket path

@@ -7,7 +7,7 @@
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin } from "@savvy-web/bun-hooks/pipeline";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin/pipeline";
  * import { z } from "zod";
  *
  * export default ClaudeBinaryPlugin.create({

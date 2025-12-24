@@ -10,7 +10,7 @@
  *
  * @example
  * ```ts
- * import { DebugLogger } from "@savvy-web/bun-hooks/debug-logger";
+ * import { DebugLogger } from "claude-binary-plugin/debug-logger";
  *
  * const log = new DebugLogger({ prefix: "my-hook" });
  * log.info("Starting hook execution");

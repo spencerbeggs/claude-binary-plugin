@@ -12,7 +12,7 @@
 * @example
 
 * ```ts
-* import { isWriteToolInput, type WriteToolInput } from "@savvy-web/bun-hooks";
+* import { isWriteToolInput, type WriteToolInput } from "claude-binary-plugin";
 *
 * if (event.tool_name === "Write" && isWriteToolInput(event.tool_input)) {
 * // TypeScript knows these properties exist and are strings

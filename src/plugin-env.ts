@@ -172,7 +172,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  * @example Basic usage with SessionStart hook
  * ```typescript
  * import { z } from "zod";
- * import { BunPluginEnv } from "@savvy-web/bun-hooks";
+ * import { BunPluginEnv } from "claude-binary-plugin";
  *
  * const myPluginEnvSchema = z.object({
  *   MY_PLUGIN_ENABLED: z.enum(["true", "false"]),
