@@ -23,8 +23,6 @@ interface PublishTarget {
 	provenance?: boolean;
 	/** Publish tag (e.g., "latest", "next", "beta") */
 	tag?: string;
-	/** Environment variable name containing the auth token */
-	tokenEnv?: string;
 }
 
 /**
@@ -80,60 +78,44 @@ interface ResolvedTarget {
 	access: "public" | "restricted";
 	provenance: boolean;
 	tag: string;
-	tokenEnv: string | null;
 }
 
 /**
  * Known shorthands that expand to full targets
  */
-const KNOWN_SHORTHANDS: Record<string, PublishTarget> = {
+const KNOWN_SHORTHANDS = {
 	npm: {
 		protocol: "npm",
 		registry: "https://registry.npmjs.org/",
 		provenance: true,
+		directory: "dist/npm",
 	},
 	github: {
 		protocol: "npm",
 		registry: "https://npm.pkg.github.com/",
 		provenance: true,
-		tokenEnv: "GITHUB_TOKEN",
+		directory: "dist/github",
 	},
 	jsr: {
 		protocol: "jsr",
 		provenance: false,
+		directory: "dist/jsr",
 	},
-};
+} as const satisfies Record<string, PublishTarget>;
 
 /**
  * Registry-specific defaults
  */
-const REGISTRY_DEFAULTS: Record<
-	string,
-	{ provenance: boolean; access: "public" | "restricted"; tokenEnv: string | null }
-> = {
+const REGISTRY_DEFAULTS: Record<string, { provenance: boolean; access: "public" | "restricted" }> = {
 	"https://registry.npmjs.org/": {
 		provenance: true,
 		access: "restricted",
-		tokenEnv: null,
 	},
 	"https://npm.pkg.github.com/": {
 		provenance: true,
 		access: "restricted",
-		tokenEnv: "GITHUB_TOKEN",
 	},
 };
-
-/**
- * Convert a registry URL to a valid environment variable name
- */
-function registryToEnvName(registry: string): string {
-	return `${registry
-		.replace(/^https?:\/\//, "")
-		.replace(/[^a-zA-Z0-9]/g, "_")
-		.toUpperCase()
-		.replace(/_+/g, "_")
-		.replace(/^_|_$/g, "")}_TOKEN`;
-}
 
 /**
  * Get defaults for a registry URL
@@ -141,10 +123,9 @@ function registryToEnvName(registry: string): string {
 function getRegistryDefaults(registry: string | null): {
 	provenance: boolean;
 	access: "public" | "restricted";
-	tokenEnv: string | null;
 } {
 	if (!registry) {
-		return { provenance: false, access: "restricted", tokenEnv: null };
+		return { provenance: false, access: "restricted" };
 	}
 	const defaults = REGISTRY_DEFAULTS[registry];
 	if (defaults) {
@@ -153,7 +134,6 @@ function getRegistryDefaults(registry: string | null): {
 	return {
 		provenance: false,
 		access: "restricted",
-		tokenEnv: registryToEnvName(registry),
 	};
 }
 
@@ -166,7 +146,7 @@ function expandShorthand(target: Target): PublishTarget {
 	}
 
 	if (target in KNOWN_SHORTHANDS) {
-		return { ...KNOWN_SHORTHANDS[target] };
+		return { ...KNOWN_SHORTHANDS[target as keyof typeof KNOWN_SHORTHANDS] };
 	}
 
 	if (target.startsWith("https://") || target.startsWith("http://")) {
@@ -174,7 +154,6 @@ function expandShorthand(target: Target): PublishTarget {
 			protocol: "npm",
 			registry: target,
 			provenance: false,
-			tokenEnv: registryToEnvName(target),
 		};
 	}
 
@@ -279,7 +258,6 @@ export class BunPackage {
 					access: "restricted",
 					provenance: true,
 					tag: "latest",
-					tokenEnv: null,
 				},
 			];
 		}
@@ -297,7 +275,6 @@ export class BunPackage {
 					access: publishConfig.access || defaults.access,
 					provenance: defaults.provenance,
 					tag: "latest",
-					tokenEnv: defaults.tokenEnv,
 				},
 			];
 		}
@@ -316,8 +293,6 @@ export class BunPackage {
 					? resolve(this.root, publishConfig.directory)
 					: this.root;
 
-			const tokenEnv = expanded.tokenEnv ?? registryDefaults.tokenEnv;
-
 			return {
 				protocol: expanded.protocol,
 				registry,
@@ -325,7 +300,6 @@ export class BunPackage {
 				access: expanded.access ?? publishConfig.access ?? registryDefaults.access,
 				provenance: expanded.provenance ?? registryDefaults.provenance,
 				tag: expanded.tag ?? "latest",
-				tokenEnv,
 			};
 		});
 	}

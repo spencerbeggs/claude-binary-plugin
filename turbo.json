@@ -4,7 +4,18 @@
 	"tasks": {
 		"build": {
 			"dependsOn": ["typecheck", "compile"],
-			"inputs": ["$TURBO_DEFAULTS$", "bun.lock", "src/**/*.ts"]
+			"inputs": [
+				"$TURBO_DEFAULTS$",
+				"bun.lock",
+				"package.json",
+				"src/**/*",
+				"lib/scripts/build.mts",
+				"lib/scripts/build/**/*",
+				"bunfig.toml",
+				"tsconfig.json",
+				".npmignore"
+			],
+			"outputs": ["bin/**", "dist/**"]
 		},
 		"compile": {
 			"dependsOn": ["typecheck"],

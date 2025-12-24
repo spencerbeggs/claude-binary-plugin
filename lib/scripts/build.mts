@@ -9,7 +9,11 @@ await BunPackage.create({
 		if (target.registry === "https://npm.pkg.github.com/") {
 			pkg.name = "@spencerbeggs/claude-binary-plugin";
 		}
-
+		delete pkg.devDependencies;
+		delete pkg.scripts;
+		delete pkg.publishConfig;
+		delete pkg.packageManager;
+		delete pkg.devEngines;
 		return pkg;
 	},
 });
