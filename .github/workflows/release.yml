@@ -24,6 +24,8 @@ permissions:
     packages: write
     attestations: write
     checks: write
+    issues: write
+    actions: read
 
 jobs:
     workflow:
@@ -31,4 +33,6 @@ jobs:
         uses: spencerbeggs/.github/.github/workflows/release.yml@main
         with:
             dry-run: ${{ inputs.dry_run || false }}
+            app-bot-name: ${{ vars.APP_BOT_NAME }}
+            app-bot-id: ${{ vars.APP_BOT_ID }}
         secrets: inherit
