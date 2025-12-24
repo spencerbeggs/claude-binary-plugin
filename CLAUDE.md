@@ -13,17 +13,17 @@ For deeper context, reference these files:
   system, command runtime, OTEL sidecar spawning and handshake
 - @docs/SCHEMA.md - OTEL telemetry schema, event types, attributes, metrics
 
-**Core Source Files:**
+**Core Source Files (load as needed):**
 
-- @src/pipeline.ts - `ClaudeBinaryPlugin.create()` factory and type inference
-- @src/pipeline-runtime.ts - `runPipeline()` execution and response mapping
-- @src/builder.ts - `buildPlugin()` compilation and entrypoint generation
-- @src/plugin-env.ts - `BunPluginEnv` base class for environment management
-- @src/command-runtime.ts - `runCommand()` for CLI command execution
-- @src/session-registry.ts - SQLite session lookup for state persistence
-- @src/schemas.ts - Zod schemas for Claude Code hook event inputs
-- @src/otel/client.ts - Sidecar client for fire-and-forget telemetry
-- @src/otel/constants.ts - OTEL attribute and metric name constants
+- `src/pipeline.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
+- `src/pipeline-runtime.ts` - `runPipeline()` execution and response mapping
+- `src/builder.ts` - `buildPlugin()` compilation and entrypoint generation
+- `src/plugin-env.ts` - `BunPluginEnv` base class for environment management
+- `src/command-runtime.ts` - `runCommand()` for CLI command execution
+- `src/session-registry.ts` - SQLite session lookup for state persistence
+- `src/schemas.ts` - Zod schemas for Claude Code hook event inputs
+- `src/otel/client.ts` - Sidecar client for fire-and-forget telemetry
+- `src/otel/constants.ts` - OTEL attribute and metric name constants
 
 ## Overview
 
