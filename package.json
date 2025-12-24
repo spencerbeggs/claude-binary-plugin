@@ -11,7 +11,9 @@
 	"scripts": {
 		"build": "turbo run compile",
 		"compile": "bun lib/scripts/build.mts",
+		"ci:build": "turbo run compile",
 		"ci:test": "bun test",
+		"ci:version": "changeset version && biome format --write .",
 		"lint": "biome check --max-diagnostics=none",
 		"lint:fix": "biome check --write --max-diagnostics=none",
 		"lint:fix:unsafe": "biome check --write --unsafe --max-diagnostics=none",
