@@ -90,15 +90,16 @@
 			{
 				"protocol": "npm",
 				"registry": "https://npm.pkg.github.com/",
-				"directory": "dist/npm",
+				"directory": "dist/github",
 				"access": "public",
 				"provenance": true
 			},
 			{
 				"protocol": "npm",
+				"registry": "https://registry.npmjs.org/",
 				"directory": "dist/npm",
 				"access": "public",
-				"registry": "https://registry.savvyweb.dev/"
+				"provenance": true
 			}
 		]
 	}
