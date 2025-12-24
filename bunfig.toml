@@ -1,0 +1,9 @@
+[test]
+coverage = true
+coverageSkipTestFiles = true  # default false
+# To require 90% line-level and function-level coverage
+coverageThreshold = { line = 0.9, function = 0.9, statement = 0.9, perFile = true }
+coveragePathIgnorePatterns = [
+
+]
+coverageReporter  = ["text", "lcov"] 

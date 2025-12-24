@@ -1,0 +1,221 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working
+with code in this repository.
+
+## Key References
+
+For deeper context, reference these files:
+
+**Documentation:**
+
+- @docs/ARCHITECTURE.md - Complete system architecture, data flow, build
+  system, command runtime, OTEL sidecar spawning and handshake
+- @docs/SCHEMA.md - OTEL telemetry schema, event types, attributes, metrics
+
+**Core Source Files (load as needed):**
+
+- `src/pipeline.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
+- `src/pipeline-runtime.ts` - `runPipeline()` execution and response mapping
+- `src/builder.ts` - `buildPlugin()` compilation and entrypoint generation
+- `src/plugin-env.ts` - `BunPluginEnv` base class for environment management
+- `src/command-runtime.ts` - `runCommand()` for CLI command execution
+- `src/session-registry.ts` - SQLite session lookup for state persistence
+- `src/schemas.ts` - Zod schemas for Claude Code hook event inputs
+- `src/otel/client.ts` - Sidecar client for fire-and-forget telemetry
+- `src/otel/constants.ts` - OTEL attribute and metric name constants
+
+## Overview
+
+`claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
+that compile to single-file Bun executables. It provides a declarative
+pipeline system for defining hooks and commands with Zod-validated
+inputs/outputs, OpenTelemetry observability, and type-safe environment
+management.
+
+## Development Commands
+
+```bash
+# Install dependencies
+bun install
+
+# Run tests (LLM-formatted output)
+bun run test:ai
+
+# Run tests (verbose)
+bun run test
+
+# Type check
+bun run typecheck
+
+# Lint and format
+bun run lint:fix
+
+# Build (compiles the package)
+bun run build
+```
+
+## Architecture
+
+### Three-Layer Plugin Model
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 1: Input (from Claude Code)                          │
+│  Hook events: SessionStart, PreToolUse, PostToolUse, etc.   │
+│  Passed as JSON via stdin to the plugin binary              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 2: Options (user-configurable)                       │
+│  Zod schema validates env vars with {PREFIX}_*              │
+│  Example: SAVVY_WORKFLOW_DEBUG=true                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 3: State (computed at SessionStart)                  │
+│  setup() runs once, detects environment                     │
+│  Results persisted to CLAUDE_ENV_FILE for all hooks         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Hook Handlers                                              │
+│  Pure functions: ({ input, options, env }) => output        │
+│  Zod-validated outputs ensure type safety                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Modules
+
+| Export Path | Purpose |
+| ----------- | ------- |
+| `claude-binary-plugin` | Core types, events, builders |
+| `claude-binary-plugin/pipeline` | Plugin factory, handler types |
+| `claude-binary-plugin/pipeline-runtime` | Runtime execution |
+| `claude-binary-plugin/builder` | Build system |
+| `claude-binary-plugin/otel` | OpenTelemetry client |
+| `claude-binary-plugin/otel/sidecar` | OTEL sidecar entry |
+| `claude-binary-plugin/mocks` | Test utilities |
+
+### Source File Organization
+
+- `src/index.ts` - Hook event classes, response builders, type exports
+- `src/pipeline.ts` - Plugin config types, `ClaudeBinaryPlugin.create()`
+- `src/pipeline-runtime.ts` - `runPipeline()`, response mapping
+- `src/pipeline-types.ts` - Output schemas per hook type
+- `src/builder.ts` - `buildPlugin()`, entrypoint generation
+- `src/plugin-env.ts` - `BunPluginEnv` base class
+- `src/schemas.ts` - Zod schemas for hook event inputs
+- `src/otel/` - OpenTelemetry integration
+
+### Data Flow
+
+1. Claude Code invokes plugin binary with hook event JSON on stdin
+2. Plugin runtime parses input with Zod schema (`src/schemas.ts`)
+3. Environment loaded via `BunPluginEnv` (options + state)
+4. Handler called with `{ input, options, env }` context
+5. Handler returns pipeline output with `status`, `action`, `summary`
+6. Runtime validates output, emits OTEL telemetry
+7. JSON response written to stdout, process exits
+
+### Hook Types
+
+| Event | When | Capability |
+| ----- | ---- | ---------- |
+| `SessionStart` | Session begins | Add context, run setup() |
+| `SessionEnd` | Session ends | Cleanup only |
+| `PreToolUse` | Before tool | Allow/deny/modify input |
+| `PostToolUse` | After tool | Add context or block |
+| `Stop` | Agent stopping | Block with reason |
+| `SubagentStop` | Subagent stopping | Block with reason |
+| `UserPromptSubmit` | User submits | Add context or block |
+| `PermissionRequest` | Permission needed | Auto-allow/deny |
+
+### Pipeline Output Types
+
+All handlers must return a pipeline output object:
+
+```typescript
+{
+  status: "executed" | "skipped" | "disabled" | "cached" |
+          "error" | "timeout";
+  summary: string;           // Human-readable log message
+  action?: "allow" | "deny" | "ask" | "block" |
+           "continue" | "modify" | "context" | "none";
+  validation?: "passed" | "fixed" | "failed" | "warning";
+  claudeContext?: string;    // Detailed context for Claude
+  reason?: string;           // Concise reason for decisions
+  userMessage?: string;      // Message shown in terminal
+  updatedInput?: Record<string, unknown>;  // Modified input
+  metrics?: Record<string, number>;        // Custom metrics
+}
+```
+
+## Code Conventions
+
+### Bun Runtime
+
+- Use `bun` instead of `node` for all runtime operations
+- Use `Bun.file()` for file I/O, `Bun.$` for shell commands
+- Use `bun:test` for testing, not jest or vitest
+- Bun auto-loads `.env` files - don't use dotenv
+
+### TypeScript
+
+- Uses Biome for linting and formatting (tabs, 120 char lines)
+- Import extensions required (`.js` for TypeScript files)
+- Type-only imports must use `import type`
+- Uses `tsgo` (native TypeScript) for type checking
+
+### Testing Patterns
+
+```typescript
+// Environment mocking
+import { mockEnv } from "claude-binary-plugin/mocks";
+
+let env: MockEnvContext;
+beforeEach(() => {
+  env = mockEnv(
+    { CLAUDE_PROJECT_DIR: "/tmp/test" },
+    { clearPrefix: "MY_PLUGIN_" }
+  );
+});
+afterEach(() => env.restore());
+
+// Shell executor injection for subprocess mocking
+const mockShell = async () => ({
+  exitCode: 0,
+  stdout: "v22.0.0",
+  stderr: ""
+});
+const result = await detectVersion(mockShell);
+```
+
+## OTEL Telemetry
+
+The SDK includes an OpenTelemetry sidecar for metrics and events:
+
+- Sidecar spawned at SessionStart if `CLAUDE_CODE_OTEL_ENDPOINT` set
+- Hooks communicate via Unix domain socket (IPC)
+- Events include hook execution, validation errors, decisions
+- Metrics track hook duration, tool usage, context consumption
+
+See `docs/SCHEMA.md` for the complete telemetry schema specification.
+
+## Environment Variables
+
+### Claude Code Provided
+
+- `CLAUDE_PLUGIN_ROOT` - Plugin directory path
+- `CLAUDE_PROJECT_DIR` - User's project directory
+- `CLAUDE_ENV_FILE` - Session env file path (for persisted vars)
+- `CLAUDE_SESSION_ID` - Session UUID
+
+### OTEL Configuration
+
+- `CLAUDE_CODE_OTEL_ENDPOINT` - OTLP HTTP endpoint
+- `CLAUDE_CODE_OTEL_HEADERS` - Auth headers for endpoint
+- `CLAUDE_CODE_OTEL_SIDECAR_SOCKET` - Custom socket path
