@@ -9,7 +9,8 @@
 		"claude-binary-plugin": "./bin/cli.js"
 	},
 	"scripts": {
-		"build": "turbo run compile",
+		"build": "bun lib/scripts/build.mts",
+		"build:turbo": "turbo run compile",
 		"compile": "bun lib/scripts/build.mts",
 		"ci:build": "turbo run compile",
 		"ci:test": "bun test",
@@ -62,7 +63,7 @@
 		"@commitlint/config-conventional": "^20.2.0",
 		"@changesets/cli": "^2.29.8",
 		"@types/bun": "1.3.5",
-		"@typescript/native-preview": "7.0.0-dev.20251220.1",
+		"@typescript/native-preview": "7.0.0-dev.20251223.1",
 		"husky": "^9.1.7",
 		"markdownlint-cli2": "^0.20.0",
 		"markdownlint-cli2-formatter-codequality": "^0.0.7",
@@ -86,14 +87,6 @@
 	},
 	"publishConfig": {
 		"access": "public",
-		"targets": [
-			{
-				"protocol": "npm",
-				"registry": "https://npm.pkg.github.com/",
-				"directory": ".",
-				"access": "public",
-				"provenance": true
-			}
-		]
+		"targets": ["npm", "github"]
 	}
 }

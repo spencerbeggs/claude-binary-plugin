@@ -1,17 +1,20 @@
-const result = await Bun.build({
-	entrypoints: [Bun.fileURLToPath(import.meta.resolve("../../src/cli/index.ts"))],
-	outdir: Bun.fileURLToPath(import.meta.resolve("../../bin")),
-	target: "bun",
-	minify: false,
-	naming: "cli.js",
+import { BunPackage } from "../builder/bun-package.js";
+
+await BunPackage.create({
+	bin: {
+		"src/cli/index.ts": "bin/cli.js",
+	},
+	link: "npm",
+	packageJson({ pkg, target }) {
+		// Scope the package name for GitHub Packages
+		if (target.registry === "https://npm.pkg.github.com/") {
+			pkg.name = "@spencerbeggs/claude-binary-plugin";
+		}
+		delete pkg.devDependencies;
+		delete pkg.scripts;
+		delete pkg.publishConfig;
+		delete pkg.packageManager;
+		delete pkg.devEngines;
+		return pkg;
+	},
 });
-
-if (!result.success) {
-	// Exit with error code if build failed
-	process.exit(1);
-}
-
-const outdir = Bun.fileURLToPath(import.meta.resolve("../../bin"));
-
-// Make the output executable
-await Bun.$`chmod +x ${outdir}/cli.js`;
