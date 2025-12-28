@@ -17,8 +17,16 @@ import {
 	SubagentStopEventSchema,
 	UserPromptSubmitEventSchema,
 	parseHookEvent,
+	parseNotificationEvent,
+	parsePermissionRequestEvent,
+	parsePostToolUseEvent,
+	parsePreCompactEvent,
 	parsePreToolUseEvent,
+	parseSessionEndEvent,
 	parseSessionStartEvent,
+	parseStopEvent,
+	parseSubagentStopEvent,
+	parseUserPromptSubmitEvent,
 } from "./schemas.js";
 
 // =============================================================================
@@ -329,6 +337,114 @@ describe("parseSessionStartEvent", () => {
 		const json = JSON.stringify(validSessionStartEvent);
 		const result = parseSessionStartEvent(json);
 		expect(result.source).toBe("startup");
+	});
+});
+
+describe("parsePostToolUseEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validPostToolUseEvent);
+		const result = parsePostToolUseEvent(json);
+		expect(result.tool_name).toBe("Read");
+		expect(result.tool_response).toEqual({ content: "file contents" });
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parsePostToolUseEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parsePermissionRequestEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validPermissionRequestEvent);
+		const result = parsePermissionRequestEvent(json);
+		expect(result.message).toBe("Allow bash command?");
+		expect(result.notification_type).toBe("permission_prompt");
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parsePermissionRequestEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parseNotificationEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validNotificationEvent);
+		const result = parseNotificationEvent(json);
+		expect(result.message).toBe("Task completed");
+		expect(result.notification_type).toBe("idle_prompt");
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parseNotificationEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parseUserPromptSubmitEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validUserPromptSubmitEvent);
+		const result = parseUserPromptSubmitEvent(json);
+		expect(result.prompt).toBe("Hello, Claude!");
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parseUserPromptSubmitEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parseStopEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validStopEvent);
+		const result = parseStopEvent(json);
+		expect(result.stop_hook_active).toBe(false);
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parseStopEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parseSubagentStopEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validSubagentStopEvent);
+		const result = parseSubagentStopEvent(json);
+		expect(result.stop_hook_active).toBe(true);
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parseSubagentStopEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parsePreCompactEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validPreCompactEvent);
+		const result = parsePreCompactEvent(json);
+		expect(result.trigger).toBe("auto");
+		expect(result.custom_instructions).toBe("Preserve important context");
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parsePreCompactEvent(json)).toThrow(z.ZodError);
+	});
+});
+
+describe("parseSessionEndEvent", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validSessionEndEvent);
+		const result = parseSessionEndEvent(json);
+		expect(result.reason).toBe("clear");
+	});
+
+	test("throws ZodError on wrong event type", () => {
+		const json = JSON.stringify(validPreToolUseEvent);
+		expect(() => parseSessionEndEvent(json)).toThrow(z.ZodError);
 	});
 });
 

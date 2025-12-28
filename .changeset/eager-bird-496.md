@@ -11,5 +11,5 @@ Features:
 - Command runtime for CLI tools exposed via skill markdown files
 - OpenTelemetry observability with fire-and-forget sidecar architecture
 - Session registry with SQLite for state persistence across hooks
-- Type-safe environment management with BunPluginEnv base class
+- Type-safe environment management with ClaudeBinaryPluginEnv base class
 - Build system that generates hooks.json manifest and compiles to standalone binaries

@@ -172,7 +172,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  * @example Basic usage with SessionStart hook
  * ```typescript
  * import { z } from "zod";
- * import { BunPluginEnv } from "claude-binary-plugin";
+ * import { ClaudeBinaryPluginEnv } from "claude-binary-plugin";
  *
  * const myPluginEnvSchema = z.object({
  *   MY_PLUGIN_ENABLED: z.enum(["true", "false"]),
@@ -181,7 +181,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  *
  * type MyPluginEnvVars = z.infer<typeof myPluginEnvSchema>;
  *
- * class MyPluginEnv extends BunPluginEnv<MyPluginEnvVars> {
+ * class MyPluginEnv extends ClaudeBinaryPluginEnv<MyPluginEnvVars> {
  *   protected readonly prefix = "MY_PLUGIN";
  *   protected schema = myPluginEnvSchema;
  *
@@ -217,7 +217,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  *   fix: z.boolean().default(true),
  * });
  *
- * class MyPluginEnv extends BunPluginEnv<MyPluginEnvVars> {
+ * class MyPluginEnv extends ClaudeBinaryPluginEnv<MyPluginEnvVars> {
  *   protected readonly prefix = "MY_PLUGIN";
  *   protected schema = myPluginEnvSchema;
  *
@@ -387,7 +387,7 @@ export class EnvFileLoadError extends Error {
  *
  * @template TSchema - TypeScript interface defining the environment variable schema
  */
-export abstract class BunPluginEnv<TSchema = Record<string, string>> {
+export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	/**
 	 * Environment variable prefix for this plugin (e.g., "MY_PLUGIN").
 	 * Subclasses must override this to define their namespace.
@@ -580,22 +580,22 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 	 * });
 	 * ```
 	 */
-	static async forContext<T extends BunPluginEnv>(
+	static async forContext<T extends ClaudeBinaryPluginEnv>(
 		this: new () => T,
 		context: "sessionStart",
 		params: SessionStartContextParams,
 	): Promise<T>;
-	static async forContext<T extends BunPluginEnv>(
+	static async forContext<T extends ClaudeBinaryPluginEnv>(
 		this: new () => T,
 		context: "hook",
 		params: HookContextParams,
 	): Promise<T>;
-	static async forContext<T extends BunPluginEnv, TArgs = Record<string, unknown>>(
+	static async forContext<T extends ClaudeBinaryPluginEnv, TArgs = Record<string, unknown>>(
 		this: new () => T,
 		context: "command",
 		params: CommandContextParams,
 	): Promise<CommandContextResult<T, TArgs>>;
-	static async forContext<T extends BunPluginEnv, TArgs = Record<string, unknown>>(
+	static async forContext<T extends ClaudeBinaryPluginEnv, TArgs = Record<string, unknown>>(
 		this: new () => T,
 		context: EnvContext,
 		params: SessionStartContextParams | HookContextParams | CommandContextParams,
@@ -605,7 +605,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 				const p = params as SessionStartContextParams;
 				const projectRoot = p.projectRoot || Bun.env.CLAUDE_PROJECT_DIR;
 				if (projectRoot) {
-					await BunPluginEnv.loadUserEnvFiles(projectRoot, p.fs);
+					await ClaudeBinaryPluginEnv.loadUserEnvFiles(projectRoot, p.fs);
 				}
 				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
 				const instance = new this();
@@ -625,10 +625,10 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 				// Load env vars from session-env directory
 				// Claude Code does NOT source hook files, so we must load them manually
 				if (p.sessionEnvDir) {
-					await BunPluginEnv.loadAllHookFiles(p.sessionEnvDir, p.fs);
+					await ClaudeBinaryPluginEnv.loadAllHookFiles(p.sessionEnvDir, p.fs);
 				} else {
 					// Fallback to prefixed env file check (won't work in practice, but keep for API compat)
-					await BunPluginEnv.loadFromSessionEnvFile(instance.prefix, p.fs);
+					await ClaudeBinaryPluginEnv.loadFromSessionEnvFile(instance.prefix, p.fs);
 				}
 
 				instance.loadVarsFromEnv();
@@ -672,7 +672,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 					if (content === null) {
 						throw new EnvFileLoadError(varsPath, "failed to read file");
 					}
-					BunPluginEnv.parseEnvFileContent(content);
+					ClaudeBinaryPluginEnv.parseEnvFileContent(content);
 				}
 
 				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
@@ -681,8 +681,8 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 
 				// Parse and validate command args if command config exists
 				let parsedArgs: TArgs | undefined;
-				if (p.commandName && (BunPluginEnv as typeof BunPluginEnv).commands) {
-					const commandConfig = (BunPluginEnv as typeof BunPluginEnv).commands?.[p.commandName];
+				if (p.commandName && (ClaudeBinaryPluginEnv as typeof ClaudeBinaryPluginEnv).commands) {
+					const commandConfig = (ClaudeBinaryPluginEnv as typeof ClaudeBinaryPluginEnv).commands?.[p.commandName];
 					if (commandConfig?.argsSchema) {
 						// Convert args array to object for validation
 						const argsObj: Record<string, unknown> = {};
@@ -797,7 +797,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 
 		const content = await fs.readFile(envFilePath);
 		if (content !== null && content.trim().length > 0) {
-			BunPluginEnv.parseEnvFileContent(content);
+			ClaudeBinaryPluginEnv.parseEnvFileContent(content);
 		}
 	}
 
@@ -838,7 +838,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 		for (const filePath of files) {
 			const content = await fs.readFile(filePath);
 			if (content !== null && content.trim().length > 0) {
-				BunPluginEnv.parseEnvFileContent(content);
+				ClaudeBinaryPluginEnv.parseEnvFileContent(content);
 				loadedCount++;
 			}
 		}
@@ -858,7 +858,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * const sessionEnvDir = BunPluginEnv.getSessionEnvDir(event.session_id);
+	 * const sessionEnvDir = ClaudeBinaryPluginEnv.getSessionEnvDir(event.session_id);
 	 * // "/Users/user/.claude/session-env/abc-123-def"
 	 * ```
 	 */
@@ -964,7 +964,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 				if (content === null) {
 					throw new EnvFileLoadError(filePath, "file exists but could not be read");
 				}
-				BunPluginEnv.parseEnvFileContent(content);
+				ClaudeBinaryPluginEnv.parseEnvFileContent(content);
 				loadedFiles.push(fileName);
 			}
 		}
@@ -996,7 +996,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 	 *   MY_PLUGIN_ENABLED: "true",
 	 *   MY_PLUGIN_API_KEY: apiKey,
 	 * };
-	 * const result = await BunPluginEnv.persistVars(sessionId, vars);
+	 * const result = await ClaudeBinaryPluginEnv.persistVars(sessionId, vars);
 	 * if (result.persisted) {
 	 *   console.log(`Persisted to: ${result.path}`);
 	 * }
@@ -1015,7 +1015,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 		}
 
 		// Write variables to the env file (Claude Code already created the directory)
-		await BunPluginEnv.writeToEnvFile(claudeEnvFile, vars, fs);
+		await ClaudeBinaryPluginEnv.writeToEnvFile(claudeEnvFile, vars, fs);
 
 		// Make the file executable (required for bash to source it)
 		await fs.chmod(claudeEnvFile, "+x");
@@ -1100,7 +1100,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 	 * This is a universal template method for session initialization. It:
 	 * 1. Creates a plugin env instance
 	 * 2. Calls the subclass's setupForSession() method to get variables
-	 * 3. Persists those variables using BunPluginEnv.persistVars()
+	 * 3. Persists those variables using ClaudeBinaryPluginEnv.persistVars()
 	 * 4. Returns the initialized environment and persistence result
 	 *
 	 * Subclasses implement `setupForSession()` to define their detection logic.
@@ -1121,7 +1121,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 	 * }
 	 * ```
 	 */
-	static async initializeSession<T extends BunPluginEnv>(
+	static async initializeSession<T extends ClaudeBinaryPluginEnv>(
 		this: new () => T,
 		params: SessionStartContextParams,
 	): Promise<{ env: T; persisted: PersistResult }> {
@@ -1129,7 +1129,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 		const instance = new this();
 
 		// Pass sessionId to logger so log files go to the correct session directory
-		const log = DebugLogger.create(params.hookName || "BunPluginEnv", {
+		const log = DebugLogger.create(params.hookName || "ClaudeBinaryPluginEnv", {
 			sessionId: params.sessionId,
 		});
 		const fs = params.fs || defaultPluginEnvFileSystem;
@@ -1137,7 +1137,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 		// Load user .env files first (same as forContext("sessionStart"))
 		const projectRoot = params.projectRoot || Bun.env.CLAUDE_PROJECT_DIR;
 		if (projectRoot) {
-			await BunPluginEnv.loadUserEnvFiles(projectRoot, fs);
+			await ClaudeBinaryPluginEnv.loadUserEnvFiles(projectRoot, fs);
 		}
 
 		// Get session ID from params (passed from event data) or fallback to environment
@@ -1180,7 +1180,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 			}
 		}
 
-		const persistResult = await BunPluginEnv.persistVars(sessionId, vars, fs);
+		const persistResult = await ClaudeBinaryPluginEnv.persistVars(sessionId, vars, fs);
 		log.debug(
 			`persisted=${persistResult.persisted}, path=${persistResult.path ?? "(none)"}, reason=${persistResult.reason ?? "(none)"}`,
 		);
@@ -1190,7 +1190,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 		if (envFilePath && sessionId && projectDir) {
 			const sessionEnvDir = envFilePath.replace(/\/hook-\d+\.sh$/, "");
 			if (sessionEnvDir !== envFilePath) {
-				BunPluginEnv.registerSession(sessionId, projectDir, sessionEnvDir);
+				ClaudeBinaryPluginEnv.registerSession(sessionId, projectDir, sessionEnvDir);
 			}
 		}
 
@@ -1210,7 +1210,7 @@ export abstract class BunPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * class MyPluginEnv extends BunPluginEnv<MyEnvVars> {
+	 * class MyPluginEnv extends ClaudeBinaryPluginEnv<MyEnvVars> {
 	 *   protected async setupForSession(params: SessionStartContextParams): Promise<Record<string, string>> {
 	 *     // Detect environment
 	 *     const apiKey = await detectApiKey();

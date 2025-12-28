@@ -18,7 +18,7 @@ For deeper context, reference these files:
 - `src/pipeline.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
 - `src/pipeline-runtime.ts` - `runPipeline()` execution and response mapping
 - `src/builder.ts` - `buildPlugin()` compilation and entrypoint generation
-- `src/plugin-env.ts` - `BunPluginEnv` base class for environment management
+- `src/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class for environment management
 - `src/command-runtime.ts` - `runCommand()` for CLI command execution
 - `src/session-registry.ts` - SQLite session lookup for state persistence
 - `src/schemas.ts` - Zod schemas for Claude Code hook event inputs
@@ -107,7 +107,7 @@ bun run build
 - `src/pipeline-runtime.ts` - `runPipeline()`, response mapping
 - `src/pipeline-types.ts` - Output schemas per hook type
 - `src/builder.ts` - `buildPlugin()`, entrypoint generation
-- `src/plugin-env.ts` - `BunPluginEnv` base class
+- `src/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class
 - `src/schemas.ts` - Zod schemas for hook event inputs
 - `src/otel/` - OpenTelemetry integration
 
@@ -115,7 +115,7 @@ bun run build
 
 1. Claude Code invokes plugin binary with hook event JSON on stdin
 2. Plugin runtime parses input with Zod schema (`src/schemas.ts`)
-3. Environment loaded via `BunPluginEnv` (options + state)
+3. Environment loaded via `ClaudeBinaryPluginEnv` (options + state)
 4. Handler called with `{ input, options, env }` context
 5. Handler returns pipeline output with `status`, `action`, `summary`
 6. Runtime validates output, emits OTEL telemetry

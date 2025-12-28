@@ -1,7 +1,7 @@
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
 import type { HookEventBase, IO } from "./index.js";
-import { BunPluginEnv } from "./plugin-env.js";
+import { ClaudeBinaryPluginEnv } from "./plugin-env.js";
 
 // =============================================================================
 // LOGGER MOCKS
@@ -42,7 +42,7 @@ export function mockLogger(): {
 /**
  * Mock environment class for testing hooks
  */
-class MockEnv extends BunPluginEnv {
+class MockEnv extends ClaudeBinaryPluginEnv {
 	protected readonly prefix = "MOCK";
 }
 

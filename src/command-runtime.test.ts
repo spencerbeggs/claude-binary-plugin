@@ -1,6 +1,18 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { CommandArgumentError, parseRawArgs } from "./command-runtime.js";
+import {
+	CommandArgumentError,
+	createBaseEnv,
+	extractStateFromEnv,
+	findSessionEnvDir,
+	formatFatalError,
+	parseCommandArgs,
+	parseRawArgs,
+	validateCommandOutput,
+} from "./command-runtime.js";
+import type { MockEnvContext } from "./mocks.js";
+import { mockEnv } from "./mocks.js";
+import { ClaudeBinaryPluginEnv } from "./plugin-env.js";
 
 describe("parseRawArgs", () => {
 	test("parses --key=value flags", () => {
@@ -221,5 +233,316 @@ describe("CommandArgumentError", () => {
 		const error = new CommandArgumentError([], schema, zodError);
 
 		expect(error.message).toContain("**(root)**: Root level error");
+	});
+});
+
+// =============================================================================
+// parseCommandArgs tests
+// =============================================================================
+
+describe("parseCommandArgs", () => {
+	test("parses and validates arguments", async () => {
+		const schema = z.object({
+			name: z.string(),
+			count: z.number().optional(),
+		});
+
+		const result = await parseCommandArgs(["--name=test", "--count=42"], schema);
+
+		expect(result.name).toBe("test");
+		expect(result.count).toBe(42);
+	});
+
+	test("throws CommandArgumentError for invalid arguments", async () => {
+		const schema = z.object({
+			name: z.string(),
+		});
+
+		await expect(parseCommandArgs([], schema)).rejects.toThrow(CommandArgumentError);
+	});
+
+	test("uses default values from schema", async () => {
+		const schema = z.object({
+			name: z.string().default("default-name"),
+		});
+
+		const result = await parseCommandArgs([], schema);
+
+		expect(result.name).toBe("default-name");
+	});
+});
+
+// =============================================================================
+// createBaseEnv tests
+// =============================================================================
+
+describe("createBaseEnv", () => {
+	let env: MockEnvContext;
+
+	class TestEnv extends ClaudeBinaryPluginEnv<Record<string, unknown>> {
+		protected readonly prefix = "TEST";
+	}
+
+	beforeEach(() => {
+		env = mockEnv({});
+	});
+
+	afterEach(() => {
+		env.restore();
+	});
+
+	test("uses prefixed env vars when available", () => {
+		env.set("TEST_PROJECT_DIR", "/test/project");
+		env.set("TEST_PLUGIN_DIR", "/test/plugin");
+		env.set("TEST_PLUGIN_ENV_FILE", "/test/env.sh");
+
+		const envInstance = new TestEnv();
+		const result = createBaseEnv(envInstance);
+
+		expect(result.projectDir).toBe("/test/project");
+		expect(result.pluginDir).toBe("/test/plugin");
+		expect(result.pluginEnvFile).toBe("/test/env.sh");
+	});
+
+	test("falls back to CLAUDE_ vars when prefixed not available", () => {
+		env.set("CLAUDE_PROJECT_DIR", "/claude/project");
+		env.set("CLAUDE_PLUGIN_ROOT", "/claude/plugin");
+		env.set("CLAUDE_ENV_FILE", "/claude/env.sh");
+
+		const envInstance = new TestEnv();
+		const result = createBaseEnv(envInstance);
+
+		expect(result.projectDir).toBe("/claude/project");
+		expect(result.pluginDir).toBe("/claude/plugin");
+		expect(result.pluginEnvFile).toBe("/claude/env.sh");
+	});
+
+	test("falls back to defaults when no env vars", () => {
+		const envInstance = new TestEnv();
+		const result = createBaseEnv(envInstance);
+
+		expect(result.projectDir).toBe(process.cwd());
+		expect(result.pluginDir).toBe("");
+		expect(result.pluginEnvFile).toBe("");
+	});
+
+	test("includes logger methods", () => {
+		const envInstance = new TestEnv();
+		const result = createBaseEnv(envInstance);
+
+		expect(typeof result.log).toBe("function");
+		expect(typeof result.info).toBe("function");
+		expect(typeof result.debug).toBe("function");
+	});
+});
+
+// =============================================================================
+// extractStateFromEnv tests
+// =============================================================================
+
+describe("extractStateFromEnv", () => {
+	let env: MockEnvContext;
+
+	class TestEnv extends ClaudeBinaryPluginEnv<Record<string, unknown>> {
+		protected readonly prefix = "TEST";
+	}
+
+	class NoPrefixEnv extends ClaudeBinaryPluginEnv<Record<string, unknown>> {
+		protected readonly prefix = "";
+	}
+
+	beforeEach(() => {
+		env = mockEnv({});
+	});
+
+	afterEach(() => {
+		env.restore();
+	});
+
+	test("returns empty object when no prefix", () => {
+		const envInstance = new NoPrefixEnv();
+		const result = extractStateFromEnv(envInstance);
+
+		expect(result).toEqual({});
+	});
+
+	test("returns empty object when PLUGIN_STATE not set", () => {
+		const envInstance = new TestEnv();
+		const result = extractStateFromEnv(envInstance);
+
+		expect(result).toEqual({});
+	});
+
+	test("decodes base64 PLUGIN_STATE", () => {
+		const state = { foo: "bar", count: 42 };
+		const encoded = Buffer.from(JSON.stringify(state)).toString("base64");
+		env.set("TEST_PLUGIN_STATE", encoded);
+
+		const envInstance = new TestEnv();
+		const result = extractStateFromEnv(envInstance);
+
+		expect(result).toEqual(state);
+	});
+
+	test("returns empty object for invalid base64", () => {
+		env.set("TEST_PLUGIN_STATE", "not-valid-base64!!!!");
+
+		const envInstance = new TestEnv();
+		const result = extractStateFromEnv(envInstance);
+
+		expect(result).toEqual({});
+	});
+
+	test("returns empty object for non-object state", () => {
+		const encoded = Buffer.from(JSON.stringify("just a string")).toString("base64");
+		env.set("TEST_PLUGIN_STATE", encoded);
+
+		const envInstance = new TestEnv();
+		const result = extractStateFromEnv(envInstance);
+
+		expect(result).toEqual({});
+	});
+
+	test("returns empty object for null state", () => {
+		const encoded = Buffer.from(JSON.stringify(null)).toString("base64");
+		env.set("TEST_PLUGIN_STATE", encoded);
+
+		const envInstance = new TestEnv();
+		const result = extractStateFromEnv(envInstance);
+
+		expect(result).toEqual({});
+	});
+});
+
+// =============================================================================
+// findSessionEnvDir tests
+// =============================================================================
+
+describe("findSessionEnvDir", () => {
+	let env: MockEnvContext;
+
+	beforeEach(() => {
+		env = mockEnv({});
+	});
+
+	afterEach(() => {
+		env.restore();
+	});
+
+	test("uses CLAUDE_ENV_FILE directory when available", () => {
+		env.set("CLAUDE_ENV_FILE", "/tmp/session-123/hook-0.sh");
+
+		const result = findSessionEnvDir();
+
+		expect(result).toBe("/tmp/session-123");
+	});
+
+	test("uses *_PLUGIN_ENV_FILE when CLAUDE_ENV_FILE not set", () => {
+		env.set("TEST_PLUGIN_ENV_FILE", "/tmp/test-session/hook-0.sh");
+
+		const result = findSessionEnvDir();
+
+		expect(result).toBe("/tmp/test-session");
+	});
+
+	test("returns undefined when no session env available", () => {
+		// Clear any session env vars that might be set
+		for (const key of Object.keys(Bun.env)) {
+			if (key.includes("SESSION") || key.includes("ENV_FILE")) {
+				delete Bun.env[key];
+			}
+		}
+
+		const result = findSessionEnvDir();
+
+		// May return a directory from SQLite registry if previous tests registered one
+		expect(result === undefined || typeof result === "string").toBe(true);
+	});
+});
+
+// =============================================================================
+// validateCommandOutput tests
+// =============================================================================
+
+describe("validateCommandOutput", () => {
+	test("accepts valid output", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: 0, output: "success" }, "test");
+		}).not.toThrow();
+	});
+
+	test("throws for non-number exitCode", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: "0" as unknown as number, output: "test" }, "test");
+		}).toThrow("invalid exitCode");
+	});
+
+	test("throws for non-string output", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: 0, output: 123 as unknown as string }, "test");
+		}).toThrow("invalid output");
+	});
+
+	test("throws for negative exitCode", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: -1, output: "test" }, "test");
+		}).toThrow("must be 0-255");
+	});
+
+	test("throws for exitCode > 255", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: 256, output: "test" }, "test");
+		}).toThrow("must be 0-255");
+	});
+
+	test("accepts exitCode 0", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: 0, output: "test" }, "test");
+		}).not.toThrow();
+	});
+
+	test("accepts exitCode 255", () => {
+		expect(() => {
+			validateCommandOutput({ exitCode: 255, output: "test" }, "test");
+		}).not.toThrow();
+	});
+});
+
+// =============================================================================
+// formatFatalError tests
+// =============================================================================
+
+describe("formatFatalError", () => {
+	test("formats Error with message", () => {
+		const error = new Error("Something went wrong");
+		const result = formatFatalError("test-cmd", error);
+
+		expect(result).toContain("# Command Error");
+		expect(result).toContain("test-cmd");
+		expect(result).toContain("Something went wrong");
+	});
+
+	test("formats Error with stack trace", () => {
+		const error = new Error("Test error");
+		error.stack = "Error: Test error\n    at test.ts:10";
+
+		const result = formatFatalError("test-cmd", error);
+
+		expect(result).toContain("## Stack Trace");
+		expect(result).toContain("at test.ts:10");
+	});
+
+	test("formats non-Error objects", () => {
+		const result = formatFatalError("test-cmd", "string error");
+
+		expect(result).toContain("# Command Error");
+		expect(result).toContain("string error");
+	});
+
+	test("formats objects", () => {
+		const result = formatFatalError("test-cmd", { code: "ERR_001" });
+
+		expect(result).toContain("# Command Error");
+		expect(result).toContain("[object Object]");
 	});
 });

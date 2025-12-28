@@ -500,9 +500,9 @@ Claude Code's expected response:
 
 ## Environment Management
 
-### BunPluginEnv Class
+### ClaudeBinaryPluginEnv Class
 
-The `BunPluginEnv` class in `src/plugin-env.ts` provides:
+The `ClaudeBinaryPluginEnv` class in `src/plugin-env.ts` provides:
 
 1. **Schema validation** - Validates env vars against Zod schema
 2. **Context-aware loading** - Different loading strategies per context
@@ -523,7 +523,7 @@ const env = await MyEnv.forContext("sessionStart", {
 const env = await MyEnv.forContext("hook", {
   hookName: "my-hook",
   sessionId: event.session_id,
-  sessionEnvDir: BunPluginEnv.getSessionEnvDir(event.session_id),
+  sessionEnvDir: ClaudeBinaryPluginEnv.getSessionEnvDir(event.session_id),
 });
 
 // Commands: Parse --vars argument
@@ -1053,7 +1053,7 @@ State persisted to hook-0.sh as base64 JSON
        ▼
 Commands load state via:
   1. SessionRegistry.getByProjectDir(cwd) → session-env dir
-  2. BunPluginEnv.loadAllHookFiles(dir) → parse hook-*.sh
+  2. ClaudeBinaryPluginEnv.loadAllHookFiles(dir) → parse hook-*.sh
   3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ env })
 ```
 
@@ -1083,7 +1083,7 @@ src/
 ├── pipeline-metrics.ts   # Token estimation, metrics
 ├── command-runtime.ts    # runCommand(), arg parsing
 ├── builder.ts            # buildPlugin(), entrypoint gen
-├── plugin-env.ts         # BunPluginEnv base class
+├── plugin-env.ts         # ClaudeBinaryPluginEnv base class
 ├── schemas.ts            # Input Zod schemas
 ├── session-registry.ts   # SQLite session lookup
 ├── debug-logger.ts       # File-based debug logging
