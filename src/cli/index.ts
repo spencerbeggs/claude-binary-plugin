@@ -30,6 +30,10 @@ import {
 	readPluginManifest,
 } from "../builder.js";
 import type { CompiledPlugin } from "../pipeline.js";
+import { getPackageVersion } from "./macros.ts" with { type: "macro" };
+
+// Package version is inlined at compile time via Bun macro
+const cliVersion = getPackageVersion();
 
 // Build command arguments and options
 const pluginConfigPath = Args.file({ name: "plugin-config-path", exists: "yes" }).pipe(
@@ -189,7 +193,7 @@ const rootCommand = Command.make("claude-binary-plugin", {}, () =>
 // Create and run the CLI
 const cli = Command.run(rootCommand, {
 	name: "Claude Binary Plugin Builder",
-	version: "0.1.0",
+	version: cliVersion,
 });
 
 cli(process.argv).pipe(Effect.provide(BunContext.layer), BunRuntime.runMain);

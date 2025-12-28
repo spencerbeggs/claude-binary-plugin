@@ -11,6 +11,7 @@ Refactor CLI to use @effect/cli with subcommand-based architecture.
 New features:
 - Optional plugin config path argument (defaults to `plugin.config.ts`)
 - Built-in `--help`, `--version`, `--wizard` flags from @effect/cli
+- CLI version inlined at compile time via Bun macro (reads from package.json)
 - Shell completion scripts via `--completions` (bash, zsh, fish, sh)
 - Configurable log levels via `--log-level`
 
