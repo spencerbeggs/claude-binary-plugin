@@ -7,12 +7,12 @@ export { DebugLogger };
 export type { DebugLoggerOptions, LogLevel, Timer, TimingEntry, TimingTracker } from "./debug-logger.js";
 
 import {
-	BunPluginEnv,
+	ClaudeBinaryPluginEnv,
 	EnvFileLoadError,
 	escapeForBashDoubleQuotes,
 	formatZodError as formatZodErrorAsMarkdown,
 } from "./plugin-env.js";
-export { BunPluginEnv, EnvFileLoadError, escapeForBashDoubleQuotes, formatZodErrorAsMarkdown };
+export { ClaudeBinaryPluginEnv, EnvFileLoadError, escapeForBashDoubleQuotes, formatZodErrorAsMarkdown };
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -79,6 +79,11 @@ export interface IO {
 	stdin: typeof process.stdin;
 	stdout: typeof process.stdout;
 	stderr: typeof process.stderr;
+	/**
+	 * Pre-loaded input text, bypasses stdin reading.
+	 * Useful for testing without mocking Bun.stdin.
+	 */
+	inputText?: string;
 }
 
 /**
@@ -99,7 +104,7 @@ export interface HookEventOptions<TEnv = unknown> extends IO {
 	 */
 	pluginVersion?: string;
 	/**
-	 * BunPluginEnv subclass for type-safe environment loading.
+	 * ClaudeBinaryPluginEnv subclass for type-safe environment loading.
 	 *
 	 * @example
 	 * ```ts
@@ -1501,6 +1506,17 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
+	 * Reads input text from options.inputText or Bun.stdin.
+	 * Allows testing without mocking Bun.stdin.
+	 */
+	protected static async readInputText(options: IO): Promise<string> {
+		if (options.inputText !== undefined) {
+			return options.inputText;
+		}
+		return Bun.stdin.text();
+	}
+
+	/**
 	 * Create a HookEvent from stdin using Bun.stdin.
 	 * Uses two-stage parsing to enable OTEL error capture on schema validation failures.
 	 * @param options - The I/O streams and optional name
@@ -1509,12 +1525,12 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 		const hookName = options.name ?? "HookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const params = await Bun.stdin.text();
+		const params = await HookEvent.readInputText(options);
 		if (params) {
 			// Two-stage parsing: extracts session_id first, inits OTEL, then validates
 			const parsed = (await parseWithOTEL(params, HookEventSchema, hookName)) as HookEventBase;
 			// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-			const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+			const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 			// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 			const env = (await (options.envClass as any).forContext("hook", {
 				sessionId: parsed.session_id,
@@ -1558,13 +1574,13 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		const hookName = options.name ?? "PreToolUseHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read PreToolUseEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, PreToolUseEventSchema, hookName)) as PreToolUseEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1609,13 +1625,13 @@ export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implem
 		const hookName = options.name ?? "PostToolUseHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read PostToolUseEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, PostToolUseEventSchema, hookName)) as PostToolUseEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1654,13 +1670,13 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
 		const hookName = options.name ?? "PermissionRequestHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read PermissionRequestEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, PermissionRequestEventSchema, hookName)) as PermissionRequestEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1695,13 +1711,13 @@ export class NotificationHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		const hookName = options.name ?? "NotificationHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read NotificationEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, NotificationEventSchema, hookName)) as NotificationEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1737,13 +1753,13 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
 		const hookName = options.name ?? "UserPromptSubmitHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read UserPromptSubmitEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, UserPromptSubmitEventSchema, hookName)) as UserPromptSubmitEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1779,13 +1795,13 @@ export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements St
 		const hookName = options.name ?? "StopHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read StopEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, StopEventSchema, hookName)) as StopEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1821,13 +1837,13 @@ export class SubagentStopHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		const hookName = options.name ?? "SubagentStopHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read SubagentStopEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, SubagentStopEventSchema, hookName)) as SubagentStopEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1862,13 +1878,13 @@ export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		const hookName = options.name ?? "PreCompactHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read PreCompactEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, PreCompactEventSchema, hookName)) as PreCompactEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
@@ -1904,7 +1920,7 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		const hookName = options.name ?? "SessionStartHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read SessionStartEvent from stdin");
 		}
@@ -1949,13 +1965,13 @@ export class SessionEndHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		const hookName = options.name ?? "SessionEndHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
-		const eventText = await Bun.stdin.text();
+		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
 			throw new Error("Failed to read SessionEndEvent from stdin");
 		}
 		const parsed = (await parseWithOTEL(eventText, SessionEndEventSchema, hookName)) as SessionEndEvent;
 		// Get session-env dir from mapping file (Claude Code doesn't source hook files)
-		const sessionEnvDir = await BunPluginEnv.getSessionEnvDir(parsed.session_id);
+		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: This is ugly, but fine for now
 		const env = (await (options.envClass as any).forContext("hook", {
 			sessionId: parsed.session_id,

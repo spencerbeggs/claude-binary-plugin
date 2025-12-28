@@ -687,7 +687,7 @@ export interface BaseEnv {
 	/** Path to the session env file (from CLAUDE_ENV_FILE) */
 	readonly pluginEnvFile: string;
 
-	// Logger methods (bound from BunPluginEnv instance)
+	// Logger methods (bound from ClaudeBinaryPluginEnv instance)
 	/** Log at INFO level */
 	log(message: string, ...args: unknown[]): void;
 	/** Log at INFO level (alias for log) */

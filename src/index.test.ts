@@ -13,7 +13,7 @@ import type {
 	UserPromptSubmitEvent,
 } from "./index.js";
 import {
-	BunPluginEnv,
+	ClaudeBinaryPluginEnv,
 	HookEvent,
 	HookEventName,
 	HookResponseBuilder,
@@ -42,7 +42,7 @@ import { envPresets, mockEnv } from "./mocks.js";
 // =============================================================================
 
 // Mock environment class for testing
-class MockEnv extends BunPluginEnv {
+class MockEnv extends ClaudeBinaryPluginEnv {
 	protected readonly prefix = "MOCK";
 }
 

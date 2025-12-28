@@ -16,7 +16,7 @@
 import { z } from "zod";
 import type { ZodSchema } from "./index.js";
 import {
-	BunPluginEnv,
+	ClaudeBinaryPluginEnv,
 	NotificationHookEvent,
 	PermissionRequestHookEvent,
 	PostToolUseHookEvent,
@@ -93,6 +93,9 @@ interface PermissionRequestResponse {
 import { extractTokenMetrics } from "./pipeline-metrics.js";
 import type { AnyPipelineOutput, ExecutionStatus, HookAction } from "./pipeline-types.js";
 import { isPipelineOutput } from "./pipeline-types.js";
+
+// Re-export types that are used in exports
+export type { ExecutionStatus, HookAction } from "./pipeline-types.js";
 
 // =============================================================================
 // HOOK EVENT CONSTRUCTORS MAP
@@ -291,6 +294,44 @@ function convertToResponse(hookType: HookEventType, output: AnyPipelineOutput): 
 // =============================================================================
 
 /**
+ * I/O dependencies for runPipeline.
+ * Allows injection for testing without mocking process globals.
+ */
+export interface IODependencies {
+	/** Readable stream for hook input (defaults to process.stdin) */
+	stdin?: NodeJS.ReadableStream;
+	/** Writable stream for hook output (defaults to process.stdout) */
+	stdout?: NodeJS.WritableStream;
+	/** Writable stream for error output (defaults to process.stderr) */
+	stderr?: NodeJS.WritableStream;
+	/** Exit function (defaults to process.exit) */
+	exit?: (code: number) => never;
+	/** Get current working directory (defaults to process.cwd) */
+	cwd?: () => string;
+	/**
+	 * Pre-loaded input text, bypasses stdin reading.
+	 * Useful for testing without mocking Bun.stdin.
+	 */
+	inputText?: string;
+}
+
+/**
+ * Resolved I/O dependencies type (inputText remains optional).
+ */
+type ResolvedIODependencies = Required<Omit<IODependencies, "inputText">> & Pick<IODependencies, "inputText">;
+
+/**
+ * Default I/O dependencies using process globals.
+ */
+const defaultIO: ResolvedIODependencies = {
+	stdin: process.stdin,
+	stdout: process.stdout,
+	stderr: process.stderr,
+	exit: (code: number) => process.exit(code),
+	cwd: () => process.cwd(),
+};
+
+/**
  * Options for running a pipeline hook.
  */
 export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, string>> {
@@ -305,13 +346,15 @@ export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, 
 	/** The pipeline handler function */
 	pipeline: PipelineHandler<unknown, unknown, TOptions, TState>;
 	/** Environment class for loading env vars */
-	envClass: new () => BunPluginEnv<TOptions>;
+	envClass: new () => ClaudeBinaryPluginEnv<TOptions>;
 	/** Tool filter (for PreToolUse/PostToolUse) */
 	tools?: string[];
 	/** Zod schema for validating options (used for SessionStart persistence) */
 	schema?: z.ZodType<TOptions>;
 	/** Setup function for computing derived variables (used for SessionStart persistence) */
 	setup?: SetupFunction<TOptions>;
+	/** I/O dependencies (defaults to process.*) - for testing */
+	io?: IODependencies;
 }
 
 /**
@@ -457,11 +500,21 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 	const { hookType, hookName, pluginName, pluginVersion, pipeline, envClass, tools, schema, setup } = options;
 	const startTime = performance.now();
 
+	// Merge provided I/O with defaults
+	const io: ResolvedIODependencies = { ...defaultIO, ...options.io };
+
+	// Helper to write to stderr
+	const writeError = (msg: string) => {
+		if (io.stderr && "write" in io.stderr) {
+			(io.stderr as NodeJS.WritableStream).write(`${msg}\n`);
+		}
+	};
+
 	// Get the appropriate event class
 	const EventClass = HookEventClasses[hookType];
 	if (!EventClass) {
-		console.error(`Unknown hook type: ${hookType}`);
-		process.exit(2);
+		writeError(`Unknown hook type: ${hookType}`);
+		io.exit(2);
 	}
 
 	// Create the event from stdin
@@ -475,9 +528,10 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			name: hookName,
 			pluginName,
 			pluginVersion,
-			stdin: process.stdin,
-			stdout: process.stdout,
-			stderr: process.stderr,
+			stdin: io.stdin,
+			stdout: io.stdout,
+			stderr: io.stderr,
+			inputText: io.inputText,
 			envClass,
 		});
 		event = result.event;
@@ -485,14 +539,14 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 	} catch (error) {
 		// Handle validation errors with debug output
 		if (error instanceof z.ZodError) {
-			console.error(`[${hookName}] Input validation failed:`);
-			console.error(JSON.stringify(error.issues, null, 2));
+			writeError(`[${hookName}] Input validation failed:`);
+			writeError(JSON.stringify(error.issues, null, 2));
 
 			if (Bun.env.CLAUDE_DEBUG === "1") {
-				console.error(`\n[${hookName}] Debug: Hook type=${hookType}, Plugin=${pluginName}`);
-				console.error(`[${hookName}] Debug: Set CLAUDE_DEBUG=0 to suppress this output`);
+				writeError(`\n[${hookName}] Debug: Hook type=${hookType}, Plugin=${pluginName}`);
+				writeError(`[${hookName}] Debug: Set CLAUDE_DEBUG=0 to suppress this output`);
 			}
-			process.exit(2);
+			io.exit(2);
 		}
 		throw error;
 	}
@@ -530,7 +584,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 		// For SessionStart, run setup() BEFORE the hook to get fresh state.
 		// For other hooks, extract state from the persisted env.
 		const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE ?? "";
-		const cwd = "cwd" in event ? (event.cwd as string) : process.cwd();
+		const cwd = "cwd" in event ? (event.cwd as string) : io.cwd();
 		const baseEnv = createBaseEnv(cwd, claudeEnvFile, env);
 
 		let state: TState;
@@ -611,7 +665,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			if (hookType === "SessionStart") {
 				await persistSessionEnv({
 					event: event as SessionStartHookEvent,
-					env: env as BunPluginEnv<unknown>,
+					env: env as ClaudeBinaryPluginEnv<unknown>,
 					schema,
 					state: state as Record<string, unknown>,
 					baseEnv,
@@ -687,7 +741,7 @@ function isDebugEnabled(): boolean {
 	return val === "1" || val === "true";
 }
 
-function extractStateFromEnv(env: BunPluginEnv<unknown>): Record<string, unknown> {
+function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
 	const prefix = env.getPrefix();
 
 	// Always log to file for debugging (bypasses stderr issues)
@@ -740,7 +794,7 @@ function extractStateFromEnv(env: BunPluginEnv<unknown>): Record<string, unknown
  */
 interface PersistSessionEnvOptions {
 	event: SessionStartHookEvent;
-	env: BunPluginEnv<unknown>;
+	env: ClaudeBinaryPluginEnv<unknown>;
 	schema?: z.ZodType<unknown>;
 	/** State from setup() - will be JSON-stringified */
 	state?: Record<string, unknown>;
@@ -751,7 +805,7 @@ interface PersistSessionEnvOptions {
 /**
  * Create the base env object for the setup function.
  */
-function createBaseEnv(cwd: string, claudeEnvFile: string, env: BunPluginEnv<unknown>): BaseEnv {
+function createBaseEnv(cwd: string, claudeEnvFile: string, env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
 	return {
 		projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? cwd,
 		pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "",
@@ -836,12 +890,12 @@ async function persistSessionEnv(options: PersistSessionEnvOptions): Promise<voi
 	}
 
 	// Persist all variables
-	await BunPluginEnv.persistVars(event.session_id, vars);
+	await ClaudeBinaryPluginEnv.persistVars(event.session_id, vars);
 
 	// Register session in SQLite registry for subsequent lookups
 	const sessionEnvDir = claudeEnvFile.replace(/\/hook-\d+\.sh$/, "");
 	if (sessionEnvDir !== claudeEnvFile && event.session_id && baseEnv.projectDir) {
-		BunPluginEnv.registerSession(event.session_id, baseEnv.projectDir, sessionEnvDir);
+		ClaudeBinaryPluginEnv.registerSession(event.session_id, baseEnv.projectDir, sessionEnvDir);
 	}
 }
 
@@ -860,7 +914,7 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
 	/** The raw handler function */
 	handler: (ctx: { event: unknown; options: TOptions; env: TState }) => void | Promise<void>;
 	/** Environment class */
-	envClass: new () => BunPluginEnv<TOptions>;
+	envClass: new () => ClaudeBinaryPluginEnv<TOptions>;
 }
 
 /**
@@ -928,7 +982,7 @@ export async function runRawHandler<TOptions, TState = Record<string, string>>(
 // =============================================================================
 
 /**
- * Create a BunPluginEnv subclass from a Zod schema, prefix, and plugin name.
+ * Create a ClaudeBinaryPluginEnv subclass from a Zod schema, prefix, and plugin name.
  *
  * This is used by the generated plugin entrypoint to create the env class
  * dynamically based on the plugin configuration.
@@ -941,8 +995,8 @@ export function createEnvClass<T>(
 	prefixValue: string,
 	schemaValue: ZodSchema<T>,
 	pluginNameValue?: string,
-): new () => BunPluginEnv<T> & { validated: T } {
-	return class extends BunPluginEnv<T> {
+): new () => ClaudeBinaryPluginEnv<T> & { validated: T } {
+	return class extends ClaudeBinaryPluginEnv<T> {
 		protected readonly prefix = prefixValue;
 		protected override readonly pluginName = pluginNameValue ?? "";
 		protected override schema = schemaValue;
@@ -950,7 +1004,7 @@ export function createEnvClass<T>(
 		get validated(): T {
 			return this.vars as T;
 		}
-	} as new () => BunPluginEnv<T> & { validated: T };
+	} as new () => ClaudeBinaryPluginEnv<T> & { validated: T };
 }
 
 /**
@@ -1015,3 +1069,22 @@ export async function handleUnknownHook(hookKey: string, validHooks: string[]): 
 	process.stderr.write(`${errorMessage}\n`);
 	process.exit(2);
 }
+
+// =============================================================================
+// EXPORTED UTILITIES
+// =============================================================================
+
+export {
+	mapToOutcome,
+	mapToPermissionDecision,
+	convertToPreToolUseResponse,
+	convertToPostToolUseResponse,
+	convertToSessionStartResponse,
+	convertToStopResponse,
+	convertToUserPromptSubmitResponse,
+	convertToPermissionRequestResponse,
+	convertToResponse,
+	isDebugEnabled,
+	extractStateFromEnv,
+	createBaseEnv,
+};

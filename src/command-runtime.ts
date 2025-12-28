@@ -10,7 +10,7 @@
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { BaseEnv, CommandHandler, CommandOutput, PluginEnv } from "./pipeline.js";
-import { BunPluginEnv } from "./plugin-env.js";
+import { ClaudeBinaryPluginEnv } from "./plugin-env.js";
 
 // =============================================================================
 // ARGUMENT PARSING
@@ -216,13 +216,13 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 	/** Zod schema for validating arguments */
 	argsSchema: z.ZodType<TArgs>;
 	/** Environment class for loading env vars */
-	envClass: new () => BunPluginEnv<TOptions>;
+	envClass: new () => ClaudeBinaryPluginEnv<TOptions>;
 }
 
 /**
  * Create the base env object.
  */
-function createBaseEnv(env: BunPluginEnv<unknown>): BaseEnv {
+function createBaseEnv(env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
 	const prefix = env.getPrefix() ?? "";
 	return {
 		projectDir: Bun.env[`${prefix}_PROJECT_DIR`] ?? Bun.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
@@ -242,7 +242,7 @@ function createBaseEnv(env: BunPluginEnv<unknown>): BaseEnv {
  * @param env - The plugin environment instance
  * @returns State object parsed from {prefix}_PLUGIN_STATE
  */
-function extractStateFromEnv(env: BunPluginEnv<unknown>): Record<string, unknown> {
+function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
 	const prefix = env.getPrefix();
 	if (!prefix) {
 		return {};
@@ -277,7 +277,7 @@ function extractStateFromEnv(env: BunPluginEnv<unknown>): Record<string, unknown
 function findSessionEnvDir(): string | undefined {
 	// First try via session ID in SQLite registry
 	if (Bun.env.CLAUDE_SESSION_ID) {
-		const dir = BunPluginEnv.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
+		const dir = ClaudeBinaryPluginEnv.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
 		if (dir) return dir;
 	}
 
@@ -295,7 +295,7 @@ function findSessionEnvDir(): string | undefined {
 
 	// Try project directory in SQLite registry (saved during SessionStart)
 	const projectDir = process.cwd();
-	const dir = BunPluginEnv.getProjectSessionEnvDir(projectDir);
+	const dir = ClaudeBinaryPluginEnv.getProjectSessionEnvDir(projectDir);
 	if (dir) return dir;
 
 	return undefined;
@@ -332,7 +332,7 @@ export async function runCommand<TArgs, TOptions, TState>(
 					"Commands must be run within a Claude Code session that has been initialized by SessionStart hook.",
 			);
 		}
-		await BunPluginEnv.loadAllHookFiles(sessionEnvDir);
+		await ClaudeBinaryPluginEnv.loadAllHookFiles(sessionEnvDir);
 
 		// Create env instance after loading session files (constructor reads from Bun.env)
 		const envInstance = new envClass();
@@ -416,3 +416,9 @@ function formatFatalError(commandName: string, error: unknown): string {
 export const emptyArgsSchema = z.object({});
 
 export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
+
+// =============================================================================
+// EXPORTED UTILITIES FOR TESTING
+// =============================================================================
+
+export { createBaseEnv, extractStateFromEnv, findSessionEnvDir, validateCommandOutput, formatFatalError };
