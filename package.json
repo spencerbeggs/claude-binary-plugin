@@ -86,6 +86,7 @@
 		}
 	},
 	"publishConfig": {
+		"access": "public",
 		"targets": [
 			{
 				"protocol": "npm",
