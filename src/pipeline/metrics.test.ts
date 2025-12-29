@@ -10,8 +10,8 @@ import {
 	extractToolTokenMetrics,
 	getSessionTokenAttributes,
 	updateSessionTokens,
-} from "./pipeline-metrics.js";
-import type { AnyPipelineOutput } from "./pipeline-types.js";
+} from "./metrics.js";
+import type { AnyPipelineOutput } from "./types.js";
 
 describe("estimateTokenCount", () => {
 	test("returns 0 for null/undefined/empty", () => {

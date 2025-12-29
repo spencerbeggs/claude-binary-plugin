@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Writable } from "node:stream";
 import { z } from "zod";
-import type { MockEnvContext } from "./mocks.js";
-import { mockEnv } from "./mocks.js";
-import type { IODependencies } from "./pipeline-runtime.js";
+import type { MockEnvContext } from "../testing/mocks.js";
+import { mockEnv } from "../testing/mocks.js";
+import type { IODependencies } from "./runtime.js";
 import {
 	convertToPermissionRequestResponse,
 	convertToPostToolUseResponse,
@@ -19,8 +19,8 @@ import {
 	mapToOutcome,
 	mapToPermissionDecision,
 	runPipeline,
-} from "./pipeline-runtime.js";
-import type { AnyPipelineOutput } from "./pipeline-types.js";
+} from "./runtime.js";
+import type { AnyPipelineOutput } from "./types.js";
 
 /**
  * Base event fields required by all hook events.

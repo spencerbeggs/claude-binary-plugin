@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import type { MockEnvContext } from "./mocks.js";
-import { mockEnv } from "./mocks.js";
+import type { MockEnvContext } from "../testing/mocks.js";
+import { mockEnv } from "../testing/mocks.js";
 import type { PluginEnvFileSystem, ZodErrorMinimal } from "./plugin-env.js";
 import { ClaudeBinaryPluginEnv, escapeForBashDoubleQuotes, formatZodError } from "./plugin-env.js";
 

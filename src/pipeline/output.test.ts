@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { detectContentType, estimateTokenCount, extractTokenMetrics } from "./pipeline-metrics.js";
+import { detectContentType, estimateTokenCount, extractTokenMetrics } from "./metrics.js";
 import type {
 	PermissionRequestOutput,
 	PostToolUseOutput,
@@ -17,7 +17,7 @@ import type {
 	SessionStartOutput,
 	StopOutput,
 	UserPromptSubmitOutput,
-} from "./pipeline-types.js";
+} from "./types.js";
 import {
 	PassthroughOutputSchema,
 	PermissionRequestOutputSchema,
@@ -27,7 +27,7 @@ import {
 	StopOutputSchema,
 	UserPromptSubmitOutputSchema,
 	isPipelineOutput,
-} from "./pipeline-types.js";
+} from "./types.js";
 
 // =============================================================================
 // PIPELINE OUTPUT DETECTION

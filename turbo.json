@@ -1,6 +1,6 @@
 {
 	"$schema": "https://turborepo.com/schema.v2.json",
-	"globalPassThroughEnv": [],
+	"globalPassThroughEnv": ["HOME", "XDG_CONFIG_HOME"],
 	"tasks": {
 		"api": {
 			"dependsOn": ["typecheck"],

@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { ClaudeBinaryPlugin, getOutputSchema, isPipelineHook, isRawHook } from "./pipeline.js";
-import type { PreToolUseOutput, SessionStartOutput } from "./pipeline-types.js";
+import { ClaudeBinaryPlugin, getOutputSchema, isPipelineHook, isRawHook } from "./config.js";
+import type { PreToolUseOutput, SessionStartOutput } from "./types.js";
 import {
 	OutputSchemas,
 	PostToolUseOutputSchema,
 	PreToolUseOutputSchema,
 	SessionStartOutputSchema,
 	StopOutputSchema,
-} from "./pipeline-types.js";
+} from "./types.js";
 
 describe("Pipeline Output Schemas", () => {
 	describe("SessionStartOutputSchema", () => {

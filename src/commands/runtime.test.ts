@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
+import type { MockEnvContext } from "../testing/mocks.js";
+import { mockEnv } from "../testing/mocks.js";
 import {
 	CommandArgumentError,
 	createBaseEnv,
@@ -9,10 +12,7 @@ import {
 	parseCommandArgs,
 	parseRawArgs,
 	validateCommandOutput,
-} from "./command-runtime.js";
-import type { MockEnvContext } from "./mocks.js";
-import { mockEnv } from "./mocks.js";
-import { ClaudeBinaryPluginEnv } from "./plugin-env.js";
+} from "./runtime.js";
 
 describe("parseRawArgs", () => {
 	test("parses --key=value flags", () => {

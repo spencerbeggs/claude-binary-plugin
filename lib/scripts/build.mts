@@ -5,6 +5,8 @@ await BunPackage.create({
 		"src/cli/index.ts": "bin/cli.js",
 	},
 	link: "npm",
+	// Install dependencies in dist directories for local linking
+	installDeps: false,
 	packageJson({ pkg, target }) {
 		// Scope the package name for GitHub Packages
 		if (target.registry === "https://npm.pkg.github.com/") {

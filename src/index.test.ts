@@ -34,8 +34,8 @@ import {
 	UserPromptSubmitHookEvent,
 	UserPromptSubmitResponseBuilder,
 } from "./index.js";
-import type { MockEnvContext } from "./mocks.js";
-import { envPresets, mockEnv } from "./mocks.js";
+import type { MockEnvContext } from "./testing/mocks.js";
+import { envPresets, mockEnv } from "./testing/mocks.js";
 
 // =============================================================================
 // TEST UTILITIES

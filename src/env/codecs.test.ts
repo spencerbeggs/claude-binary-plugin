@@ -14,7 +14,7 @@ import {
 	optionalBoolEnvCodec,
 	optionalIntEnvCodec,
 	optionalNullableEnvCodec,
-} from "./env-codecs.js";
+} from "./codecs.js";
 
 describe("boolEnvCodec", () => {
 	test("decodes 'true' to true", () => {

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import type { MockEnvContext } from "../testing/mocks.js";
+import { mockEnv } from "../testing/mocks.js";
 import type {
 	GeneratePipelinePluginOptions,
 	MarketplaceManifest,
@@ -22,8 +24,6 @@ import {
 	readPluginManifest,
 	syncPluginToCache,
 } from "./builder.js";
-import type { MockEnvContext } from "./mocks.js";
-import { mockEnv } from "./mocks.js";
 
 // Test directory for build tests
 const TEST_DIR = join(Bun.env.TMPDIR || "/tmp", `builder-test-${Date.now()}`);
@@ -895,8 +895,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 		// Check that it imports the plugin definition
 		expect(entrypoint).toContain('import pluginDefinition from "./my-plugin.ts"');
 
-		// Check that it imports the pipeline runtime
-		expect(entrypoint).toContain("claude-binary-plugin/pipeline-runtime");
+		// Check that it imports from the main entry point
+		expect(entrypoint).toContain('from "claude-binary-plugin"');
 
 		// Check that it has the correct hook cases
 		expect(entrypoint).toContain('case "SessionStart/project-context"');
@@ -1004,7 +1004,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		expect(entrypoint).toContain("--sidecar");
 		expect(entrypoint).toContain("runSidecar");
-		expect(entrypoint).toContain("claude-binary-plugin/otel/sidecar");
+		expect(entrypoint).toContain("sidecarMain");
 	});
 
 	test("calls setPluginInfo with plugin name and version", () => {

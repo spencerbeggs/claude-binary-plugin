@@ -194,6 +194,12 @@ interface BunPackageOptions {
 	 * Runs `bun unlink` in root, then `bun link` in the target directory.
 	 */
 	link?: TargetShorthand;
+	/**
+	 * Install dependencies in dist directories after copying.
+	 * Required for local linking when TypeScript needs to resolve types
+	 * from the package's own node_modules (e.g., zod schemas).
+	 */
+	installDeps?: boolean;
 }
 
 /**
@@ -256,7 +262,11 @@ export class BunPackage {
 	}
 
 	/**
-	 * Link a target directory for local development
+	 * Link a target directory for local development.
+	 *
+	 * Note: We create symlinks manually instead of using `bun link` because
+	 * bun link doesn't respect globalDir/globalBinDir settings from bunfig.toml.
+	 * See: https://github.com/oven-sh/bun/issues/12886
 	 */
 	private async linkTarget(link: TargetShorthand, targets: ResolvedTarget[]): Promise<void> {
 		// Find matching target
@@ -274,25 +284,152 @@ export class BunPackage {
 
 		console.log(`🔗 Linking ${matchingTarget.directory}...`);
 
-		// Remove existing global symlink directly (bun unlink only works from the linked dir)
-		const globalLinkPath = join(
-			process.env.HOME ?? "",
-			".local/share/bun/install/global/node_modules",
-			this.packageJson.name,
-		);
-		try {
-			await rm(globalLinkPath, { force: true });
-		} catch {
-			// Doesn't exist, that's fine
+		// Get configured paths from bunfig.toml
+		const { globalDir, globalBinDir } = await this.getBunfigGlobalPaths();
+
+		// Remove existing global symlinks from all possible locations
+		const globalModulesPaths = await this.getGlobalModulesPaths();
+		for (const globalModulesPath of globalModulesPaths) {
+			const globalLinkPath = join(globalModulesPath, this.packageJson.name);
+			try {
+				await rm(globalLinkPath, { force: true });
+			} catch {
+				// Doesn't exist, that's fine
+			}
 		}
 
-		// Link from target directory
-		const result = await Bun.$`bun link`.cwd(matchingTarget.directory).nothrow();
-		if (result.exitCode !== 0) {
-			console.error(`   ✗ Failed to link: ${result.stderr.toString()}`);
+		// Create the package symlink in globalDir
+		const globalModulesPath = join(globalDir, "node_modules");
+		const globalLinkPath = join(globalModulesPath, this.packageJson.name);
+
+		try {
+			// Ensure the node_modules directory exists
+			await mkdir(globalModulesPath, { recursive: true });
+
+			// Create symlink to the target directory
+			await Bun.$`ln -sf ${matchingTarget.directory} ${globalLinkPath}`.nothrow();
+			console.log(`   ✓ Linked ${this.packageJson.name} → ${globalLinkPath}`);
+		} catch (error) {
+			console.error(`   ✗ Failed to create symlink: ${error}`);
 			return;
 		}
-		console.log(`   ✓ Linked ${this.packageJson.name}`);
+
+		// Create bin symlinks if package has bin entries
+		if (this.packageJson.bin) {
+			await mkdir(globalBinDir, { recursive: true });
+
+			for (const [binName, binPath] of Object.entries(this.packageJson.bin)) {
+				const sourceBinPath = join(matchingTarget.directory, binPath);
+				const targetBinPath = join(globalBinDir, binName);
+
+				try {
+					await rm(targetBinPath, { force: true });
+					await Bun.$`ln -sf ${sourceBinPath} ${targetBinPath}`.nothrow();
+					console.log(`   ✓ Linked bin/${binName} → ${targetBinPath}`);
+				} catch (error) {
+					console.error(`   ✗ Failed to link bin/${binName}: ${error}`);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Get globalDir and globalBinDir from bunfig.toml, with fallbacks.
+	 */
+	private async getBunfigGlobalPaths(): Promise<{ globalDir: string; globalBinDir: string }> {
+		const home = process.env.HOME ?? "";
+
+		// Default paths
+		let globalDir = join(home, ".bun/install/global");
+		let globalBinDir = join(home, ".bun/bin");
+
+		// Try to read bunfig.toml
+		const bunfigPaths = [
+			process.env.XDG_CONFIG_HOME ? join(process.env.XDG_CONFIG_HOME, ".bunfig.toml") : null,
+			join(home, ".bunfig.toml"),
+		].filter(Boolean) as string[];
+
+		for (const bunfigPath of bunfigPaths) {
+			try {
+				const file = Bun.file(bunfigPath);
+				const exists = await file.exists();
+				if (!exists) continue;
+
+				const content = await file.text();
+
+				// Parse globalDir
+				const globalDirMatch = content.match(/globalDir\s*=\s*["']([^"']+)["']/);
+				if (globalDirMatch?.[1]) {
+					globalDir = globalDirMatch[1].replace(/^~/, home);
+				}
+
+				// Parse globalBinDir
+				const globalBinDirMatch = content.match(/globalBinDir\s*=\s*["']([^"']+)["']/);
+				if (globalBinDirMatch?.[1]) {
+					globalBinDir = globalBinDirMatch[1].replace(/^~/, home);
+				}
+
+				// Found a bunfig, use these values
+				break;
+			} catch {
+				// File doesn't exist or can't be read, continue
+			}
+		}
+
+		return { globalDir, globalBinDir };
+	}
+
+	/**
+	 * Get all possible global modules paths to clean up before linking.
+	 *
+	 * Bun can have global modules in different locations depending on:
+	 * - bunfig.toml install.globalDir setting
+	 * - XDG_DATA_HOME environment variable
+	 * - Default ~/.bun/install/global
+	 *
+	 * We return all possible paths so we can clean up any stale links.
+	 */
+	private async getGlobalModulesPaths(): Promise<string[]> {
+		const home = process.env.HOME ?? "";
+		const paths: string[] = [];
+
+		// 1. Try to read bunfig.toml for explicit globalDir
+		const bunfigPaths = [
+			process.env.XDG_CONFIG_HOME ? join(process.env.XDG_CONFIG_HOME, ".bunfig.toml") : null,
+			join(home, ".bunfig.toml"),
+		].filter(Boolean) as string[];
+
+		for (const bunfigPath of bunfigPaths) {
+			try {
+				const content = await Bun.file(bunfigPath).text();
+				// Simple TOML parsing for install.globalDir
+				const match = content.match(/globalDir\s*=\s*["']([^"']+)["']/);
+				if (match?.[1]) {
+					const globalDir = match[1].replace(/^~/, home);
+					paths.push(join(globalDir, "node_modules"));
+				}
+			} catch {
+				// File doesn't exist or can't be read, continue
+			}
+		}
+
+		// 2. Add XDG_DATA_HOME path if set
+		if (process.env.XDG_DATA_HOME) {
+			paths.push(join(process.env.XDG_DATA_HOME, "bun/install/global/node_modules"));
+		}
+
+		// 3. Add path derived from bun pm cache
+		const cacheResult = await Bun.$`bun pm cache`.text();
+		const cachePath = cacheResult.split("\n")[0]?.trim() ?? "";
+		if (cachePath) {
+			paths.push(join(dirname(cachePath), "global/node_modules"));
+		}
+
+		// 4. Always include default ~/.bun path (bun link often uses this regardless of cache location)
+		paths.push(join(home, ".bun/install/global/node_modules"));
+
+		// Return unique paths
+		return [...new Set(paths)];
 	}
 
 	/**
@@ -458,7 +595,23 @@ export class BunPackage {
 		// Transform and write package.json
 		await this.writePackageJson(target);
 
+		// Install dependencies if requested (for local linking)
+		if (this.options.installDeps) {
+			await this.installDependencies(target);
+		}
+
 		console.log(`   ✓ Created ${target.directory}`);
+	}
+
+	/**
+	 * Install dependencies in a target directory
+	 */
+	private async installDependencies(target: ResolvedTarget): Promise<void> {
+		console.log(`   📦 Installing dependencies...`);
+		const result = await Bun.$`bun install --production`.cwd(target.directory).nothrow();
+		if (result.exitCode !== 0) {
+			console.error(`   ✗ Failed to install dependencies: ${result.stderr.toString()}`);
+		}
 	}
 
 	/**

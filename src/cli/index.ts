@@ -28,11 +28,11 @@ import {
 	generateHooksJson,
 	generatePipelinePluginEntrypoint,
 	readPluginManifest,
-} from "../builder.js";
-import type { CompiledPlugin } from "../pipeline.js";
-import { getPackageVersion } from "./macros.js" with { type: "macro" };
+} from "../build/builder.js";
+import type { CompiledPlugin } from "../pipeline/config.js";
+import { getPackageVersion } from "./macros.js";
 
-// Package version is inlined at compile time via Bun macro
+// Package version - works both at runtime and when bundled
 const cliVersion = getPackageVersion();
 
 // Build command arguments and options

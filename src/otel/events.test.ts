@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { HookEventName } from "../index.js";
-import type { MockEnvContext } from "../mocks.js";
-import { mockEnv } from "../mocks.js";
+import type { MockEnvContext } from "../testing/mocks.js";
+import { mockEnv } from "../testing/mocks.js";
 import { clearSidecarClients, getSidecarClient } from "./client.js";
 import {
 	emitEnvValidationError,

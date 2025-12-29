@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { HookEventBase } from "../index.js";
 import { HookEventName } from "../index.js";
-import type { MockEnvContext } from "../mocks.js";
-import { mockEnv } from "../mocks.js";
+import type { MockEnvContext } from "../testing/mocks.js";
+import { mockEnv } from "../testing/mocks.js";
 import { clearSidecarClients } from "./client.js";
 import { instrumentHook, instrumentToolHook, withChildSpan, withHookSpan } from "./instrumentation.js";
 
