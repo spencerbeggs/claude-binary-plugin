@@ -30,7 +30,7 @@ import {
 	readPluginManifest,
 } from "../builder.js";
 import type { CompiledPlugin } from "../pipeline.js";
-import { getPackageVersion } from "./macros.ts" with { type: "macro" };
+import { getPackageVersion } from "./macros.js" with { type: "macro" };
 
 // Package version is inlined at compile time via Bun macro
 const cliVersion = getPackageVersion();
