@@ -11,12 +11,13 @@
  * - Event/log emitters
  * - Metric recording functions
  *
- * The sidecar binary entry point is at `claude-binary-plugin/otel/sidecar`.
+ * The sidecar entry point is exported as `sidecarMain` from the main entry point.
  *
  * @module
  */
 
 // Client
+export type { ClientState } from "./client.js";
 export {
 	SidecarClient,
 	clearSidecarClients,
@@ -42,6 +43,7 @@ export { getPluginInfo, setPluginInfo } from "./plugin-info.js";
  * use `HookEvent.initTelemetry()` instead.
  *
  * @param sessionId - The Claude Code session ID
+ * @public
  */
 export async function preconnectTelemetry(sessionId: string): Promise<void> {
 	if (!isOTELEnabled()) return;
@@ -77,6 +79,7 @@ export {
 	SPAN_NAMES,
 } from "./constants.js";
 export type {
+	DecisionSource,
 	EnvValidationErrorResult,
 	FatalErrorResult,
 	HookExecutionResult,
@@ -119,6 +122,7 @@ export type {
 	MetricType,
 	OTELConfig,
 	PingMessage,
+	ScopeData,
 	ShutdownMessage,
 	SidecarMessage,
 	SidecarResponse,

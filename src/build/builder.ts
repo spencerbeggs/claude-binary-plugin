@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 import { basename, relative, resolve } from "node:path";
+import type { PassthroughHookEntry } from "../pipeline/config.js";
 
 /**
-
-* Result of a shell command execution.
+ * Result of a shell command execution.
+ * @public
  */
 export interface ShellResult {
 	exitCode: number;
@@ -12,14 +13,14 @@ export interface ShellResult {
 }
 
 /**
-
-* Shell executor function type for dependency injection.
+ * Shell executor function type for dependency injection.
+ * @public
  */
 export type ShellExecutor = (cmd: string) => Promise<ShellResult>;
 
 /**
-
-* Default shell executor using Bun.$.
+ * Default shell executor using Bun.$.
+ * @public
  */
 export const defaultShellExecutor: ShellExecutor = async (cmd: string): Promise<ShellResult> => {
 	const result = await Bun.$`sh -c ${cmd}`.quiet().nothrow();
@@ -31,8 +32,8 @@ export const defaultShellExecutor: ShellExecutor = async (cmd: string): Promise<
 };
 
 /**
-
-* Compilation target platforms for cross-compilation.
+ * Compilation target platforms for cross-compilation.
+ * @public
  */
 export type CompileTarget =
 	| "bun-linux-x64"
@@ -45,8 +46,8 @@ export type CompileTarget =
 	| "bun-linux-arm64-musl";
 
 /**
-
-* Configuration for a hook handler in the plugin.
+ * Configuration for a hook handler in the plugin.
+ * @public
  */
 export interface PluginHookConfig {
 	/**Hook name used in CLI (e.g., "pre-edit-code") */
@@ -58,8 +59,8 @@ export interface PluginHookConfig {
 }
 
 /**
-
-* Configuration for a command handler in the plugin.
+ * Configuration for a command handler in the plugin.
+ * @public
  */
 export interface PluginCommandConfig {
 	/**Command name used in CLI (e.g., "lint") */
@@ -76,6 +77,7 @@ export interface PluginCommandConfig {
 
 /**
  * Hook event type for pipeline plugins.
+ * @public
  */
 export type PipelineHookEventType =
 	| "PreToolUse"
@@ -91,6 +93,7 @@ export type PipelineHookEventType =
 
 /**
  * Configuration for a pipeline hook in the generated entrypoint.
+ * @public
  */
 export interface PipelineHookEntry {
 	/** Hook event type (e.g., "PreToolUse", "SessionStart") */
@@ -109,6 +112,7 @@ export interface PipelineHookEntry {
 
 /**
  * Configuration for a pipeline command in the generated entrypoint.
+ * @public
  */
 export interface PipelineCommandEntry {
 	/** Command name for CLI routing */
@@ -123,6 +127,7 @@ export interface PipelineCommandEntry {
 
 /**
  * Options for generating a pipeline plugin entrypoint.
+ * @public
  */
 export interface GeneratePipelinePluginOptions {
 	/** Import path to the plugin definition file (relative to entrypoint) */
@@ -147,6 +152,7 @@ export interface GeneratePipelinePluginOptions {
  *
  * @param options - Generation options
  * @returns Generated TypeScript source code
+ * @public
  */
 export function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions): string {
 	const { pluginPath, pluginName, pluginVersion, hooks, commands = [], pipelineCommands = [] } = options;
@@ -307,7 +313,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
 	const commandRuntimeImport = hasPipelineCmds
-		? `import { runCommand as runCommandPipeline, emptyArgsSchema } from "claude-binary-plugin/command-runtime";`
+		? `import { runCommand as runCommandPipeline, emptyArgsSchema } from "claude-binary-plugin";`
 		: "";
 
 	return `#!/usr/bin/env bun
@@ -320,8 +326,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { runPipeline, runRawHandler, createEnvClass, handleUnknownHook } from "claude-binary-plugin/pipeline-runtime";
-import { setPluginInfo } from "claude-binary-plugin/otel";
+import { runPipeline, runRawHandler, createEnvClass, handleUnknownHook, setPluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -338,8 +343,8 @@ const EnvClass = createEnvClass(pluginConfig.prefix, pluginConfig.schema, PLUGIN
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
-  const { main } = await import("claude-binary-plugin/otel/sidecar");
-  main();
+  const { sidecarMain } = await import("claude-binary-plugin");
+  sidecarMain();
 }
 
 const validHooks = [${validHooksArray}];
@@ -445,8 +450,11 @@ main().catch((error) => {
 `;
 }
 
-/** Hook definition with minimal required fields for extraction */
-interface ExtractableHook {
+/**
+ * Hook definition with minimal required fields for extraction.
+ * @public
+ */
+export interface ExtractableHook {
 	name?: string;
 	tools?: string[];
 	description?: string;
@@ -457,12 +465,6 @@ interface ExtractableHook {
 	matcher?: string;
 }
 
-/**
- * Extract hook entries from a ClaudeBinaryPlugin config for use with generatePipelinePluginEntrypoint.
- *
- * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
- * @returns Array of hook entries ready for code generation
- */
 /**
  * Check if a hook entry is a passthrough (raw hooks.json entry).
  * Passthrough entries have a `hooks` array and no `name` property.
@@ -477,21 +479,23 @@ function isPassthroughHook(hook: unknown): hook is PassthroughHookEntry {
 	);
 }
 
-/**
- * Passthrough hook entry for hooks.json generation.
- */
-export interface PassthroughHookEntry {
-	matcher?: string;
-	hooks: Array<{ type: "command"; command: string }>;
-}
+// PassthroughHookEntry is imported from pipeline/config.ts
 
 /**
  * Extracted passthrough entries grouped by hook type.
+ * @public
  */
 export interface ExtractedPassthroughHooks {
 	[hookType: string]: PassthroughHookEntry[];
 }
 
+/**
+ * Extract hook entries from a ClaudeBinaryPlugin config for use with generatePipelinePluginEntrypoint.
+ *
+ * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
+ * @returns Array of hook entries ready for code generation
+ * @public
+ */
 export function extractPipelineHookEntries(config: {
 	hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
 }): PipelineHookEntry[] {
@@ -529,8 +533,11 @@ export function extractPipelineHookEntries(config: {
 	return entries;
 }
 
-/** Command definition with minimal required fields for extraction */
-interface ExtractableCommand {
+/**
+ * Command definition with minimal required fields for extraction.
+ * @public
+ */
+export interface ExtractableCommand {
 	description?: string;
 	args?: unknown;
 	pipeline: string;
@@ -541,6 +548,7 @@ interface ExtractableCommand {
  *
  * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
  * @returns Array of pipeline command entries
+ * @public
  */
 export function extractPipelineCommandEntries(config: {
 	commands?: Record<string, ExtractableCommand>;
@@ -568,6 +576,7 @@ export function extractPipelineCommandEntries(config: {
  *
  * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
  * @returns Object mapping hook types to their passthrough entries
+ * @public
  */
 export function extractPassthroughHookEntries(config: {
 	hooks: Partial<Record<PipelineHookEventType, unknown[]>>;
@@ -597,6 +606,7 @@ export function extractPassthroughHookEntries(config: {
 
 /**
  * Plugin manifest from .claude-plugin/plugin.json
+ * @public
  */
 export interface PluginManifest {
 	name: string;
@@ -611,6 +621,7 @@ export interface PluginManifest {
 
 /**
  * Marketplace manifest from .claude-plugin/marketplace.json
+ * @public
  */
 export interface MarketplaceManifest {
 	name: string;
@@ -654,6 +665,7 @@ async function readManifestFile<T>(manifestPath: string): Promise<T | null> {
  *
  * @param pluginPath - Path to plugin.json, or directory containing .claude-plugin/plugin.json
  * @returns Plugin manifest or null if not found
+ * @public
  */
 export async function readPluginManifest(pluginPath: string): Promise<PluginManifest | null> {
 	// If path ends with .json, read directly; otherwise treat as directory
@@ -667,6 +679,7 @@ export async function readPluginManifest(pluginPath: string): Promise<PluginMani
  *
  * @param marketplacePath - Path to marketplace.json, or directory containing .claude-plugin/marketplace.json
  * @returns Marketplace manifest or null if not found
+ * @public
  */
 export async function readMarketplaceManifest(marketplacePath: string): Promise<MarketplaceManifest | null> {
 	// If path ends with .json, read directly; otherwise treat as directory
@@ -678,8 +691,8 @@ export async function readMarketplaceManifest(marketplacePath: string): Promise<
 }
 
 /**
-
-* Options for compiling a unified plugin binary.
+ * Options for compiling a unified plugin binary.
+ * @public
  */
 export interface BuildPluginOptions {
 	/**Root directory containing the plugin (defaults to cwd) */
@@ -763,7 +776,7 @@ export interface BuildPluginOptions {
 	 * Used for cache path and debug log naming.
 	 */
 	marketplaceName?: string;
-	/** Packages to exclude from bundling (e.g., ["@commitlint/load"]) */
+	/** Packages to exclude from bundling (e.g., `["@commitlint/load"]`) */
 	external?: string[];
 	/**
 	 * Whether to persist the built plugin to Claude's local cache.
@@ -774,14 +787,14 @@ export interface BuildPluginOptions {
 	 * without needing to reinstall from the marketplace.
 	 *
 	 * Requires `marketplaceName` to be set.
-	 * @default false
+	 * @defaultValue false
 	 */
 	persistLocal?: boolean;
 }
 
 /**
-
-* Result of compiling a plugin binary.
+ * Result of compiling a plugin binary.
+ * @public
  */
 export interface PluginBuildResult {
 	/**Original source file path (relative to rootDir) */
@@ -797,19 +810,19 @@ export interface PluginBuildResult {
 }
 
 /**
-
-* Generates the TypeScript source code for a plugin entrypoint.
-*
-* The generated code includes:
-* * Dynamic imports for all hooks and commands
-* * CLI argument parsing with --hook and --cmd options
-* * Help text with descriptions
-*
-* @param hooks - Hook configurations
-* @param commands - Command configurations
-* @param pluginName - Name shown in help text
-* @param pluginVersion - Plugin version from plugin.json
-* @returns Generated TypeScript source code
+ * Generates the TypeScript source code for a plugin entrypoint.
+ *
+ * The generated code includes:
+ * - Dynamic imports for all hooks and commands
+ * - CLI argument parsing with --hook and --cmd options
+ * - Help text with descriptions
+ *
+ * @param hooks - Hook configurations
+ * @param commands - Command configurations
+ * @param pluginName - Name shown in help text
+ * @param pluginVersion - Plugin version from plugin.json
+ * @returns Generated TypeScript source code
+ * @public
  */
 export function generatePluginEntrypoint(
 	hooks: PluginHookConfig[],
@@ -859,7 +872,7 @@ export function generatePluginEntrypoint(
  */
 
 import { parseArgs } from "node:util";
-import { setPluginInfo } from "claude-binary-plugin/otel";
+import { setPluginInfo } from "claude-binary-plugin";
 
 // Plugin metadata - compiled constants
 const PLUGIN_NAME = "${pluginName}";
@@ -867,8 +880,8 @@ const PLUGIN_VERSION = "${pluginVersion}";
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
- const { main } = await import("claude-binary-plugin/otel/sidecar");
- main();
+ const { sidecarMain } = await import("claude-binary-plugin");
+ sidecarMain();
 }
 
 type HookName = ${hookNames || "never"};
@@ -981,6 +994,7 @@ main().catch((error) => {
 
 /**
  * Configuration for persisting a plugin to local cache.
+ * @public
  */
 export interface PersistLocalConfig {
 	/** Root directory of the plugin */
@@ -996,6 +1010,7 @@ export interface PersistLocalConfig {
  *
  * @param config - Configuration for determining cache path
  * @returns Cache path or null if plugin.json not found or invalid
+ * @public
  */
 export async function getPluginCachePath(config: PersistLocalConfig): Promise<string[]> {
 	const { rootDir, marketplaceName } = config;
@@ -1033,6 +1048,7 @@ export async function getPluginCachePath(config: PersistLocalConfig): Promise<st
  *
  * @param config - Configuration for syncing
  * @returns true if successful, false otherwise
+ * @public
  */
 export async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
 	const { rootDir, shell } = config;
@@ -1095,41 +1111,39 @@ export async function syncPluginToCache(config: PersistLocalConfig): Promise<boo
 }
 
 /**
-
-* Compiles a plugin into a single unified executable.
-*
-* This creates a single binary that bundles all hooks and commands,
-* reducing the total size compared to multiple separate binaries
-* (since the Bun runtime is only included once).
-*
-* When `hooks` and/or `commands` are provided, the entrypoint is auto-generated.
-* Otherwise, a manual entrypoint file is expected.
-*
-* @example
-
-* ```ts
-* // plugins/workflow/build.ts - Declarative configuration (recommended)
-* import { buildPlugin } from "claude-binary-plugin/builder";
-*
-* await buildPlugin({
-* rootDir: import.meta.dir,
-* outputName: "workflow.plugin",
-* hooks: [
-*     { name: "pre-edit-code", path: "./hooks/pre-edit-code.hook.js", description: "Lint before edit" },
-* ],
-* commands: [
-*     { name: "lint", path: "./commands/scripts/lint.js", description: "Run linters" },
-* ],
-* });
-
-* ```
-*
-* The unified binary can then be invoked as:
-* workflow.plugin --hook=pre-edit-code
-* workflow.plugin --cmd=lint
-*
-* @param options - Build configuration options
-* @returns Result of the build operation
+ * Compiles a plugin into a single unified executable.
+ *
+ * This creates a single binary that bundles all hooks and commands,
+ * reducing the total size compared to multiple separate binaries
+ * (since the Bun runtime is only included once).
+ *
+ * When `hooks` and/or `commands` are provided, the entrypoint is auto-generated.
+ * Otherwise, a manual entrypoint file is expected.
+ *
+ * @example
+ * ```ts
+ * // plugins/workflow/build.ts - Declarative configuration (recommended)
+ * import { buildPlugin } from "claude-binary-plugin";
+ *
+ * await buildPlugin({
+ *   rootDir: import.meta.dir,
+ *   outputName: "workflow.plugin",
+ *   hooks: [
+ *     { name: "pre-edit-code", path: "./hooks/pre-edit-code.hook.js", description: "Lint before edit" },
+ *   ],
+ *   commands: [
+ *     { name: "lint", path: "./commands/scripts/lint.js", description: "Run linters" },
+ *   ],
+ * });
+ * ```
+ *
+ * The unified binary can then be invoked as:
+ * workflow.plugin --hook=pre-edit-code
+ * workflow.plugin --cmd=lint
+ *
+ * @param options - Build configuration options
+ * @returns Result of the build operation
+ * @public
  */
 export async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuildResult> {
 	const startTime = performance.now();
@@ -1353,6 +1367,7 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 
 /**
  * Options for generating hooks.json
+ * @public
  */
 export interface GenerateHooksJsonOptions {
 	/** Plugin binary name (e.g., "bun-plugin-builder.plugin") */
@@ -1364,25 +1379,28 @@ export interface GenerateHooksJsonOptions {
 }
 
 /**
- * Hook command entry in hooks.json
+ * Hook command entry in hooks.json.
+ * @public
  */
-interface HooksJsonCommand {
+export interface HooksJsonCommand {
 	type: "command";
 	command: string;
 }
 
 /**
- * Hook entry with optional matcher
+ * Hook entry with optional matcher.
+ * @public
  */
-interface HooksJsonEntry {
+export interface HooksJsonEntry {
 	matcher?: string;
 	hooks: HooksJsonCommand[];
 }
 
 /**
- * The hooks.json file structure
+ * The hooks.json file structure.
+ * @public
  */
-interface HooksJsonFile {
+export interface HooksJsonFile {
 	hooks: Record<string, HooksJsonEntry[]>;
 }
 
@@ -1413,6 +1431,7 @@ interface HooksJsonFile {
  * //   }
  * // }
  * ```
+ * @public
  */
 export function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
 	const { pluginBinaryName, hooks, passthroughHooks = {} } = options;

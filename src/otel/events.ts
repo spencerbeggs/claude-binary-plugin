@@ -13,14 +13,15 @@ import { getClaudeVersion, getTerminalType, isOTELEnabled } from "./config.js";
 import { CLAUDE_ATTRS, EVENT_NAMES, PLUGIN_ATTRS, SCOPE } from "./constants.js";
 import { getPluginInfo } from "./plugin-info.js";
 import type { EventData } from "./protocol.js";
-import { getSdkVersion } from "./version.macro.ts" with { type: "macro" };
+import { getSdkVersion } from "./version.macro.js";
 
-// SDK version is resolved at compile time via Bun macro
+// SDK version - works both at runtime and when bundled
 const SDK_VERSION = getSdkVersion();
 
 /**
  * Semantic outcome of hook execution.
  * Used for filtering and understanding hook behavior patterns.
+ * @public
  */
 export type HookOutcome =
 	| "skipped" // Hook didn't apply (wrong tool, disabled, etc.)
@@ -35,6 +36,7 @@ export type HookOutcome =
 /**
  * Decision source taxonomy aligned with Anthropic's native telemetry.
  * Indicates what/who made the permission decision.
+ * @public
  */
 export type DecisionSource =
 	| "config" // Decision from configuration (e.g., allowlist)
@@ -47,6 +49,7 @@ export type DecisionSource =
 /**
  * Operational metrics for hook execution.
  * Used to track performance characteristics and identify bottlenecks.
+ * @public
  */
 export interface HookMetrics {
 	/** Number of files scanned/analyzed */
@@ -67,6 +70,7 @@ export interface HookMetrics {
 
 /**
  * Result data for hook execution event.
+ * @public
  */
 export interface HookExecutionResult {
 	/** The hook event type (PreToolUse, PostToolUse, SessionStart, etc.) */
@@ -120,6 +124,7 @@ export interface HookExecutionResult {
  * @param event - The hook event base containing session info
  * @param hookName - The custom hook name (e.g., "pre-edit-code", "docs-access")
  * @param result - The hook execution result data
+ * @public
  */
 export function emitHookExecution(event: HookEventBase, hookName: string, result: HookExecutionResult): void {
 	if (!isOTELEnabled()) return;
@@ -225,6 +230,7 @@ export function emitHookExecution(event: HookEventBase, hookName: string, result
 
 /**
  * Result data for schema validation error event.
+ * @public
  */
 export interface SchemaValidationErrorResult {
 	/** The hook name that encountered the error */
@@ -248,6 +254,7 @@ export interface SchemaValidationErrorResult {
  * @param sessionId - The session ID (may be extracted from partial data)
  * @param hookName - The custom hook name
  * @param result - The validation error details
+ * @public
  */
 export function emitSchemaValidationError(
 	sessionId: string,
@@ -298,6 +305,7 @@ export function emitSchemaValidationError(
 
 /**
  * Result data for environment validation error event.
+ * @public
  */
 export interface EnvValidationErrorResult {
 	/** The hook name that encountered the error */
@@ -321,6 +329,7 @@ export interface EnvValidationErrorResult {
  * @param sessionId - The session ID
  * @param hookName - The custom hook name
  * @param result - The validation error details
+ * @public
  */
 export function emitEnvValidationError(sessionId: string, hookName: string, result: EnvValidationErrorResult): void {
 	if (!isOTELEnabled()) return;
@@ -371,6 +380,7 @@ export function emitEnvValidationError(sessionId: string, hookName: string, resu
 
 /**
  * Result data for fatal error event.
+ * @public
  */
 export interface FatalErrorResult {
 	/** The hook name that encountered the error */
@@ -402,6 +412,7 @@ export interface FatalErrorResult {
  * @param result - The fatal error details
  * @param flushTimeoutMs - Maximum time to wait for flush (default: 500ms)
  * @returns Promise that resolves when message is sent (or timeout)
+ * @public
  */
 export async function emitFatalError(
 	sessionId: string,
@@ -473,6 +484,7 @@ export async function emitFatalError(
 /**
  * Direct hook execution result for use without an event object.
  * Used for errors that occur before the event object is created (e.g., unknown hook).
+ * @public
  */
 export interface HookExecutionDirectResult {
 	/** Session ID for telemetry */
@@ -500,6 +512,7 @@ export interface HookExecutionDirectResult {
  * such as when a plugin receives an unknown hook name.
  *
  * @param result - The hook execution result data including sessionId
+ * @public
  */
 export function emitHookExecutionDirect(result: HookExecutionDirectResult): void {
 	if (!isOTELEnabled()) return;

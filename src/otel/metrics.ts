@@ -43,6 +43,7 @@ function getMetricAttributes(
 /**
  * Record a hook execution (counter + histogram).
  * Called automatically by instrumentHook().
+ * @public
  */
 export function recordHookExecution(
 	event: HookEventBase,
@@ -97,6 +98,7 @@ export function recordHookExecution(
 
 /**
  * Record a hook decision (allow/block/modify).
+ * @public
  */
 export function recordHookDecision(
 	event: HookEventBase,
@@ -126,6 +128,7 @@ export function recordHookDecision(
 
 /**
  * Record a custom counter metric.
+ * @public
  */
 export function recordCounter(
 	event: HookEventBase,
@@ -155,6 +158,7 @@ export function recordCounter(
 
 /**
  * Record a custom histogram metric.
+ * @public
  */
 export function recordHistogram(
 	event: HookEventBase,
@@ -186,6 +190,7 @@ export function recordHistogram(
 
 /**
  * Record a custom gauge metric.
+ * @public
  */
 export function recordGauge(
 	event: HookEventBase,

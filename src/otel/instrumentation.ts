@@ -38,6 +38,7 @@ function randomHex(bytes: number): string {
  *   return validateInput(event.tool_input);
  * });
  * ```
+ * @public
  */
 export async function withHookSpan<T>(
 	event: HookEventBase,
@@ -122,6 +123,7 @@ export async function withHookSpan<T>(
  *   event.end(response);
  * }
  * ```
+ * @public
  */
 export function instrumentHook<TEvent extends HookEventBase, TResult>(
 	hookName: string,
@@ -136,6 +138,7 @@ export function instrumentHook<TEvent extends HookEventBase, TResult>(
 /**
  * Wrap a tool hook handler with tool-specific attributes.
  * Captures tool_name and optionally tool_input.
+ * @public
  */
 export function instrumentToolHook<TEvent extends HookEventBase & { tool_name: string; tool_input: unknown }, TResult>(
 	hookName: string,
@@ -175,6 +178,7 @@ export function instrumentToolHook<TEvent extends HookEventBase & { tool_name: s
  *   return event.response();
  * });
  * ```
+ * @public
  */
 export async function withChildSpan<T>(
 	event: HookEventBase,

@@ -8,13 +8,7 @@
  */
 
 import { extname } from "node:path";
-import type {
-	AnyPipelineOutput,
-	ContentType,
-	ExecutionQuality,
-	PipelineMetrics,
-	TokenMetrics,
-} from "./pipeline-types.js";
+import type { AnyPipelineOutput, ContentType, ExecutionQuality, PipelineMetrics, TokenMetrics } from "./types.js";
 
 // =============================================================================
 // TOKEN ESTIMATION
@@ -32,6 +26,7 @@ import type {
  * @param text - Text to estimate tokens for
  * @param contentType - Optional content type for better accuracy
  * @returns Estimated token count
+ * @public
  */
 export function estimateTokenCount(text: string | undefined | null, contentType?: ContentType): number {
 	if (!text) return 0;
@@ -54,6 +49,7 @@ export function estimateTokenCount(text: string | undefined | null, contentType?
  *
  * @param input - Object containing file_path and/or content
  * @returns Detected content type
+ * @public
  */
 export function detectContentType(input: { file_path?: string; content?: string }): ContentType {
 	// Check file extension first
@@ -121,6 +117,7 @@ export function detectContentType(input: { file_path?: string; content?: string 
  *
  * @param output - Pipeline output object
  * @returns Token metrics
+ * @public
  */
 export function extractTokenMetrics(output: AnyPipelineOutput): TokenMetrics {
 	const claudeContext = estimateTokenCount("claudeContext" in output ? output.claudeContext : undefined);
@@ -140,6 +137,7 @@ export function extractTokenMetrics(output: AnyPipelineOutput): TokenMetrics {
  *
  * @param event - Hook event with tool_input and/or tool_response
  * @returns Partial token metrics for tool-related fields
+ * @public
  */
 export function extractToolTokenMetrics(event: {
 	tool_input?: Record<string, unknown>;
@@ -176,6 +174,7 @@ export function extractToolTokenMetrics(event: {
 
 /**
  * OTEL attribute record type.
+ * @public
  */
 export type OtelAttributes = Record<string, string | number | boolean | undefined>;
 
@@ -189,6 +188,7 @@ export type OtelAttributes = Record<string, string | number | boolean | undefine
  * @param output - Pipeline output
  * @param durationMs - Execution duration in milliseconds
  * @returns OTEL attributes record
+ * @public
  */
 export function extractAutoMetrics(
 	hookType: string,
@@ -348,6 +348,7 @@ export function extractAutoMetrics(
 
 /**
  * Session-level token tracking state.
+ * @public
  */
 export interface SessionTokenState {
 	/** Total tokens added to context by all hooks */
@@ -365,6 +366,7 @@ export interface SessionTokenState {
 
 /**
  * Create initial session token state.
+ * @public
  */
 export function createSessionTokenState(): SessionTokenState {
 	return {
@@ -382,6 +384,7 @@ export function createSessionTokenState(): SessionTokenState {
  * @param hookName - Name of the hook
  * @param hookType - Type of the hook
  * @param tokens - Token metrics from the hook
+ * @public
  */
 export function updateSessionTokens(
 	state: SessionTokenState,
@@ -403,6 +406,7 @@ export function updateSessionTokens(
  *
  * @param state - Session token state
  * @returns OTEL attributes for session metrics
+ * @public
  */
 export function getSessionTokenAttributes(state: SessionTokenState): OtelAttributes {
 	const attrs: OtelAttributes = {
@@ -428,6 +432,7 @@ export function getSessionTokenAttributes(state: SessionTokenState): OtelAttribu
 
 /**
  * Token budget configuration.
+ * @public
  */
 export interface TokenBudget {
 	/** Total context window size */
@@ -440,6 +445,7 @@ export interface TokenBudget {
 
 /**
  * Default token budget (200k context window).
+ * @public
  */
 export const DEFAULT_TOKEN_BUDGET: TokenBudget = {
 	contextWindow: 200_000,
@@ -453,6 +459,7 @@ export const DEFAULT_TOKEN_BUDGET: TokenBudget = {
  * @param contextAdded - Total tokens added to context
  * @param budget - Token budget configuration
  * @returns Budget status with level and usage percentage
+ * @public
  */
 export function checkTokenBudget(
 	contextAdded: number,

@@ -16,11 +16,13 @@ import { socketExists, spawnSidecar } from "./spawn.js";
 
 /**
  * Client state for tracking connection status.
+ * @public
  */
-type ClientState = "disconnected" | "connecting" | "connected";
+export type ClientState = "disconnected" | "connecting" | "connected";
 
 /**
  * Socket data for client connections.
+ * @public
  */
 interface SocketData {
 	/** Timestamp when connection was established */
@@ -36,6 +38,7 @@ interface SocketData {
  * - Reconnection is lazy (attempted on next emit)
  *
  * This ensures hooks are never blocked by telemetry operations.
+ * @public
  */
 export class SidecarClient {
 	private sessionId: string;
@@ -403,6 +406,7 @@ const clients = new Map<string, SidecarClient>();
  *
  * @param sessionId - The Claude Code session ID
  * @returns SidecarClient for the session
+ * @public
  */
 export function getSidecarClient(sessionId: string): SidecarClient {
 	let client = clients.get(sessionId);
@@ -419,6 +423,7 @@ export function getSidecarClient(sessionId: string): SidecarClient {
  * Called when a session ends to clean up resources.
  *
  * @param sessionId - The session ID to remove
+ * @public
  */
 export function removeSidecarClient(sessionId: string): void {
 	const client = clients.get(sessionId);
@@ -432,6 +437,7 @@ export function removeSidecarClient(sessionId: string): void {
  * Clear all cached clients.
  *
  * Useful for testing or cleanup.
+ * @public
  */
 export function clearSidecarClients(): void {
 	for (const client of clients.values()) {

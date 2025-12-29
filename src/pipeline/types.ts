@@ -15,6 +15,7 @@ import { z } from "zod";
 
 /**
  * Execution status - Did the hook run?
+ * @public
  */
 export const ExecutionStatusSchema = z.enum([
 	"executed", // Hook ran normally
@@ -25,6 +26,7 @@ export const ExecutionStatusSchema = z.enum([
 	"timeout", // Exceeded time limit
 ]);
 
+/** @public */
 export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 
 // =============================================================================
@@ -34,6 +36,7 @@ export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 /**
  * Hook action - What did the hook decide to do?
  * Only present when status is "executed".
+ * @public
  */
 export const HookActionSchema = z.enum([
 	// Permission decisions (PreToolUse, PermissionRequest)
@@ -53,6 +56,7 @@ export const HookActionSchema = z.enum([
 	"none", // Analyzed but took no action
 ]);
 
+/** @public */
 export type HookAction = z.infer<typeof HookActionSchema>;
 
 // =============================================================================
@@ -62,6 +66,7 @@ export type HookAction = z.infer<typeof HookActionSchema>;
 /**
  * Validation result - For hooks that perform linting/checking.
  * Optional field, only for validation-oriented hooks.
+ * @public
  */
 export const ValidationResultSchema = z.enum([
 	"passed", // All checks passed
@@ -70,6 +75,7 @@ export const ValidationResultSchema = z.enum([
 	"warning", // Passed but with warnings
 ]);
 
+/** @public */
 export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 
 // =============================================================================
@@ -79,6 +85,7 @@ export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 /**
  * Execution quality indicators.
  * Tracks degraded or partial execution states.
+ * @public
  */
 export const ExecutionQualitySchema = z
 	.object({
@@ -93,6 +100,7 @@ export const ExecutionQualitySchema = z
 	})
 	.strict();
 
+/** @public */
 export type ExecutionQuality = z.infer<typeof ExecutionQualitySchema>;
 
 // =============================================================================
@@ -102,6 +110,7 @@ export type ExecutionQuality = z.infer<typeof ExecutionQualitySchema>;
 /**
  * User-provided metrics for telemetry.
  * Domain-specific metrics that require hook knowledge.
+ * @public
  */
 export const PipelineMetricsSchema = z
 	.object({
@@ -116,6 +125,7 @@ export const PipelineMetricsSchema = z
 	})
 	.catchall(z.union([z.number(), z.boolean(), z.string()]));
 
+/** @public */
 export type PipelineMetrics = z.infer<typeof PipelineMetricsSchema>;
 
 // =============================================================================
@@ -125,6 +135,7 @@ export type PipelineMetrics = z.infer<typeof PipelineMetricsSchema>;
 /**
  * Token metrics calculated by the runtime.
  * These are auto-instrumented from the output fields.
+ * @public
  */
 export interface TokenMetrics {
 	/** Tokens in claudeContext */
@@ -149,6 +160,7 @@ export interface TokenMetrics {
 
 /**
  * Content type for token estimation accuracy.
+ * @public
  */
 export type ContentType = "code" | "json" | "markdown" | "prose";
 
@@ -159,6 +171,7 @@ export type ContentType = "code" | "json" | "markdown" | "prose";
 /**
  * Base schema for all pipeline outputs.
  * Defines the three-audience model fields.
+ * @public
  */
 export const PipelineOutputBaseSchema = z.object({
 	// ─────────────────────────────────────────────────────────────────────────
@@ -212,6 +225,7 @@ export const PipelineOutputBaseSchema = z.object({
 	updatedInput: z.record(z.string(), z.unknown()).optional(),
 });
 
+/** @public */
 export type PipelineOutputBase = z.infer<typeof PipelineOutputBaseSchema>;
 
 // =============================================================================
@@ -220,6 +234,7 @@ export type PipelineOutputBase = z.infer<typeof PipelineOutputBaseSchema>;
 
 /**
  * PreToolUse pipeline output with discriminated union for type safety.
+ * @public
  */
 export const PreToolUseOutputSchema = z.discriminatedUnion("status", [
 	// Executed states
@@ -290,6 +305,7 @@ export const PreToolUseOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type PreToolUseOutput = z.infer<typeof PreToolUseOutputSchema>;
 
 // =============================================================================
@@ -298,6 +314,7 @@ export type PreToolUseOutput = z.infer<typeof PreToolUseOutputSchema>;
 
 /**
  * PostToolUse pipeline output with discriminated union for type safety.
+ * @public
  */
 export const PostToolUseOutputSchema = z.discriminatedUnion("status", [
 	// Executed states
@@ -365,6 +382,7 @@ export const PostToolUseOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type PostToolUseOutput = z.infer<typeof PostToolUseOutputSchema>;
 
 // =============================================================================
@@ -373,6 +391,7 @@ export type PostToolUseOutput = z.infer<typeof PostToolUseOutputSchema>;
 
 /**
  * SessionStart pipeline output with discriminated union for type safety.
+ * @public
  */
 export const SessionStartOutputSchema = z.discriminatedUnion("status", [
 	// Executed states
@@ -420,6 +439,7 @@ export const SessionStartOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type SessionStartOutput = z.infer<typeof SessionStartOutputSchema>;
 
 // =============================================================================
@@ -428,6 +448,7 @@ export type SessionStartOutput = z.infer<typeof SessionStartOutputSchema>;
 
 /**
  * Stop/SubagentStop pipeline output with discriminated union for type safety.
+ * @public
  */
 export const StopOutputSchema = z.discriminatedUnion("status", [
 	// Executed state (block or continue)
@@ -478,10 +499,13 @@ export const StopOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type StopOutput = z.infer<typeof StopOutputSchema>;
 
 // Alias for SubagentStop
+/** @public */
 export const SubagentStopOutputSchema = StopOutputSchema;
+/** @public */
 export type SubagentStopOutput = StopOutput;
 
 // =============================================================================
@@ -490,6 +514,7 @@ export type SubagentStopOutput = StopOutput;
 
 /**
  * UserPromptSubmit pipeline output with discriminated union for type safety.
+ * @public
  */
 export const UserPromptSubmitOutputSchema = z.discriminatedUnion("status", [
 	// Executed states
@@ -537,6 +562,7 @@ export const UserPromptSubmitOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type UserPromptSubmitOutput = z.infer<typeof UserPromptSubmitOutputSchema>;
 
 // =============================================================================
@@ -545,6 +571,7 @@ export type UserPromptSubmitOutput = z.infer<typeof UserPromptSubmitOutputSchema
 
 /**
  * PermissionRequest pipeline output with discriminated union for type safety.
+ * @public
  */
 export const PermissionRequestOutputSchema = z.discriminatedUnion("status", [
 	// Executed states
@@ -594,6 +621,7 @@ export const PermissionRequestOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type PermissionRequestOutput = z.infer<typeof PermissionRequestOutputSchema>;
 
 // =============================================================================
@@ -602,6 +630,7 @@ export type PermissionRequestOutput = z.infer<typeof PermissionRequestOutputSche
 
 /**
  * Passthrough hooks that only support executed/skipped/disabled/error states.
+ * @public
  */
 export const PassthroughOutputSchema = z.discriminatedUnion("status", [
 	// Executed state
@@ -643,16 +672,23 @@ export const PassthroughOutputSchema = z.discriminatedUnion("status", [
 		.strict(),
 ]);
 
+/** @public */
 export type PassthroughOutput = z.infer<typeof PassthroughOutputSchema>;
 
 // Aliases for specific passthrough hooks
+/** @public */
 export const SessionEndOutputSchema = PassthroughOutputSchema;
+/** @public */
 export type SessionEndOutput = PassthroughOutput;
 
+/** @public */
 export const PreCompactOutputSchema = PassthroughOutputSchema;
+/** @public */
 export type PreCompactOutput = PassthroughOutput;
 
+/** @public */
 export const NotificationOutputSchema = PassthroughOutputSchema;
+/** @public */
 export type NotificationOutput = PassthroughOutput;
 
 // =============================================================================
@@ -661,6 +697,7 @@ export type NotificationOutput = PassthroughOutput;
 
 /**
  * Map of hook types to their output schemas.
+ * @public
  */
 export const OutputSchemas = {
 	SessionStart: SessionStartOutputSchema,
@@ -681,6 +718,7 @@ export const OutputSchemas = {
 
 /**
  * Union of all pipeline output types.
+ * @public
  */
 export type AnyPipelineOutput =
 	| PreToolUseOutput
@@ -696,6 +734,7 @@ export type AnyPipelineOutput =
 
 /**
  * Check if an output uses the pipeline format (has status and summary fields).
+ * @public
  */
 export function isPipelineOutput(output: unknown): output is AnyPipelineOutput {
 	return typeof output === "object" && output !== null && "status" in output && "summary" in output;

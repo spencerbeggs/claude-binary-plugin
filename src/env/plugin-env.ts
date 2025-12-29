@@ -1,11 +1,12 @@
-import { DebugLogger } from "./debug-logger.js";
-import type { EnvValidationErrorResult } from "./otel/events.js";
-import { emitEnvValidationError, isOTELEnabled } from "./otel/index.js";
+import type { EnvValidationErrorResult } from "../otel/events.js";
+import { emitEnvValidationError, isOTELEnabled } from "../otel/index.js";
+import { DebugLogger } from "../utils/debug-logger.js";
 
 /**
  * Zod issue type for error formatting.
  * Minimal interface matching what we need from ZodError.issues.
  * Uses PropertyKey[] for path to be compatible with Zod v4.
+ * @public
  */
 export interface ZodIssueMinimal {
 	path: PropertyKey[];
@@ -22,6 +23,7 @@ export interface ZodIssueMinimal {
 /**
  * Zod error type for validation results.
  * Minimal interface matching what we need from ZodError.
+ * @public
  */
 export interface ZodErrorMinimal {
 	issues: ZodIssueMinimal[];
@@ -30,6 +32,7 @@ export interface ZodErrorMinimal {
 /**
  * Result of validation with context.
  * Either success with validated data, or failure with formatted error message.
+ * @public
  */
 export type ValidationResult<T> =
 	| { success: true; data: T }
@@ -75,6 +78,7 @@ function formatReceivedValue(received: unknown): string {
  *
  * - **MY_VAR**: Invalid enum value. Expected 'true' | 'false', received: undefined
  * ```
+ * @public
  */
 export function formatZodError(error: ZodErrorMinimal, maxErrors = 10): string {
 	const issues = error.issues.slice(0, maxErrors);
@@ -116,7 +120,7 @@ export function formatZodError(error: ZodErrorMinimal, maxErrors = 10): string {
  * @remarks
  * In bash double quotes, these characters have special meaning and must be escaped:
  * - `"` (double quote) - terminates the string
- * - `` ` `` (backtick) - command substitution
+ * - backtick - command substitution
  * - `$` (dollar sign) - variable expansion
  * - `\` (backslash) - escape character (only when followed by special chars)
  *
@@ -129,6 +133,7 @@ export function formatZodError(error: ZodErrorMinimal, maxErrors = 10): string {
  * escapeForBashDoubleQuotes('Run `cmd`') // 'Run \\`cmd\\`'
  * escapeForBashDoubleQuotes('Cost: $50') // 'Cost: \\$50'
  * ```
+ * @public
  */
 export function escapeForBashDoubleQuotes(value: string): string {
 	return value
@@ -141,12 +146,14 @@ export function escapeForBashDoubleQuotes(value: string): string {
 /**
  * Context types for environment loading strategies.
  * Each context defines how environment variables are loaded.
+ * @public
  */
 export type EnvContext = "sessionStart" | "hook" | "command";
 
 /**
  * Configuration for a command context.
  * Defines the command name and optional argument schema.
+ * @public
  */
 export interface CommandConfig<TArgs = Record<string, unknown>> {
 	/** Command name (e.g., "lint", "test") */
@@ -242,6 +249,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  * Plugins that want validation should install zod as a peer dependency.
  *
  * Supports both Zod v3 (shape as function) and Zod v4 (shape as object).
+ * @public
  */
 export interface ZodSchema<T = unknown> {
 	parse(data: unknown): T;
@@ -254,6 +262,7 @@ export interface ZodSchema<T = unknown> {
 
 /**
  * File system operations interface for dependency injection.
+ * @public
  */
 export interface PluginEnvFileSystem {
 	/** Read file contents as text */
@@ -300,6 +309,7 @@ export const defaultPluginEnvFileSystem: PluginEnvFileSystem = {
 
 /**
  * Parameters for SessionStart context
+ * @public
  */
 export interface SessionStartContextParams {
 	/** Hook name for logging (e.g., "workflow-context") */
@@ -316,6 +326,7 @@ export interface SessionStartContextParams {
 
 /**
  * Parameters for Hook context
+ * @public
  */
 export interface HookContextParams {
 	/** Session ID from the hook event */
@@ -330,6 +341,7 @@ export interface HookContextParams {
 
 /**
  * Parameters for Command context
+ * @public
  */
 export interface CommandContextParams {
 	/** Raw command line arguments (typically process.argv.slice(2)) */
@@ -342,6 +354,7 @@ export interface CommandContextParams {
 
 /**
  * Result from forContext when context is "command"
+ * @public
  */
 export interface CommandContextResult<TEnv, TArgs = Record<string, unknown>> {
 	/** Loaded environment instance */
@@ -358,6 +371,7 @@ export interface CommandContextResult<TEnv, TArgs = Record<string, unknown>> {
  * @remarks
  * Contains information about whether persistence succeeded and diagnostic
  * details useful for debugging configuration issues.
+ * @public
  */
 export interface PersistResult {
 	/** Whether the variables were successfully persisted to CLAUDE_ENV_FILE */
@@ -370,6 +384,7 @@ export interface PersistResult {
 
 /**
  * Error thrown when the env vars file specified by --vars cannot be loaded.
+ * @public
  */
 export class EnvFileLoadError extends Error {
 	readonly exitCode = 2;
@@ -385,13 +400,14 @@ export class EnvFileLoadError extends Error {
 /**
  * Base class for plugin environment variable management.
  *
- * @template TSchema - TypeScript interface defining the environment variable schema
+ * @typeParam TSchema - TypeScript interface defining the environment variable schema
+ * @public
  */
 export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	/**
 	 * Environment variable prefix for this plugin (e.g., "MY_PLUGIN").
 	 * Subclasses must override this to define their namespace.
-	 * Used for generating prefixed env vars like {PREFIX}_PROJECT_DIR.
+	 * Used for generating prefixed env vars like `PREFIX_PROJECT_DIR`.
 	 */
 	protected abstract readonly prefix: string;
 
@@ -560,7 +576,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * TypeScript overloads ensure type-safe return values based on context:
 	 * - sessionStart/hook contexts return the env instance directly
-	 * - command context returns { env, remainingArgs, args? }
+	 * - command context returns `{ env, remainingArgs, args? }`
 	 *
 	 * @example SessionStart hook
 	 * ```typescript
@@ -812,7 +828,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * The session-env directory path must be derived from transcript_path using
 	 * `deriveSessionEnvDir()`.
 	 *
-	 * @param sessionEnvDir - Path to session-env directory (e.g., ~/.claude/session-env/{transcript_id}/)
+	 * @param sessionEnvDir - Path to session-env directory (e.g., `~/.claude/session-env/transcript_id/`)
 	 * @param fs - File system implementation (defaults to real file system)
 	 * @returns Promise with count of files loaded
 	 */
@@ -986,7 +1002,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * executable for bash to source.
 	 *
 	 * @param _sessionId - Unused (kept for API compatibility). CLAUDE_ENV_FILE is used directly.
-	 * @param vars - Environment variables to persist (name -> value)
+	 * @param vars - Environment variables to persist (name to value mapping)
 	 * @param fs - File system implementation (defaults to real file system)
 	 * @returns Object indicating success/failure with path or reason
 	 *
@@ -1233,7 +1249,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 
 	/**
 	 * Gets the project directory from environment variables.
-	 * Checks CLAUDE_PROJECT_DIR first, then falls back to {PREFIX}_PROJECT_DIR.
+	 * Checks CLAUDE_PROJECT_DIR first, then falls back to `PREFIX_PROJECT_DIR`.
 	 *
 	 * @returns Project directory path
 	 * @throws Error if neither env var is set
@@ -1252,7 +1268,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 
 	/**
 	 * Gets the plugin root directory from environment variables.
-	 * Checks CLAUDE_PLUGIN_ROOT first, then falls back to {PREFIX}_PLUGIN_ROOT.
+	 * Checks CLAUDE_PLUGIN_ROOT first, then falls back to `PREFIX_PLUGIN_ROOT`.
 	 *
 	 * @returns Plugin root directory path
 	 * @throws Error if neither env var is set

@@ -30,8 +30,8 @@ import type { FilePath, ShellCommand } from "./branded-types.js";
 // =============================================================================
 
 /**
-
-* Input for the Write tool - creates or overwrites a file.
+ * Input for the Write tool - creates or overwrites a file.
+ * @public
  */
 export interface WriteToolInput {
 	/**Absolute path to the file to write */
@@ -41,8 +41,8 @@ export interface WriteToolInput {
 }
 
 /**
-
-* Branded version of WriteToolInput with FilePath type.
+ * Branded version of WriteToolInput with FilePath type.
+ * @public
  */
 export interface BrandedWriteToolInput {
 	/**Absolute path to the file to write */
@@ -52,8 +52,8 @@ export interface BrandedWriteToolInput {
 }
 
 /**
-
-* Input for the Edit tool - performs string replacement in a file.
+ * Input for the Edit tool - performs string replacement in a file.
+ * @public
  */
 export interface EditToolInput {
 	/**Absolute path to the file to modify */
@@ -67,8 +67,8 @@ export interface EditToolInput {
 }
 
 /**
-
-* Branded version of EditToolInput with FilePath type.
+ * Branded version of EditToolInput with FilePath type.
+ * @public
  */
 export interface BrandedEditToolInput {
 	/**Absolute path to the file to modify */
@@ -82,8 +82,8 @@ export interface BrandedEditToolInput {
 }
 
 /**
-
-* Input for the Read tool - reads file content.
+ * Input for the Read tool - reads file content.
+ * @public
  */
 export interface ReadToolInput {
 	/**Absolute path to the file to read */
@@ -95,8 +95,8 @@ export interface ReadToolInput {
 }
 
 /**
-
-* Branded version of ReadToolInput with FilePath type.
+ * Branded version of ReadToolInput with FilePath type.
+ * @public
  */
 export interface BrandedReadToolInput {
 	/**Absolute path to the file to read */
@@ -108,8 +108,8 @@ export interface BrandedReadToolInput {
 }
 
 /**
-
-* Input for the NotebookEdit tool - edits Jupyter notebook cells.
+ * Input for the NotebookEdit tool - edits Jupyter notebook cells.
+ * @public
  */
 export interface NotebookEditToolInput {
 	/**Absolute path to the notebook file */
@@ -125,8 +125,8 @@ export interface NotebookEditToolInput {
 }
 
 /**
-
-* Branded version of NotebookEditToolInput with FilePath type.
+ * Branded version of NotebookEditToolInput with FilePath type.
+ * @public
  */
 export interface BrandedNotebookEditToolInput {
 	/**Absolute path to the notebook file */
@@ -146,8 +146,8 @@ export interface BrandedNotebookEditToolInput {
 // =============================================================================
 
 /**
-
-* Input for the Glob tool - finds files by pattern.
+ * Input for the Glob tool - finds files by pattern.
+ * @public
  */
 export interface GlobToolInput {
 	/**Glob pattern to match files */
@@ -157,8 +157,8 @@ export interface GlobToolInput {
 }
 
 /**
-
-* Input for the Grep tool - searches file content.
+ * Input for the Grep tool - searches file content.
+ * @public
  */
 export interface GrepToolInput {
 	/**Regular expression pattern to search for */
@@ -194,8 +194,8 @@ export interface GrepToolInput {
 // =============================================================================
 
 /**
-
-* Input for the Bash tool - executes shell commands.
+ * Input for the Bash tool - executes shell commands.
+ * @public
  */
 export interface BashToolInput {
 	/**The command to execute */
@@ -211,8 +211,8 @@ export interface BashToolInput {
 }
 
 /**
-
-* Branded version of BashToolInput with ShellCommand type.
+ * Branded version of BashToolInput with ShellCommand type.
+ * @public
  */
 export interface BrandedBashToolInput {
 	/**The command to execute */
@@ -228,8 +228,8 @@ export interface BrandedBashToolInput {
 }
 
 /**
-
-* Input for the Task tool - spawns subagents.
+ * Input for the Task tool - spawns subagents.
+ * @public
  */
 export interface TaskToolInput {
 	/**Task description for the agent */
@@ -249,8 +249,8 @@ export interface TaskToolInput {
 // =============================================================================
 
 /**
-
-* Input for the WebFetch tool - fetches and processes web content.
+ * Input for the WebFetch tool - fetches and processes web content.
+ * @public
  */
 export interface WebFetchToolInput {
 	/**URL to fetch content from */
@@ -260,8 +260,8 @@ export interface WebFetchToolInput {
 }
 
 /**
-
-* Input for the WebSearch tool - searches the web.
+ * Input for the WebSearch tool - searches the web.
+ * @public
  */
 export interface WebSearchToolInput {
 	/**Search query */
@@ -277,8 +277,8 @@ export interface WebSearchToolInput {
 // =============================================================================
 
 /**
-
-* Todo item structure for TodoWrite.
+ * Todo item structure for TodoWrite.
+ * @public
  */
 export interface TodoItem {
 	/**Task description */
@@ -290,8 +290,8 @@ export interface TodoItem {
 }
 
 /**
-
-* Input for the TodoWrite tool - manages task lists.
+ * Input for the TodoWrite tool - manages task lists.
+ * @public
  */
 export interface TodoWriteToolInput {
 	/**The updated todo list*/
@@ -303,9 +303,9 @@ export interface TodoWriteToolInput {
 // =============================================================================
 
 /**
-
-* Maps tool names to their input types.
-* Use this with discriminated unions for type-safe tool input access.
+ * Maps tool names to their input types.
+ * Use this with discriminated unions for type-safe tool input access.
+ * @public
  */
 export interface ToolInputMap {
 	Write: WriteToolInput;
@@ -322,8 +322,8 @@ export interface ToolInputMap {
 }
 
 /**
-
-* Known tool names that have typed inputs.
+ * Known tool names that have typed inputs.
+ * @public
  */
 export type TypedToolName = keyof ToolInputMap;
 
@@ -332,8 +332,8 @@ export type TypedToolName = keyof ToolInputMap;
 // =============================================================================
 
 /**
-
-* Type guard to check if an object is a valid WriteToolInput.
+ * Type guard to check if an object is a valid WriteToolInput.
+ * @public
  */
 export function isWriteToolInput(input: unknown): input is WriteToolInput {
 	return (
@@ -345,8 +345,8 @@ export function isWriteToolInput(input: unknown): input is WriteToolInput {
 }
 
 /**
-
-* Type guard to check if an object is a valid EditToolInput.
+ * Type guard to check if an object is a valid EditToolInput.
+ * @public
  */
 export function isEditToolInput(input: unknown): input is EditToolInput {
 	return (
@@ -359,40 +359,40 @@ export function isEditToolInput(input: unknown): input is EditToolInput {
 }
 
 /**
-
-* Type guard to check if an object is a valid ReadToolInput.
+ * Type guard to check if an object is a valid ReadToolInput.
+ * @public
  */
 export function isReadToolInput(input: unknown): input is ReadToolInput {
 	return typeof input === "object" && input !== null && typeof (input as ReadToolInput).file_path === "string";
 }
 
 /**
-
-* Type guard to check if an object is a valid BashToolInput.
+ * Type guard to check if an object is a valid BashToolInput.
+ * @public
  */
 export function isBashToolInput(input: unknown): input is BashToolInput {
 	return typeof input === "object" && input !== null && typeof (input as BashToolInput).command === "string";
 }
 
 /**
-
-* Type guard to check if an object is a valid GlobToolInput.
+ * Type guard to check if an object is a valid GlobToolInput.
+ * @public
  */
 export function isGlobToolInput(input: unknown): input is GlobToolInput {
 	return typeof input === "object" && input !== null && typeof (input as GlobToolInput).pattern === "string";
 }
 
 /**
-
-* Type guard to check if an object is a valid GrepToolInput.
+ * Type guard to check if an object is a valid GrepToolInput.
+ * @public
  */
 export function isGrepToolInput(input: unknown): input is GrepToolInput {
 	return typeof input === "object" && input !== null && typeof (input as GrepToolInput).pattern === "string";
 }
 
 /**
-
-* Type guard to check if an object is a valid TaskToolInput.
+ * Type guard to check if an object is a valid TaskToolInput.
+ * @public
  */
 export function isTaskToolInput(input: unknown): input is TaskToolInput {
 	return (
@@ -405,8 +405,8 @@ export function isTaskToolInput(input: unknown): input is TaskToolInput {
 }
 
 /**
-
-* Type guard to check if an object is a valid WebFetchToolInput.
+ * Type guard to check if an object is a valid WebFetchToolInput.
+ * @public
  */
 export function isWebFetchToolInput(input: unknown): input is WebFetchToolInput {
 	return (
@@ -418,16 +418,16 @@ export function isWebFetchToolInput(input: unknown): input is WebFetchToolInput 
 }
 
 /**
-
-* Type guard to check if an object is a valid WebSearchToolInput.
+ * Type guard to check if an object is a valid WebSearchToolInput.
+ * @public
  */
 export function isWebSearchToolInput(input: unknown): input is WebSearchToolInput {
 	return typeof input === "object" && input !== null && typeof (input as WebSearchToolInput).query === "string";
 }
 
 /**
-
-* Type guard to check if an object is a valid NotebookEditToolInput.
+ * Type guard to check if an object is a valid NotebookEditToolInput.
+ * @public
  */
 export function isNotebookEditToolInput(input: unknown): input is NotebookEditToolInput {
 	return (
@@ -439,8 +439,8 @@ export function isNotebookEditToolInput(input: unknown): input is NotebookEditTo
 }
 
 /**
-
-* Type guard to check if an object is a valid TodoWriteToolInput.
+ * Type guard to check if an object is a valid TodoWriteToolInput.
+ * @public
  */
 export function isTodoWriteToolInput(input: unknown): input is TodoWriteToolInput {
 	return typeof input === "object" && input !== null && Array.isArray((input as TodoWriteToolInput).todos);
@@ -451,20 +451,17 @@ export function isTodoWriteToolInput(input: unknown): input is TodoWriteToolInpu
 // =============================================================================
 
 /**
-
-* Get typed tool input for a specific tool.
-* Returns the input if it matches the expected type, otherwise undefined.
-*
-* @example
-
-* ```ts
-* const writeInput = getTypedToolInput("Write", event.tool_input);
-* if (writeInput) {
-* console.log(writeInput.file_path); // Type-safe access
-* }
-
-* ```
-
+ * Get typed tool input for a specific tool.
+ * Returns the input if it matches the expected type, otherwise undefined.
+ *
+ * @example
+ * ```ts
+ * const writeInput = getTypedToolInput("Write", event.tool_input);
+ * if (writeInput) {
+ *   console.log(writeInput.file_path); // Type-safe access
+ * }
+ * ```
+ * @public
  */
 export function getTypedToolInput<T extends TypedToolName>(toolName: T, input: unknown): ToolInputMap[T] | undefined {
 	const guards: Record<TypedToolName, (input: unknown) => boolean> = {

@@ -80,6 +80,7 @@ function handleMessage(message: SidecarMessage): SidecarResponse | undefined {
 
 /**
  * Main entry point for the sidecar.
+ * @public
  */
 export function main(): void {
 	// Enable file logging for sidecar process (not tests)

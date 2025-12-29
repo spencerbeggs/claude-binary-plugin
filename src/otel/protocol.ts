@@ -10,24 +10,25 @@
 /**
  * OTEL exporter configuration sent from hooks to sidecar.
  * The sidecar uses this to configure its OTEL providers.
+ * @public
  */
 export interface OTELConfig {
 	/**
 	 * OTLP endpoint URL (e.g., "http://localhost:4318")
-	 * @default "http://localhost:4318"
+	 * @defaultValue "http://localhost:4318"
 	 */
 	endpoint?: string;
 
 	/**
 	 * Protocol to use for export.
 	 * HTTP is preferred for Bun compatibility (gRPC has issues).
-	 * @default "http"
+	 * @defaultValue "http"
 	 */
 	protocol?: "http" | "grpc";
 
 	/**
 	 * Service name for OTEL resource.
-	 * @default "claude-code-plugin"
+	 * @defaultValue "claude-code-plugin"
 	 */
 	serviceName?: string;
 
@@ -54,7 +55,7 @@ export interface OTELConfig {
 
 	/**
 	 * Export timeout in milliseconds.
-	 * @default 30000
+	 * @defaultValue 30000
 	 */
 	exportTimeoutMs?: number;
 }
@@ -62,6 +63,7 @@ export interface OTELConfig {
 /**
  * Span data for tracing.
  * Represents a single unit of work in a distributed trace.
+ * @public
  */
 export interface SpanData {
 	/** Unique identifier for this span (hex-encoded 16 bytes) */
@@ -100,6 +102,7 @@ export interface SpanData {
 
 /**
  * An event within a span timeline.
+ * @public
  */
 export interface SpanEvent {
 	/** Event name */
@@ -114,6 +117,7 @@ export interface SpanEvent {
 
 /**
  * Instrumentation scope for telemetry.
+ * @public
  */
 export interface ScopeData {
 	/** Scope name (e.g., "systems.savvyweb.claude_code.events") */
@@ -125,6 +129,7 @@ export interface ScopeData {
 /**
  * Standalone event data (not attached to a span).
  * Used for logging notable occurrences.
+ * @public
  */
 export interface EventData {
 	/** Event name */
@@ -149,6 +154,7 @@ export interface EventData {
 /**
  * Metric data point.
  * Supports counters, gauges, and histograms.
+ * @public
  */
 export interface MetricData {
 	/** Metric name */
@@ -172,6 +178,7 @@ export interface MetricData {
 
 /**
  * Metric type discriminated union.
+ * @public
  */
 export type MetricType =
 	| { kind: "counter"; value: number; monotonic?: boolean }
@@ -181,6 +188,7 @@ export type MetricType =
 /**
  * Ping message to verify sidecar is alive and configure it.
  * Sent at session start to establish connection.
+ * @public
  */
 export interface PingMessage {
 	type: "ping";
@@ -192,6 +200,7 @@ export interface PingMessage {
 
 /**
  * Span message containing trace data.
+ * @public
  */
 export interface SpanMessage {
 	type: "span";
@@ -203,6 +212,7 @@ export interface SpanMessage {
 
 /**
  * Event message containing log/event data.
+ * @public
  */
 export interface EventMessage {
 	type: "event";
@@ -214,6 +224,7 @@ export interface EventMessage {
 
 /**
  * Metric message containing metric data.
+ * @public
  */
 export interface MetricMessage {
 	type: "metric";
@@ -225,6 +236,7 @@ export interface MetricMessage {
 
 /**
  * Shutdown message to gracefully terminate the sidecar.
+ * @public
  */
 export interface ShutdownMessage {
 	type: "shutdown";
@@ -234,11 +246,13 @@ export interface ShutdownMessage {
 
 /**
  * Union of all sidecar message types.
+ * @public
  */
 export type SidecarMessage = PingMessage | SpanMessage | EventMessage | MetricMessage | ShutdownMessage;
 
 /**
  * Response from sidecar to client.
+ * @public
  */
 export interface SidecarResponse {
 	/** Whether the operation succeeded */
@@ -252,6 +266,7 @@ export interface SidecarResponse {
 /**
  * Serialize a message to JSON Line format.
  * Uses a custom replacer to handle BigInt values.
+ * @public
  */
 export function serializeMessage(message: SidecarMessage): string {
 	return `${JSON.stringify(message, bigIntReplacer)}\n`;
@@ -260,6 +275,7 @@ export function serializeMessage(message: SidecarMessage): string {
 /**
  * Parse a JSON Line message.
  * Returns null if parsing fails.
+ * @public
  */
 export function parseMessage(line: string): SidecarMessage | null {
 	try {

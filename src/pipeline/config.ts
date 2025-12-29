@@ -7,7 +7,7 @@
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin/pipeline";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
  * import { z } from "zod";
  *
  * export default ClaudeBinaryPlugin.create({
@@ -28,6 +28,7 @@
  */
 
 import type { z } from "zod";
+import type { $ZodType } from "zod/v4/core";
 import type {
 	NotificationEvent,
 	PermissionRequestEvent,
@@ -40,7 +41,7 @@ import type {
 	SubagentStopEvent,
 	ToolName,
 	UserPromptSubmitEvent,
-} from "./index.js";
+} from "../index.js";
 import type {
 	NotificationOutput,
 	PassthroughOutput,
@@ -53,8 +54,8 @@ import type {
 	StopOutput,
 	SubagentStopOutput,
 	UserPromptSubmitOutput,
-} from "./pipeline-types.js";
-import { OutputSchemas } from "./pipeline-types.js";
+} from "./types.js";
+import { OutputSchemas } from "./types.js";
 
 // =============================================================================
 // HANDLER TYPES
@@ -79,9 +80,13 @@ import { OutputSchemas } from "./pipeline-types.js";
  */
 /**
  * Full environment passed to handlers: BaseEnv + state from setup().
+ * @public
  */
 export type PluginEnv<TState> = BaseEnv & TState;
 
+/**
+ * @public
+ */
 export interface PipelineContext<TInput, TOptions, TState = Record<string, unknown>> {
 	/** Hook event input from Claude Code */
 	input: TInput;
@@ -94,6 +99,7 @@ export interface PipelineContext<TInput, TOptions, TState = Record<string, unkno
 /**
  * Pipeline handler: pure transformation function.
  * Returns a validated output or throws to indicate error.
+ * @public
  */
 export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, unknown>> = (
 	ctx: PipelineContext<TInput, TOptions, TState>,
@@ -102,6 +108,7 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
 /**
  * Raw handler: full access to event object for advanced use cases.
  * User is responsible for calling event.end() with appropriate response.
+ * @public
  */
 export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ctx: {
 	event: TEvent;
@@ -130,6 +137,7 @@ export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ct
  * };
  * export default handler;
  * ```
+ * @public
  */
 export type SessionStartPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SessionStartEvent,
@@ -140,6 +148,7 @@ export type SessionStartPipeline<TOptions, TState = Record<string, string>> = Pi
 
 /**
  * Typed pipeline handler for SessionEnd hooks.
+ * @public
  */
 export type SessionEndPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SessionEndEvent,
@@ -168,6 +177,7 @@ export type SessionEndPipeline<TOptions, TState = Record<string, string>> = Pipe
  * };
  * export default handler;
  * ```
+ * @public
  */
 export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PreToolUseEvent,
@@ -178,6 +188,7 @@ export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = Pipe
 
 /**
  * Typed pipeline handler for PostToolUse hooks.
+ * @public
  */
 export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PostToolUseEvent,
@@ -188,6 +199,7 @@ export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = Pip
 
 /**
  * Typed pipeline handler for Stop hooks.
+ * @public
  */
 export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	StopEvent,
@@ -198,6 +210,7 @@ export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHa
 
 /**
  * Typed pipeline handler for SubagentStop hooks.
+ * @public
  */
 export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SubagentStopEvent,
@@ -208,6 +221,7 @@ export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = Pi
 
 /**
  * Typed pipeline handler for UserPromptSubmit hooks.
+ * @public
  */
 export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	UserPromptSubmitEvent,
@@ -218,6 +232,7 @@ export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> 
 
 /**
  * Typed pipeline handler for PreCompact hooks.
+ * @public
  */
 export type PreCompactPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PreCompactEvent,
@@ -228,6 +243,7 @@ export type PreCompactPipeline<TOptions, TState = Record<string, string>> = Pipe
 
 /**
  * Typed pipeline handler for Notification hooks.
+ * @public
  */
 export type NotificationPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	NotificationEvent,
@@ -238,6 +254,7 @@ export type NotificationPipeline<TOptions, TState = Record<string, string>> = Pi
 
 /**
  * Typed pipeline handler for PermissionRequest hooks.
+ * @public
  */
 export type PermissionRequestPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PermissionRequestEvent,
@@ -248,18 +265,20 @@ export type PermissionRequestPipeline<TOptions, TState = Record<string, string>>
 
 /**
  * Typed raw handler for SessionStart hooks.
+ * @public
  */
 export type SessionStartRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").SessionStartHookEvent<TOptions>,
+	import("../index.js").SessionStartHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for SessionEnd hooks.
+ * @public
  */
 export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").SessionEndHookEvent<TOptions>,
+	import("../index.js").SessionEndHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -276,72 +295,80 @@ export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = Ra
  * };
  * export default handler;
  * ```
+ * @public
  */
 export type PreToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").PreToolUseHookEvent<TOptions>,
+	import("../index.js").PreToolUseHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for PostToolUse hooks.
+ * @public
  */
 export type PostToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").PostToolUseHookEvent<TOptions>,
+	import("../index.js").PostToolUseHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for Stop hooks.
+ * @public
  */
 export type StopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").StopHookEvent<TOptions>,
+	import("../index.js").StopHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for SubagentStop hooks.
+ * @public
  */
 export type SubagentStopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").SubagentStopHookEvent<TOptions>,
+	import("../index.js").SubagentStopHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for UserPromptSubmit hooks.
+ * @public
  */
 export type UserPromptSubmitRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").UserPromptSubmitHookEvent<TOptions>,
+	import("../index.js").UserPromptSubmitHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for PreCompact hooks.
+ * @public
  */
 export type PreCompactRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").PreCompactHookEvent<TOptions>,
+	import("../index.js").PreCompactHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for Notification hooks.
+ * @public
  */
 export type NotificationRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").NotificationHookEvent<TOptions>,
+	import("../index.js").NotificationHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
 
 /**
  * Typed raw handler for PermissionRequest hooks.
+ * @public
  */
 export type PermissionRequestRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("./index.js").PermissionRequestHookEvent<TOptions>,
+	import("../index.js").PermissionRequestHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -352,8 +379,9 @@ export type PermissionRequestRawHandler<TOptions, TState = Record<string, string
 
 /**
  * Base hook definition with common fields.
+ * @public
  */
-interface HookDefinitionBase {
+export interface HookDefinitionBase {
 	/** Unique name for this hook (used in CLI and telemetry) */
 	name: string;
 	/** Description shown in help text */
@@ -362,16 +390,18 @@ interface HookDefinitionBase {
 
 /**
  * Tool filter for PreToolUse/PostToolUse hooks.
+ * @public
  */
-interface ToolFilter {
+export interface ToolFilter {
 	/** Only run this hook for these tools (fast-path skip for others) */
 	tools?: ToolName[];
 }
 
 /**
  * Pipeline-based hook definition with inline function.
+ * @public
  */
-interface PipelineHookDefinition<TInput, TOutput, TOptions> extends HookDefinitionBase {
+export interface PipelineHookDefinition<TInput, TOutput, TOptions> extends HookDefinitionBase {
 	/** Pure transformation function */
 	pipeline: PipelineHandler<TInput, TOutput, TOptions>;
 	handler?: never;
@@ -390,8 +420,9 @@ interface PipelineHookDefinition<TInput, TOutput, TOptions> extends HookDefiniti
  *   pipeline: "./hooks/docs-access.hook.ts"
  * }
  * ```
+ * @public
  */
-interface PipelineFileHookDefinition extends HookDefinitionBase {
+export interface PipelineFileHookDefinition extends HookDefinitionBase {
 	/** Relative path to file exporting default pipeline function */
 	pipeline: string;
 	handler?: never;
@@ -399,8 +430,9 @@ interface PipelineFileHookDefinition extends HookDefinitionBase {
 
 /**
  * Raw handler-based hook definition with inline function.
+ * @public
  */
-interface RawHookDefinition<TEvent, TOptions, TState = Record<string, string>> extends HookDefinitionBase {
+export interface RawHookDefinition<TEvent, TOptions, TState = Record<string, string>> extends HookDefinitionBase {
 	/** Raw event handler with full control */
 	handler: RawHandler<TEvent, TOptions, TState>;
 	pipeline?: never;
@@ -419,8 +451,9 @@ interface RawHookDefinition<TEvent, TOptions, TState = Record<string, string>> e
  *   handler: "./hooks/post-build.hook.ts"
  * }
  * ```
+ * @public
  */
-interface RawFileHookDefinition extends HookDefinitionBase {
+export interface RawFileHookDefinition extends HookDefinitionBase {
 	/** Relative path to file exporting default handler function */
 	handler: string;
 	pipeline?: never;
@@ -438,6 +471,7 @@ interface RawFileHookDefinition extends HookDefinitionBase {
  *   hooks: [{ type: "command", command: "bash ./scripts/init.sh" }]
  * }
  * ```
+ * @public
  */
 export interface PassthroughHookEntry {
 	/** Optional matcher pattern for tool filtering */
@@ -452,6 +486,7 @@ export interface PassthroughHookEntry {
 
 /**
  * Hook definition: either pipeline, handler, file path, or passthrough.
+ * @public
  */
 export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>> =
 	| PipelineHookDefinition<TInput, TOutput, TOptions>
@@ -464,85 +499,115 @@ export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<st
 // TYPED HOOK DEFINITIONS PER EVENT TYPE
 // =============================================================================
 
-/** SessionStart hook definition */
+/**
+ * SessionStart hook definition
+ * @public
+ */
 export type SessionStartHookDefinition<TOptions> = HookDefinition<
 	SessionStartEvent,
 	SessionStartOutput,
-	import("./index.js").SessionStartHookEvent<TOptions>,
+	import("../index.js").SessionStartHookEvent<TOptions>,
 	TOptions
 >;
 
-/** SessionEnd hook definition */
+/**
+ * SessionEnd hook definition
+ * @public
+ */
 export type SessionEndHookDefinition<TOptions> = HookDefinition<
 	SessionEndEvent,
 	SessionEndOutput,
-	import("./index.js").SessionEndHookEvent<TOptions>,
+	import("../index.js").SessionEndHookEvent<TOptions>,
 	TOptions
 >;
 
-/** PreToolUse hook definition with tool filter */
+/**
+ * PreToolUse hook definition with tool filter
+ * @public
+ */
 export type PreToolUseHookDefinition<TOptions> = HookDefinition<
 	PreToolUseEvent,
 	PreToolUseOutput,
-	import("./index.js").PreToolUseHookEvent<TOptions>,
+	import("../index.js").PreToolUseHookEvent<TOptions>,
 	TOptions
 > &
 	ToolFilter;
 
-/** PostToolUse hook definition with tool filter */
+/**
+ * PostToolUse hook definition with tool filter
+ * @public
+ */
 export type PostToolUseHookDefinition<TOptions> = HookDefinition<
 	PostToolUseEvent,
 	PostToolUseOutput,
-	import("./index.js").PostToolUseHookEvent<TOptions>,
+	import("../index.js").PostToolUseHookEvent<TOptions>,
 	TOptions
 > &
 	ToolFilter;
 
-/** Stop hook definition */
+/**
+ * Stop hook definition
+ * @public
+ */
 export type StopHookDefinition<TOptions> = HookDefinition<
 	StopEvent,
 	StopOutput,
-	import("./index.js").StopHookEvent<TOptions>,
+	import("../index.js").StopHookEvent<TOptions>,
 	TOptions
 >;
 
-/** SubagentStop hook definition */
+/**
+ * SubagentStop hook definition
+ * @public
+ */
 export type SubagentStopHookDefinition<TOptions> = HookDefinition<
 	SubagentStopEvent,
 	SubagentStopOutput,
-	import("./index.js").SubagentStopHookEvent<TOptions>,
+	import("../index.js").SubagentStopHookEvent<TOptions>,
 	TOptions
 >;
 
-/** UserPromptSubmit hook definition */
+/**
+ * UserPromptSubmit hook definition
+ * @public
+ */
 export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
 	UserPromptSubmitEvent,
 	UserPromptSubmitOutput,
-	import("./index.js").UserPromptSubmitHookEvent<TOptions>,
+	import("../index.js").UserPromptSubmitHookEvent<TOptions>,
 	TOptions
 >;
 
-/** PreCompact hook definition */
+/**
+ * PreCompact hook definition
+ * @public
+ */
 export type PreCompactHookDefinition<TOptions> = HookDefinition<
 	PreCompactEvent,
 	PreCompactOutput,
-	import("./index.js").PreCompactHookEvent<TOptions>,
+	import("../index.js").PreCompactHookEvent<TOptions>,
 	TOptions
 >;
 
-/** Notification hook definition */
+/**
+ * Notification hook definition
+ * @public
+ */
 export type NotificationHookDefinition<TOptions> = HookDefinition<
 	NotificationEvent,
 	NotificationOutput,
-	import("./index.js").NotificationHookEvent<TOptions>,
+	import("../index.js").NotificationHookEvent<TOptions>,
 	TOptions
 >;
 
-/** PermissionRequest hook definition */
+/**
+ * PermissionRequest hook definition
+ * @public
+ */
 export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
 	PermissionRequestEvent,
 	PermissionRequestOutput,
-	import("./index.js").PermissionRequestHookEvent<TOptions>,
+	import("../index.js").PermissionRequestHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -552,6 +617,7 @@ export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
 
 /**
  * Map of hook event types to their definitions.
+ * @public
  */
 export interface HooksMap<TOptions> {
 	SessionStart?: SessionStartHookDefinition<TOptions>[];
@@ -573,6 +639,7 @@ export interface HooksMap<TOptions> {
 /**
  * Command configuration for CLI commands (legacy format).
  * @deprecated Use CommandDefinition with args schema instead
+ * @public
  */
 export interface CommandConfig {
 	/** Command name used in CLI */
@@ -590,7 +657,7 @@ export interface CommandConfig {
 /**
  * Command definition with Zod argument schema for declarative command definitions.
  *
- * @template TArgs - Zod schema type for command arguments
+ * @typeParam TArgs - Zod schema type for command arguments
  *
  * @example
  * ```ts
@@ -605,8 +672,9 @@ export interface CommandConfig {
  *   },
  * }
  * ```
+ * @public
  */
-export interface CommandDefinition<TArgs extends z.ZodType = z.ZodType> {
+export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
 	/** Description shown in help text and to LLM */
 	description: string;
 	/** Zod schema for validating CLI arguments */
@@ -618,9 +686,9 @@ export interface CommandDefinition<TArgs extends z.ZodType = z.ZodType> {
 /**
  * Context provided to command handlers.
  *
- * @template TArgs - Validated argument type from Zod schema
- * @template TOptions - Validated options from plugin schema (Layer 2)
- * @template TState - Computed variables from setup function (Layer 3)
+ * @typeParam TArgs - Validated argument type from Zod schema
+ * @typeParam TOptions - Validated options from plugin schema (Layer 2)
+ * @typeParam TState - Computed variables from setup function (Layer 3)
  *
  * @example
  * ```ts
@@ -631,6 +699,7 @@ export interface CommandDefinition<TArgs extends z.ZodType = z.ZodType> {
  *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
  * };
  * ```
+ * @public
  */
 export interface CommandContext<TArgs, TOptions, TState = Record<string, unknown>> {
 	/** Validated command arguments from CLI */
@@ -644,9 +713,10 @@ export interface CommandContext<TArgs, TOptions, TState = Record<string, unknown
 /**
  * Command handler function signature.
  *
- * @template TArgs - Validated argument type from Zod schema
- * @template TOptions - Validated options from plugin schema
- * @template TState - State from setup function
+ * @typeParam TArgs - Validated argument type from Zod schema
+ * @typeParam TOptions - Validated options from plugin schema
+ * @typeParam TState - State from setup function
+ * @public
  */
 export type CommandHandler<TArgs, TOptions, TState = Record<string, unknown>> = (
 	ctx: CommandContext<TArgs, TOptions, TState>,
@@ -655,6 +725,7 @@ export type CommandHandler<TArgs, TOptions, TState = Record<string, unknown>> = 
 /**
  * Command output structure returned by command handlers.
  * Commands output markdown for LLM consumption.
+ * @public
  */
 export interface CommandOutput {
 	/** Exit code (0 = success, 1 = issues found, 2 = fatal error) */
@@ -667,6 +738,7 @@ export interface CommandOutput {
 
 /**
  * Map of command names to their definitions.
+ * @public
  */
 export type CommandsMap = Record<string, CommandDefinition>;
 
@@ -675,9 +747,10 @@ export type CommandsMap = Record<string, CommandDefinition>;
  * These are the core paths that the pipeline provides automatically.
  *
  * Persisted as:
- * - {prefix}_PROJECT_DIR
- * - {prefix}_PLUGIN_DIR
- * - {prefix}_PLUGIN_ENV_FILE
+ * - `PREFIX_PROJECT_DIR`
+ * - `PREFIX_PLUGIN_DIR`
+ * - `PREFIX_PLUGIN_ENV_FILE`
+ * @public
  */
 export interface BaseEnv {
 	/** Project directory (from CLAUDE_PROJECT_DIR or cwd) */
@@ -698,6 +771,7 @@ export interface BaseEnv {
 
 /**
  * Context passed to the setup function during SessionStart.
+ * @public
  */
 export interface SetupContext<TOptions> {
 	/** Validated options from the schema (with defaults applied) */
@@ -714,8 +788,8 @@ export interface SetupContext<TOptions> {
  * Setup function for computing derived environment variables.
  * Runs during SessionStart after options are validated.
  *
- * @template TOptions - Validated options type from schema
- * @template TState - Return type with specific computed variable names
+ * @typeParam TOptions - Validated options type from schema
+ * @typeParam TState - Return type with specific computed variable names
  * @returns Object with computed values of any type (will be typed through inference)
  *
  * @example
@@ -728,6 +802,7 @@ export interface SetupContext<TOptions> {
  *   };
  * }
  * ```
+ * @public
  */
 export type SetupFunction<TOptions, TState = Record<string, unknown>> = (
 	ctx: SetupContext<TOptions>,
@@ -739,8 +814,9 @@ export type SetupFunction<TOptions, TState = Record<string, unknown>> = (
  *
  * Uses `infer _TOptions` to match SetupContext with any options type,
  * allowing the pattern to match setup functions regardless of their options type.
+ * @public
  */
-type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions>) => Promise<infer R>
+export type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions>) => Promise<infer R>
 	? R
 	: T extends (ctx: SetupContext<infer _TOptions>) => infer R
 		? R
@@ -749,12 +825,13 @@ type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions>) => P
 /**
  * Plugin configuration options.
  *
- * @template TEnv - Zod schema type for environment validation
- * @template TSetup - Setup function type (used to infer computed vars)
- * @template TCommands - Map of command names to their definitions
+ * @typeParam TEnv - Zod schema type for environment validation
+ * @typeParam TSetup - Setup function type (used to infer computed vars)
+ * @typeParam TCommands - Map of command names to their definitions
+ * @public
  */
 export interface PluginConfig<
-	TEnv extends z.ZodType,
+	TEnv extends $ZodType,
 	// Use function type constraint directly to avoid default type parameter issues
 	TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
 	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
@@ -762,7 +839,7 @@ export interface PluginConfig<
 	/**
 	 * Environment variable prefix for this plugin.
 	 * All env vars will be prefixed with this value.
-	 * @example "SAVVY_WORKFLOW" -> SAVVY_WORKFLOW_DEBUG
+	 * @example "SAVVY_WORKFLOW" becomes SAVVY_WORKFLOW_DEBUG
 	 */
 	prefix: string;
 
@@ -794,7 +871,7 @@ export interface PluginConfig<
 
 	/**
 	 * Command definitions with typed argument schemas.
-	 * Commands receive { args, options, computed } context.
+	 * Commands receive `{ args, options, computed }` context.
 	 *
 	 * @example
 	 * ```ts
@@ -815,38 +892,38 @@ export interface PluginConfig<
 
 	/**
 	 * Whether to compile to bytecode for faster startup.
-	 * @default false
+	 * @defaultValue false
 	 */
 	bytecode?: boolean;
 
 	/**
 	 * Whether to persist to local cache after build.
-	 * @default true
+	 * @defaultValue true
 	 */
 	persistLocal?: boolean;
 
 	/**
 	 * Whether to compile to standalone binary.
-	 * @default true
+	 * @defaultValue true
 	 */
 	compile?: boolean;
 
 	/**
 	 * Whether to minify output.
-	 * @default true
+	 * @defaultValue true
 	 */
 	minify?: boolean;
 
 	/**
 	 * Whether to embed sourcemaps.
-	 * @default true
+	 * @defaultValue true
 	 */
 	sourcemap?: boolean;
 
 	/**
 	 * Output path for generated hooks.json file.
 	 * Relative to the plugin root directory.
-	 * @default "hooks/hooks.json"
+	 * @defaultValue "hooks/hooks.json"
 	 */
 	hooksOutputPath?: string;
 }
@@ -854,12 +931,13 @@ export interface PluginConfig<
 /**
  * Compiled plugin ready for building.
  *
- * @template TEnv - Zod schema type
- * @template TSetup - Setup function type (preserves return type for inference)
- * @template TCommands - Map of command names to their definitions
+ * @typeParam TEnv - Zod schema type
+ * @typeParam TSetup - Setup function type (preserves return type for inference)
+ * @typeParam TCommands - Map of command names to their definitions
+ * @public
  */
 export interface CompiledPlugin<
-	TEnv extends z.ZodType,
+	TEnv extends $ZodType,
 	// Use function type constraint directly to avoid default type parameter issues
 	TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
 	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
@@ -901,18 +979,19 @@ export interface CompiledPlugin<
  *   }
  * });
  * ```
+ * @public
  */
 export const ClaudeBinaryPlugin = {
 	/**
 	 * Create a new plugin configuration.
 	 * This returns a config object that can be used by the builder.
 	 *
-	 * @template TEnv - Zod schema type
-	 * @template TSetup - Setup function type (inferred from config.setup)
-	 * @template TCommands - Map of command names to their definitions
+	 * @typeParam TEnv - Zod schema type
+	 * @typeParam TSetup - Setup function type (inferred from config.setup)
+	 * @typeParam TCommands - Map of command names to their definitions
 	 */
 	create<
-		TEnv extends z.ZodType,
+		TEnv extends $ZodType,
 		TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
 		TCommands extends Record<string, CommandDefinition> = Record<string, never>,
 	>(config: PluginConfig<TEnv, TSetup, TCommands>): CompiledPlugin<TEnv, TSetup, TCommands> {
@@ -949,6 +1028,7 @@ export const ClaudeBinaryPlugin = {
  * };
  * export default handler;
  * ```
+ * @public
  */
 export namespace ClaudeBinaryPlugin {
 	/**
@@ -1060,6 +1140,7 @@ export namespace ClaudeBinaryPlugin {
 
 /**
  * Check if a hook definition uses pipeline mode.
+ * @public
  */
 export function isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
 	hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
@@ -1069,6 +1150,7 @@ export function isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Recor
 
 /**
  * Check if a hook definition uses raw handler mode.
+ * @public
  */
 export function isRawHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
 	hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
@@ -1078,7 +1160,8 @@ export function isRawHook<TInput, TOutput, TEvent, TOptions, TState = Record<str
 
 /**
  * Get the output schema for a hook event type.
+ * @public
  */
-export function getOutputSchema(hookType: keyof typeof OutputSchemas): z.ZodType {
+export function getOutputSchema(hookType: keyof typeof OutputSchemas): $ZodType {
 	return OutputSchemas[hookType];
 }

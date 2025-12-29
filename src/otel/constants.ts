@@ -58,6 +58,7 @@ export const EVENT_NAMES = {
  *
  * All attributes use dot notation for consistency with Anthropic's native telemetry
  * (e.g., "session.id", "tool.name", "hook.duration_ms").
+ * @public
  */
 export const CLAUDE_ATTRS = {
 	/**
@@ -84,21 +85,21 @@ export const CLAUDE_ATTRS = {
 
 	/**
 	 * Organization ID from the user's Claude account.
-	 * Read from ~/.claude.json -> oauthAccount.organizationUuid
+	 * Read from `~/.claude.json` at `oauthAccount.organizationUuid`
 	 * Aligns with Anthropic's native OTEL schema.
 	 */
 	ORGANIZATION_ID: "organization.id",
 
 	/**
 	 * User account UUID from the user's Claude account.
-	 * Read from ~/.claude.json -> oauthAccount.accountUuid
+	 * Read from `~/.claude.json` at `oauthAccount.accountUuid`
 	 * Aligns with Anthropic's native OTEL schema.
 	 */
 	USER_ACCOUNT_UUID: "user.account_uuid",
 
 	/**
 	 * User email from the user's Claude account.
-	 * Read from ~/.claude.json -> oauthAccount.emailAddress
+	 * Read from `~/.claude.json` at `oauthAccount.emailAddress`
 	 * High cardinality - only include if explicitly enabled.
 	 */
 	USER_EMAIL: "user.email",
@@ -240,6 +241,7 @@ export const CLAUDE_ATTRS = {
 
 /**
  * Plugin-specific attributes.
+ * @public
  */
 export const PLUGIN_ATTRS = {
 	/**
@@ -368,6 +370,7 @@ export const RESOURCE_ATTRS = {
 /**
  * Metric names for hook telemetry.
  * Uses `claude_code.hook.*` prefix to align with Anthropic's naming.
+ * @public
  */
 export const METRIC_NAMES = {
 	/**
@@ -430,6 +433,7 @@ export const METRIC_NAMES = {
 /**
  * Span names for tracing.
  * Uses `claude_code.hook.*` prefix for consistency.
+ * @public
  */
 export const SPAN_NAMES = {
 	/**

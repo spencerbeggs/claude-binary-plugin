@@ -14,9 +14,9 @@
  */
 
 import { z } from "zod";
-import type { ZodSchema } from "./index.js";
+import type { ZodSchema } from "../env/plugin-env.js";
+import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
 import {
-	ClaudeBinaryPluginEnv,
 	NotificationHookEvent,
 	PermissionRequestHookEvent,
 	PostToolUseHookEvent,
@@ -27,10 +27,10 @@ import {
 	StopHookEvent,
 	SubagentStopHookEvent,
 	UserPromptSubmitHookEvent,
-} from "./index.js";
-import type { HookOutcome } from "./otel/events.js";
-import { emitHookExecution } from "./otel/events.js";
-import type { BaseEnv, PipelineHandler, SetupFunction } from "./pipeline.js";
+} from "../events/subclasses.js";
+import type { HookOutcome } from "../otel/events.js";
+import { emitHookExecution } from "../otel/events.js";
+import type { BaseEnv, PipelineHandler, SetupFunction } from "./config.js";
 
 // =============================================================================
 // INTERNAL RESPONSE TYPES (for Claude Code response builder)
@@ -40,8 +40,9 @@ import type { BaseEnv, PipelineHandler, SetupFunction } from "./pipeline.js";
  * Internal type for PreToolUse response builder.
  * This is the format expected by the Claude Code response builder,
  * converted from pipeline output format.
+ * @public
  */
-interface PreToolUseResponse {
+export interface PreToolUseResponse {
 	permissionDecision: "allow" | "deny" | "ask";
 	reason?: string;
 	updatedInput?: Record<string, unknown>;
@@ -49,8 +50,9 @@ interface PreToolUseResponse {
 
 /**
  * Internal type for PostToolUse response builder.
+ * @public
  */
-interface PostToolUseResponse {
+export interface PostToolUseResponse {
 	additionalContext?: string;
 	decision?: "block";
 	reason?: string;
@@ -58,23 +60,26 @@ interface PostToolUseResponse {
 
 /**
  * Internal type for SessionStart response builder.
+ * @public
  */
-interface SessionStartResponse {
+export interface SessionStartResponse {
 	additionalContext?: string;
 }
 
 /**
  * Internal type for Stop/SubagentStop response builder.
+ * @public
  */
-interface StopResponse {
+export interface StopResponse {
 	decision?: "block";
 	reason?: string;
 }
 
 /**
  * Internal type for UserPromptSubmit response builder.
+ * @public
  */
-interface UserPromptSubmitResponse {
+export interface UserPromptSubmitResponse {
 	additionalContext?: string;
 	decision?: "block";
 	reason?: string;
@@ -82,39 +87,53 @@ interface UserPromptSubmitResponse {
 
 /**
  * Internal type for PermissionRequest response builder.
+ * @public
  */
-interface PermissionRequestResponse {
+export interface PermissionRequestResponse {
 	behavior: "allow" | "deny";
 	message?: string;
 	interrupt?: boolean;
 	updatedInput?: Record<string, unknown>;
 }
 
-import { extractTokenMetrics } from "./pipeline-metrics.js";
-import type { AnyPipelineOutput, ExecutionStatus, HookAction } from "./pipeline-types.js";
-import { isPipelineOutput } from "./pipeline-types.js";
+import { extractTokenMetrics } from "./metrics.js";
+import type { AnyPipelineOutput, ExecutionStatus, HookAction } from "./types.js";
+import { isPipelineOutput } from "./types.js";
 
 // Re-export types that are used in exports
-export type { ExecutionStatus, HookAction } from "./pipeline-types.js";
+export type { ExecutionStatus, HookAction } from "./types.js";
 
 // =============================================================================
 // HOOK EVENT CONSTRUCTORS MAP
 // =============================================================================
 
-const HookEventClasses = {
-	PreToolUse: PreToolUseHookEvent,
-	PostToolUse: PostToolUseHookEvent,
-	SessionStart: SessionStartHookEvent,
-	SessionEnd: SessionEndHookEvent,
-	Stop: StopHookEvent,
-	SubagentStop: SubagentStopHookEvent,
-	UserPromptSubmit: UserPromptSubmitHookEvent,
-	PreCompact: PreCompactHookEvent,
-	Notification: NotificationHookEvent,
-	PermissionRequest: PermissionRequestHookEvent,
-} as const;
+/**
+ * Lazily initialized map of hook event constructors.
+ * Uses a function to avoid circular dependency issues when
+ * index.ts re-exports from this module while we import event
+ * classes from index.ts.
+ * @public
+ */
+export function getHookEventClasses() {
+	return {
+		PreToolUse: PreToolUseHookEvent,
+		PostToolUse: PostToolUseHookEvent,
+		SessionStart: SessionStartHookEvent,
+		SessionEnd: SessionEndHookEvent,
+		Stop: StopHookEvent,
+		SubagentStop: SubagentStopHookEvent,
+		UserPromptSubmit: UserPromptSubmitHookEvent,
+		PreCompact: PreCompactHookEvent,
+		Notification: NotificationHookEvent,
+		PermissionRequest: PermissionRequestHookEvent,
+	} as const;
+}
 
-type HookEventType = keyof typeof HookEventClasses;
+/**
+ * Union of all hook event type names.
+ * @public
+ */
+export type HookEventType = keyof ReturnType<typeof getHookEventClasses>;
 
 // =============================================================================
 // PIPELINE OUTPUT PROCESSING
@@ -122,6 +141,7 @@ type HookEventType = keyof typeof HookEventClasses;
 
 /**
  * Map pipeline status and action to HookOutcome for telemetry.
+ * @public
  */
 function mapToOutcome(status: ExecutionStatus, action?: HookAction): HookOutcome {
 	// Non-executed states
@@ -163,6 +183,7 @@ function mapToOutcome(status: ExecutionStatus, action?: HookAction): HookOutcome
 
 /**
  * Map pipeline action to permission decision for response builder.
+ * @public
  */
 function mapToPermissionDecision(action?: HookAction): "allow" | "deny" | "ask" | undefined {
 	if (action === "allow" || action === "deny" || action === "ask") {
@@ -177,6 +198,7 @@ function mapToPermissionDecision(action?: HookAction): "allow" | "deny" | "ask" 
 
 /**
  * Convert pipeline output to PreToolUse response format.
+ * @public
  */
 function convertToPreToolUseResponse(output: AnyPipelineOutput): PreToolUseResponse {
 	const action = "action" in output ? output.action : undefined;
@@ -198,6 +220,7 @@ function convertToPreToolUseResponse(output: AnyPipelineOutput): PreToolUseRespo
 
 /**
  * Convert pipeline output to PostToolUse response format.
+ * @public
  */
 function convertToPostToolUseResponse(output: AnyPipelineOutput): PostToolUseResponse {
 	const action = "action" in output ? output.action : undefined;
@@ -213,6 +236,7 @@ function convertToPostToolUseResponse(output: AnyPipelineOutput): PostToolUseRes
 
 /**
  * Convert pipeline output to SessionStart response format.
+ * @public
  */
 function convertToSessionStartResponse(output: AnyPipelineOutput): SessionStartResponse {
 	if ("claudeContext" in output && output.claudeContext) {
@@ -223,6 +247,7 @@ function convertToSessionStartResponse(output: AnyPipelineOutput): SessionStartR
 
 /**
  * Convert pipeline output to Stop response format.
+ * @public
  */
 function convertToStopResponse(output: AnyPipelineOutput): StopResponse {
 	const action = "action" in output ? output.action : undefined;
@@ -235,6 +260,7 @@ function convertToStopResponse(output: AnyPipelineOutput): StopResponse {
 
 /**
  * Convert pipeline output to UserPromptSubmit response format.
+ * @public
  */
 function convertToUserPromptSubmitResponse(output: AnyPipelineOutput): UserPromptSubmitResponse {
 	const action = "action" in output ? output.action : undefined;
@@ -250,6 +276,7 @@ function convertToUserPromptSubmitResponse(output: AnyPipelineOutput): UserPromp
 
 /**
  * Convert pipeline output to PermissionRequest response format.
+ * @public
  */
 function convertToPermissionRequestResponse(output: AnyPipelineOutput): PermissionRequestResponse {
 	const action = "action" in output ? output.action : undefined;
@@ -264,6 +291,7 @@ function convertToPermissionRequestResponse(output: AnyPipelineOutput): Permissi
 
 /**
  * Convert pipeline output to response format based on hook type.
+ * @public
  */
 function convertToResponse(hookType: HookEventType, output: AnyPipelineOutput): unknown {
 	switch (hookType) {
@@ -296,6 +324,7 @@ function convertToResponse(hookType: HookEventType, output: AnyPipelineOutput): 
 /**
  * I/O dependencies for runPipeline.
  * Allows injection for testing without mocking process globals.
+ * @public
  */
 export interface IODependencies {
 	/** Readable stream for hook input (defaults to process.stdin) */
@@ -333,6 +362,7 @@ const defaultIO: ResolvedIODependencies = {
 
 /**
  * Options for running a pipeline hook.
+ * @public
  */
 export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, string>> {
 	/** Hook event type */
@@ -486,13 +516,14 @@ function applyPipelineOutput(event: any, hookType: HookEventType, output: unknow
  * This function:
  * 1. Creates the appropriate hook event from stdin
  * 2. Checks tool filter (for PreToolUse/PostToolUse)
- * 3. Calls the pipeline handler with { input, options, computed }
+ * 3. Calls the pipeline handler with `{ input, options, computed }`
  * 4. Validates the pipeline output
  * 5. For pipeline outputs: extracts auto-metrics and emits telemetry
  * 6. For SessionStart hooks, persists env vars to CLAUDE_ENV_FILE
  * 7. Converts output to hook response and ends the event
  *
  * @param options - Pipeline configuration
+ * @public
  */
 export async function runPipeline<TOptions = unknown, TState = Record<string, string>>(
 	options: RunPipelineOptions<TOptions, TState>,
@@ -511,7 +542,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 	};
 
 	// Get the appropriate event class
-	const EventClass = HookEventClasses[hookType];
+	const EventClass = getHookEventClasses()[hookType];
 	if (!EventClass) {
 		writeError(`Unknown hook type: ${hookType}`);
 		io.exit(2);
@@ -729,18 +760,22 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 }
 
 /**
- * Extract state from the environment.
- * Reads {prefix}_PLUGIN_STATE and parses it as JSON.
- *
- * @param env - The plugin environment instance
- * @returns State object parsed from {prefix}_PLUGIN_STATE
+ * Check if CLAUDE_DEBUG is enabled (handles "1", "true", etc.)
+ * @public
  */
-/** Check if CLAUDE_DEBUG is enabled (handles "1", "true", etc.) */
 function isDebugEnabled(): boolean {
 	const val = Bun.env.CLAUDE_DEBUG;
 	return val === "1" || val === "true";
 }
 
+/**
+ * Extract state from the environment.
+ * Reads `prefix`_PLUGIN_STATE and parses it as JSON.
+ *
+ * @param env - The plugin environment instance
+ * @returns State object parsed from `prefix`_PLUGIN_STATE
+ * @public
+ */
 function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
 	const prefix = env.getPrefix();
 
@@ -804,6 +839,7 @@ interface PersistSessionEnvOptions {
 
 /**
  * Create the base env object for the setup function.
+ * @public
  */
 function createBaseEnv(cwd: string, claudeEnvFile: string, env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
 	return {
@@ -901,6 +937,7 @@ async function persistSessionEnv(options: PersistSessionEnvOptions): Promise<voi
 
 /**
  * Options for running a raw handler hook.
+ * @public
  */
 export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>> {
 	/** Hook event type */
@@ -922,13 +959,14 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
  *
  * This function simply creates the event and passes it to the handler.
  * The handler is responsible for calling event.end().
+ * @public
  */
 export async function runRawHandler<TOptions, TState = Record<string, string>>(
 	options: RunRawHandlerOptions<TOptions, TState>,
 ): Promise<void> {
 	const { hookType, hookName, pluginName, pluginVersion, handler, envClass } = options;
 
-	const EventClass = HookEventClasses[hookType];
+	const EventClass = getHookEventClasses()[hookType];
 	if (!EventClass) {
 		console.error(`Unknown hook type: ${hookType}`);
 		process.exit(2);
@@ -990,6 +1028,7 @@ export async function runRawHandler<TOptions, TState = Record<string, string>>(
  * @param prefixValue - Environment variable prefix (e.g., "SAVVY_WORKFLOW")
  * @param schemaValue - Zod schema for validating env vars
  * @param pluginNameValue - Plugin name for logging (e.g., "workflow")
+ * @public
  */
 export function createEnvClass<T>(
 	prefixValue: string,
@@ -1020,6 +1059,7 @@ export function createEnvClass<T>(
  *
  * @param hookKey - The hook key in format "HookType/hook-name"
  * @param validHooks - Array of valid hook keys for error message
+ * @public
  */
 export async function handleUnknownHook(hookKey: string, validHooks: string[]): Promise<never> {
 	const startTime = performance.now();
@@ -1048,9 +1088,9 @@ export async function handleUnknownHook(hookKey: string, validHooks: string[]): 
 
 	// Emit telemetry for the error
 	try {
-		const { isOTELEnabled } = await import("./otel/config.js");
+		const { isOTELEnabled } = await import("../otel/config.js");
 		if (isOTELEnabled()) {
-			const { emitHookExecutionDirect } = await import("./otel/events.js");
+			const { emitHookExecutionDirect } = await import("../otel/events.js");
 			emitHookExecutionDirect({
 				sessionId: sessionId ?? "unknown",
 				hookName: `${hookType}/${hookName}`,

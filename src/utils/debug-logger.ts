@@ -10,7 +10,7 @@
  *
  * @example
  * ```ts
- * import { DebugLogger } from "claude-binary-plugin/debug-logger";
+ * import { DebugLogger } from "claude-binary-plugin";
  *
  * const log = new DebugLogger({ prefix: "my-hook" });
  * log.info("Starting hook execution");
@@ -25,11 +25,15 @@ import { dirname, join } from "node:path";
 
 /**
  * Log levels supported by DebugLogger
+ *
+ * @public
  */
 export type LogLevel = "debug" | "info" | "warn" | "error" | "diag";
 
 /**
  * A timing entry for tracking operation durations
+ *
+ * @public
  */
 export interface TimingEntry {
 	label: string;
@@ -42,6 +46,8 @@ export interface TimingEntry {
 
 /**
  * Timer handle returned by `time()` for stopping measurements
+ *
+ * @public
  */
 export interface Timer {
 	/** Stop the timer and log the duration */
@@ -52,13 +58,15 @@ export interface Timer {
 
 /**
  * Options for configuring the DebugLogger
+ *
+ * @public
  */
 export interface DebugLoggerOptions {
 	/** Prefix for log messages (e.g., "workflow-context", "code-check") */
 	prefix?: string;
 	/** Plugin name for per-plugin log files (e.g., "workflow" creates "workflow-debug.log") */
 	pluginName?: string;
-	/** Override the log file path (default: {pluginName}-debug.log in session-env directory) */
+	/** Override the log file path (default: `pluginName-debug.log` in session-env directory) */
 	logPath?: string;
 	/** Force enable/disable logging (default: reads from CLAUDE_DEBUG env var) */
 	enabled?: boolean;
@@ -68,6 +76,8 @@ export interface DebugLoggerOptions {
 
 /**
  * Interface for file system operations (for testing)
+ *
+ * @public
  */
 export interface FileSystem {
 	existsSync(path: string): boolean;
@@ -78,6 +88,8 @@ export interface FileSystem {
 /**
  * Default file system implementation using Node's fs module.
  * Uses appendFileSync for proper append semantics across processes.
+ *
+ * @public
  */
 export const defaultFileSystem: FileSystem = {
 	existsSync,
@@ -88,6 +100,8 @@ export const defaultFileSystem: FileSystem = {
 /**
  * Get the project directory from environment variables.
  * Priority: CLAUDE_PROJECT_DIR > cwd
+ *
+ * @public
  */
 export function getProjectDir(): string {
 	return Bun.env.CLAUDE_PROJECT_DIR ?? process.cwd();
@@ -96,6 +110,8 @@ export function getProjectDir(): string {
 /**
  * Tracks timing for operations with hierarchical support.
  * Used internally by DebugLogger for timing instrumentation.
+ *
+ * @public
  */
 export class TimingTracker {
 	private entries: TimingEntry[] = [];
@@ -235,6 +251,8 @@ export class TimingTracker {
  * # In another terminal, run Claude Code with debug enabled
  * CLAUDE_DEBUG=true claude
  * ```
+ *
+ * @public
  */
 export class DebugLogger {
 	private prefix: string;
@@ -406,7 +424,7 @@ export class DebugLogger {
 	 * 1. pluginName must be set (no shared log file to prevent races)
 	 * 2. Session env file must be available via one of:
 	 *    - CLAUDE_ENV_FILE (set during SessionStart by Claude Code)
-	 *    - {PREFIX}_SESSION_ENV_FILE (set after sourcing hook files)
+	 *    - `PREFIX`_SESSION_ENV_FILE (set after sourcing hook files)
 	 *
 	 * When either is missing, file writes are skipped.
 	 */

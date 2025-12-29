@@ -9,8 +9,8 @@
 
 import { dirname } from "node:path";
 import { z } from "zod";
-import type { BaseEnv, CommandHandler, CommandOutput, PluginEnv } from "./pipeline.js";
-import { ClaudeBinaryPluginEnv } from "./plugin-env.js";
+import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
+import type { BaseEnv, CommandHandler, CommandOutput, PluginEnv } from "../pipeline/config.js";
 
 // =============================================================================
 // ARGUMENT PARSING
@@ -79,6 +79,7 @@ function isOptional(schema: z.ZodType): boolean {
  *
  * @param rawArgs - Raw CLI arguments array
  * @returns Parsed arguments object
+ * @public
  */
 export function parseRawArgs(rawArgs: string[]): Record<string, unknown> {
 	const parsed: Record<string, unknown> = {};
@@ -115,6 +116,7 @@ export function parseRawArgs(rawArgs: string[]): Record<string, unknown> {
  * @param schema - Zod schema for validation
  * @returns Validated arguments
  * @throws CommandArgumentError if validation fails
+ * @public
  */
 export async function parseCommandArgs<T extends z.ZodType>(rawArgs: string[], schema: T): Promise<z.infer<T>> {
 	const parsed = parseRawArgs(rawArgs);
@@ -136,6 +138,7 @@ export async function parseCommandArgs<T extends z.ZodType>(rawArgs: string[], s
 /**
  * Error thrown when command arguments fail validation.
  * Provides LLM-friendly markdown error message.
+ * @public
  */
 export class CommandArgumentError extends Error {
 	readonly exitCode = 2;
@@ -201,6 +204,7 @@ function formatArgumentError(rawArgs: string[], schema: z.ZodType, error: z.ZodE
 
 /**
  * Options for running a command.
+ * @public
  */
 export interface RunCommandOptions<TArgs, TOptions, TState> {
 	/** Command name for logging/telemetry */
@@ -221,6 +225,7 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 
 /**
  * Create the base env object.
+ * @public
  */
 function createBaseEnv(env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
 	const prefix = env.getPrefix() ?? "";
@@ -241,6 +246,7 @@ function createBaseEnv(env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
  *
  * @param env - The plugin environment instance
  * @returns State object parsed from {prefix}_PLUGIN_STATE
+ * @public
  */
 function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
 	const prefix = env.getPrefix();
@@ -273,6 +279,7 @@ function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string
  * 4. Project directory via SQLite registry (saved during SessionStart)
  *
  * @returns Session env directory path, or undefined if not found
+ * @public
  */
 function findSessionEnvDir(): string | undefined {
 	// First try via session ID in SQLite registry
@@ -308,11 +315,12 @@ function findSessionEnvDir(): string | undefined {
  * 1. Parses and validates CLI arguments with the Zod schema
  * 2. Loads environment variables from the session
  * 3. Extracts options and state, merges with base env
- * 4. Calls the handler with { args, options, env }
+ * 4. Calls the handler with `{ args, options, env }`
  * 5. Outputs the result markdown to stdout
  * 6. Exits with the appropriate exit code
  *
  * @param options - Command configuration
+ * @public
  */
 export async function runCommand<TArgs, TOptions, TState>(
 	options: RunCommandOptions<TArgs, TOptions, TState>,
@@ -367,6 +375,7 @@ export async function runCommand<TArgs, TOptions, TState>(
 
 /**
  * Validate command output structure.
+ * @public
  */
 function validateCommandOutput(output: CommandOutput, commandName: string): void {
 	if (typeof output.exitCode !== "number") {
@@ -382,6 +391,7 @@ function validateCommandOutput(output: CommandOutput, commandName: string): void
 
 /**
  * Format a fatal error as LLM-friendly markdown.
+ * @public
  */
 function formatFatalError(commandName: string, error: unknown): string {
 	const errorMessage = error instanceof Error ? error.message : String(error);
@@ -412,9 +422,11 @@ function formatFatalError(commandName: string, error: unknown): string {
 
 /**
  * Empty args schema for commands that don't accept arguments.
+ * @public
  */
 export const emptyArgsSchema = z.object({});
 
+/** @public */
 export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
 
 // =============================================================================

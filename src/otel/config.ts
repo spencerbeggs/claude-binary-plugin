@@ -103,6 +103,7 @@ export function clearAccountInfoCache(): void {
  * 2. Platform supports Unix sockets (darwin/linux)
  *
  * @returns true if telemetry should be collected
+ * @public
  */
 export function isOTELEnabled(): boolean {
 	return Bun.env.CLAUDE_CODE_ENABLE_TELEMETRY === "1" && isPlatformSupported();
@@ -112,6 +113,7 @@ export function isOTELEnabled(): boolean {
  * Parse OTEL configuration from environment variables.
  *
  * @returns Parsed OTEL configuration
+ * @public
  */
 export function parseOTELConfig(): OTELConfig {
 	const config: OTELConfig = {};
@@ -197,6 +199,7 @@ function parseHeaders(headersStr: string): Record<string, string> {
  * and extracting the directory path.
  *
  * @returns Session env directory path, or null if not available
+ * @public
  */
 export function getSessionEnvDir(): string | null {
 	// Look for any *_SESSION_ENV_FILE env var (plugin-namespaced)

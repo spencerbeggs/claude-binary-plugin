@@ -8,7 +8,7 @@
  *
  * @example
  * ```typescript
- * import { SessionRegistry } from "claude-binary-plugin/session-registry";
+ * import { SessionRegistry } from "claude-binary-plugin";
  *
  * // Register a session during SessionStart
  * SessionRegistry.register({
