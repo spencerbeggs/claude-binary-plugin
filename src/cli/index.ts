@@ -6,19 +6,20 @@
  * Builds a Claude Code plugin from a declarative plugin definition file.
  *
  * Usage:
- *   claude-binary-plugin <plugin-file>
- *   claude-binary-plugin plugin.ts
- *   claude-binary-plugin ./src/plugin.ts --no-persist
+ *   claude-binary-plugin build [plugin-config-path]
+ *   claude-binary-plugin build
+ *   claude-binary-plugin build ./src/plugin.ts --no-persist
  *
  * Options:
  *   --no-persist    Don't persist to local cache (overrides config)
  *   --no-bytecode   Don't compile to bytecode (overrides config)
  *   --bundle        Bundle to JS instead of compiling to binary
- *   --help          Show this help message
  */
 
 import { dirname, resolve } from "node:path";
-import { parseArgs } from "node:util";
+import { Args, Command, Options } from "@effect/cli";
+import { BunContext, BunRuntime } from "@effect/platform-bun";
+import { Console, Effect } from "effect";
 import type { z } from "zod";
 import {
 	buildPlugin,
@@ -29,235 +30,170 @@ import {
 	readPluginManifest,
 } from "../builder.js";
 import type { CompiledPlugin } from "../pipeline.js";
+import { getPackageVersion } from "./macros.js" with { type: "macro" };
 
-interface CLIOptions {
-	help: boolean;
-	noPersist: boolean;
-	noBytecode: boolean;
-	bundle: boolean;
-}
+// Package version is inlined at compile time via Bun macro
+const cliVersion = getPackageVersion();
 
-function printHelp(): void {
-	console.log(`
-Claude Binary Plugin Builder
+// Build command arguments and options
+const pluginConfigPath = Args.file({ name: "plugin-config-path", exists: "yes" }).pipe(
+	Args.withDefault("plugin.config.ts"),
+);
 
-Builds a Claude Code plugin from a declarative plugin definition file.
+const noPersist = Options.boolean("no-persist").pipe(
+	Options.withDescription("Don't persist to local cache (overrides config)"),
+);
 
-Usage:
-  claude-binary-plugin <plugin-file>
-  claude-binary-plugin plugin.ts
-  claude-binary-plugin ./src/plugin.ts --no-persist
+const noBytecode = Options.boolean("no-bytecode").pipe(
+	Options.withDescription("Don't compile to bytecode (overrides config)"),
+);
 
-Arguments:
-  plugin-file     Path to the plugin definition file (e.g., plugin.ts)
+const bundle = Options.boolean("bundle").pipe(Options.withDescription("Bundle to JS instead of compiling to binary"));
 
-Options:
-  --no-persist    Don't persist to local cache (overrides config)
-  --no-bytecode   Don't compile to bytecode (overrides config)
-  --bundle        Bundle to JS instead of compiling to binary
-  --help          Show this help message
+// Build command implementation
+const buildCommand = Command.make(
+	"build",
+	{ pluginConfigPath, noPersist, noBytecode, bundle },
+	({ pluginConfigPath, noPersist, noBytecode, bundle }) =>
+		Effect.gen(function* () {
+			const pluginFile = pluginConfigPath;
 
-Examples:
-  # Build plugin.ts in current directory
-  claude-binary-plugin plugin.ts
+			// Resolve plugin file path
+			const absolutePluginFile = resolve(process.cwd(), pluginFile);
+			const rootDir = dirname(absolutePluginFile);
 
-  # Build without persisting to cache
-  claude-binary-plugin plugin.ts --no-persist
+			// Check if file exists
+			const file = Bun.file(absolutePluginFile);
+			if (!(yield* Effect.promise(() => file.exists()))) {
+				yield* Console.error(`Error: Plugin file not found: ${absolutePluginFile}`);
+				return yield* Effect.fail(new Error("Plugin file not found"));
+			}
 
-  # Bundle to JS for debugging
-  claude-binary-plugin plugin.ts --bundle
-`);
-}
+			yield* Console.log(`Building plugin from: ${pluginFile}`);
 
-function parseOptions(): { pluginFile: string; options: CLIOptions } | null {
-	try {
-		const { values, positionals } = parseArgs({
-			args: process.argv.slice(2),
-			options: {
-				help: { type: "boolean", default: false },
-				"no-persist": { type: "boolean", default: false },
-				"no-bytecode": { type: "boolean", default: false },
-				bundle: { type: "boolean", default: false },
-			},
-			allowPositionals: true,
-			strict: true,
-		});
+			// Import plugin definition
+			const pluginDefinition = yield* Effect.tryPromise({
+				try: async () => {
+					const module = await import(absolutePluginFile);
+					const definition = module.default as CompiledPlugin<z.ZodTypeAny>;
+					if (!definition?.config) {
+						throw new Error("Plugin file must export a default ClaudeBinaryPlugin.create() result");
+					}
+					return definition;
+				},
+				catch: (error) => error as Error,
+			});
 
-		if (values.help) {
-			printHelp();
-			process.exit(0);
-		}
+			const config = pluginDefinition.config;
 
-		if (positionals.length === 0) {
-			console.error("Error: Missing plugin file argument");
-			console.error("Usage: claude-binary-plugin <plugin-file>");
-			console.error("Run 'claude-binary-plugin --help' for more information");
-			process.exit(1);
-		}
+			// Read plugin manifest for name and version
+			const manifest = yield* Effect.promise(() => readPluginManifest(rootDir));
+			const pluginName = manifest?.name ?? config.prefix.toLowerCase().replace(/_/g, "-");
+			const pluginVersion = manifest?.version ?? "1.0.0";
 
-		if (positionals.length > 1) {
-			console.error("Error: Too many arguments");
-			console.error("Usage: claude-binary-plugin <plugin-file>");
-			process.exit(1);
-		}
+			// Extract hook entries
+			const hookEntries = extractPipelineHookEntries(config);
 
-		const pluginFile = positionals[0];
-		if (!pluginFile) {
-			console.error("Error: Missing plugin file argument");
-			process.exit(1);
-		}
+			// Convert commands object to pipelineCommands format for generatePipelinePluginEntrypoint
+			const pipelineCommands = config.commands
+				? Object.entries(config.commands).map(([name, cmd]) => {
+						const cmdDef = cmd as { pipeline?: string; description?: string; args?: unknown };
+						const pipelinePath = cmdDef.pipeline ?? "";
+						const resolvedPath = pipelinePath ? resolve(rootDir, pipelinePath) : "";
+						return {
+							name,
+							filePath: resolvedPath,
+							description: cmdDef.description ?? "",
+							hasArgsSchema: !!cmdDef.args,
+						};
+					})
+				: [];
 
-		return {
-			pluginFile,
-			options: {
-				help: values.help ?? false,
-				noPersist: values["no-persist"] ?? false,
-				noBytecode: values["no-bytecode"] ?? false,
-				bundle: values.bundle ?? false,
-			},
-		};
-	} catch (error) {
-		console.error(`Error: ${(error as Error).message}`);
-		process.exit(1);
-	}
-}
+			yield* Console.log(`\nPlugin: ${pluginName} v${pluginVersion}`);
+			yield* Console.log(`Hooks: ${hookEntries.length}`);
+			for (const hook of hookEntries) {
+				const mode = hook.isPipeline ? "pipeline" : "handler";
+				yield* Console.log(`  ${hook.hookType}/${hook.name} (${mode})`);
+			}
+			if (pipelineCommands.length > 0) {
+				yield* Console.log(`Commands: ${pipelineCommands.length}`);
+				for (const cmd of pipelineCommands) {
+					yield* Console.log(`  ${cmd.name}`);
+				}
+			}
 
-async function main(): Promise<void> {
-	const parsed = parseOptions();
-	if (!parsed) return;
+			// Generate entrypoint
+			const pluginImportPath = `./${pluginFile.replace(/\.ts$/, ".js")}`;
+			const entrypointSource = generatePipelinePluginEntrypoint({
+				pluginPath: pluginImportPath,
+				pluginName,
+				pluginVersion,
+				hooks: hookEntries,
+				pipelineCommands,
+			});
 
-	const { pluginFile, options } = parsed;
+			// Write generated entrypoint
+			const entrypointPath = resolve(rootDir, ".plugin-entrypoint.ts");
+			yield* Effect.promise(() => Bun.write(entrypointPath, entrypointSource));
 
-	// Resolve plugin file path
-	const absolutePluginFile = resolve(process.cwd(), pluginFile);
-	const rootDir = dirname(absolutePluginFile);
+			// Determine build options (CLI flags override config)
+			const shouldPersist = noPersist ? false : (config.persistLocal ?? true);
+			const shouldBytecode = noBytecode ? false : (config.bytecode ?? false);
+			const shouldCompile = bundle ? false : (config.compile ?? true);
 
-	// Check if file exists
-	const file = Bun.file(absolutePluginFile);
-	if (!(await file.exists())) {
-		console.error(`Error: Plugin file not found: ${absolutePluginFile}`);
-		process.exit(1);
-	}
+			// Build the plugin
+			const result = yield* Effect.promise(() =>
+				buildPlugin({
+					rootDir,
+					entrypoint: ".plugin-entrypoint.ts",
+					bytecode: shouldBytecode,
+					persistLocal: shouldPersist,
+					compile: shouldCompile,
+					minify: config.minify ?? true,
+					sourcemap: config.sourcemap ?? true,
+					cleanupTempFiles: true,
+				}),
+			);
 
-	console.log(`Building plugin from: ${pluginFile}`);
+			// Clean up generated entrypoint
+			yield* Effect.promise(() => Bun.$`rm -f ${entrypointPath}`.quiet());
 
-	// Import plugin definition
-	let pluginDefinition: CompiledPlugin<z.ZodTypeAny>;
-	try {
-		const module = await import(absolutePluginFile);
-		pluginDefinition = module.default;
+			if (!result.success) {
+				yield* Console.error("\nBuild failed");
+				return yield* Effect.fail(new Error("Build failed"));
+			}
 
-		if (!pluginDefinition?.config) {
-			console.error("Error: Plugin file must export a default ClaudeBinaryPlugin.create() result");
-			process.exit(1);
-		}
-	} catch (error) {
-		console.error(`Error importing plugin file: ${(error as Error).message}`);
-		process.exit(1);
-	}
+			// Generate hooks.json
+			const hooksOutputPath = config.hooksOutputPath ?? "hooks/hooks.json";
+			const passthroughHooks = extractPassthroughHookEntries(config);
+			const hooksJson = generateHooksJson({
+				pluginBinaryName: result.output,
+				hooks: hookEntries,
+				passthroughHooks,
+			});
 
-	const config = pluginDefinition.config;
+			// Write hooks.json
+			const hooksJsonPath = resolve(rootDir, hooksOutputPath);
+			const hooksDir = dirname(hooksJsonPath);
 
-	// Read plugin manifest for name and version
-	const manifest = await readPluginManifest(rootDir);
-	const pluginName = manifest?.name ?? config.prefix.toLowerCase().replace(/_/g, "-");
-	const pluginVersion = manifest?.version ?? "1.0.0";
+			// Ensure directory exists
+			yield* Effect.promise(() => Bun.$`mkdir -p ${hooksDir}`.quiet());
+			yield* Effect.promise(() => Bun.write(hooksJsonPath, `${JSON.stringify(hooksJson, null, "\t")}\n`));
 
-	// Extract hook entries
-	const hookEntries = extractPipelineHookEntries(config);
+			yield* Console.log(`\nBuild complete: ${result.output}`);
+			yield* Console.log(`Hooks config: ${hooksOutputPath}`);
+		}),
+);
 
-	// Convert commands object to pipelineCommands format for generatePipelinePluginEntrypoint
-	// Commands are defined as: { lint: { pipeline, description, args }, ... }
-	const pipelineCommands = config.commands
-		? Object.entries(config.commands).map(([name, cmd]) => {
-				const cmdDef = cmd as { pipeline?: string; description?: string; args?: unknown };
-				// Resolve the file path for the command handler
-				const pipelinePath = cmdDef.pipeline ?? "";
-				const resolvedPath = pipelinePath ? resolve(rootDir, pipelinePath) : "";
-				return {
-					name,
-					filePath: resolvedPath,
-					description: cmdDef.description ?? "",
-					hasArgsSchema: !!cmdDef.args,
-				};
-			})
-		: [];
+// Root command (just shows help when called without subcommand)
+const rootCommand = Command.make("claude-binary-plugin", {}, () =>
+	Console.log("Use 'claude-binary-plugin build' to build a plugin. Run with --help for more information."),
+).pipe(Command.withSubcommands([buildCommand]));
 
-	console.log(`\nPlugin: ${pluginName} v${pluginVersion}`);
-	console.log(`Hooks: ${hookEntries.length}`);
-	for (const hook of hookEntries) {
-		const mode = hook.isPipeline ? "pipeline" : "handler";
-		console.log(`  ${hook.hookType}/${hook.name} (${mode})`);
-	}
-	if (pipelineCommands.length > 0) {
-		console.log(`Commands: ${pipelineCommands.length}`);
-		for (const cmd of pipelineCommands) {
-			console.log(`  ${cmd.name}`);
-		}
-	}
-
-	// Generate entrypoint
-	// Use relative path from the generated entrypoint to the plugin file
-	const pluginImportPath = `./${pluginFile.replace(/\.ts$/, ".js")}`;
-	const entrypointSource = generatePipelinePluginEntrypoint({
-		pluginPath: pluginImportPath,
-		pluginName,
-		pluginVersion,
-		hooks: hookEntries,
-		pipelineCommands,
-	});
-
-	// Write generated entrypoint
-	const entrypointPath = resolve(rootDir, ".plugin-entrypoint.ts");
-	await Bun.write(entrypointPath, entrypointSource);
-
-	// Determine build options (CLI flags override config)
-	const shouldPersist = options.noPersist ? false : (config.persistLocal ?? true);
-	const shouldBytecode = options.noBytecode ? false : (config.bytecode ?? false);
-	const shouldCompile = options.bundle ? false : (config.compile ?? true);
-
-	// Build the plugin
-	const result = await buildPlugin({
-		rootDir,
-		entrypoint: ".plugin-entrypoint.ts",
-		bytecode: shouldBytecode,
-		persistLocal: shouldPersist,
-		compile: shouldCompile,
-		minify: config.minify ?? true,
-		sourcemap: config.sourcemap ?? true,
-		cleanupTempFiles: true,
-	});
-
-	// Clean up generated entrypoint
-	await Bun.$`rm -f ${entrypointPath}`.quiet();
-
-	if (!result.success) {
-		console.error("\nBuild failed");
-		process.exit(1);
-	}
-
-	// Generate hooks.json
-	const hooksOutputPath = config.hooksOutputPath ?? "hooks/hooks.json";
-	const passthroughHooks = extractPassthroughHookEntries(config);
-	const hooksJson = generateHooksJson({
-		pluginBinaryName: result.output,
-		hooks: hookEntries,
-		passthroughHooks,
-	});
-
-	// Write hooks.json
-	const hooksJsonPath = resolve(rootDir, hooksOutputPath);
-	const hooksDir = dirname(hooksJsonPath);
-
-	// Ensure directory exists
-	await Bun.$`mkdir -p ${hooksDir}`.quiet();
-	await Bun.write(hooksJsonPath, `${JSON.stringify(hooksJson, null, "\t")}\n`);
-
-	console.log(`\nBuild complete: ${result.output}`);
-	console.log(`Hooks config: ${hooksOutputPath}`);
-}
-
-main().catch((error) => {
-	console.error(`Fatal error: ${error}`);
-	process.exit(2);
+// Create and run the CLI
+const cli = Command.run(rootCommand, {
+	name: "Claude Binary Plugin Builder",
+	version: cliVersion,
 });
+
+cli(process.argv).pipe(Effect.provide(BunContext.layer), BunRuntime.runMain);
