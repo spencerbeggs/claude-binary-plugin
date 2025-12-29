@@ -2,20 +2,16 @@
 	"$schema": "https://turborepo.com/schema.v2.json",
 	"globalPassThroughEnv": [],
 	"tasks": {
-		"build": {
-			"dependsOn": ["typecheck", "compile"],
+		"api": {
+			"dependsOn": ["typecheck"],
 			"inputs": [
-				"$TURBO_DEFAULTS$",
-				"bun.lock",
-				"package.json",
-				"src/**/*",
-				"lib/scripts/build.mts",
-				"lib/builder/**/*",
-				"bunfig.toml",
+				"src/**/*.ts",
 				"tsconfig.json",
-				".npmignore"
+				"lib/configs/tsconfig.declarations.json",
+				"lib/configs/api-extractor.json",
+				"lib/scripts/api.mts"
 			],
-			"outputs": ["bin/**", "dist/**"]
+			"outputs": ["dist/types/**", "lib/api/**"]
 		},
 		"compile": {
 			"dependsOn": ["typecheck"],

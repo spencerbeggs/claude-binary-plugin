@@ -6,6 +6,7 @@
 **/*.tsbuildinfo
 **/build
 **/dist
+temp/
 **/.rslib
 **/.artifacts
 **/.turbo
@@ -27,7 +28,9 @@ pnpm-release.json
 !.env.*.example
 
 .pnpm-release.json
+# API Extractor outputs - ignore by default but keep lib/api/ tracked
 **/*.api.json
+!lib/api/*.api.json
 **/yo-rc.json
 **/savvy.config.toml
 pkgs/generators/test.ts
