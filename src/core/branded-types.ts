@@ -210,38 +210,47 @@ export type ShellCommand = Brand<string, "ShellCommand">;
 // INTERNAL CONSTRUCTOR FUNCTIONS
 // =============================================================================
 
+/** @internal */
 function _toFilePath(path: string): FilePath {
 	return path as FilePath;
 }
 
+/** @internal */
 function _toDirectoryPath(path: string): DirectoryPath {
 	return path as DirectoryPath;
 }
 
+/** @internal */
 function _toConfigPath(path: string): ConfigPath {
 	return path as ConfigPath;
 }
 
+/** @internal */
 function _toTempFilePath(path: string): TempFilePath {
 	return path as TempFilePath;
 }
 
+/** @internal */
 function _toBinaryPath(path: string): BinaryPath {
 	return path as BinaryPath;
 }
 
+/** @internal */
 function _toSessionId(id: string): SessionId {
 	return id as SessionId;
 }
 
+/** @internal */
 function _toToolUseId(id: string): ToolUseId {
 	return id as ToolUseId;
 }
 
+/** @internal */
 function _toSemanticVersion(version: string): SemanticVersion {
 	return version as SemanticVersion;
 }
 
+/** @internal */
 function _toShellCommand(command: string): ShellCommand {
 	return command as ShellCommand;
 }
@@ -250,15 +259,18 @@ function _toShellCommand(command: string): ShellCommand {
 // INTERNAL VALIDATION FUNCTIONS
 // =============================================================================
 
+/** @internal */
 function _parseSemanticVersion(input: string): SemanticVersion | undefined {
 	const match = input.match(/^(\d+\.\d+\.\d+)/);
 	return match ? (match[1] as SemanticVersion) : undefined;
 }
 
+/** @internal */
 function _parseAbsoluteFilePath(input: string): FilePath | undefined {
 	return input.startsWith("/") ? (input as FilePath) : undefined;
 }
 
+/** @internal */
 function _parseAbsoluteDirectoryPath(input: string): DirectoryPath | undefined {
 	return input.startsWith("/") ? (input as DirectoryPath) : undefined;
 }

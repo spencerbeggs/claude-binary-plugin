@@ -229,7 +229,7 @@ const _floatCodec = z
  * logLevelCodec.encode("warn")   // → "warn"
  * ```
  *
- * @public
+ * @internal
  */
 function createEnumCodec<T extends readonly [string, ...string[]]>(values: T, defaultValue: T[number]) {
 	const enumSchema = z.enum(values);
@@ -267,7 +267,7 @@ function createEnumCodec<T extends readonly [string, ...string[]]>(values: T, de
  * packagesCodec.encode([{name: "foo", version: "1.0"}])    // → '[{"name":"foo","version":"1.0"}]'
  * ```
  *
- * @public
+ * @internal
  */
 function createJsonArrayCodec<T extends z.ZodType>(itemSchema: T) {
 	const arraySchema = z.array(itemSchema);

@@ -523,8 +523,8 @@ export const HookEventSchemas = {
 	 *
 	 * @param json - Raw JSON string from Claude Code
 	 * @returns Validated and typed hook event
-	 * @throws {z.ZodError} When the data doesn't match any hook event schema
-	 * @throws {SyntaxError} When the JSON is malformed
+	 * @throws `z.ZodError` when the data doesn't match any hook event schema
+	 * @throws `SyntaxError` when the JSON is malformed
 	 */
 	parse(json: string): HookEventParsed {
 		return _HookEventSchema.parse(JSON.parse(json));

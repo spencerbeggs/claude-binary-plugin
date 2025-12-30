@@ -734,7 +734,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!BinaryPath:type",
-          "docComment": "/**\n * A branded string representing a path to an executable binary.\n *\n * @remarks\n *\n * Use for paths to executable files like compilers, linters, or tools. Helps ensure executable paths are validated before use.\n *\n * @see\n *\n * {@link toBinaryPath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a path to an executable binary.\n *\n * @remarks\n *\n * Use for paths to executable files like compilers, linters, or tools. Helps ensure executable paths are validated before use.\n *\n * @see\n *\n * {@link BrandedTypes.toBinaryPath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -7646,7 +7646,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!ConfigPath:type",
-          "docComment": "/**\n * A branded string representing a path to a configuration file.\n *\n * @remarks\n *\n * Use for paths to configuration files like `biome.json`, `tsconfig.json`, `.eslintrc`, etc. Distinguishes config files from regular source files.\n *\n * @see\n *\n * {@link toConfigPath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a path to a configuration file.\n *\n * @remarks\n *\n * Use for paths to configuration files like `biome.json`, `tsconfig.json`, `.eslintrc`, etc. Distinguishes config files from regular source files.\n *\n * @see\n *\n * {@link BrandedTypes.toConfigPath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -9239,7 +9239,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!DirectoryPath:type",
-          "docComment": "/**\n * A branded string representing an absolute directory path.\n *\n * @remarks\n *\n * Use for paths that point to directories rather than files. Helps distinguish directory operations from file operations at the type level.\n *\n * @see\n *\n * {@link toDirectoryPath} - Create without validation\n *\n * @see\n *\n * {@link parseAbsoluteDirectoryPath} - Create with validation\n *\n * @see\n *\n * {@link FilePath} - For file paths\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing an absolute directory path.\n *\n * @remarks\n *\n * Use for paths that point to directories rather than files. Helps distinguish directory operations from file operations at the type level.\n *\n * @see\n *\n * {@link BrandedTypes.toDirectoryPath} - Create without validation\n *\n * @see\n *\n * {@link BrandedTypes.parseAbsoluteDirectoryPath} - Create with validation\n *\n * @see\n *\n * {@link FilePath} - For file paths\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -12377,7 +12377,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!FilePath:type",
-          "docComment": "/**\n * A branded string representing an absolute file path.\n *\n * @remarks\n *\n * Use for paths that point to user/project files, as distinguished from directories, config files, or temporary files. This helps prevent accidentally mixing different path types.\n *\n * @see\n *\n * {@link toFilePath} - Create without validation\n *\n * @see\n *\n * {@link parseAbsoluteFilePath} - Create with validation\n *\n * @see\n *\n * {@link DirectoryPath} - For directory paths\n *\n * @see\n *\n * {@link ConfigPath} - For configuration files\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing an absolute file path.\n *\n * @remarks\n *\n * Use for paths that point to user/project files, as distinguished from directories, config files, or temporary files. This helps prevent accidentally mixing different path types.\n *\n * @see\n *\n * {@link BrandedTypes.toFilePath} - Create without validation\n *\n * @see\n *\n * {@link BrandedTypes.parseAbsoluteFilePath} - Create with validation\n *\n * @see\n *\n * {@link DirectoryPath} - For directory paths\n *\n * @see\n *\n * {@link ConfigPath} - For configuration files\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -44335,7 +44335,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!SemanticVersion:type",
-          "docComment": "/**\n * A branded string representing a semantic version (e.g., \"1.2.3\").\n *\n * @remarks\n *\n * Semantic versions follow the semver specification: MAJOR.MINOR.PATCH. Use {@link parseSemanticVersion} for validated parsing.\n *\n * @see\n *\n * {@link toSemanticVersion} - Create without validation\n *\n * @see\n *\n * {@link parseSemanticVersion} - Create with validation\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a semantic version (e.g., \"1.2.3\").\n *\n * @remarks\n *\n * Semantic versions follow the semver specification: MAJOR.MINOR.PATCH. Use {@link BrandedTypes.parseSemanticVersion} for validated parsing.\n *\n * @see\n *\n * {@link BrandedTypes.toSemanticVersion} - Create without validation\n *\n * @see\n *\n * {@link BrandedTypes.parseSemanticVersion} - Create with validation\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -45550,7 +45550,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!SessionId:type",
-          "docComment": "/**\n * A branded string representing a Claude Code session UUID.\n *\n * @remarks\n *\n * Session IDs uniquely identify a Claude Code conversation session. They are used for correlating events, looking up persisted state, and OTEL telemetry.\n *\n * @see\n *\n * {@link toSessionId} - Create without validation\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a Claude Code session UUID.\n *\n * @remarks\n *\n * Session IDs uniquely identify a Claude Code conversation session. They are used for correlating events, looking up persisted state, and OTEL telemetry.\n *\n * @see\n *\n * {@link BrandedTypes.toSessionId} - Create without validation\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -47843,7 +47843,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!ShellCommand:type",
-          "docComment": "/**\n * A branded string representing a shell command.\n *\n * @remarks\n *\n * Use for shell commands that have been validated or come from trusted sources. This brand helps track which commands have passed security checks.\n *\n * @see\n *\n * {@link toShellCommand} - Create without validation\n *\n * @see\n *\n * {@link BashToolInput} - Bash tool input interface\n *\n * @see\n *\n * {@link BrandedBashToolInput} - Branded variant using ShellCommand\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a shell command.\n *\n * @remarks\n *\n * Use for shell commands that have been validated or come from trusted sources. This brand helps track which commands have passed security checks.\n *\n * @see\n *\n * {@link BrandedTypes.toShellCommand} - Create without validation\n *\n * @see\n *\n * {@link BashToolInput} - Bash tool input interface\n *\n * @see\n *\n * {@link BrandedBashToolInput} - Branded variant using ShellCommand\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -52252,7 +52252,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!TempFilePath:type",
-          "docComment": "/**\n * A branded string representing a path to a temporary file.\n *\n * @remarks\n *\n * Use for paths in `/tmp` or similar temporary directories. Helps track files that should be cleaned up after use.\n *\n * @see\n *\n * {@link toTempFilePath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a path to a temporary file.\n *\n * @remarks\n *\n * Use for paths in `/tmp` or similar temporary directories. Helps track files that should be cleaned up after use.\n *\n * @see\n *\n * {@link BrandedTypes.toTempFilePath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -54078,7 +54078,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!ToolUseId:type",
-          "docComment": "/**\n * A branded string representing a unique tool use identifier.\n *\n * @remarks\n *\n * Tool use IDs are assigned by Claude Code to each tool invocation. They enable correlation between PreToolUse and PostToolUse events for the same operation.\n *\n * @see\n *\n * {@link toToolUseId} - Create without validation\n *\n * @public\n */\n",
+          "docComment": "/**\n * A branded string representing a unique tool use identifier.\n *\n * @remarks\n *\n * Tool use IDs are assigned by Claude Code to each tool invocation. They enable correlation between PreToolUse and PostToolUse events for the same operation.\n *\n * @see\n *\n * {@link BrandedTypes.toToolUseId} - Create without validation\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
