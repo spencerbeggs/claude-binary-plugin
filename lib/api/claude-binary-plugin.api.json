@@ -581,7 +581,7 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!BashToolInput:interface",
-          "docComment": "/**\n * Input for the Bash tool - executes shell commands.\n *\n * @remarks\n *\n * The Bash tool executes shell commands in a persistent shell session. This is one of the most powerful and potentially dangerous tools, requiring careful security consideration in PreToolUse hooks.\n *\n * **Security considerations:** - Validate `command` against allowlists/blocklists for dangerous patterns - Watch for command injection via semicolons, pipes, backticks, `$()` - Block destructive commands: `rm -rf`, `chmod 777`, `curl | bash` - Consider blocking network access: `curl`, `wget`, `ssh`, `nc` - Validate working directory if security-sensitive\n *\n * **Sandbox mode:** Commands run in a sandbox by default. The `dangerouslyDisableSandbox` option bypasses this protection and should be blocked in most PreToolUse hooks.\n *\n * **Background execution:** When `run_in_background` is true, the command runs asynchronously and can be monitored via TaskOutput.\n *\n * @example\n * ```typescript\n * if (isBashToolInput(input.tool_input)) {\n *   const { command, dangerouslyDisableSandbox } = input.tool_input;\n *\n *   // Block sandbox bypass\n *   if (dangerouslyDisableSandbox) {\n *     return { status: \"executed\", action: \"deny\", summary: \"sandbox bypass blocked\" };\n *   }\n *\n *   // Block dangerous commands\n *   if (command.includes(\"rm -rf /\")) {\n *     return { status: \"executed\", action: \"deny\", summary: \"destructive command blocked\" };\n *   }\n * }\n * ```\n *\n * @see\n *\n * {@link BrandedBashToolInput} - Compile-time validated variant with {@link ShellCommand}\n *\n * @see\n *\n * {@link ToolInputGuard.isBash} - Type guard for runtime validation\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks#pretooluse | PreToolUse Hook Documentation}\n *\n * @public\n */\n",
+          "docComment": "/**\n * Input for the Bash tool - executes shell commands.\n *\n * @remarks\n *\n * The Bash tool executes shell commands in a persistent shell session. This is one of the most powerful and potentially dangerous tools, requiring careful security consideration in PreToolUse hooks.\n *\n * **Security considerations:** - Validate `command` against allowlists/blocklists for dangerous patterns - Watch for command injection via semicolons, pipes, backticks, `$()` - Block destructive commands: `rm -rf`, `chmod 777`, `curl | bash` - Consider blocking network access: `curl`, `wget`, `ssh`, `nc` - Validate working directory if security-sensitive\n *\n * **Sandbox mode:** Commands run in a sandbox by default. The `dangerouslyDisableSandbox` option bypasses this protection and should be blocked in most PreToolUse hooks.\n *\n * **Background execution:** When `run_in_background` is true, the command runs asynchronously and can be monitored via TaskOutput.\n *\n * @example\n * ```typescript\n * if (isBashToolInput(input.tool_input)) {\n *   const { command, dangerouslyDisableSandbox } = input.tool_input;\n *\n *   // Block sandbox bypass\n *   if (dangerouslyDisableSandbox) {\n *     return { status: \"executed\", action: \"deny\", summary: \"sandbox bypass blocked\" };\n *   }\n *\n *   // Block dangerous commands\n *   if (command.includes(\"rm -rf /\")) {\n *     return { status: \"executed\", action: \"deny\", summary: \"destructive command blocked\" };\n *   }\n * }\n * ```\n *\n * @see\n *\n * {@link ToolInputGuard.isBash} - Type guard for runtime validation\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks#pretooluse | PreToolUse Hook Documentation}\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -733,37 +733,6 @@
         },
         {
           "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!BinaryPath:type",
-          "docComment": "/**\n * A branded string representing a path to an executable binary.\n *\n * @remarks\n *\n * Use for paths to executable files like compilers, linters, or tools. Helps ensure executable paths are validated before use.\n *\n * @see\n *\n * {@link BrandedTypes.toBinaryPath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type BinaryPath = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"BinaryPath\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "BinaryPath",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
-          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!BlockDecision:type",
           "docComment": "/**\n * Decision type for hooks that can block operations.\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -787,803 +756,6 @@
             "startIndex": 1,
             "endIndex": 2
           }
-        },
-        {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!Brand:type",
-          "docComment": "/**\n * Creates a branded type from a base type with a unique string brand.\n *\n * @remarks\n *\n * The brand property (`__brand`) is phantom - it exists only at compile-time and has zero runtime overhead. This enables TypeScript to distinguish between structurally identical types.\n *\n * @typeParam T - The base type to brand (e.g., `string`, `number`)\n *\n * @typeParam B - The brand identifier string (e.g., `\"FilePath\"`, `\"SessionId\"`)\n *\n * @example\n * ```typescript\n * // Define a custom branded type\n * type UserId = Brand<string, \"UserId\">;\n * type OrderId = Brand<string, \"OrderId\">;\n *\n * function getUser(id: UserId) { ... }\n *\n * const userId = \"abc\" as UserId;\n * const orderId = \"abc\" as OrderId;\n *\n * getUser(userId);   // OK\n * getUser(orderId);  // Type error - OrderId is not assignable to UserId\n * ```\n *\n * @see\n *\n * {@link Unbrand} - Extract the base type\n *\n * @see\n *\n * {@link IsBranded} - Check if a type is branded\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type Brand<T, B extends "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "> = "
-            },
-            {
-              "kind": "Content",
-              "text": "T & {\n    readonly __brand: B;\n}"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "Brand",
-          "typeParameters": [
-            {
-              "typeParameterName": "T",
-              "constraintTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            },
-            {
-              "typeParameterName": "B",
-              "constraintTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            }
-          ],
-          "typeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          }
-        },
-        {
-          "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!BrandedBashToolInput:interface",
-          "docComment": "/**\n * Branded version of {@link BashToolInput} with {@link ShellCommand} type.\n *\n * @remarks\n *\n * Use this interface when you want compile-time enforcement that shell commands have been validated. The {@link ShellCommand} brand ensures the command comes from a trusted source or has passed security validation.\n *\n * This is particularly useful for building secure command execution pipelines where commands are constructed programmatically and must be validated before execution.\n *\n * @see\n *\n * {@link BashToolInput} - Plain string variant\n *\n * @see\n *\n * {@link ShellCommand} - The branded command type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface BrandedBashToolInput "
-            }
-          ],
-          "fileUrlPath": "src/core/tool-inputs.ts",
-          "releaseTag": "Public",
-          "name": "BrandedBashToolInput",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedBashToolInput#command:member",
-              "docComment": "/**\n * The shell command to execute (validated)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "command: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ShellCommand",
-                  "canonicalReference": "claude-binary-plugin!ShellCommand:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "command",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedBashToolInput#dangerouslyDisableSandbox:member",
-              "docComment": "/**\n * Bypass sandbox mode - DANGEROUS, should typically be blocked by hooks\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "dangerouslyDisableSandbox?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "boolean"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "dangerouslyDisableSandbox",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedBashToolInput#description:member",
-              "docComment": "/**\n * Short description of what the command does (5-10 words)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "description?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "description",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedBashToolInput#run_in_background:member",
-              "docComment": "/**\n * Run command in background, monitor via TaskOutput\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "run_in_background?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "boolean"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "run_in_background",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedBashToolInput#timeout:member",
-              "docComment": "/**\n * Timeout in milliseconds (max 600000 / 10 minutes, default: 120000 / 2 minutes)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "timeout?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "number"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "timeout",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
-          "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!BrandedEditToolInput:interface",
-          "docComment": "/**\n * Branded version of {@link EditToolInput} with {@link FilePath} type.\n *\n * @remarks\n *\n * Use this interface when you want compile-time enforcement that file paths have been validated. The {@link FilePath} brand ensures the path comes from a trusted source or has passed validation.\n *\n * @see\n *\n * {@link EditToolInput} - Plain string variant\n *\n * @see\n *\n * {@link FilePath} - The branded path type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface BrandedEditToolInput "
-            }
-          ],
-          "fileUrlPath": "src/core/tool-inputs.ts",
-          "releaseTag": "Public",
-          "name": "BrandedEditToolInput",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedEditToolInput#file_path:member",
-              "docComment": "/**\n * Absolute path to the file to modify\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "file_path: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "FilePath",
-                  "canonicalReference": "claude-binary-plugin!FilePath:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "file_path",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedEditToolInput#new_string:member",
-              "docComment": "/**\n * The replacement text\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "new_string: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "new_string",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedEditToolInput#old_string:member",
-              "docComment": "/**\n * The text to replace (must be found exactly in the file)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "old_string: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "old_string",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedEditToolInput#replace_all:member",
-              "docComment": "/**\n * Replace all occurrences instead of just the first (default: false)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "replace_all?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "boolean"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "replace_all",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
-          "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!BrandedNotebookEditToolInput:interface",
-          "docComment": "/**\n * Branded version of {@link NotebookEditToolInput} with {@link FilePath} type.\n *\n * @remarks\n *\n * Use this interface when you want compile-time enforcement that file paths have been validated. The {@link FilePath} brand ensures the path comes from a trusted source or has passed validation.\n *\n * @see\n *\n * {@link NotebookEditToolInput} - Plain string variant\n *\n * @see\n *\n * {@link FilePath} - The branded path type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface BrandedNotebookEditToolInput "
-            }
-          ],
-          "fileUrlPath": "src/core/tool-inputs.ts",
-          "releaseTag": "Public",
-          "name": "BrandedNotebookEditToolInput",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedNotebookEditToolInput#cell_id:member",
-              "docComment": "/**\n * Cell ID to target for editing (optional, uses first cell if not specified)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "cell_id?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "cell_id",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedNotebookEditToolInput#cell_type:member",
-              "docComment": "/**\n * Cell type: \"code\" for executable cells, \"markdown\" for documentation\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "cell_type?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "\"code\" | \"markdown\""
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "cell_type",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedNotebookEditToolInput#edit_mode:member",
-              "docComment": "/**\n * Edit mode: \"replace\" (default), \"insert\" new cell, or \"delete\" existing\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "edit_mode?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "\"replace\" | \"insert\" | \"delete\""
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "edit_mode",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedNotebookEditToolInput#new_source:member",
-              "docComment": "/**\n * New source content for the cell\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "new_source: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "new_source",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedNotebookEditToolInput#notebook_path:member",
-              "docComment": "/**\n * Absolute path to the Jupyter notebook file (.ipynb)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "notebook_path: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "FilePath",
-                  "canonicalReference": "claude-binary-plugin!FilePath:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "notebook_path",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
-          "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!BrandedReadToolInput:interface",
-          "docComment": "/**\n * Branded version of {@link ReadToolInput} with {@link FilePath} type.\n *\n * @remarks\n *\n * Use this interface when you want compile-time enforcement that file paths have been validated. The {@link FilePath} brand ensures the path comes from a trusted source or has passed validation.\n *\n * @see\n *\n * {@link ReadToolInput} - Plain string variant\n *\n * @see\n *\n * {@link FilePath} - The branded path type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface BrandedReadToolInput "
-            }
-          ],
-          "fileUrlPath": "src/core/tool-inputs.ts",
-          "releaseTag": "Public",
-          "name": "BrandedReadToolInput",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedReadToolInput#file_path:member",
-              "docComment": "/**\n * Absolute path to the file to read\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "file_path: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "FilePath",
-                  "canonicalReference": "claude-binary-plugin!FilePath:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "file_path",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedReadToolInput#limit:member",
-              "docComment": "/**\n * Maximum number of lines to read (optional, default: 2000)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "limit?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "number"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "limit",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedReadToolInput#offset:member",
-              "docComment": "/**\n * Line number to start reading from (1-indexed, optional)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "offset?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "number"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "offset",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!BrandedTypes:var",
-          "docComment": "/**\n * `BrandedTypes` provides all branded type constructors and validators.\n *\n * @remarks\n *\n * This namespace consolidates all functions for creating and validating branded types. Branded types are compile-time-only type safety constructs - the `__brand` property is phantom and has zero runtime overhead.\n *\n * **Categories of functions:**\n *\n * - **Path constructors** - `toFilePath`, `toDirectoryPath`, `toConfigPath`, `toTempFilePath`, `toBinaryPath` - **Identifier constructors** - `toSessionId`, `toToolUseId` - **Version constructors** - `toSemanticVersion` - **Shell constructors** - `toShellCommand` - **Validators** - `parseSemanticVersion`, `parseAbsoluteFilePath`, `parseAbsoluteDirectoryPath`\n *\n * @example\n *\n * Creating branded values\n * ```typescript\n * import { BrandedTypes, FilePath, SessionId } from \"claude-binary-plugin\";\n *\n * // Path types\n * const file: FilePath = BrandedTypes.toFilePath(\"/home/user/code.ts\");\n * const dir = BrandedTypes.toDirectoryPath(\"/home/user\");\n * const config = BrandedTypes.toConfigPath(\"/etc/biome.json\");\n *\n * // Identifiers\n * const sessionId: SessionId = BrandedTypes.toSessionId(\"abc-123\");\n * const toolUseId = BrandedTypes.toToolUseId(\"tool-use-456\");\n *\n * // Versions\n * const version = BrandedTypes.toSemanticVersion(\"1.2.3\");\n * ```\n *\n * @example\n *\n * Validating values\n * ```typescript\n * import { BrandedTypes } from \"claude-binary-plugin\";\n *\n * // Returns undefined for invalid input\n * const version = BrandedTypes.parseSemanticVersion(\"1.2.3\"); // SemanticVersion\n * const invalid = BrandedTypes.parseSemanticVersion(\"abc\"); // undefined\n *\n * // Path validation\n * const abs = BrandedTypes.parseAbsoluteFilePath(\"/home/user\"); // FilePath\n * const rel = BrandedTypes.parseAbsoluteFilePath(\"./relative\"); // undefined\n * ```\n *\n * @see\n *\n * {@link Brand} - The generic branding helper type\n *\n * @see\n *\n * {@link Unbrand} - Extract the base type from a branded type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "BrandedTypes: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly toFilePath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toFilePath",
-              "canonicalReference": "claude-binary-plugin!~_toFilePath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toDirectoryPath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toDirectoryPath",
-              "canonicalReference": "claude-binary-plugin!~_toDirectoryPath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toConfigPath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toConfigPath",
-              "canonicalReference": "claude-binary-plugin!~_toConfigPath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toTempFilePath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toTempFilePath",
-              "canonicalReference": "claude-binary-plugin!~_toTempFilePath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toBinaryPath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toBinaryPath",
-              "canonicalReference": "claude-binary-plugin!~_toBinaryPath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toSessionId: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toSessionId",
-              "canonicalReference": "claude-binary-plugin!~_toSessionId:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toToolUseId: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toToolUseId",
-              "canonicalReference": "claude-binary-plugin!~_toToolUseId:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toSemanticVersion: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toSemanticVersion",
-              "canonicalReference": "claude-binary-plugin!~_toSemanticVersion:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly toShellCommand: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_toShellCommand",
-              "canonicalReference": "claude-binary-plugin!~_toShellCommand:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly parseSemanticVersion: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_parseSemanticVersion",
-              "canonicalReference": "claude-binary-plugin!~_parseSemanticVersion:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly parseAbsoluteFilePath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_parseAbsoluteFilePath",
-              "canonicalReference": "claude-binary-plugin!~_parseAbsoluteFilePath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly parseAbsoluteDirectoryPath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "_parseAbsoluteDirectoryPath",
-              "canonicalReference": "claude-binary-plugin!~_parseAbsoluteDirectoryPath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n}"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "BrandedTypes",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 26
-          }
-        },
-        {
-          "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!BrandedWriteToolInput:interface",
-          "docComment": "/**\n * Branded version of {@link WriteToolInput} with {@link FilePath} type.\n *\n * @remarks\n *\n * Use this interface when you want compile-time enforcement that file paths have been validated. The {@link FilePath} brand ensures the path comes from a trusted source or has passed validation.\n *\n * @see\n *\n * {@link WriteToolInput} - Plain string variant\n *\n * @see\n *\n * {@link FilePath} - The branded path type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface BrandedWriteToolInput "
-            }
-          ],
-          "fileUrlPath": "src/core/tool-inputs.ts",
-          "releaseTag": "Public",
-          "name": "BrandedWriteToolInput",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedWriteToolInput#content:member",
-              "docComment": "/**\n * Content to write to the file\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "content: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "content",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BrandedWriteToolInput#file_path:member",
-              "docComment": "/**\n * Absolute path to the file to write\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "file_path: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "FilePath",
-                  "canonicalReference": "claude-binary-plugin!FilePath:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "file_path",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
         },
         {
           "kind": "TypeAlias",
@@ -6611,6 +5783,34 @@
           }
         },
         {
+          "kind": "Function",
+          "canonicalReference": "claude-binary-plugin!closeDb:function(1)",
+          "docComment": "/**\n * Closes the database connection.\n *\n * @remarks\n *\n * Primarily used in tests to reset database state between test runs.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function closeDb(): "
+            },
+            {
+              "kind": "Content",
+              "text": "void"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/env/session-registry.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [],
+          "name": "closeDb"
+        },
+        {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!CommandArgumentError:class",
           "docComment": "/**\n * Error thrown when command arguments fail validation. Provides LLM-friendly markdown error message.\n *\n * @public\n */\n",
@@ -7645,37 +6845,6 @@
         },
         {
           "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!ConfigPath:type",
-          "docComment": "/**\n * A branded string representing a path to a configuration file.\n *\n * @remarks\n *\n * Use for paths to configuration files like `biome.json`, `tsconfig.json`, `.eslintrc`, etc. Distinguishes config files from regular source files.\n *\n * @see\n *\n * {@link BrandedTypes.toConfigPath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type ConfigPath = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"ConfigPath\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "ConfigPath",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
-          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!ContentType:type",
           "docComment": "/**\n * Content type for token estimation accuracy.\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -7699,6 +6868,219 @@
             "startIndex": 1,
             "endIndex": 2
           }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "claude-binary-plugin!createEnumCodec:function(1)",
+          "docComment": "/**\n * Creates a codec for enum environment variables with a default value.\n *\n * @remarks\n *\n * Empty strings, undefined, or invalid enum values decode to the default. Useful for configuration options with a known set of valid values.\n *\n * @param values - The enum values tuple (e.g., `[\"debug\", \"info\", \"warn\"]`)\n *\n * @param defaultValue - The default value when env is empty/undefined/invalid\n *\n * @typeParam T - The enum values tuple type\n *\n * @returns A Zod codec that decodes/encodes the enum\n *\n * @example\n * ```typescript\n * const logLevelCodec = EnvCodecs.enum([\"debug\", \"info\", \"warn\", \"error\"], \"info\");\n * logLevelCodec.decode(\"\")       // → \"info\"\n * logLevelCodec.decode(\"debug\")  // → \"debug\"\n * logLevelCodec.encode(\"warn\")   // → \"warn\"\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createEnumCodec<T extends "
+            },
+            {
+              "kind": "Content",
+              "text": "readonly [string, ...string[]]"
+            },
+            {
+              "kind": "Content",
+              "text": ">(values: "
+            },
+            {
+              "kind": "Content",
+              "text": "T"
+            },
+            {
+              "kind": "Content",
+              "text": ", defaultValue: "
+            },
+            {
+              "kind": "Content",
+              "text": "T[number]"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{ [k in T[number]]: k; } extends infer T_1 ? { [k in keyof T_1]: T_1[k]; } : never>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/env/codecs.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 7,
+            "endIndex": 13
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "values",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "defaultValue",
+              "parameterTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "createEnumCodec"
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "claude-binary-plugin!createJsonArrayCodec:function(1)",
+          "docComment": "/**\n * Creates a codec for JSON-serialized arrays in environment variables.\n *\n * @remarks\n *\n * Empty strings, undefined, or invalid JSON decode to an empty array. Useful for persisting complex configuration like workspace packages or feature flags as JSON strings in environment variables.\n *\n * @param itemSchema - The Zod schema for validating each array item\n *\n * @typeParam T - The Zod schema type for array items\n *\n * @returns A Zod codec that decodes JSON strings to typed arrays and encodes back to JSON\n *\n * @example\n * ```typescript\n * const packageSchema = z.object({ name: z.string(), version: z.string() });\n * const packagesCodec = EnvCodecs.jsonArray(packageSchema);\n *\n * packagesCodec.decode('[]')                              // → []\n * packagesCodec.decode('[{\"name\":\"foo\",\"version\":\"1.0\"}]') // → [{name: \"foo\", version: \"1.0\"}]\n * packagesCodec.encode([{name: \"foo\", version: \"1.0\"}])    // → '[{\"name\":\"foo\",\"version\":\"1.0\"}]'\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function createJsonArrayCodec<T extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodType",
+              "canonicalReference": "zod!ZodType:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">(itemSchema: "
+            },
+            {
+              "kind": "Content",
+              "text": "T"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodDefault",
+              "canonicalReference": "zod!ZodDefault:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodArray",
+              "canonicalReference": "zod!ZodArray:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/env/codecs.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 5,
+            "endIndex": 15
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "itemSchema",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "isOptional": false
+            }
+          ],
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "createJsonArrayCodec"
         },
         {
           "kind": "Function",
@@ -9237,40 +8619,9 @@
           "name": "detectContentType"
         },
         {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!DirectoryPath:type",
-          "docComment": "/**\n * A branded string representing an absolute directory path.\n *\n * @remarks\n *\n * Use for paths that point to directories rather than files. Helps distinguish directory operations from file operations at the type level.\n *\n * @see\n *\n * {@link BrandedTypes.toDirectoryPath} - Create without validation\n *\n * @see\n *\n * {@link BrandedTypes.parseAbsoluteDirectoryPath} - Create with validation\n *\n * @see\n *\n * {@link FilePath} - For file paths\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type DirectoryPath = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"DirectoryPath\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "DirectoryPath",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!EditToolInput:interface",
-          "docComment": "/**\n * Input for the Edit tool - performs string replacement in a file.\n *\n * @remarks\n *\n * The Edit tool performs surgical text replacements within files. It locates `old_string` in the file and replaces it with `new_string`. By default, only the first occurrence is replaced unless `replace_all` is true.\n *\n * Key behaviors: - The edit fails if `old_string` is not found in the file - The edit fails if `old_string` appears multiple times (unless unique context is provided) - Whitespace and indentation must match exactly\n *\n * Security considerations for PreToolUse hooks: - Validate that `new_string` doesn't introduce vulnerabilities - Check for command injection in shell script edits - Monitor for credential or secret modifications\n *\n * @example\n * ```typescript\n * if (isEditToolInput(input.tool_input)) {\n *   const { file_path, old_string, new_string } = input.tool_input;\n *   console.log(`Editing ${file_path}: replacing ${old_string.length} chars`);\n * }\n * ```\n *\n * @see\n *\n * {@link BrandedEditToolInput} - Compile-time validated variant\n *\n * @see\n *\n * {@link ToolInputGuard.isEdit} - Type guard for runtime validation\n *\n * @see\n *\n * {@link WriteToolInput} - For complete file replacement\n *\n * @public\n */\n",
+          "docComment": "/**\n * Input for the Edit tool - performs string replacement in a file.\n *\n * @remarks\n *\n * The Edit tool performs surgical text replacements within files. It locates `old_string` in the file and replaces it with `new_string`. By default, only the first occurrence is replaced unless `replace_all` is true.\n *\n * Key behaviors: - The edit fails if `old_string` is not found in the file - The edit fails if `old_string` appears multiple times (unless unique context is provided) - Whitespace and indentation must match exactly\n *\n * Security considerations for PreToolUse hooks: - Validate that `new_string` doesn't introduce vulnerabilities - Check for command injection in shell script edits - Monitor for credential or secret modifications\n *\n * @example\n * ```typescript\n * if (isEditToolInput(input.tool_input)) {\n *   const { file_path, old_string, new_string } = input.tool_input;\n *   console.log(`Editing ${file_path}: replacing ${old_string.length} chars`);\n * }\n * ```\n *\n * @see\n *\n * {@link ToolInputGuard.isEdit} - Type guard for runtime validation\n *\n * @see\n *\n * {@link WriteToolInput} - For complete file replacement\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -10274,7 +9625,7 @@
             {
               "kind": "Reference",
               "text": "createEnumCodec",
-              "canonicalReference": "claude-binary-plugin!~createEnumCodec:function"
+              "canonicalReference": "claude-binary-plugin!createEnumCodec:function"
             },
             {
               "kind": "Content",
@@ -10283,7 +9634,7 @@
             {
               "kind": "Reference",
               "text": "createJsonArrayCodec",
-              "canonicalReference": "claude-binary-plugin!~createJsonArrayCodec:function"
+              "canonicalReference": "claude-binary-plugin!createJsonArrayCodec:function"
             },
             {
               "kind": "Content",
@@ -12373,37 +11724,6 @@
             }
           ],
           "extendsTokenRanges": []
-        },
-        {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!FilePath:type",
-          "docComment": "/**\n * A branded string representing an absolute file path.\n *\n * @remarks\n *\n * Use for paths that point to user/project files, as distinguished from directories, config files, or temporary files. This helps prevent accidentally mixing different path types.\n *\n * @see\n *\n * {@link BrandedTypes.toFilePath} - Create without validation\n *\n * @see\n *\n * {@link BrandedTypes.parseAbsoluteFilePath} - Create with validation\n *\n * @see\n *\n * {@link DirectoryPath} - For directory paths\n *\n * @see\n *\n * {@link ConfigPath} - For configuration files\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type FilePath = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"FilePath\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "FilePath",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
         },
         {
           "kind": "Interface",
@@ -17848,25 +17168,7 @@
             },
             {
               "kind": "Content",
-              "text": "keyof "
-            },
-            {
-              "kind": "Reference",
-              "text": "ReturnType",
-              "canonicalReference": "!ReturnType:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "getHookEventClasses",
-              "canonicalReference": "claude-binary-plugin!~getHookEventClasses:function"
-            },
-            {
-              "kind": "Content",
-              "text": ">"
+              "text": "\"PreToolUse\" | \"PostToolUse\" | \"SessionStart\" | \"SessionEnd\" | \"Stop\" | \"SubagentStop\" | \"UserPromptSubmit\" | \"PreCompact\" | \"Notification\" | \"PermissionRequest\""
             },
             {
               "kind": "Content",
@@ -17878,7 +17180,7 @@
           "name": "HookEventType",
           "typeTokenRange": {
             "startIndex": 1,
-            "endIndex": 6
+            "endIndex": 2
           }
         },
         {
@@ -21077,54 +20379,6 @@
           "extendsTokenRanges": []
         },
         {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!IsBranded:type",
-          "docComment": "/**\n * Type predicate that returns `true` if the type is branded.\n *\n * @remarks\n *\n * Useful for conditional types that need to behave differently for branded vs. unbranded types.\n *\n * @typeParam T - The type to check\n *\n * @example\n * ```typescript\n * type A = IsBranded<FilePath>; // true\n * type B = IsBranded<string>; // false\n *\n * // Use in conditional types\n * type MaybeUnbrand<T> = IsBranded<T> extends true ? Unbrand<T> : T;\n * ```\n *\n * @see\n *\n * {@link Brand} - The branding type\n *\n * @see\n *\n * {@link Unbrand} - Extract the base type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type IsBranded<T> = "
-            },
-            {
-              "kind": "Content",
-              "text": "T extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown, string> ? true : false"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "IsBranded",
-          "typeParameters": [
-            {
-              "typeParameterName": "T",
-              "constraintTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            }
-          ],
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 4
-          }
-        },
-        {
           "kind": "Function",
           "canonicalReference": "claude-binary-plugin!isOTELEnabled:function(1)",
           "docComment": "/**\n * Check if OTEL telemetry is enabled.\n *\n * Telemetry is enabled when: 1. CLAUDE_CODE_ENABLE_TELEMETRY=1 2. Platform supports Unix sockets (darwin/linux)\n *\n * @returns true if telemetry should be collected\n *\n * @public\n */\n",
@@ -22854,7 +22108,7 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!NotebookEditToolInput:interface",
-          "docComment": "/**\n * Input for the NotebookEdit tool - edits Jupyter notebook cells.\n *\n * @remarks\n *\n * The NotebookEdit tool modifies Jupyter notebook (.ipynb) cells. It can replace cell contents, insert new cells, or delete existing ones.\n *\n * Edit modes: - `\"replace\"` (default) - Replace the content of an existing cell - `\"insert\"` - Insert a new cell after the specified cell ID - `\"delete\"` - Remove a cell entirely\n *\n * Cell types: - `\"code\"` - Executable code cells - `\"markdown\"` - Documentation/text cells\n *\n * @example\n * ```typescript\n * if (isNotebookEditToolInput(input.tool_input)) {\n *   const { notebook_path, edit_mode, cell_type } = input.tool_input;\n *   console.log(`${edit_mode ?? 'replace'} ${cell_type ?? 'code'} cell in ${notebook_path}`);\n * }\n * ```\n *\n * @see\n *\n * {@link BrandedNotebookEditToolInput} - Compile-time validated variant\n *\n * @see\n *\n * {@link ToolInputGuard.isNotebookEdit} - Type guard for runtime validation\n *\n * @public\n */\n",
+          "docComment": "/**\n * Input for the NotebookEdit tool - edits Jupyter notebook cells.\n *\n * @remarks\n *\n * The NotebookEdit tool modifies Jupyter notebook (.ipynb) cells. It can replace cell contents, insert new cells, or delete existing ones.\n *\n * Edit modes: - `\"replace\"` (default) - Replace the content of an existing cell - `\"insert\"` - Insert a new cell after the specified cell ID - `\"delete\"` - Remove a cell entirely\n *\n * Cell types: - `\"code\"` - Executable code cells - `\"markdown\"` - Documentation/text cells\n *\n * @example\n * ```typescript\n * if (isNotebookEditToolInput(input.tool_input)) {\n *   const { notebook_path, edit_mode, cell_type } = input.tool_input;\n *   console.log(`${edit_mode ?? 'replace'} ${cell_type ?? 'code'} cell in ${notebook_path}`);\n * }\n * ```\n *\n * @see\n *\n * {@link ToolInputGuard.isNotebookEdit} - Type guard for runtime validation\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -42201,7 +41455,7 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!ReadToolInput:interface",
-          "docComment": "/**\n * Input for the Read tool - reads file content.\n *\n * @remarks\n *\n * The Read tool retrieves file contents, optionally with line offset and limit for reading specific portions of large files. This is one of the most commonly used tools and is typically safe to allow without restriction.\n *\n * By default, the tool reads up to 2000 lines from the beginning of the file. Use `offset` and `limit` to read specific sections of larger files.\n *\n * PostToolUse hooks can inspect read results to add contextual information, such as documentation links or related file suggestions.\n *\n * @example\n * ```typescript\n * if (isReadToolInput(input.tool_input)) {\n *   const { file_path, offset, limit } = input.tool_input;\n *   console.log(`Reading ${file_path}${offset ? ` from line ${offset}` : ''}`);\n * }\n * ```\n *\n * @see\n *\n * {@link BrandedReadToolInput} - Compile-time validated variant\n *\n * @see\n *\n * {@link ToolInputGuard.isRead} - Type guard for runtime validation\n *\n * @public\n */\n",
+          "docComment": "/**\n * Input for the Read tool - reads file content.\n *\n * @remarks\n *\n * The Read tool retrieves file contents, optionally with line offset and limit for reading specific portions of large files. This is one of the most commonly used tools and is typically safe to allow without restriction.\n *\n * By default, the tool reads up to 2000 lines from the beginning of the file. Use `offset` and `limit` to read specific sections of larger files.\n *\n * PostToolUse hooks can inspect read results to add contextual information, such as documentation links or related file suggestions.\n *\n * @example\n * ```typescript\n * if (isReadToolInput(input.tool_input)) {\n *   const { file_path, offset, limit } = input.tool_input;\n *   console.log(`Reading ${file_path}${offset ? ` from line ${offset}` : ''}`);\n * }\n * ```\n *\n * @see\n *\n * {@link ToolInputGuard.isRead} - Type guard for runtime validation\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -44333,37 +43587,6 @@
           "extendsTokenRanges": []
         },
         {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!SemanticVersion:type",
-          "docComment": "/**\n * A branded string representing a semantic version (e.g., \"1.2.3\").\n *\n * @remarks\n *\n * Semantic versions follow the semver specification: MAJOR.MINOR.PATCH. Use {@link BrandedTypes.parseSemanticVersion} for validated parsing.\n *\n * @see\n *\n * {@link BrandedTypes.toSemanticVersion} - Create without validation\n *\n * @see\n *\n * {@link BrandedTypes.parseSemanticVersion} - Create with validation\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type SemanticVersion = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"SemanticVersion\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "SemanticVersion",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!SessionEndEvent:interface",
           "docComment": "/**\n * Event fired when a Claude Code session terminates.\n *\n * @public\n */\n",
@@ -45548,37 +44771,6 @@
           }
         },
         {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!SessionId:type",
-          "docComment": "/**\n * A branded string representing a Claude Code session UUID.\n *\n * @remarks\n *\n * Session IDs uniquely identify a Claude Code conversation session. They are used for correlating events, looking up persisted state, and OTEL telemetry.\n *\n * @see\n *\n * {@link BrandedTypes.toSessionId} - Create without validation\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type SessionId = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"SessionId\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "SessionId",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!SessionRecord:interface",
           "docComment": "/**\n * Session record as stored in the SQLite database.\n *\n * @remarks\n *\n * This interface represents the raw database row structure. Column names use snake_case to match SQLite conventions. Timestamps are Unix epoch seconds (not milliseconds).\n *\n * @see\n *\n * {@link SessionRegistry.getRecord} - Returns full session records\n *\n * @see\n *\n * {@link SessionRegistry.getAll} - Returns all session records\n *\n * @public\n */\n",
@@ -45872,8 +45064,8 @@
             },
             {
               "kind": "Reference",
-              "text": "_closeDb",
-              "canonicalReference": "claude-binary-plugin!~_closeDb:function"
+              "text": "closeDb",
+              "canonicalReference": "claude-binary-plugin!closeDb:function"
             },
             {
               "kind": "Content",
@@ -47838,37 +47030,6 @@
           "typeTokenRange": {
             "startIndex": 4,
             "endIndex": 9
-          }
-        },
-        {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!ShellCommand:type",
-          "docComment": "/**\n * A branded string representing a shell command.\n *\n * @remarks\n *\n * Use for shell commands that have been validated or come from trusted sources. This brand helps track which commands have passed security checks.\n *\n * @see\n *\n * {@link BrandedTypes.toShellCommand} - Create without validation\n *\n * @see\n *\n * {@link BashToolInput} - Bash tool input interface\n *\n * @see\n *\n * {@link BrandedBashToolInput} - Branded variant using ShellCommand\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type ShellCommand = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"ShellCommand\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "ShellCommand",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
           }
         },
         {
@@ -52250,37 +51411,6 @@
           }
         },
         {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!TempFilePath:type",
-          "docComment": "/**\n * A branded string representing a path to a temporary file.\n *\n * @remarks\n *\n * Use for paths in `/tmp` or similar temporary directories. Helps track files that should be cleaned up after use.\n *\n * @see\n *\n * {@link BrandedTypes.toTempFilePath} - Create without validation\n *\n * @see\n *\n * {@link FilePath} - For regular file paths\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type TempFilePath = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"TempFilePath\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "TempFilePath",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
           "kind": "Function",
           "canonicalReference": "claude-binary-plugin!testFatalErrorHandler:function(1)",
           "docComment": "/**\n * Helper to test fatal error handler functions. These functions typically log an error and call process.exit(2).\n *\n * @param handler - The fatal error handler function to test\n *\n * @param error - The error to pass to the handler (defaults to Error(\"Test error\"))\n *\n * @returns FatalErrorResult with captured exit code and error messages\n *\n * @example\n * ```ts\n * import { testFatalErrorHandler } from \"claude-binary-plugin\";\n * import { handleFatalError } from \"./my-cmd.cmd.js\";\n *\n * describe(\"handleFatalError\", () => {\n *   test(\"logs error and exits with code 2\", () => {\n *     const result = testFatalErrorHandler(handleFatalError);\n *\n *     expect(result.exitCode).toBe(2);\n *     expect(result.errorMessages.join(\" \")).toContain(\"Fatal\");\n *     expect(result.errorMessages.join(\" \")).toContain(\"Test error\");\n *   });\n *\n *   test(\"handles custom error\", () => {\n *     const result = testFatalErrorHandler(handleFatalError, new Error(\"Custom error\"));\n *\n *     expect(result.errorMessages.join(\" \")).toContain(\"Custom error\");\n *   });\n * });\n * ```\n *\n * @public\n */\n",
@@ -54077,37 +53207,6 @@
         },
         {
           "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!ToolUseId:type",
-          "docComment": "/**\n * A branded string representing a unique tool use identifier.\n *\n * @remarks\n *\n * Tool use IDs are assigned by Claude Code to each tool invocation. They enable correlation between PreToolUse and PostToolUse events for the same operation.\n *\n * @see\n *\n * {@link BrandedTypes.toToolUseId} - Create without validation\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type ToolUseId = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, \"ToolUseId\">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "ToolUseId",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 3
-          }
-        },
-        {
-          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!TypedToolName:type",
           "docComment": "/**\n * Union of known tool names that have typed input interfaces.\n *\n * @remarks\n *\n * Use this type to constrain function parameters to only accept valid tool names from the {@link ToolInputMap}.\n *\n * @example\n * ```typescript\n * function logToolUse(toolName: TypedToolName) {\n *   console.log(`Using tool: ${toolName}`);\n * }\n *\n * logToolUse(\"Bash\");  // OK\n * logToolUse(\"Unknown\");  // Type error\n * ```\n *\n * @see\n *\n * {@link ToolInputMap} - Maps these names to input types\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -54135,54 +53234,6 @@
           "typeTokenRange": {
             "startIndex": 1,
             "endIndex": 3
-          }
-        },
-        {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!Unbrand:type",
-          "docComment": "/**\n * Extracts the base type from a branded type.\n *\n * @remarks\n *\n * Useful when you need to pass a branded type to a function that expects the underlying base type. This is a compile-time only utility.\n *\n * @typeParam T - The branded type to unwrap\n *\n * @example\n * ```typescript\n * type BaseOfFilePath = Unbrand<FilePath>; // string\n * type BaseOfSessionId = Unbrand<SessionId>; // string\n *\n * // Useful for generic functions\n * function logPath<T extends Brand<string, string>>(path: T): Unbrand<T> {\n *   console.log(path);\n *   return path;\n * }\n * ```\n *\n * @see\n *\n * {@link Brand} - The branding type\n *\n * @see\n *\n * {@link IsBranded} - Check if a type is branded\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type Unbrand<T> = "
-            },
-            {
-              "kind": "Content",
-              "text": "T extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "Brand",
-              "canonicalReference": "claude-binary-plugin!Brand:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<infer U, string> ? U : T"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "releaseTag": "Public",
-          "name": "Unbrand",
-          "typeParameters": [
-            {
-              "typeParameterName": "T",
-              "constraintTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            }
-          ],
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 4
           }
         },
         {
@@ -56247,7 +55298,7 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!WriteToolInput:interface",
-          "docComment": "/**\n * Input for the Write tool - creates or overwrites a file.\n *\n * @remarks\n *\n * The Write tool creates new files or completely replaces existing file contents. Unlike {@link EditToolInput}, Write does not perform partial modifications.\n *\n * Common security considerations for PreToolUse hooks: - Check `file_path` against allowlists for sensitive locations - Validate `content` for secrets, credentials, or malicious payloads - Consider blocking writes to configuration files (`.env`, `package.json`)\n *\n * @example\n * ```typescript\n * if (isWriteToolInput(input.tool_input)) {\n *   const { file_path, content } = input.tool_input;\n *   if (file_path.endsWith('.env')) {\n *     return { status: \"executed\", action: \"deny\", summary: \"blocked .env write\" };\n *   }\n * }\n * ```\n *\n * @see\n *\n * {@link BrandedWriteToolInput} - Compile-time validated variant\n *\n * @see\n *\n * {@link ToolInputGuard.isWrite} - Type guard for runtime validation\n *\n * @see\n *\n * {@link EditToolInput} - For partial file modifications\n *\n * @public\n */\n",
+          "docComment": "/**\n * Input for the Write tool - creates or overwrites a file.\n *\n * @remarks\n *\n * The Write tool creates new files or completely replaces existing file contents. Unlike {@link EditToolInput}, Write does not perform partial modifications.\n *\n * Common security considerations for PreToolUse hooks: - Check `file_path` against allowlists for sensitive locations - Validate `content` for secrets, credentials, or malicious payloads - Consider blocking writes to configuration files (`.env`, `package.json`)\n *\n * @example\n * ```typescript\n * if (isWriteToolInput(input.tool_input)) {\n *   const { file_path, content } = input.tool_input;\n *   if (file_path.endsWith('.env')) {\n *     return { status: \"executed\", action: \"deny\", summary: \"blocked .env write\" };\n *   }\n * }\n * ```\n *\n * @see\n *\n * {@link ToolInputGuard.isWrite} - Type guard for runtime validation\n *\n * @see\n *\n * {@link EditToolInput} - For partial file modifications\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",

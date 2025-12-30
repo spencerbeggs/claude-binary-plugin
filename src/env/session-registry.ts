@@ -155,10 +155,14 @@ function getDb(): Database {
 }
 
 /**
- * Internal function to close the database connection.
- * @internal
+ * Closes the database connection.
+ *
+ * @remarks
+ * Primarily used in tests to reset database state between test runs.
+ *
+ * @public
  */
-function _closeDb(): void {
+export function closeDb(): void {
 	if (db) {
 		db.close();
 		db = null;
@@ -476,5 +480,5 @@ export const SessionRegistry = {
 	 * });
 	 * ```
 	 */
-	close: _closeDb,
+	close: closeDb,
 };

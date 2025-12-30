@@ -153,7 +153,17 @@ function getHookEventClasses() {
  * Union of all hook event type names.
  * @public
  */
-export type HookEventType = keyof ReturnType<typeof getHookEventClasses>;
+export type HookEventType =
+	| "PreToolUse"
+	| "PostToolUse"
+	| "SessionStart"
+	| "SessionEnd"
+	| "Stop"
+	| "SubagentStop"
+	| "UserPromptSubmit"
+	| "PreCompact"
+	| "Notification"
+	| "PermissionRequest";
 
 // =============================================================================
 // PIPELINE OUTPUT PROCESSING

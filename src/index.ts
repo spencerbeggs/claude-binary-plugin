@@ -63,7 +63,7 @@ import {
 export { ClaudeBinaryPluginEnv, EnvFileLoadError, escapeForBashDoubleQuotes, formatZodErrorAsMarkdown };
 export type { EnvCodecMetadata } from "./env/codecs.js";
 // Environment codecs with registry metadata
-export { EnvCodecs, envCodecRegistry } from "./env/codecs.js";
+export { createEnumCodec, createJsonArrayCodec, EnvCodecs, envCodecRegistry } from "./env/codecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -80,7 +80,7 @@ export type {
 } from "./env/plugin-env.js";
 export type { SessionRecord, SessionRegistration } from "./env/session-registry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry } from "./env/session-registry.js";
+export { closeDb, SessionRegistry } from "./env/session-registry.js";
 
 // =============================================================================
 // EVENTS MODULE
@@ -94,12 +94,6 @@ export * from "./events/index.js";
 // =============================================================================
 
 export * from "./core/tool-inputs.js";
-
-// =============================================================================
-// BRANDED TYPES
-// =============================================================================
-
-export * from "./core/branded-types.js";
 
 // =============================================================================
 // HOOK EVENT SCHEMAS

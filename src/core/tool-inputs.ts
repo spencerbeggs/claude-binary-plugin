@@ -6,12 +6,6 @@
  * modifying tool inputs.
  *
  * @remarks
- * Two levels of type safety are available:
- *
- * 1. **Basic types** (e.g., `WriteToolInput`) - Plain string properties, validated by type guards
- * 2. **Branded types** (e.g., `BrandedWriteToolInput`) - Uses {@link FilePath} and other
- *    branded types for compile-time path safety
- *
  * Use the {@link ToolInputGuard} namespace methods to validate and narrow tool inputs:
  * - `ToolInputGuard.isWrite(input)` - Check if input is a {@link WriteToolInput}
  * - `ToolInputGuard.isBash(input)` - Check if input is a {@link BashToolInput}
@@ -54,8 +48,6 @@
  * @module
  */
 
-import type { FilePath, ShellCommand } from "./branded-types.js";
-
 // =============================================================================
 // FILE OPERATION TOOLS
 // =============================================================================
@@ -82,7 +74,6 @@ import type { FilePath, ShellCommand } from "./branded-types.js";
  * }
  * ```
  *
- * @see {@link BrandedWriteToolInput} - Compile-time validated variant
  * @see {@link ToolInputGuard.isWrite} - Type guard for runtime validation
  * @see {@link EditToolInput} - For partial file modifications
  * @public
@@ -90,25 +81,6 @@ import type { FilePath, ShellCommand } from "./branded-types.js";
 export interface WriteToolInput {
 	/** Absolute path to the file to write */
 	file_path: string;
-	/** Content to write to the file */
-	content: string;
-}
-
-/**
- * Branded version of {@link WriteToolInput} with {@link FilePath} type.
- *
- * @remarks
- * Use this interface when you want compile-time enforcement that file paths
- * have been validated. The {@link FilePath} brand ensures the path comes from
- * a trusted source or has passed validation.
- *
- * @see {@link WriteToolInput} - Plain string variant
- * @see {@link FilePath} - The branded path type
- * @public
- */
-export interface BrandedWriteToolInput {
-	/** Absolute path to the file to write */
-	file_path: FilePath;
 	/** Content to write to the file */
 	content: string;
 }
@@ -139,7 +111,6 @@ export interface BrandedWriteToolInput {
  * }
  * ```
  *
- * @see {@link BrandedEditToolInput} - Compile-time validated variant
  * @see {@link ToolInputGuard.isEdit} - Type guard for runtime validation
  * @see {@link WriteToolInput} - For complete file replacement
  * @public
@@ -147,29 +118,6 @@ export interface BrandedWriteToolInput {
 export interface EditToolInput {
 	/** Absolute path to the file to modify */
 	file_path: string;
-	/** The text to replace (must be found exactly in the file) */
-	old_string: string;
-	/** The replacement text */
-	new_string: string;
-	/** Replace all occurrences instead of just the first (default: false) */
-	replace_all?: boolean;
-}
-
-/**
- * Branded version of {@link EditToolInput} with {@link FilePath} type.
- *
- * @remarks
- * Use this interface when you want compile-time enforcement that file paths
- * have been validated. The {@link FilePath} brand ensures the path comes from
- * a trusted source or has passed validation.
- *
- * @see {@link EditToolInput} - Plain string variant
- * @see {@link FilePath} - The branded path type
- * @public
- */
-export interface BrandedEditToolInput {
-	/** Absolute path to the file to modify */
-	file_path: FilePath;
 	/** The text to replace (must be found exactly in the file) */
 	old_string: string;
 	/** The replacement text */
@@ -200,34 +148,12 @@ export interface BrandedEditToolInput {
  * }
  * ```
  *
- * @see {@link BrandedReadToolInput} - Compile-time validated variant
  * @see {@link ToolInputGuard.isRead} - Type guard for runtime validation
  * @public
  */
 export interface ReadToolInput {
 	/** Absolute path to the file to read */
 	file_path: string;
-	/** Line number to start reading from (1-indexed, optional) */
-	offset?: number;
-	/** Maximum number of lines to read (optional, default: 2000) */
-	limit?: number;
-}
-
-/**
- * Branded version of {@link ReadToolInput} with {@link FilePath} type.
- *
- * @remarks
- * Use this interface when you want compile-time enforcement that file paths
- * have been validated. The {@link FilePath} brand ensures the path comes from
- * a trusted source or has passed validation.
- *
- * @see {@link ReadToolInput} - Plain string variant
- * @see {@link FilePath} - The branded path type
- * @public
- */
-export interface BrandedReadToolInput {
-	/** Absolute path to the file to read */
-	file_path: FilePath;
 	/** Line number to start reading from (1-indexed, optional) */
 	offset?: number;
 	/** Maximum number of lines to read (optional, default: 2000) */
@@ -258,38 +184,12 @@ export interface BrandedReadToolInput {
  * }
  * ```
  *
- * @see {@link BrandedNotebookEditToolInput} - Compile-time validated variant
  * @see {@link ToolInputGuard.isNotebookEdit} - Type guard for runtime validation
  * @public
  */
 export interface NotebookEditToolInput {
 	/** Absolute path to the Jupyter notebook file (.ipynb) */
 	notebook_path: string;
-	/** New source content for the cell */
-	new_source: string;
-	/** Cell ID to target for editing (optional, uses first cell if not specified) */
-	cell_id?: string;
-	/** Cell type: "code" for executable cells, "markdown" for documentation */
-	cell_type?: "code" | "markdown";
-	/** Edit mode: "replace" (default), "insert" new cell, or "delete" existing */
-	edit_mode?: "replace" | "insert" | "delete";
-}
-
-/**
- * Branded version of {@link NotebookEditToolInput} with {@link FilePath} type.
- *
- * @remarks
- * Use this interface when you want compile-time enforcement that file paths
- * have been validated. The {@link FilePath} brand ensures the path comes from
- * a trusted source or has passed validation.
- *
- * @see {@link NotebookEditToolInput} - Plain string variant
- * @see {@link FilePath} - The branded path type
- * @public
- */
-export interface BrandedNotebookEditToolInput {
-	/** Absolute path to the Jupyter notebook file (.ipynb) */
-	notebook_path: FilePath;
 	/** New source content for the cell */
 	new_source: string;
 	/** Cell ID to target for editing (optional, uses first cell if not specified) */
@@ -444,7 +344,6 @@ export interface GrepToolInput {
  * }
  * ```
  *
- * @see {@link BrandedBashToolInput} - Compile-time validated variant with {@link ShellCommand}
  * @see {@link ToolInputGuard.isBash} - Type guard for runtime validation
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#pretooluse | PreToolUse Hook Documentation}
  * @public
@@ -452,35 +351,6 @@ export interface GrepToolInput {
 export interface BashToolInput {
 	/** The shell command to execute */
 	command: string;
-	/** Timeout in milliseconds (max 600000 / 10 minutes, default: 120000 / 2 minutes) */
-	timeout?: number;
-	/** Short description of what the command does (5-10 words) */
-	description?: string;
-	/** Run command in background, monitor via TaskOutput */
-	run_in_background?: boolean;
-	/** Bypass sandbox mode - DANGEROUS, should typically be blocked by hooks */
-	dangerouslyDisableSandbox?: boolean;
-}
-
-/**
- * Branded version of {@link BashToolInput} with {@link ShellCommand} type.
- *
- * @remarks
- * Use this interface when you want compile-time enforcement that shell commands
- * have been validated. The {@link ShellCommand} brand ensures the command comes
- * from a trusted source or has passed security validation.
- *
- * This is particularly useful for building secure command execution pipelines
- * where commands are constructed programmatically and must be validated before
- * execution.
- *
- * @see {@link BashToolInput} - Plain string variant
- * @see {@link ShellCommand} - The branded command type
- * @public
- */
-export interface BrandedBashToolInput {
-	/** The shell command to execute (validated) */
-	command: ShellCommand;
 	/** Timeout in milliseconds (max 600000 / 10 minutes, default: 120000 / 2 minutes) */
 	timeout?: number;
 	/** Short description of what the command does (5-10 words) */
