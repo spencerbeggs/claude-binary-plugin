@@ -1714,6 +1714,135 @@
           "name": "buildPlugin"
         },
         {
+          "kind": "Function",
+          "canonicalReference": "claude-binary-plugin!buildPluginFromConfig:function(1)",
+          "docComment": "/**\n * Build a plugin from a ClaudeBinaryPlugin instance.\n *\n * @remarks\n *\n * This function is the bridge between `ClaudeBinaryPlugin.build()` and the underlying build system. It extracts hooks and commands from the plugin configuration and invokes the standard build process.\n *\n * **Build Steps:** 1. Read plugin.json/marketplace.json manifests for name/version 2. Extract hooks, commands, and passthrough entries from plugin.config 3. Resolve file paths for file-based handlers 4. Generate TypeScript entrypoint using generatePipelinePluginEntrypoint() 5. Compile to single-file executable with Bun.build() 6. Generate hooks.json manifest for Claude Code 7. Optionally sync to Claude Code plugins cache\n *\n * @param plugin - The plugin instance (ClaudeBinaryPlugin)\n *\n * @param options - Build configuration options\n *\n * @returns Result of the build operation\n *\n * @example\n * ```ts\n * import plugin from \"./plugin.ts\";\n * import { buildPluginFromConfig } from \"claude-binary-plugin\";\n *\n * const result = await buildPluginFromConfig(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function buildPluginFromConfig(plugin: "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    config: {\n        hooks: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Partial",
+              "canonicalReference": "!Partial:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "PipelineHookEventType",
+              "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractableHook",
+              "canonicalReference": "claude-binary-plugin!ExtractableHook:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "[]>>;\n        commands?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, "
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractableCommand",
+              "canonicalReference": "claude-binary-plugin!ExtractableCommand:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        hooksOutputPath?: string;\n    };\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ", options?: "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    rootDir?: string;\n    plugin?: string;\n    marketplace?: string;\n    outputName?: string;\n    compile?: boolean;\n    minify?: boolean;\n    sourcemap?: boolean;\n    bytecode?: boolean;\n    target?: string;\n    clean?: boolean;\n    persistLocal?: boolean;\n    external?: string[];\n}"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Promise",
+              "canonicalReference": "!Promise:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "PluginBuildResult",
+              "canonicalReference": "claude-binary-plugin!PluginBuildResult:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/build/builder.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 17,
+            "endIndex": 21
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "plugin",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 14
+              },
+              "isOptional": false
+            },
+            {
+              "parameterName": "options",
+              "parameterTypeTokenRange": {
+                "startIndex": 15,
+                "endIndex": 16
+              },
+              "isOptional": true
+            }
+          ],
+          "name": "buildPluginFromConfig"
+        },
+        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!BuildPluginOptions:interface",
           "docComment": "/**\n * Options for compiling a unified plugin binary.\n *\n * @public\n */\n",
@@ -2280,9 +2409,431 @@
           }
         },
         {
+          "kind": "Class",
+          "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class",
+          "docComment": "/**\n * Claude Code plugin with declarative hook definitions.\n *\n * @remarks\n *\n * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins. Use the static `create()` factory to instantiate plugins with full type inference.\n *\n * **Three-Layer Model:** 1. **Input** - Hook event data from Claude Code (stdin JSON) 2. **Options** - User-configurable settings validated by Zod schema 3. **State** - Computed values from `setup()` function at SessionStart\n *\n * **Static Methods:** - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)\n *\n * **Type Inference:** Use the namespace utilities to extract types from plugin instances: - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup() - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands\n *\n * The constructor for this class is marked as internal. Third-party code should not call the constructor directly or create subclasses that extend the `ClaudeBinaryPlugin` class.\n *\n * @typeParam TEnv - Zod schema type for environment validation\n *\n * @typeParam TSetup - Setup function type (used to infer state)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @example\n * ```ts\n * // plugin.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({\n *     DEBUG: z.boolean().default(false),\n *   }),\n *   hooks: {\n *     SessionStart: [{\n *       name: \"project-context\",\n *       pipeline: async ({ input, env }) => {\n *         return { additionalContext: \"Hello from plugin!\" };\n *       }\n *     }],\n *   }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n * ```\n *\n * @example\n *\n * Building a plugin\n * ```ts\n * import plugin from \"./plugin.ts\";\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n *\n * await ClaudeBinaryPlugin.build(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class ClaudeBinaryPlugin<TEnv extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "$ZodType",
+              "canonicalReference": "zod!$ZodType:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", TSetup extends "
+            },
+            {
+              "kind": "Content",
+              "text": "((ctx: "
+            },
+            {
+              "kind": "Reference",
+              "text": "SetupContext",
+              "canonicalReference": "claude-binary-plugin!SetupContext:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEnv>>) => unknown) | undefined"
+            },
+            {
+              "kind": "Content",
+              "text": " = "
+            },
+            {
+              "kind": "Content",
+              "text": "undefined"
+            },
+            {
+              "kind": "Content",
+              "text": ", TCommands extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, "
+            },
+            {
+              "kind": "Reference",
+              "text": "CommandDefinition",
+              "canonicalReference": "claude-binary-plugin!CommandDefinition:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": " = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, never>"
+            },
+            {
+              "kind": "Content",
+              "text": "> "
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "TEnv",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "TSetup",
+              "constraintTokenRange": {
+                "startIndex": 3,
+                "endIndex": 8
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 10
+              }
+            },
+            {
+              "typeParameterName": "TCommands",
+              "constraintTokenRange": {
+                "startIndex": 11,
+                "endIndex": 15
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 16,
+                "endIndex": 18
+              }
+            }
+          ],
+          "isAbstract": false,
+          "name": "ClaudeBinaryPlugin",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.build:member(1)",
+              "docComment": "/**\n * Build a plugin to a compiled executable.\n *\n * @remarks\n *\n * This static method compiles a plugin instance to a single-file Bun executable. It uses dynamic import to load the build system, making the build code tree-shakeable when not used.\n *\n * **Build Process:** 1. Read plugin.json/marketplace.json manifests for name/version 2. Extract hooks and commands from plugin configuration 3. Generate TypeScript entrypoint 4. Compile to single-file executable with Bun.build() 5. Generate hooks.json manifest for Claude Code 6. Optionally sync to Claude Code plugins cache\n *\n * @param plugin - The plugin instance to build\n *\n * @param options - Build configuration options\n *\n * @returns Result of the build operation\n *\n * @example\n * ```ts\n * import plugin from \"./plugin.ts\";\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n *\n * const result = await ClaudeBinaryPlugin.build(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n *\n * if (result.success) {\n *   console.log(`Built: ${result.output}`);\n * }\n * ```\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static build(plugin: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ClaudeBinaryPlugin",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<any, any, any>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginBuildOptions",
+                  "canonicalReference": "claude-binary-plugin!PluginBuildOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginBuildResult",
+                  "canonicalReference": "claude-binary-plugin!PluginBuildResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 6,
+                "endIndex": 10
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "plugin",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 5
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "build"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin#config:member",
+              "docComment": "/**\n * The plugin configuration.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "readonly config: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginConfig",
+                  "canonicalReference": "claude-binary-plugin!PluginConfig:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TEnv, TSetup, TCommands>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "config",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.create:member(1)",
+              "docComment": "/**\n * Create a new plugin instance.\n *\n * @remarks\n *\n * This is the primary factory for creating Claude Code plugins. The returned instance contains the configuration and can be passed to `ClaudeBinaryPlugin.build()` for compilation.\n *\n * @param config - Plugin configuration\n *\n * @typeParam TEnv - Zod schema type for environment validation\n *\n * @typeParam TSetup - Setup function type (inferred from config.setup)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @returns Plugin instance ready for building or export\n *\n * @example\n * ```ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: {\n *     PreToolUse: [{\n *       name: \"security\",\n *       tools: [\"Bash\"],\n *       pipeline: \"./hooks/security.hook.ts\",\n *     }],\n *   },\n * });\n * ```\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static create<TEnv extends "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "$ZodType",
+                  "canonicalReference": "zod!$ZodType:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", TSetup extends "
+                },
+                {
+                  "kind": "Content",
+                  "text": "((ctx: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SetupContext",
+                  "canonicalReference": "claude-binary-plugin!SetupContext:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.infer",
+                  "canonicalReference": "zod!output:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TEnv>>) => unknown) | undefined"
+                },
+                {
+                  "kind": "Content",
+                  "text": " = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "undefined"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", TCommands extends "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "CommandDefinition",
+                  "canonicalReference": "claude-binary-plugin!CommandDefinition:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": " = "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, never>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(config: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginConfig",
+                  "canonicalReference": "claude-binary-plugin!PluginConfig:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TEnv, TSetup, TCommands>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ClaudeBinaryPlugin",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TEnv, TSetup, TCommands>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "TEnv",
+                  "constraintTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TSetup",
+                  "constraintTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 8
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 9,
+                    "endIndex": 10
+                  }
+                },
+                {
+                  "typeParameterName": "TCommands",
+                  "constraintTokenRange": {
+                    "startIndex": 11,
+                    "endIndex": 15
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 16,
+                    "endIndex": 18
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 22,
+                "endIndex": 24
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "config",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 19,
+                    "endIndex": 21
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "create"
+            }
+          ],
+          "implementsTokenRanges": []
+        },
+        {
           "kind": "Namespace",
           "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:namespace",
-          "docComment": "/**\n * Namespace for type inference utilities. Merges with the ClaudeBinaryPlugin const to enable Zod-like patterns.\n *\n * @example\n * ```ts\n * // In plugin.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: { ... }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n *\n * // In hooks/my-hook.hook.ts\n * import type { Pipeline } from \"../plugin.js\";\n *\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, computed }) => {\n *   // input, options, and computed are fully typed!\n *   return { permissionDecision: \"allow\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Namespace for type inference utilities. Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.\n *\n * @example\n * ```ts\n * // In plugin.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: { ... }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n *\n * // In hooks/my-hook.hook.ts\n * import type { Pipeline } from \"../plugin.js\";\n *\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, computed }) => {\n *   // input, options, and computed are fully typed!\n *   return { permissionDecision: \"allow\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -2294,6 +2845,147 @@
           "name": "ClaudeBinaryPlugin",
           "preserveMemberOrder": false,
           "members": [
+            {
+              "kind": "TypeAlias",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractCommands:type",
+              "docComment": "/**\n * Helper type to extract commands map from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "type ExtractCommands<T> = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T extends "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ClaudeBinaryPlugin",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<any, any, infer TCommands> ? TCommands : never"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "ExtractCommands",
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "typeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              }
+            },
+            {
+              "kind": "TypeAlias",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSchema:type",
+              "docComment": "/**\n * Helper type to extract schema from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "type ExtractSchema<T> = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T extends "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ClaudeBinaryPlugin",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<infer TSchema, any, any> ? TSchema : never"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "ExtractSchema",
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "typeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              }
+            },
+            {
+              "kind": "TypeAlias",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSetup:type",
+              "docComment": "/**\n * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "type ExtractSetup<T> = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T extends "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ClaudeBinaryPlugin",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<any, infer TSetup, any> ? TSetup : undefined"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "releaseTag": "Public",
+              "name": "ExtractSetup",
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "typeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              }
+            },
             {
               "kind": "TypeAlias",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferCommands:type",
@@ -2398,24 +3090,20 @@
             {
               "kind": "TypeAlias",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferCommandsMap:type",
-              "docComment": "/**\n * Extract the commands map from a CompiledPlugin.\n */\n",
+              "docComment": "/**\n * Extract the commands map from a plugin.\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
                   "text": "type InferCommandsMap<T> = "
                 },
                 {
-                  "kind": "Content",
-                  "text": "T extends "
-                },
-                {
                   "kind": "Reference",
-                  "text": "CompiledPlugin",
-                  "canonicalReference": "claude-binary-plugin!CompiledPlugin:interface"
+                  "text": "ExtractCommands",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractCommands:type"
                 },
                 {
                   "kind": "Content",
-                  "text": "<any, any, infer TCommands> ? TCommands : never"
+                  "text": "<T>"
                 },
                 {
                   "kind": "Content",
@@ -2439,73 +3127,17 @@
               ],
               "typeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 4
-              }
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferEnv:type",
-              "docComment": "/**\n * @deprecated\n *\n * Use InferOptions instead\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type InferEnv<T> = "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "InferOptions",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "InferEnv",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
                 "endIndex": 3
               }
             },
             {
               "kind": "TypeAlias",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type",
-              "docComment": "/**\n * Extract the inferred Options type from a CompiledPlugin.\n *\n * @example\n * ```ts\n * type Options = ClaudeBinaryPlugin.InferOptions<typeof plugin>;\n * ```\n *\n */\n",
+              "docComment": "/**\n * Extract the inferred Options type from a plugin.\n *\n * @example\n * ```ts\n * type Options = ClaudeBinaryPlugin.InferOptions<typeof plugin>;\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
                   "text": "type InferOptions<T> = "
-                },
-                {
-                  "kind": "Content",
-                  "text": "T extends "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "CompiledPlugin",
-                  "canonicalReference": "claude-binary-plugin!CompiledPlugin:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<infer TSchema, any, any> ? "
                 },
                 {
                   "kind": "Reference",
@@ -2514,7 +3146,16 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TSchema> : never"
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractSchema",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSchema:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
                 },
                 {
                   "kind": "Content",
@@ -2538,7 +3179,7 @@
               ],
               "typeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 5
               }
             },
             {
@@ -3574,24 +4215,20 @@
             {
               "kind": "TypeAlias",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type",
-              "docComment": "/**\n * Extract the inferred State type from a CompiledPlugin's setup function. State is merged with BaseEnv to form the full PluginEnv passed to handlers.\n *\n * @example\n * ```ts\n * type State = ClaudeBinaryPlugin.InferState<typeof plugin>;\n * // { packageManager: string; typeChecker: string; ... }\n * ```\n *\n */\n",
+              "docComment": "/**\n * Extract the inferred State type from a plugin's setup function. State is merged with BaseEnv to form the full PluginEnv passed to handlers.\n *\n * @example\n * ```ts\n * type State = ClaudeBinaryPlugin.InferState<typeof plugin>;\n * // { packageManager: string; typeChecker: string; ... }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
                   "text": "type InferState<T> = "
                 },
                 {
-                  "kind": "Content",
-                  "text": "T extends "
-                },
-                {
                   "kind": "Reference",
-                  "text": "CompiledPlugin",
-                  "canonicalReference": "claude-binary-plugin!CompiledPlugin:interface"
+                  "text": "ExtractSetup",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSetup:type"
                 },
                 {
                   "kind": "Content",
-                  "text": "<infer _TSchema, infer TSetup, any> ? TSetup extends undefined ? "
+                  "text": "<T> extends undefined ? "
                 },
                 {
                   "kind": "Reference",
@@ -3609,16 +4246,25 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TSetup> : "
+                  "text": "<"
                 },
                 {
                   "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
+                  "text": "NonNullable",
+                  "canonicalReference": "!NonNullable:type"
                 },
                 {
                   "kind": "Content",
-                  "text": "<string, unknown>"
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractSetup",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSetup:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>>"
                 },
                 {
                   "kind": "Content",
@@ -3642,132 +4288,10 @@
               ],
               "typeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 10
+                "endIndex": 11
               }
             }
           ]
-        },
-        {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:var",
-          "docComment": "/**\n * Factory for creating Claude Code plugins with declarative hook definitions.\n *\n * @example\n * ```ts\n * export default ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({\n *     DEBUG: z.boolean().default(false),\n *   }),\n *   hooks: {\n *     SessionStart: [{\n *       name: \"project-context\",\n *       pipeline: async ({ input, env }) => {\n *         return { additionalContext: \"Hello from plugin!\" };\n *       }\n *     }],\n *     PreToolUse: [{\n *       name: \"security-check\",\n *       tools: [\"Bash\", \"Write\"],\n *       pipeline: ({ input, env }) => {\n *         if (input.tool_input.command?.includes(\"rm -rf\")) {\n *           return { permissionDecision: \"deny\", reason: \"Dangerous command\" };\n *         }\n *         return { permissionDecision: \"allow\" };\n *       }\n *     }],\n *   }\n * });\n * ```\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "ClaudeBinaryPlugin: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    create<TEnv extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "$ZodType",
-              "canonicalReference": "zod!$ZodType:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown, unknown, "
-            },
-            {
-              "kind": "Reference",
-              "text": "z.core.$ZodTypeInternals",
-              "canonicalReference": "zod!$ZodTypeInternals:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown, unknown>>, TSetup extends ((ctx: "
-            },
-            {
-              "kind": "Reference",
-              "text": "SetupContext",
-              "canonicalReference": "claude-binary-plugin!SetupContext:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "z.TypeOf",
-              "canonicalReference": "zod!output:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<TEnv>>) => unknown) | undefined = undefined, TCommands extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, "
-            },
-            {
-              "kind": "Reference",
-              "text": "CommandDefinition",
-              "canonicalReference": "claude-binary-plugin!CommandDefinition:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "$ZodType",
-              "canonicalReference": "zod!$ZodType:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown, unknown, "
-            },
-            {
-              "kind": "Reference",
-              "text": "z.core.$ZodTypeInternals",
-              "canonicalReference": "zod!$ZodTypeInternals:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown, unknown>>>> = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, never>>(config: "
-            },
-            {
-              "kind": "Reference",
-              "text": "PluginConfig",
-              "canonicalReference": "claude-binary-plugin!PluginConfig:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<TEnv, TSetup, TCommands>): "
-            },
-            {
-              "kind": "Reference",
-              "text": "CompiledPlugin",
-              "canonicalReference": "claude-binary-plugin!CompiledPlugin:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<TEnv, TSetup, TCommands>;\n}"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/config.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "ClaudeBinaryPlugin",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 24
-          }
         },
         {
           "kind": "Class",
@@ -3854,6 +4378,113 @@
               "isStatic": true,
               "isProtected": false,
               "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginEnv.create:member(1)",
+              "docComment": "/**\n * Creates a concrete `ClaudeBinaryPluginEnv` subclass from configuration.\n *\n * @remarks\n *\n * This factory method creates a runtime subclass of `ClaudeBinaryPluginEnv` with the specified prefix, schema, and plugin name. It's primarily used by the build system to generate plugin entrypoints that don't require manually defining an env class.\n *\n * The returned class has a `validated` getter that provides typed access to the validated environment variables.\n *\n * @param prefix - Environment variable prefix (e.g., `\"MY_PLUGIN\"`)\n *\n * @param schema - Zod schema for validating environment variables\n *\n * @param pluginName - Optional plugin name for logging (e.g., `\"my-plugin\"`)\n *\n * @typeParam T - The type of validated environment variables (inferred from schema)\n *\n * @returns A constructor for the configured env class\n *\n * @example\n * ```typescript\n * import { ClaudeBinaryPluginEnv } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const schema = z.object({\n *   MY_PLUGIN_DEBUG: z.enum([\"true\", \"false\"]).default(\"false\"),\n * });\n *\n * const MyEnvClass = ClaudeBinaryPluginEnv.create(\"MY_PLUGIN\", schema, \"my-plugin\");\n *\n * // Use in hook context\n * const env = await MyEnvClass.forContext(\"sessionStart\", { hookName: \"init\" });\n * console.log(env.validated.MY_PLUGIN_DEBUG); // \"false\" (typed!)\n * ```\n *\n * @see\n *\n * `forContext()` - Loading environment by context\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static create<T>(prefix: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", schema: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ZodSchema",
+                  "canonicalReference": "claude-binary-plugin!ZodSchema:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", pluginName?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "new () => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ClaudeBinaryPluginEnv",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginEnv:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T> & {\n        validated: T;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 8,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "prefix",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "schema",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "pluginName",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 7
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "create"
             },
             {
               "kind": "Method",
@@ -6948,169 +7579,6 @@
           }
         },
         {
-          "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!CompiledPlugin:interface",
-          "docComment": "/**\n * Compiled plugin ready for building.\n *\n * @typeParam TEnv - Zod schema type\n *\n * @typeParam TSetup - Setup function type (preserves return type for inference)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface CompiledPlugin<TEnv extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "$ZodType",
-              "canonicalReference": "zod!$ZodType:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ", TSetup extends "
-            },
-            {
-              "kind": "Content",
-              "text": "((ctx: "
-            },
-            {
-              "kind": "Reference",
-              "text": "SetupContext",
-              "canonicalReference": "claude-binary-plugin!SetupContext:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "z.infer",
-              "canonicalReference": "zod!output:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<TEnv>>) => unknown) | undefined"
-            },
-            {
-              "kind": "Content",
-              "text": " = "
-            },
-            {
-              "kind": "Content",
-              "text": "undefined"
-            },
-            {
-              "kind": "Content",
-              "text": ", TCommands extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, "
-            },
-            {
-              "kind": "Reference",
-              "text": "CommandDefinition",
-              "canonicalReference": "claude-binary-plugin!CommandDefinition:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ">"
-            },
-            {
-              "kind": "Content",
-              "text": " = "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, never>"
-            },
-            {
-              "kind": "Content",
-              "text": "> "
-            }
-          ],
-          "fileUrlPath": "src/pipeline/config.ts",
-          "releaseTag": "Public",
-          "typeParameters": [
-            {
-              "typeParameterName": "TEnv",
-              "constraintTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            },
-            {
-              "typeParameterName": "TSetup",
-              "constraintTokenRange": {
-                "startIndex": 3,
-                "endIndex": 8
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 9,
-                "endIndex": 10
-              }
-            },
-            {
-              "typeParameterName": "TCommands",
-              "constraintTokenRange": {
-                "startIndex": 11,
-                "endIndex": 15
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 16,
-                "endIndex": 18
-              }
-            }
-          ],
-          "name": "CompiledPlugin",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!CompiledPlugin#config:member",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "config: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "PluginConfig",
-                  "canonicalReference": "claude-binary-plugin!PluginConfig:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<TEnv, TSetup, TCommands>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "config",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!CompileTarget:type",
           "docComment": "/**\n * Compilation target platforms for cross-compilation.\n *\n * @public\n */\n",
@@ -7192,538 +7660,6 @@
             "startIndex": 1,
             "endIndex": 2
           }
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToPermissionRequestResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to PermissionRequest response format.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToPermissionRequestResponse(output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "PermissionRequestResponse",
-              "canonicalReference": "claude-binary-plugin!PermissionRequestResponse:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToPermissionRequestResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToPostToolUseResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to PostToolUse response format.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToPostToolUseResponse(output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "PostToolUseResponse",
-              "canonicalReference": "claude-binary-plugin!PostToolUseResponse:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToPostToolUseResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToPreToolUseResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to PreToolUse response format.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToPreToolUseResponse(output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "PreToolUseResponse",
-              "canonicalReference": "claude-binary-plugin!PreToolUseResponse:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToPreToolUseResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to response format based on hook type.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToResponse(hookType: "
-            },
-            {
-              "kind": "Reference",
-              "text": "HookEventType",
-              "canonicalReference": "claude-binary-plugin!HookEventType:type"
-            },
-            {
-              "kind": "Content",
-              "text": ", output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Content",
-              "text": "unknown"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 5,
-            "endIndex": 6
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "hookType",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToSessionStartResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to SessionStart response format.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToSessionStartResponse(output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "SessionStartResponse",
-              "canonicalReference": "claude-binary-plugin!SessionStartResponse:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToSessionStartResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToStopResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to Stop response format.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToStopResponse(output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "StopResponse",
-              "canonicalReference": "claude-binary-plugin!StopResponse:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToStopResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!convertToUserPromptSubmitResponse:function(1)",
-          "docComment": "/**\n * Convert pipeline output to UserPromptSubmit response format.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function convertToUserPromptSubmitResponse(output: "
-            },
-            {
-              "kind": "Reference",
-              "text": "AnyPipelineOutput",
-              "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "UserPromptSubmitResponse",
-              "canonicalReference": "claude-binary-plugin!UserPromptSubmitResponse:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "output",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "convertToUserPromptSubmitResponse"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!createBaseEnv:function(1)",
-          "docComment": "/**\n * Create the base env object for the setup function.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function createBaseEnv(cwd: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ", claudeEnvFile: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ", env: "
-            },
-            {
-              "kind": "Reference",
-              "text": "ClaudeBinaryPluginEnv",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginEnv:class"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown>"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "BaseEnv",
-              "canonicalReference": "claude-binary-plugin!BaseEnv:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 8,
-            "endIndex": 9
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "cwd",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "claudeEnvFile",
-              "parameterTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "env",
-              "parameterTypeTokenRange": {
-                "startIndex": 5,
-                "endIndex": 7
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "createBaseEnv"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!createEnvClass:function(1)",
-          "docComment": "/**\n * Create a ClaudeBinaryPluginEnv subclass from a Zod schema, prefix, and plugin name.\n *\n * This is used by the generated plugin entrypoint to create the env class dynamically based on the plugin configuration.\n *\n * @param prefixValue - Environment variable prefix (e.g., \"SAVVY_WORKFLOW\")\n *\n * @param schemaValue - Zod schema for validating env vars\n *\n * @param pluginNameValue - Plugin name for logging (e.g., \"workflow\")\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function createEnvClass<T>(prefixValue: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ", schemaValue: "
-            },
-            {
-              "kind": "Reference",
-              "text": "ZodSchema",
-              "canonicalReference": "claude-binary-plugin!ZodSchema:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<T>"
-            },
-            {
-              "kind": "Content",
-              "text": ", pluginNameValue?: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Content",
-              "text": "new () => "
-            },
-            {
-              "kind": "Reference",
-              "text": "ClaudeBinaryPluginEnv",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginEnv:class"
-            },
-            {
-              "kind": "Content",
-              "text": "<T> & {\n    validated: T;\n}"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 8,
-            "endIndex": 11
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "prefixValue",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "schemaValue",
-              "parameterTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 5
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "pluginNameValue",
-              "parameterTypeTokenRange": {
-                "startIndex": 6,
-                "endIndex": 7
-              },
-              "isOptional": true
-            }
-          ],
-          "typeParameters": [
-            {
-              "typeParameterName": "T",
-              "constraintTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            }
-          ],
-          "name": "createEnvClass"
         },
         {
           "kind": "Function",
@@ -11614,61 +11550,6 @@
         },
         {
           "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!extractStateFromEnv:function(1)",
-          "docComment": "/**\n * Extract state from the environment. Reads `prefix`_PLUGIN_STATE and parses it as JSON.\n *\n * @param env - The plugin environment instance\n *\n * @returns State object parsed from `prefix`_PLUGIN_STATE\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function extractStateFromEnv(env: "
-            },
-            {
-              "kind": "Reference",
-              "text": "ClaudeBinaryPluginEnv",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginEnv:class"
-            },
-            {
-              "kind": "Content",
-              "text": "<unknown>"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, unknown>"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 4,
-            "endIndex": 6
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "env",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "extractStateFromEnv"
-        },
-        {
-          "kind": "Function",
           "canonicalReference": "claude-binary-plugin!extractTokenMetrics:function(1)",
           "docComment": "/**\n * Extract token metrics from pipeline output.\n *\n * @param output - Pipeline output object\n *\n * @returns Token metrics\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -12762,124 +12643,6 @@
             }
           ],
           "name": "generatePluginEntrypoint"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!getHookEventClasses:function(1)",
-          "docComment": "/**\n * Lazily initialized map of hook event constructors. Uses a function to avoid circular dependency issues when index.ts re-exports from this module while we import event classes from index.ts.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function getHookEventClasses(): "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly PreToolUse: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "PreToolUseHookEvent",
-              "canonicalReference": "claude-binary-plugin!PreToolUseHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly PostToolUse: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "PostToolUseHookEvent",
-              "canonicalReference": "claude-binary-plugin!PostToolUseHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly SessionStart: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "SessionStartHookEvent",
-              "canonicalReference": "claude-binary-plugin!SessionStartHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly SessionEnd: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "SessionEndHookEvent",
-              "canonicalReference": "claude-binary-plugin!SessionEndHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly Stop: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "StopHookEvent",
-              "canonicalReference": "claude-binary-plugin!StopHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly SubagentStop: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "SubagentStopHookEvent",
-              "canonicalReference": "claude-binary-plugin!SubagentStopHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly UserPromptSubmit: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "UserPromptSubmitHookEvent",
-              "canonicalReference": "claude-binary-plugin!UserPromptSubmitHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly PreCompact: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "PreCompactHookEvent",
-              "canonicalReference": "claude-binary-plugin!PreCompactHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly Notification: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "NotificationHookEvent",
-              "canonicalReference": "claude-binary-plugin!NotificationHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly PermissionRequest: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "PermissionRequestHookEvent",
-              "canonicalReference": "claude-binary-plugin!PermissionRequestHookEvent:class"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n}"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 22
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [],
-          "name": "getHookEventClasses"
         },
         {
           "kind": "Function",
@@ -15209,7 +14972,7 @@
             {
               "kind": "Reference",
               "text": "getHookEventClasses",
-              "canonicalReference": "claude-binary-plugin!getHookEventClasses:function"
+              "canonicalReference": "claude-binary-plugin!~getHookEventClasses:function"
             },
             {
               "kind": "Content",
@@ -18473,34 +18236,6 @@
         },
         {
           "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!isDebugEnabled:function(1)",
-          "docComment": "/**\n * Check if CLAUDE_DEBUG is enabled (handles \"1\", \"true\", etc.)\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function isDebugEnabled(): "
-            },
-            {
-              "kind": "Content",
-              "text": "boolean"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [],
-          "name": "isDebugEnabled"
-        },
-        {
-          "kind": "Function",
           "canonicalReference": "claude-binary-plugin!isOTELEnabled:function(1)",
           "docComment": "/**\n * Check if OTEL telemetry is enabled.\n *\n * Telemetry is enabled when: 1. CLAUDE_CODE_ENABLE_TELEMETRY=1 2. Platform supports Unix sockets (darwin/linux)\n *\n * @returns true if telemetry should be collected\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -18875,116 +18610,6 @@
             "startIndex": 1,
             "endIndex": 2
           }
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!mapToOutcome:function(1)",
-          "docComment": "/**\n * Map pipeline status and action to HookOutcome for telemetry.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function mapToOutcome(status: "
-            },
-            {
-              "kind": "Reference",
-              "text": "ExecutionStatus",
-              "canonicalReference": "claude-binary-plugin!ExecutionStatus:type"
-            },
-            {
-              "kind": "Content",
-              "text": ", action?: "
-            },
-            {
-              "kind": "Reference",
-              "text": "HookAction",
-              "canonicalReference": "claude-binary-plugin!HookAction:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "HookOutcome",
-              "canonicalReference": "claude-binary-plugin!HookOutcome:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 5,
-            "endIndex": 6
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "status",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "action",
-              "parameterTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "isOptional": true
-            }
-          ],
-          "name": "mapToOutcome"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!mapToPermissionDecision:function(1)",
-          "docComment": "/**\n * Map pipeline action to permission decision for response builder.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "declare function mapToPermissionDecision(action?: "
-            },
-            {
-              "kind": "Reference",
-              "text": "HookAction",
-              "canonicalReference": "claude-binary-plugin!HookAction:type"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Content",
-              "text": "\"allow\" | \"deny\" | \"ask\" | undefined"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "action",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": true
-            }
-          ],
-          "name": "mapToPermissionDecision"
         },
         {
           "kind": "Interface",
@@ -32575,6 +32200,348 @@
             "startIndex": 1,
             "endIndex": 2
           }
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "claude-binary-plugin!PluginBuildOptions:interface",
+          "docComment": "/**\n * Options for building a plugin via `ClaudeBinaryPlugin.build()`.\n *\n * @remarks\n *\n * These options control the build process. The plugin configuration (hooks, commands, schema) comes from the plugin instance itself.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface PluginBuildOptions "
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "PluginBuildOptions",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#bytecode:member",
+              "docComment": "/**\n * Whether to compile to bytecode for faster startup.\n *\n * @defaultValue false\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "bytecode?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "bytecode",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#clean:member",
+              "docComment": "/**\n * Whether to clean existing plugin binary before building.\n *\n * @defaultValue true\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "clean?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "clean",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#compile:member",
+              "docComment": "/**\n * Whether to compile to a standalone binary. When false, bundles to JavaScript for easier debugging.\n *\n * @defaultValue true\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "compile?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "compile",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#external:member",
+              "docComment": "/**\n * External packages to exclude from bundle.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "external?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "external",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#marketplace:member",
+              "docComment": "/**\n * Path to marketplace.json manifest file. Used for cache path when persistLocal is enabled.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "marketplace?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "marketplace",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#minify:member",
+              "docComment": "/**\n * Whether to minify output.\n *\n * @defaultValue true\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "minify?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "minify",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#outputName:member",
+              "docComment": "/**\n * Output filename for the compiled binary.\n *\n * @defaultValue Auto-derived from plugin.json name as `${name}.plugin`\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "outputName?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "outputName",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#persistLocal:member",
+              "docComment": "/**\n * Whether to persist to local Claude Code cache after build. Requires marketplace name to be set.\n *\n * @defaultValue false\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "persistLocal?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "persistLocal",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#plugin:member",
+              "docComment": "/**\n * Path to plugin.json manifest file or directory containing .claude-plugin/plugin.json. Used to discover plugin name and version.\n *\n * @defaultValue `${rootDir}/.claude-plugin/plugin.json`\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "plugin?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "plugin",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#rootDir:member",
+              "docComment": "/**\n * Root directory containing the plugin (defaults to cwd). This is where the entrypoint and output will be created.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "rootDir?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "rootDir",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#sourcemap:member",
+              "docComment": "/**\n * Whether to embed sourcemaps.\n *\n * @defaultValue true\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "sourcemap?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "sourcemap",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginBuildOptions#target:member",
+              "docComment": "/**\n * Cross-compilation target.\n *\n * @defaultValue Current platform\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "target?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "target",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
         },
         {
           "kind": "Interface",

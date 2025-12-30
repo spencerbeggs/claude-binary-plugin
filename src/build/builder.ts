@@ -3,9 +3,8 @@
  * Build system for compiling Claude Code plugins.
  *
  * @remarks
- * This module provides the {@link buildPlugin} function which compiles plugin
- * configurations into single-file Bun executables with accompanying hooks.json
- * manifests.
+ * This module provides functions for compiling plugin configurations into
+ * single-file Bun executables with accompanying hooks.json manifests.
  *
  * **Build Process:**
  * 1. Generate TypeScript entrypoint from plugin config
@@ -19,27 +18,30 @@
  * - `sidecar.js` - OTEL sidecar script (if telemetry enabled)
  *
  * **Key Functions:**
- * - {@link buildPlugin} - Main entry point for building plugins
+ * - {@link buildPluginFromConfig} - Build from ClaudeBinaryPlugin instance
+ * - {@link buildPlugin} - Low-level build with manual entrypoint
+ * - {@link generatePipelinePluginEntrypoint} - Generate TypeScript entrypoint
  * - {@link generateHooksJson} - Generate hooks.json manifest
- * - {@link generatePluginEntrypoint} - Generate TypeScript entrypoint
  * - {@link syncPluginToCache} - Sync to Claude Code plugins cache
  *
  * @example
  * ```typescript
- * import { buildPlugin } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin, buildPluginFromConfig } from "claude-binary-plugin";
  *
- * const result = await buildPlugin({
- *   pluginDir: "./my-plugin",
- *   configPath: "./plugin.ts",
- *   outputDir: "./dist",
+ * const plugin = ClaudeBinaryPlugin.create({
+ *   prefix: "MY_PLUGIN",
+ *   schema: z.object({}),
+ *   hooks: { SessionStart: [{ name: "init", pipeline: "./hooks/init.ts" }] },
  * });
+ *
+ * const result = await buildPluginFromConfig(plugin, { rootDir: "." });
  * ```
  *
  * @see {@link PluginManifest} - Plugin manifest configuration
  * @see {@link BuildPluginOptions} - Build configuration options
  * @module
  */
-import { basename, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import type { PassthroughHookEntry } from "../pipeline/config.js";
 
 /**
@@ -84,32 +86,6 @@ export type CompileTarget =
 	| "bun-linux-x64-baseline"
 	| "bun-linux-x64-musl"
 	| "bun-linux-arm64-musl";
-
-/**
- * Configuration for a hook handler in the plugin.
- * @public
- */
-export interface PluginHookConfig {
-	/**Hook name used in CLI (e.g., "pre-edit-code") */
-	name: string;
-	/** Import path relative to plugin root (e.g., "./hooks/edit-code/pre-tool-use/pre-edit-code.hook.js") */
-	path: string;
-	/**Description shown in help text*/
-	description?: string;
-}
-
-/**
- * Configuration for a command handler in the plugin.
- * @public
- */
-export interface PluginCommandConfig {
-	/**Command name used in CLI (e.g., "lint") */
-	name: string;
-	/** Import path relative to plugin root (e.g., "./commands/scripts/lint.js") */
-	path: string;
-	/**Description shown in help text*/
-	description?: string;
-}
 
 // =============================================================================
 // PIPELINE PLUGIN SUPPORT
@@ -178,8 +154,6 @@ export interface GeneratePipelinePluginOptions {
 	pluginVersion: string;
 	/** Array of hook configurations extracted from the plugin definition */
 	hooks: PipelineHookEntry[];
-	/** Legacy commands (deprecated - use pipelineCommands instead) */
-	commands?: PluginCommandConfig[];
 	/** Pipeline-style commands with Zod arg schemas */
 	pipelineCommands?: PipelineCommandEntry[];
 }
@@ -195,7 +169,7 @@ export interface GeneratePipelinePluginOptions {
  * @public
  */
 export function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions): string {
-	const { pluginPath, pluginName, pluginVersion, hooks, commands = [], pipelineCommands = [] } = options;
+	const { pluginPath, pluginName, pluginVersion, hooks, pipelineCommands = [] } = options;
 
 	// Group hooks by type for the switch statement
 	const hooksByType = new Map<string, PipelineHookEntry[]>();
@@ -305,17 +279,8 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 		}
 	}
 
-	// Generate command cases - support both legacy and pipeline commands
-	const legacyCommandCases = commands
-		.map(
-			(c) => `    case "${c.name}": {
-      const { main } = await import("${c.path}");
-      return main();
-    }`,
-		)
-		.join("\n");
-
-	const pipelineCommandCases = pipelineCommands
+	// Generate command cases
+	const commandCases = pipelineCommands
 		.map((c) => {
 			const importName = commandImportMap.get(c.name);
 			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "emptyArgsSchema";
@@ -333,22 +298,13 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 		})
 		.join("\n");
 
-	// Combine command cases
-	const commandCases = [legacyCommandCases, pipelineCommandCases].filter(Boolean).join("\n");
-
-	// Combine all command entries for validation and help
-	const allCommands = [
-		...commands.map((c) => ({ name: c.name, description: c.description })),
-		...pipelineCommands.map((c) => ({ name: c.name, description: c.description })),
-	];
-
 	// Generate help text
 	const hookDescriptions = hooks.map((h) => `  ${h.hookType}/${h.name}`.padEnd(35) + (h.description || "")).join("\n");
 
-	const commandDescriptions = allCommands.map((c) => `  ${c.name}`.padEnd(20) + (c.description || "")).join("\n");
+	const commandDescriptions = pipelineCommands.map((c) => `  ${c.name}`.padEnd(20) + (c.description || "")).join("\n");
 
 	const validHooksArray = hooks.map((h) => `"${h.hookType}/${h.name}"`).join(", ");
-	const validCommandsArray = allCommands.map((c) => `"${c.name}"`).join(", ");
+	const validCommandsArray = pipelineCommands.map((c) => `"${c.name}"`).join(", ");
 
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
@@ -366,7 +322,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { runPipeline, runRawHandler, createEnvClass, handleUnknownHook, setPluginInfo } from "claude-binary-plugin";
+import { runPipeline, runRawHandler, ClaudeBinaryPluginEnv, handleUnknownHook, setPluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -379,7 +335,7 @@ const PLUGIN_VERSION = "${pluginVersion}";
 const pluginConfig = pluginDefinition.config;
 
 // Create environment class from plugin schema (with pluginName for logging)
-const EnvClass = createEnvClass(pluginConfig.prefix, pluginConfig.schema, PLUGIN_NAME);
+const EnvClass = ClaudeBinaryPluginEnv.create(pluginConfig.prefix, pluginConfig.schema, PLUGIN_NAME);
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
@@ -418,11 +374,11 @@ Usage:
 Available hooks:
 ${hookDescriptions}
 
-${allCommands.length > 0 ? `Available commands:\n${commandDescriptions}` : ""}
+${pipelineCommands.length > 0 ? `Available commands:\n${commandDescriptions}` : ""}
 
 Examples:
   ${pluginName} --hook=${hooks[0]?.hookType}/${hooks[0]?.name || "example"}
-  ${allCommands[0] ? `${pluginName} --cmd=${allCommands[0].name}` : ""}
+  ${pipelineCommands[0] ? `${pluginName} --cmd=${pipelineCommands[0].name}` : ""}
 \`);
 }
 
@@ -769,7 +725,6 @@ export interface BuildPluginOptions {
 	marketplace?: string;
 	/**
 	 * Path to the plugin entrypoint file (relative to rootDir).
-	 * If hooks or commands are provided, this is auto-generated and this option is ignored.
 	 */
 	entrypoint?: string;
 	/**
@@ -802,10 +757,6 @@ export interface BuildPluginOptions {
 	cleanupTempFiles?: boolean;
 	/**Shell executor for running build commands (for testing) */
 	shell?: ShellExecutor;
-	/** Hooks to include in the plugin (enables auto-generation of entrypoint) */
-	hooks?: PluginHookConfig[];
-	/**Commands to include in the plugin (enables auto-generation of entrypoint) */
-	commands?: PluginCommandConfig[];
 	/**
 	 * Plugin name used in help text and for per-plugin debug log files.
 	 * Default: auto-derived from plugin.json name, or from outputName if not found.
@@ -847,189 +798,6 @@ export interface PluginBuildResult {
 	error?: Error;
 	/**Build duration in milliseconds*/
 	duration: number;
-}
-
-/**
- * Generates the TypeScript source code for a plugin entrypoint.
- *
- * The generated code includes:
- * - Dynamic imports for all hooks and commands
- * - CLI argument parsing with --hook and --cmd options
- * - Help text with descriptions
- *
- * @param hooks - Hook configurations
- * @param commands - Command configurations
- * @param pluginName - Name shown in help text
- * @param pluginVersion - Plugin version from plugin.json
- * @returns Generated TypeScript source code
- * @public
- */
-export function generatePluginEntrypoint(
-	hooks: PluginHookConfig[],
-	commands: PluginCommandConfig[],
-	pluginName: string,
-	pluginVersion: string,
-): string {
-	const hookNames = hooks.map((h) => `"${h.name}"`).join(" | ");
-	const commandNames = commands.map((c) => `"${c.name}"`).join(" | ");
-
-	const hookCases = hooks
-		.map(
-			(h) => `  case "${h.name}": {
-   const { main } = await import("${h.path}");
-   return main();
-  }`,
-		)
-		.join("\n");
-
-	const commandCases = commands
-		.map(
-			(c) => `  case "${c.name}": {
-   const { main } = await import("${c.path}");
-   return main();
-  }`,
-		)
-		.join("\n");
-
-	const hookDescriptions = hooks.map((h) => `${h.name.padEnd(18)} ${h.description || ""}`).join("\n");
-
-	const commandDescriptions = commands.map((c) => `${c.name.padEnd(18)} ${c.description || ""}`).join("\n");
-
-	const validHooksArray = hooks.map((h) => `"${h.name}"`).join(", ");
-	const validCommandsArray = commands.map((c) => `"${c.name}"`).join(", ");
-
-	return `#!/usr/bin/env bun
-
-/**
-
-* Auto-generated Plugin Entrypoint (Legacy)
-*
-* This file is generated by buildPlugin() and should not be edited manually.
-* To modify hooks or commands, update the build configuration.
-*
-* NOTE: This is the legacy entrypoint generator. New plugins should use
-* ClaudeBinaryPlugin.create() with the pipeline-based system instead.
- */
-
-import { parseArgs } from "node:util";
-import { setPluginInfo } from "claude-binary-plugin";
-
-// Plugin metadata - compiled constants
-const PLUGIN_NAME = "${pluginName}";
-const PLUGIN_VERSION = "${pluginVersion}";
-
-// Sidecar main function - dynamically imported only when needed
-async function runSidecar(): Promise<void> {
- const { sidecarMain } = await import("claude-binary-plugin");
- sidecarMain();
-}
-
-type HookName = ${hookNames || "never"};
-type CommandName = ${commandNames || "never"};
-
-async function runHook(name: HookName): Promise<void> {
- switch (name) {
-${hookCases}
-  default:
-   throw new Error(\`Unknown hook: \${name}\`);
- }
-}
-
-async function runCommand(name: CommandName): Promise<void> {
- switch (name) {
-${commandCases}
-  default:
-   throw new Error(\`Unknown command: \${name}\`);
- }
-}
-
-const validHooks: HookName[] = [${validHooksArray}];
-const validCommands: CommandName[] = [${validCommandsArray}];
-
-function printUsage(): void {
- console.error(\`
-${pluginName} - Unified Binary
-
-Usage:
-  ${pluginName} --hook=<name>     Run a hook handler
-  ${pluginName} --cmd=<name>      Run a command script
-  ${pluginName} --sidecar         Run OTEL sidecar mode
-
-Available hooks:
-${hookDescriptions}
-
-Available commands:
-${commandDescriptions}
-
-Examples:
-  ${pluginName} --hook=${hooks[0]?.name || "example"}
-  ${pluginName} --cmd=${commands[0]?.name || "example"}
-\`);
-}
-
-async function main(): Promise<void> {
- // Set plugin info for telemetry (module-level, not env vars)
- setPluginInfo({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
-
- const { values } = parseArgs({
-  args: process.argv.slice(2),
-  options: {
-   hook: { type: "string", short: "h" },
-   cmd: { type: "string", short: "c" },
-   sidecar: { type: "boolean" },
-   help: { type: "boolean" },
-  },
-  allowPositionals: true,
-  strict: false,
- });
-
- if (values.help) {
-  printUsage();
-  process.exit(0);
- }
-
- // Sidecar mode - run OTEL collector
- if (values.sidecar) {
-  await runSidecar();
-  return;
- }
-
- if (values.hook) {
-  const hookName = values.hook as HookName;
-
-  if (!validHooks.includes(hookName)) {
-   console.error(\`Unknown hook: \${hookName}\`);
-   console.error(\`Available hooks: \${validHooks.join(", ")}\`);
-   process.exit(1);
-  }
-
-  await runHook(hookName);
-  return;
- }
-
- if (values.cmd) {
-  const cmdName = values.cmd as CommandName;
-
-  if (!validCommands.includes(cmdName)) {
-   console.error(\`Unknown command: \${cmdName}\`);
-   console.error(\`Available commands: \${validCommands.join(", ")}\`);
-   process.exit(1);
-  }
-
-  await runCommand(cmdName);
-  return;
- }
-
- console.error("Error: Must specify --hook=<name> or --cmd=<name>");
- printUsage();
- process.exit(1);
-}
-
-main().catch((error) => {
- console.error(\`[${pluginName}] Fatal error: \${error}\`);
- process.exit(2);
-});
-`;
 }
 
 /**
@@ -1194,7 +962,6 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 	const pluginPath = options.plugin ?? rootDir;
 	const pluginManifest = await readPluginManifest(pluginPath);
 	const manifestPluginName = pluginManifest?.name;
-	const manifestPluginVersion = pluginManifest?.version;
 
 	// Read marketplace manifest from explicit path or default monorepo location
 	const defaultMarketplacePath = resolve(rootDir, "../../.claude-plugin/marketplace.json");
@@ -1205,12 +972,6 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 	// Derive defaults from manifests
 	const defaultOutputName = manifestPluginName ? `${manifestPluginName}.plugin` : "plugin.plugin";
 	const defaultMarketplaceName = manifestMarketplaceName;
-	// Debug log identifier: "plugin@marketplace" if marketplace exists, otherwise just "plugin"
-	const defaultPluginIdentifier = manifestPluginName
-		? manifestMarketplaceName
-			? `${manifestPluginName}@${manifestMarketplaceName}`
-			: manifestPluginName
-		: undefined;
 
 	const {
 		entrypoint = "plugin.ts",
@@ -1223,9 +984,6 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 		clean = true,
 		cleanupTempFiles = true,
 		shell = defaultShellExecutor,
-		hooks = [],
-		commands = [],
-		pluginName = defaultPluginIdentifier,
 		marketplaceName = defaultMarketplaceName,
 		external = [],
 		persistLocal = false,
@@ -1237,11 +995,7 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 	const outputPath = resolve(absoluteRootDir, outputName + outputExt);
 	const relativeOutput = relative(absoluteRootDir, outputPath);
 
-	// Determine if we need to auto-generate the entrypoint
-	const shouldAutoGenerate = hooks.length > 0 || commands.length > 0;
-	const generatedEntrypointName = ".plugin-entrypoint.ts";
-	const actualEntrypoint = shouldAutoGenerate ? generatedEntrypointName : entrypoint;
-	const entrypointPath = resolve(absoluteRootDir, actualEntrypoint);
+	const entrypointPath = resolve(absoluteRootDir, entrypoint);
 	const relativeEntrypoint = relative(absoluteRootDir, entrypointPath);
 
 	// Clean existing plugin binary before building
@@ -1258,42 +1012,22 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 		}
 	};
 
-	/** Helper to clean up generated entrypoint */
-	const cleanGeneratedEntrypoint = async () => {
-		if (shouldAutoGenerate) {
-			await shell(`rm -f "${entrypointPath}"`);
-		}
-	};
-
-	// Generate entrypoint if hooks/commands provided
-	if (shouldAutoGenerate) {
-		const derivedPluginName = pluginName || basename(outputName, ".plugin");
-		const derivedPluginVersion = manifestPluginVersion || "0.0.0";
-		const entrypointSource = generatePluginEntrypoint(hooks, commands, derivedPluginName, derivedPluginVersion);
-
-		console.log(`Generating plugin entrypoint...`);
-		console.log(`  Hooks: ${hooks.length}`);
-		console.log(`  Commands: ${commands.length}`);
-
-		await Bun.write(entrypointPath, entrypointSource);
-	} else {
-		// Check if manual entrypoint exists
-		const entrypointFile = Bun.file(entrypointPath);
-		if (!(await entrypointFile.exists())) {
-			const duration = performance.now() - startTime;
-			return {
-				entrypoint: relativeEntrypoint,
-				output: relativeOutput,
-				success: false,
-				error: new Error(`Entrypoint not found: ${entrypointPath}`),
-				duration,
-			};
-		}
+	// Check if entrypoint exists
+	const entrypointFile = Bun.file(entrypointPath);
+	if (!(await entrypointFile.exists())) {
+		const duration = performance.now() - startTime;
+		return {
+			entrypoint: relativeEntrypoint,
+			output: relativeOutput,
+			success: false,
+			error: new Error(`Entrypoint not found: ${entrypointPath}`),
+			duration,
+		};
 	}
 
 	const action = compile ? "Compiling" : "Bundling";
 	console.log(`\n${action} unified plugin...`);
-	console.log(`Entrypoint: ${shouldAutoGenerate ? "(auto-generated)" : relativeEntrypoint}`);
+	console.log(`Entrypoint: ${relativeEntrypoint}`);
 	console.log(`Output: ${relativeOutput}`);
 
 	// Build compile command arguments
@@ -1333,11 +1067,8 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 		const duration = performance.now() - startTime;
 
 		// Clean up temp files
-		if (cleanupTempFiles) {
-			if (compile) {
-				await cleanBunBuildTempFiles();
-			}
-			await cleanGeneratedEntrypoint();
+		if (cleanupTempFiles && compile) {
+			await cleanBunBuildTempFiles();
 		}
 
 		if (result.exitCode !== 0) {
@@ -1346,10 +1077,10 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 			console.error(`\n✗ Failed to ${verb} plugin`);
 			console.error(`  ${errorMessage}`);
 			return {
-				entrypoint: shouldAutoGenerate ? "(auto-generated)" : relativeEntrypoint,
+				entrypoint: relativeEntrypoint,
 				output: relativeOutput,
 				success: false,
-				error: new Error(errorMessage),
+				error: new Error(`Plugin compilation failed: ${errorMessage}`),
 				duration,
 			};
 		}
@@ -1371,7 +1102,7 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 		}
 
 		return {
-			entrypoint: shouldAutoGenerate ? "(auto-generated)" : relativeEntrypoint,
+			entrypoint: relativeEntrypoint,
 			output: relativeOutput,
 			success: true,
 			duration,
@@ -1380,11 +1111,8 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 		const duration = performance.now() - startTime;
 
 		// Clean up temp files even on error
-		if (cleanupTempFiles) {
-			if (compile) {
-				await cleanBunBuildTempFiles();
-			}
-			await cleanGeneratedEntrypoint();
+		if (cleanupTempFiles && compile) {
+			await cleanBunBuildTempFiles();
 		}
 
 		const verb = compile ? "compiling" : "bundling";
@@ -1392,7 +1120,7 @@ export async function buildPlugin(options: BuildPluginOptions = {}): Promise<Plu
 		console.error(`  ${(error as Error).message}`);
 
 		return {
-			entrypoint: shouldAutoGenerate ? "(auto-generated)" : relativeEntrypoint,
+			entrypoint: relativeEntrypoint,
 			output: relativeOutput,
 			success: false,
 			error: error as Error,
@@ -1526,4 +1254,303 @@ export function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonF
 	}
 
 	return result;
+}
+
+// =============================================================================
+// PLUGIN CONFIG BUILD (for ClaudeBinaryPlugin.build())
+// =============================================================================
+
+/**
+ * Build a plugin from a ClaudeBinaryPlugin instance.
+ *
+ * @remarks
+ * This function is the bridge between `ClaudeBinaryPlugin.build()` and the
+ * underlying build system. It extracts hooks and commands from the plugin
+ * configuration and invokes the standard build process.
+ *
+ * **Build Steps:**
+ * 1. Read plugin.json/marketplace.json manifests for name/version
+ * 2. Extract hooks, commands, and passthrough entries from plugin.config
+ * 3. Resolve file paths for file-based handlers
+ * 4. Generate TypeScript entrypoint using generatePipelinePluginEntrypoint()
+ * 5. Compile to single-file executable with Bun.build()
+ * 6. Generate hooks.json manifest for Claude Code
+ * 7. Optionally sync to Claude Code plugins cache
+ *
+ * @param plugin - The plugin instance (ClaudeBinaryPlugin)
+ * @param options - Build configuration options
+ * @returns Result of the build operation
+ *
+ * @example
+ * ```ts
+ * import plugin from "./plugin.ts";
+ * import { buildPluginFromConfig } from "claude-binary-plugin";
+ *
+ * const result = await buildPluginFromConfig(plugin, {
+ *   rootDir: import.meta.dir,
+ *   compile: true,
+ * });
+ * ```
+ *
+ * @public
+ */
+export async function buildPluginFromConfig(
+	plugin: {
+		config: {
+			hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+			commands?: Record<string, ExtractableCommand>;
+			hooksOutputPath?: string;
+		};
+	},
+	options: {
+		rootDir?: string;
+		plugin?: string;
+		marketplace?: string;
+		outputName?: string;
+		compile?: boolean;
+		minify?: boolean;
+		sourcemap?: boolean;
+		bytecode?: boolean;
+		target?: string;
+		clean?: boolean;
+		persistLocal?: boolean;
+		external?: string[];
+	} = {},
+): Promise<PluginBuildResult> {
+	const startTime = performance.now();
+
+	const rootDir = options.rootDir ?? process.cwd();
+	const absoluteRootDir = resolve(rootDir);
+	const shell = defaultShellExecutor;
+
+	// Read plugin manifest from explicit path or default location
+	const pluginPath = options.plugin ?? rootDir;
+	const pluginManifest = await readPluginManifest(pluginPath);
+	const manifestPluginName = pluginManifest?.name;
+	const manifestPluginVersion = pluginManifest?.version ?? "0.0.0";
+
+	// Read marketplace manifest from explicit path or default monorepo location
+	const defaultMarketplacePath = resolve(rootDir, "../../.claude-plugin/marketplace.json");
+	const marketplacePath = options.marketplace ?? defaultMarketplacePath;
+	const marketplaceManifest = await readMarketplaceManifest(marketplacePath);
+	const manifestMarketplaceName = marketplaceManifest?.name;
+
+	// Derive plugin identifier for logging
+	const pluginIdentifier = manifestPluginName
+		? manifestMarketplaceName
+			? `${manifestPluginName}@${manifestMarketplaceName}`
+			: manifestPluginName
+		: "plugin";
+
+	// Derive output name
+	const defaultOutputName = manifestPluginName ? `${manifestPluginName}.plugin` : "plugin.plugin";
+	const outputName = options.outputName ?? defaultOutputName;
+	const outputPath = resolve(absoluteRootDir, outputName);
+	const relativeOutput = relative(absoluteRootDir, outputPath);
+
+	// Build options
+	const compile = options.compile ?? true;
+	const minify = options.minify ?? true;
+	const sourcemap = options.sourcemap ?? true;
+	const bytecode = options.bytecode ?? false;
+	const target = options.target;
+	const clean = options.clean ?? true;
+	const persistLocal = options.persistLocal ?? false;
+	const external = options.external ?? [];
+
+	// Clean existing plugin binary before building
+	if (clean) {
+		await shell(`rm -f "${outputPath}"`);
+	}
+
+	// Extract hooks and commands from plugin config
+	const hookEntries = extractPipelineHookEntries(plugin.config);
+	const commandEntries = extractPipelineCommandEntries(plugin.config);
+	const passthroughHooks = extractPassthroughHookEntries(plugin.config);
+
+	// Resolve file paths for file-based handlers using import.meta.resolve
+	const resolvedHooks: PipelineHookEntry[] = hookEntries.map((hook) => {
+		if (hook.filePath && !hook.filePath.startsWith("file://") && !hook.filePath.startsWith("/")) {
+			// Relative path - resolve from rootDir
+			return {
+				...hook,
+				filePath: resolve(absoluteRootDir, hook.filePath),
+			};
+		}
+		return hook;
+	});
+
+	const resolvedCommands: PipelineCommandEntry[] = commandEntries.map((cmd) => {
+		if (cmd.filePath && !cmd.filePath.startsWith("file://") && !cmd.filePath.startsWith("/")) {
+			// Relative path - resolve from rootDir
+			return {
+				...cmd,
+				filePath: resolve(absoluteRootDir, cmd.filePath),
+			};
+		}
+		return cmd;
+	});
+
+	console.log(`\nBuilding plugin: ${pluginIdentifier}`);
+	console.log(`  Hooks: ${resolvedHooks.length}`);
+	console.log(`  Commands: ${resolvedCommands.length}`);
+	console.log(`  Passthrough hooks: ${Object.keys(passthroughHooks).length} types`);
+
+	// Generate entrypoint
+	const generatedEntrypointName = ".plugin-entrypoint.ts";
+	const entrypointPath = resolve(absoluteRootDir, generatedEntrypointName);
+	const relativeEntrypoint = relative(absoluteRootDir, entrypointPath);
+
+	// We need a plugin path for the import - use a relative path from entrypoint
+	// This assumes the plugin definition is in a file that exports the plugin
+	// For now, we'll create an entrypoint that imports from "./plugin.ts" by default
+	const pluginImportPath = "./plugin.ts";
+
+	const entrypointSource = generatePipelinePluginEntrypoint({
+		pluginPath: pluginImportPath,
+		pluginName: manifestPluginName ?? "plugin",
+		pluginVersion: manifestPluginVersion,
+		hooks: resolvedHooks,
+		pipelineCommands: resolvedCommands,
+	});
+
+	console.log(`Generating plugin entrypoint...`);
+	await Bun.write(entrypointPath, entrypointSource);
+
+	// Build compile command arguments
+	const action = compile ? "Compiling" : "Bundling";
+	console.log(`\n${action} unified plugin...`);
+	console.log(`Entrypoint: ${relativeEntrypoint} (auto-generated)`);
+	console.log(`Output: ${relativeOutput}`);
+
+	const args = ["build", entrypointPath, "--outfile", outputPath];
+
+	if (compile) {
+		args.splice(1, 0, "--compile");
+	}
+
+	if (minify) {
+		args.push("--minify");
+	}
+
+	if (sourcemap) {
+		args.push("--sourcemap");
+	}
+
+	if (bytecode) {
+		args.push("--bytecode");
+	}
+
+	// When bundling (not compiling), default to bun target unless explicitly set
+	const effectiveTarget = target || (!compile ? "bun" : undefined);
+	if (effectiveTarget) {
+		args.push("--target", effectiveTarget);
+	}
+
+	// Add external packages
+	for (const pkg of external) {
+		args.push("--external", pkg);
+	}
+
+	/** Helper to clean up generated entrypoint */
+	const cleanGeneratedEntrypoint = async () => {
+		await shell(`rm -f "${entrypointPath}"`);
+	};
+
+	/** Helper to clean up .bun-build temp files left by bun build --compile */
+	const cleanBunBuildTempFiles = async () => {
+		const cwd = process.cwd();
+		await shell(`rm -f "${cwd}"/.*.bun-build 2>/dev/null || true`);
+		if (cwd !== absoluteRootDir) {
+			await shell(`rm -f "${absoluteRootDir}"/.*.bun-build 2>/dev/null || true`);
+		}
+	};
+
+	try {
+		const cmd = `bun ${args.join(" ")}`;
+		const result = await shell(cmd);
+
+		// Clean up temp files
+		if (compile) {
+			await cleanBunBuildTempFiles();
+		}
+		await cleanGeneratedEntrypoint();
+
+		if (result.exitCode !== 0) {
+			const duration = performance.now() - startTime;
+			const errorMessage = result.stderr;
+			const verb = compile ? "compile" : "bundle";
+			console.error(`\n✗ Failed to ${verb} plugin`);
+			console.error(`  ${errorMessage}`);
+			return {
+				entrypoint: "(auto-generated)",
+				output: relativeOutput,
+				success: false,
+				error: new Error(errorMessage),
+				duration,
+			};
+		}
+
+		// Generate hooks.json
+		const hooksJson = generateHooksJson({
+			pluginBinaryName: outputName,
+			hooks: resolvedHooks,
+			passthroughHooks,
+		});
+
+		// Write hooks.json
+		const hooksOutputPath = plugin.config.hooksOutputPath ?? "hooks/hooks.json";
+		const hooksJsonPath = resolve(absoluteRootDir, hooksOutputPath);
+
+		// Ensure directory exists
+		const hooksDir = resolve(hooksJsonPath, "..");
+		await shell(`mkdir -p "${hooksDir}"`);
+
+		await Bun.write(hooksJsonPath, JSON.stringify(hooksJson, null, "\t"));
+		console.log(`✓ Generated hooks.json: ${relative(absoluteRootDir, hooksJsonPath)}`);
+
+		const duration = performance.now() - startTime;
+		const verb = compile ? "compiled" : "bundled";
+		console.log(`\n✓ Plugin ${verb} successfully (${duration.toFixed(0)}ms)`);
+
+		// Persist plugin to local cache if enabled
+		if (persistLocal) {
+			if (!manifestMarketplaceName) {
+				console.warn("⚠ persistLocal requires marketplace.json to be present");
+			} else {
+				await syncPluginToCache({
+					rootDir: absoluteRootDir,
+					marketplaceName: manifestMarketplaceName,
+					shell,
+				});
+			}
+		}
+
+		return {
+			entrypoint: "(auto-generated)",
+			output: relativeOutput,
+			success: true,
+			duration,
+		};
+	} catch (error) {
+		const duration = performance.now() - startTime;
+
+		// Clean up temp files even on error
+		if (compile) {
+			await cleanBunBuildTempFiles();
+		}
+		await cleanGeneratedEntrypoint();
+
+		const verb = compile ? "compiling" : "bundling";
+		console.error(`\n✗ Error ${verb} plugin`);
+		console.error(`  ${(error as Error).message}`);
+
+		return {
+			entrypoint: "(auto-generated)",
+			output: relativeOutput,
+			success: false,
+			error: error as Error,
+			duration,
+		};
+	}
 }

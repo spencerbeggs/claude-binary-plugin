@@ -6,9 +6,8 @@ import { mockEnv } from "../testing/mocks.js";
 import type {
 	GeneratePipelinePluginOptions,
 	MarketplaceManifest,
+	PipelineCommandEntry,
 	PipelineHookEntry,
-	PluginCommandConfig,
-	PluginHookConfig,
 	PluginManifest,
 	ShellExecutor,
 	ShellResult,
@@ -18,7 +17,6 @@ import {
 	extractPassthroughHookEntries,
 	generateHooksJson,
 	generatePipelinePluginEntrypoint,
-	generatePluginEntrypoint,
 	getPluginCachePath,
 	readMarketplaceManifest,
 	readPluginManifest,
@@ -62,106 +60,6 @@ function createFailingBuildShell(errorMessage: string): ShellExecutor {
 		return createMockShellResult(0);
 	};
 }
-
-describe("generatePluginEntrypoint", () => {
-	test("generates valid TypeScript with hooks and commands", () => {
-		const hooks: PluginHookConfig[] = [
-			{ name: "pre-edit-code", path: "./hooks/pre-edit.js", description: "Pre-edit validation" },
-			{ name: "post-edit-code", path: "./hooks/post-edit.js", description: "Post-edit check" },
-		];
-
-		const commands: PluginCommandConfig[] = [
-			{ name: "lint", path: "./commands/lint.js", description: "Run linting" },
-			{ name: "test", path: "./commands/test.js", description: "Run tests" },
-		];
-
-		const result = generatePluginEntrypoint(hooks, commands, "my-plugin", "1.0.0");
-
-		// Check shebang
-		expect(result).toContain("#!/usr/bin/env bun");
-
-		// Check type definitions
-		expect(result).toContain('"pre-edit-code" | "post-edit-code"');
-		expect(result).toContain('"lint" | "test"');
-
-		// Check hook cases
-		expect(result).toContain('case "pre-edit-code"');
-		expect(result).toContain('await import("./hooks/pre-edit.js")');
-		expect(result).toContain('case "post-edit-code"');
-
-		// Check command cases
-		expect(result).toContain('case "lint"');
-		expect(result).toContain('await import("./commands/lint.js")');
-		expect(result).toContain('case "test"');
-
-		// Check help text
-		expect(result).toContain("my-plugin - Unified Binary");
-		expect(result).toContain("Pre-edit validation");
-		expect(result).toContain("Run linting");
-
-		// Check CLI parsing
-		expect(result).toContain("parseArgs");
-		expect(result).toContain('hook: { type: "string"');
-		expect(result).toContain('cmd: { type: "string"');
-	});
-
-	test("generates valid TypeScript with only hooks", () => {
-		const hooks: PluginHookConfig[] = [{ name: "session-start", path: "./hooks/session.js" }];
-		const commands: PluginCommandConfig[] = [];
-
-		const result = generatePluginEntrypoint(hooks, commands, "hooks-only", "1.0.0");
-
-		expect(result).toContain('"session-start"');
-		expect(result).toContain("type CommandName = never");
-		expect(result).toContain("hooks-only - Unified Binary");
-	});
-
-	test("generates valid TypeScript with only commands", () => {
-		const hooks: PluginHookConfig[] = [];
-		const commands: PluginCommandConfig[] = [{ name: "build", path: "./commands/build.js" }];
-
-		const result = generatePluginEntrypoint(hooks, commands, "commands-only", "1.0.0");
-
-		expect(result).toContain("type HookName = never");
-		expect(result).toContain('"build"');
-		expect(result).toContain("commands-only - Unified Binary");
-	});
-
-	test("handles hooks without descriptions", () => {
-		const hooks: PluginHookConfig[] = [{ name: "my-hook", path: "./hooks/my-hook.js" }];
-		const commands: PluginCommandConfig[] = [];
-
-		const result = generatePluginEntrypoint(hooks, commands, "test-plugin", "1.0.0");
-
-		// Should still generate valid code with empty description
-		expect(result).toContain("my-hook");
-		expect(result).toContain("./hooks/my-hook.js");
-	});
-
-	test("generates arrays for validation", () => {
-		const hooks: PluginHookConfig[] = [
-			{ name: "hook-a", path: "./a.js" },
-			{ name: "hook-b", path: "./b.js" },
-		];
-		const commands: PluginCommandConfig[] = [{ name: "cmd-a", path: "./cmd-a.js" }];
-
-		const result = generatePluginEntrypoint(hooks, commands, "test", "1.0.0");
-
-		expect(result).toContain('const validHooks: HookName[] = ["hook-a", "hook-b"]');
-		expect(result).toContain('const validCommands: CommandName[] = ["cmd-a"]');
-	});
-
-	test("calls setPluginInfo with plugin name and version", () => {
-		const hooks: PluginHookConfig[] = [{ name: "my-hook", path: "./hooks/my-hook.js" }];
-		const commands: PluginCommandConfig[] = [];
-
-		const result = generatePluginEntrypoint(hooks, commands, "workflow", "2.1.0");
-
-		expect(result).toContain('const PLUGIN_NAME = "workflow"');
-		expect(result).toContain('const PLUGIN_VERSION = "2.1.0"');
-		expect(result).toContain("setPluginInfo({ name: PLUGIN_NAME, version: PLUGIN_VERSION })");
-	});
-});
 
 describe("readPluginManifest", () => {
 	const MANIFEST_DIR = join(TEST_DIR, "manifest-test");
@@ -279,7 +177,7 @@ describe("buildPlugin", () => {
 		}
 	});
 
-	test("fails when entrypoint not found (no hooks/commands)", async () => {
+	test("fails when entrypoint not found", async () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
@@ -327,64 +225,16 @@ describe("buildPlugin", () => {
 		console.log = originalLog;
 	});
 
-	test("auto-generates entrypoint when hooks provided", async () => {
-		const originalLog = console.log;
-		console.log = mock(() => {});
-
-		const hooks: PluginHookConfig[] = [{ name: "test-hook", path: "./hooks/test.js" }];
-
-		const { shell, commands } = createMockShell();
-		const result = await buildPlugin({
-			rootDir: PLUGIN_DIR,
-			hooks,
-			outputName: "auto.plugin",
-			minify: false,
-			sourcemap: false,
-			shell,
-		});
-
-		expect(result.success).toBe(true);
-		expect(result.entrypoint).toBe("(auto-generated)");
-
-		// Verify build command was called
-		const buildCmd = commands.find((cmd) => cmd.startsWith("bun build"));
-		expect(buildCmd).toBeDefined();
-
-		console.log = originalLog;
-	});
-
-	test("auto-generates entrypoint when commands provided", async () => {
-		const originalLog = console.log;
-		console.log = mock(() => {});
-
-		const commands: PluginCommandConfig[] = [{ name: "my-cmd", path: "./commands/cmd.js" }];
-
-		const { shell } = createMockShell();
-		const result = await buildPlugin({
-			rootDir: PLUGIN_DIR,
-			commands,
-			outputName: "cmd.plugin",
-			minify: false,
-			sourcemap: false,
-			shell,
-		});
-
-		expect(result.success).toBe(true);
-		expect(result.entrypoint).toBe("(auto-generated)");
-
-		console.log = originalLog;
-	});
-
 	test("applies minify and sourcemap options", async () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			minify: true,
 			sourcemap: true,
 			shell,
@@ -401,12 +251,12 @@ describe("buildPlugin", () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			target: "bun-linux-arm64",
 			minify: false,
 			sourcemap: false,
@@ -426,18 +276,17 @@ describe("buildPlugin", () => {
 		console.log = mock(() => {});
 		console.error = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const shell = createFailingBuildShell("Plugin compilation failed");
 		const result = await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			shell,
 		});
 
 		expect(result.success).toBe(false);
 		expect(result.error?.message).toContain("Plugin compilation failed");
-		expect(result.entrypoint).toBe("(auto-generated)");
 
 		console.log = originalLog;
 		console.error = originalError;
@@ -447,12 +296,12 @@ describe("buildPlugin", () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			outputName: "clean-test.plugin",
 			clean: true,
 			minify: false,
@@ -471,25 +320,21 @@ describe("buildPlugin", () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			cleanupTempFiles: true,
 			minify: false,
 			sourcemap: false,
 			shell,
 		});
 
-		// Verify cleanup commands were called
+		// Verify cleanup commands were called for .bun-build files
 		const cleanupCmd = commands.find((cmd) => cmd.includes(".bun-build"));
 		expect(cleanupCmd).toBeDefined();
-
-		// Verify generated entrypoint cleanup
-		const entrypointCleanup = commands.find((cmd) => cmd.includes(".plugin-entrypoint.ts"));
-		expect(entrypointCleanup).toBeDefined();
 
 		console.log = originalLog;
 	});
@@ -500,12 +345,10 @@ describe("buildPlugin", () => {
 		console.log = mock(() => {});
 		console.error = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		// Create a shell that throws an exception only during the build command
-		// but succeeds for other commands (clean, temp file cleanup)
 		const throwingShell: ShellExecutor = async (cmd: string) => {
-			// Let initial commands pass, throw on the build command
 			if (cmd.startsWith("bun build")) {
 				throw new Error("Unexpected shell error");
 			}
@@ -514,13 +357,12 @@ describe("buildPlugin", () => {
 
 		const result = await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			shell: throwingShell,
 		});
 
 		expect(result.success).toBe(false);
 		expect(result.error?.message).toBe("Unexpected shell error");
-		expect(result.entrypoint).toBe("(auto-generated)");
 
 		console.log = originalLog;
 		console.error = originalError;
@@ -530,12 +372,12 @@ describe("buildPlugin", () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			bytecode: true,
 			minify: false,
 			sourcemap: false,
@@ -552,12 +394,12 @@ describe("buildPlugin", () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			external: ["@commitlint/load", "some-other-pkg"],
 			minify: false,
 			sourcemap: false,
@@ -578,14 +420,13 @@ describe("buildPlugin", () => {
 		console.log = mock(() => {});
 		console.warn = mock((msg: string) => warnCalls.push(msg));
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell } = createMockShell();
 		const result = await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			persistLocal: true,
-			// marketplaceName not provided
 			minify: false,
 			sourcemap: false,
 			shell,
@@ -602,12 +443,12 @@ describe("buildPlugin", () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
-		const hooks: PluginHookConfig[] = [{ name: "hook", path: "./h.js" }];
+		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
 		const result = await buildPlugin({
 			rootDir: PLUGIN_DIR,
-			hooks,
+			entrypoint: "plugin.ts",
 			compile: false,
 			outputName: "test.plugin",
 			minify: false,
@@ -887,7 +728,6 @@ describe("generatePipelinePluginEntrypoint", () => {
 			pluginName: "my-plugin",
 			pluginVersion: "1.0.0",
 			hooks,
-			commands: [],
 		};
 
 		const entrypoint = generatePipelinePluginEntrypoint(options);
@@ -924,7 +764,6 @@ describe("generatePipelinePluginEntrypoint", () => {
 			pluginName: "raw-plugin",
 			pluginVersion: "2.0.0",
 			hooks,
-			commands: [],
 		};
 
 		const entrypoint = generatePipelinePluginEntrypoint(options);
@@ -934,7 +773,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 		expect(entrypoint).toContain('case "PreToolUse/raw-handler"');
 	});
 
-	test("generates entrypoint with commands", () => {
+	test("generates entrypoint with pipelineCommands", () => {
 		const hooks: PipelineHookEntry[] = [
 			{
 				hookType: "SessionStart",
@@ -943,9 +782,9 @@ describe("generatePipelinePluginEntrypoint", () => {
 			},
 		];
 
-		const commands = [
-			{ name: "lint", path: "./commands/lint.js", description: "Run linter" },
-			{ name: "test", path: "./commands/test.js", description: "Run tests" },
+		const pipelineCommands: PipelineCommandEntry[] = [
+			{ name: "lint", filePath: "./commands/lint.js", description: "Run linter", hasArgsSchema: false },
+			{ name: "test", filePath: "./commands/test.js", description: "Run tests", hasArgsSchema: true },
 		];
 
 		const options: GeneratePipelinePluginOptions = {
@@ -953,7 +792,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			pluginName: "workflow",
 			pluginVersion: "1.0.0",
 			hooks,
-			commands,
+			pipelineCommands,
 		};
 
 		const entrypoint = generatePipelinePluginEntrypoint(options);
