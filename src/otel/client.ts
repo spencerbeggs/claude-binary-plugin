@@ -1,9 +1,34 @@
 /**
  * Sidecar client for hook-side IPC communication.
  *
- * Provides a non-blocking, fire-and-forget interface for sending
- * telemetry to the OTEL sidecar process.
+ * @remarks
+ * This module provides the {@link SidecarClient} class for sending telemetry
+ * to the OTEL sidecar process. It uses a fire-and-forget pattern to ensure
+ * hooks are never blocked by telemetry operations.
  *
+ * **Design principles:**
+ * - Non-blocking: Messages are queued and sent asynchronously
+ * - Resilient: Connection failures are handled silently
+ * - Lazy reconnection: Reconnects on next emit, not immediately
+ * - Auto-spawning: Creates sidecar if not running
+ *
+ * **Message types:**
+ * - `ping` - Initialize sidecar with OTEL config
+ * - `event` - Log structured events
+ * - `metric` - Record metric values
+ * - `span` - Create trace spans
+ * - `shutdown` - Signal session/sidecar termination
+ *
+ * @example
+ * ```typescript
+ * const client = new SidecarClient(sessionId);
+ * await client.preconnect();
+ * client.emit({ type: "event", sessionId, data: { ... } });
+ * await client.flush();
+ * ```
+ *
+ * @see {@link getSidecarClient} - Get/create singleton client
+ * @see docs/SCHEMA.md - OTEL telemetry schema
  * @module
  */
 

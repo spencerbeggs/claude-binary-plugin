@@ -1,10 +1,40 @@
 /**
  * Auto-instrumentation utilities for pipeline telemetry.
  *
- * This module provides token estimation and automatic metric extraction
- * from pipeline inputs and outputs.
+ * @remarks
+ * This module provides automatic metric extraction and token estimation for
+ * pipeline outputs. It enables observability without requiring hooks to
+ * manually calculate metrics.
  *
- * @see docs/PIPELINE_TELEMETRY_DESIGN.md
+ * **Token Estimation:**
+ * Uses content-type-aware heuristics for more accurate estimates:
+ * - Prose/Markdown: ~4 chars/token
+ * - Code: ~3.5 chars/token (more symbols)
+ * - JSON: ~3 chars/token (heavy punctuation)
+ *
+ * **Auto-Extracted Metrics:**
+ * - Token counts for claudeContext, userMessage, reason
+ * - Tool input/response sizes
+ * - File operation details (path, extension, content size)
+ * - Bash command prefixes and flags
+ *
+ * **Session Tracking:**
+ * Aggregate token tracking across all hooks in a session to monitor
+ * context consumption and warn when approaching budget limits.
+ *
+ * @example
+ * ```typescript
+ * import { estimateTokenCount, extractTokenMetrics } from "claude-binary-plugin";
+ *
+ * const tokens = estimateTokenCount(largeCodeBlock, "code");
+ * const metrics = extractTokenMetrics(pipelineOutput);
+ * console.log(`Hook added ${metrics.hookTotal} tokens to context`);
+ * ```
+ *
+ * @see {@link extractAutoMetrics} - Main metric extraction function
+ * @see {@link TokenMetrics} - Token metric interface
+ * @see {@link checkTokenBudget} - Budget threshold checking
+ * @module
  */
 
 import { extname } from "node:path";
@@ -17,15 +47,31 @@ import type { AnyPipelineOutput, ContentType, ExecutionQuality, PipelineMetrics,
 /**
  * Estimate token count for a string with content-type awareness.
  *
- * Uses heuristics based on average characters per token:
- * - Prose: ~4 chars/token (standard English text)
- * - Markdown: ~4 chars/token (similar to prose)
- * - Code: ~3.5 chars/token (more symbols, shorter identifiers)
- * - JSON: ~3 chars/token (lots of punctuation and structure)
+ * @remarks
+ * Uses heuristics based on average characters per token for different content types.
+ * These approximations are based on typical tokenizer behavior:
  *
- * @param text - Text to estimate tokens for
+ * | Content Type | Chars/Token | Reason |
+ * |--------------|-------------|--------|
+ * | Prose | ~4 | Standard English text |
+ * | Markdown | ~4 | Similar to prose |
+ * | Code | ~3.5 | More symbols, shorter identifiers |
+ * | JSON | ~3 | Heavy punctuation and structure |
+ *
+ * Note: Actual token counts vary by model and tokenizer. These are estimates
+ * for planning and monitoring purposes.
+ *
+ * @param text - Text to estimate tokens for (null/undefined returns 0)
  * @param contentType - Optional content type for better accuracy
  * @returns Estimated token count
+ *
+ * @example
+ * ```typescript
+ * const codeTokens = estimateTokenCount(sourceCode, "code");
+ * const jsonTokens = estimateTokenCount(configJson, "json");
+ * const textTokens = estimateTokenCount(documentation); // defaults to prose
+ * ```
+ *
  * @public
  */
 export function estimateTokenCount(text: string | undefined | null, contentType?: ContentType): number {
@@ -181,13 +227,27 @@ export type OtelAttributes = Record<string, string | number | boolean | undefine
 /**
  * Extract auto-instrumented OTEL attributes from a pipeline execution.
  *
+ * @remarks
+ * This function extracts comprehensive telemetry attributes from hook execution
+ * for OTEL export. Attributes are organized into categories:
+ *
+ * - **Core**: hook.name, hook.type, hook.status, hook.action, hook.duration_ms
+ * - **Tool**: tool.name, tool.use_id, tool.input_size_bytes, file.path
+ * - **Tokens**: tokens.claude_context, tokens.user_message, tokens.hook_total
+ * - **Response**: response.has_claude_context, response.input_modified
+ * - **Validation**: validation.result, validation.issues_found
+ * - **Quality**: quality.degraded, quality.partial, quality.fallback
+ *
+ * Called automatically by the pipeline runtime after each hook execution.
+ *
  * @param hookType - Type of hook (PreToolUse, PostToolUse, etc.)
- * @param hookName - Name of the hook
- * @param pluginName - Name of the plugin
- * @param event - Hook event object
- * @param output - Pipeline output
+ * @param hookName - Name of the hook (from hook definition)
+ * @param pluginName - Name of the plugin (from plugin config)
+ * @param event - Hook event object containing session_id, tool_input, etc.
+ * @param output - Pipeline output returned by the handler
  * @param durationMs - Execution duration in milliseconds
- * @returns OTEL attributes record
+ * @returns OTEL attributes record for telemetry export
+ *
  * @public
  */
 export function extractAutoMetrics(

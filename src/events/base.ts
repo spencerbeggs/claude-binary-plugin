@@ -1,5 +1,49 @@
 /**
- * Base HookEvent class for all hook events.
+ * Base HookEvent class providing core functionality for all hook event types.
+ *
+ * This module defines the abstract base class that all hook event subclasses extend.
+ * It handles stdin/stdout I/O, environment loading, telemetry emission, and response
+ * building for Claude Code hook integrations.
+ *
+ * @remarks
+ * The HookEvent class implements the three-layer plugin model:
+ *
+ * 1. **Input Layer**: Hook event data from Claude Code (parsed from stdin JSON)
+ * 2. **Options Layer**: User-configurable settings validated by Zod schema
+ * 3. **State Layer**: Computed environment from the plugin's `setup()` function
+ *
+ * For pipeline-based development (recommended), you typically don't interact with
+ * HookEvent directly. Instead, use {@link ClaudeBinaryPlugin.create} which handles
+ * event creation and response building automatically.
+ *
+ * For raw handler development, subclasses provide typed access to event-specific
+ * properties and specialized response builders.
+ *
+ * @example
+ * ```typescript
+ * // Raw handler using HookEvent directly
+ * import { PreToolUseHookEvent } from "claude-binary-plugin";
+ *
+ * export default async function handler() {
+ *   const { event, env } = await PreToolUseHookEvent.create({
+ *     stdin: process.stdin,
+ *     stdout: process.stdout,
+ *     stderr: process.stderr,
+ *     envClass: MyPluginEnv,
+ *     name: "my-hook",
+ *   });
+ *
+ *   // Access typed properties
+ *   if (event.tool_name === "Bash") {
+ *     event.end(event.response().deny("Bash not allowed"), 0);
+ *   }
+ *
+ *   event.end(event.response().allow());
+ * }
+ * ```
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
+ * @see docs/ARCHITECTURE.md for the complete three-layer model documentation
  * @module
  */
 
@@ -14,36 +58,98 @@ import type { HookEventBase, HookEventOptions, HookPermissionsMode, IO } from ".
 import { parseWithOTEL } from "./validation.js";
 
 /**
- * Base class for all hook events.
- * Provides common functionality for reading events and sending responses.
+ * Base class for all hook events in the Claude Code plugin system.
+ *
+ * @remarks
+ * HookEvent provides the foundational functionality that all hook event
+ * subclasses inherit:
+ *
+ * - **I/O Management**: Reading JSON from stdin, writing responses to stdout
+ * - **Environment Loading**: Session-aware environment context via {@link ClaudeBinaryPluginEnv}
+ * - **Response Building**: Fluent API for constructing hook responses
+ * - **Telemetry**: Automatic OTEL event emission for observability
+ * - **Error Handling**: Global error handlers for graceful failure
+ * - **Debug Logging**: Structured logging with timing information
+ *
+ * Subclasses (e.g., {@link PreToolUseHookEvent}, {@link SessionStartHookEvent})
+ * add event-specific properties and specialized response builders.
+ *
+ * @example
+ * ```typescript
+ * // The create() factory pattern
+ * const { event, env } = await PreToolUseHookEvent.create({
+ *   stdin: process.stdin,
+ *   stdout: process.stdout,
+ *   stderr: process.stderr,
+ *   envClass: MyPluginEnv,
+ * });
+ *
+ * // Use the response builder
+ * event.end(event.response().allow());
+ *
+ * // Or end with an error
+ * event.error("Something went wrong");
+ * ```
+ *
+ * @typeParam TEnv - The plugin environment type, typically inferred from plugin schema
+ *
+ * @see {@link PreToolUseHookEvent} - Most commonly used subclass
+ * @see {@link HookEventOptions} - Options for event creation
+ * @see {@link HookResponseBuilder} - Base response builder class
  * @public
  */
 export class HookEvent<TEnv = unknown> implements HookEventBase {
+	/** Custom name for this hook instance, used in logging and telemetry */
 	name: string;
-	/** Unique session identifier */
+	/** Unique Claude Code session identifier (UUID format) */
 	session_id: string;
-	/** Path to the conversation transcript (optional) */
+	/** Absolute path to the conversation transcript file, if available */
 	transcript_path?: string;
-	/** Current working directory (optional) */
+	/** Current working directory where Claude Code is running */
 	cwd?: string;
-	/** Current permission mode (optional) */
+	/** Current permission mode setting for the session */
 	permission_mode?: HookPermissionsMode;
-	/** The type of hook event */
+	/** The type of hook event (e.g., "PreToolUse", "SessionStart") */
 	hook_event_name: HookEventName;
-	/** Debug logger for this hook event */
+	/** Debug logger instance for structured logging with timing */
 	readonly log: DebugLogger;
-	/** Loaded environment (if envLoader was provided) */
+	/** The loaded plugin environment containing options and computed state */
 	readonly env?: TEnv;
 
+	/**
+	 * Standard input stream for reading event data.
+	 * @internal
+	 */
 	protected in: typeof process.stdin;
+	/**
+	 * Standard output stream for writing responses.
+	 * @internal
+	 */
 	protected out: typeof process.stdout;
+	/**
+	 * Standard error stream for writing error messages.
+	 * @internal
+	 */
 	protected err: typeof process.stderr;
+	/**
+	 * Timestamp when the hook started processing, for duration tracking.
+	 * @internal
+	 */
 	private startTime: number;
-	/** Plugin name for telemetry */
+	/**
+	 * Plugin name included in telemetry events.
+	 * @internal
+	 */
 	private readonly pluginName: string;
-	/** Plugin version for telemetry */
+	/**
+	 * Plugin version included in telemetry events.
+	 * @internal
+	 */
 	private readonly pluginVersion: string;
-	/** Flag to prevent duplicate telemetry emission */
+	/**
+	 * Flag to prevent duplicate telemetry emission on multiple end() calls.
+	 * @internal
+	 */
 	private telemetryEmitted = false;
 
 	constructor(params: HookEventBase, options: HookEventOptions<TEnv>, env?: TEnv) {
@@ -67,21 +173,58 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
-	 * Create a response builder for this event.
+	 * Creates a response builder for constructing the hook response.
+	 *
+	 * @remarks
+	 * Subclasses override this to return specialized builders (e.g.,
+	 * {@link PreToolUseResponseBuilder}) that provide type-safe methods
+	 * for the specific hook type.
+	 *
+	 * @returns A new response builder instance
+	 *
+	 * @example
+	 * ```typescript
+	 * // Build and send a response
+	 * event.end(event.response().allow());
+	 *
+	 * // Chain multiple settings
+	 * event.end(
+	 *   event.response()
+	 *     .deny("Not allowed")
+	 *     .withContext("Additional info for Claude")
+	 * );
+	 * ```
+	 * @public
 	 */
 	response(): HookResponseBuilder {
 		return new HookResponseBuilder();
 	}
 
 	/**
-	 * Mark telemetry as already emitted.
+	 * Marks telemetry as already emitted to prevent duplicates.
+	 *
+	 * @remarks
+	 * Call this when you've already emitted telemetry through another
+	 * mechanism (e.g., pipeline runtime) to prevent the `end()` method
+	 * from emitting duplicate events.
+	 *
+	 * @internal
 	 */
 	markTelemetryEmitted(): void {
 		this.telemetryEmitted = true;
 	}
 
 	/**
-	 * Pre-connect to OTEL sidecar for telemetry.
+	 * Pre-connects to the OTEL sidecar for telemetry emission.
+	 *
+	 * @param sessionId - The session ID to associate with telemetry
+	 *
+	 * @remarks
+	 * Called during event creation to ensure the sidecar connection
+	 * is ready before hook execution begins. Errors are silently
+	 * ignored to avoid blocking hook execution.
+	 *
+	 * @internal
 	 */
 	protected static async initTelemetry(sessionId: string): Promise<void> {
 		try {
@@ -93,7 +236,16 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
-	 * Set up global error handlers for uncaught exceptions.
+	 * Sets up global error handlers for uncaught exceptions and rejections.
+	 *
+	 * @param hookName - The hook name to include in error messages
+	 *
+	 * @remarks
+	 * Installs process-level handlers that format errors nicely and
+	 * ensure the process exits with code 2 on fatal errors. Zod
+	 * validation errors are formatted as markdown for readability.
+	 *
+	 * @internal
 	 */
 	protected static setupGlobalErrorHandlers(hookName: string): void {
 		const errorHandler = (error: unknown) => {
@@ -111,7 +263,36 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
-	 * End the hook with an optional response.
+	 * Ends the hook execution and sends the response to Claude Code.
+	 *
+	 * @remarks
+	 * This method is the primary way to complete a hook. It:
+	 * 1. Logs the execution result with timing
+	 * 2. Emits OTEL telemetry for observability
+	 * 3. Writes the JSON response to stdout
+	 * 4. Exits the process with the specified code
+	 *
+	 * The method is overloaded to support different use cases:
+	 * - `end()` - Exit with code 0, no response
+	 * - `end(code)` - Exit with specific code, no response
+	 * - `end(builder)` - Exit with code 0, send builder's response
+	 * - `end(builder, code)` - Exit with specific code, send response
+	 *
+	 * @param builderOrCode - Either a response builder or exit code
+	 * @param code - Exit code when first param is a builder (default: 0)
+	 *
+	 * @example
+	 * ```typescript
+	 * // Simple allow
+	 * event.end(event.response().allow());
+	 *
+	 * // Deny with non-zero exit
+	 * event.end(event.response().deny("Blocked"), 1);
+	 *
+	 * // Exit without response
+	 * event.end(0);
+	 * ```
+	 * @public
 	 */
 	end(code?: number): never;
 	end(builder: HookResponseBuilder, code?: number): never;
@@ -231,7 +412,24 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
-	 * End the hook with a blocking error.
+	 * Ends the hook with an error, writing to stderr and exiting with code 2.
+	 *
+	 * @param message - The error message to display
+	 *
+	 * @remarks
+	 * Use this for unrecoverable errors during hook execution. The message
+	 * is written to stderr (truncated in logs if over 50 chars) and OTEL
+	 * telemetry is emitted with the error details.
+	 *
+	 * Exit code 2 indicates a hook error to Claude Code.
+	 *
+	 * @example
+	 * ```typescript
+	 * if (!config.isValid) {
+	 *   event.error("Invalid configuration: missing required fields");
+	 * }
+	 * ```
+	 * @public
 	 */
 	error(message: string): never {
 		const elapsedMs = performance.now() - this.startTime;
@@ -293,7 +491,16 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
-	 * Reads input text from options.inputText or Bun.stdin.
+	 * Reads the input text from either the options or stdin.
+	 *
+	 * @param options - IO options containing optional inputText
+	 * @returns The input text (event JSON)
+	 *
+	 * @remarks
+	 * If `options.inputText` is provided (useful for testing), it's returned directly.
+	 * Otherwise, reads from `Bun.stdin` which is the standard input from Claude Code.
+	 *
+	 * @internal
 	 */
 	protected static async readInputText(options: IO): Promise<string> {
 		if (options.inputText !== undefined) {
@@ -303,7 +510,35 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	}
 
 	/**
-	 * Create a HookEvent from stdin.
+	 * Factory method to create a HookEvent from Claude Code's stdin input.
+	 *
+	 * @typeParam TEnv - The plugin environment type
+	 * @param options - Configuration including I/O streams and environment class
+	 * @returns An object containing both the event instance and loaded environment
+	 *
+	 * @remarks
+	 * This is the primary entry point for creating hook events. It:
+	 * 1. Sets up global error handlers for graceful failure
+	 * 2. Reads and parses JSON from stdin
+	 * 3. Validates the input against the appropriate Zod schema
+	 * 4. Loads the plugin environment from the session registry
+	 * 5. Returns both the typed event and environment
+	 *
+	 * Subclasses override this to return their specific event type.
+	 *
+	 * @example
+	 * ```typescript
+	 * const { event, env } = await HookEvent.create({
+	 *   stdin: process.stdin,
+	 *   stdout: process.stdout,
+	 *   stderr: process.stderr,
+	 *   envClass: MyPluginEnv,
+	 *   name: "my-hook",
+	 * });
+	 * ```
+	 *
+	 * @throws Error if stdin is empty or invalid JSON
+	 * @public
 	 */
 	static async create<TEnv = unknown>(options: HookEventOptions<TEnv>): Promise<{ event: HookEvent<TEnv>; env: TEnv }> {
 		const hookName = options.name ?? "HookEvent";

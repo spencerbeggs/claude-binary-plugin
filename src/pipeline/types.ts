@@ -1,10 +1,53 @@
 /**
- * Pipeline telemetry types for structured hook outputs.
+ * Pipeline output types for structured hook results.
  *
- * This module defines the compound result structure that provides
- * detailed observability for pipeline hooks.
+ * @remarks
+ * This module defines Zod-validated output schemas for all hook types. Pipeline
+ * outputs follow a **three-audience model**:
  *
- * @see docs/PIPELINE_TELEMETRY_DESIGN.md
+ * 1. **Telemetry** - `status`, `action`, `metrics` for observability
+ * 2. **User** - `userMessage` shown in terminal, `summary` for logs
+ * 3. **Claude** - `claudeContext` for detailed context, `reason` for decisions
+ *
+ * Each hook type has a discriminated union schema based on `status`:
+ *
+ * | Status | Description | Valid Actions |
+ * |--------|-------------|---------------|
+ * | `executed` | Hook ran normally | Hook-specific |
+ * | `skipped` | Didn't need to run | - |
+ * | `disabled` | Preconditions failed | - |
+ * | `cached` | Used cached result | Same as executed |
+ * | `error` | Exception thrown | - |
+ * | `timeout` | Exceeded time limit | - |
+ *
+ * **Valid actions by hook type:**
+ *
+ * | Hook Type | Actions |
+ * |-----------|---------|
+ * | PreToolUse | `allow`, `deny`, `ask`, `modify` |
+ * | PostToolUse | `block`, `continue`, `context`, `none` |
+ * | SessionStart | `context`, `none` |
+ * | Stop/SubagentStop | `block`, `continue` |
+ * | UserPromptSubmit | `block`, `continue`, `context`, `none` |
+ * | PermissionRequest | `allow`, `deny` |
+ * | Passthrough (SessionEnd, PreCompact, Notification) | `none` |
+ *
+ * @example
+ * ```typescript
+ * import type { PreToolUseOutput } from "claude-binary-plugin";
+ *
+ * const output: PreToolUseOutput = {
+ *   status: "executed",
+ *   action: "deny",
+ *   summary: "Blocked dangerous rm -rf command",
+ *   reason: "rm -rf commands are not allowed",
+ *   userMessage: "⚠️ Command blocked for safety",
+ * };
+ * ```
+ *
+ * @see {@link isPipelineOutput} - Type guard for pipeline outputs
+ * @see {@link OutputSchemas} - Map of hook types to output schemas
+ * @module
  */
 
 import { z } from "zod";
@@ -14,7 +57,21 @@ import { z } from "zod";
 // =============================================================================
 
 /**
- * Execution status - Did the hook run?
+ * Execution status indicating whether the hook ran and how.
+ *
+ * @remarks
+ * The status field is the discriminator for pipeline output types. Each status
+ * has different valid fields and actions:
+ *
+ * | Status | Meaning | Has Action? |
+ * |--------|---------|-------------|
+ * | `executed` | Hook ran normally | Yes (required) |
+ * | `skipped` | Hook didn't apply (filter mismatch, not applicable) | No |
+ * | `disabled` | Preconditions failed (missing tool, config error) | No |
+ * | `cached` | Used cached result from previous invocation | Yes |
+ * | `error` | Uncaught exception during execution | No |
+ * | `timeout` | Exceeded configured time limit | No |
+ *
  * @public
  */
 export const ExecutionStatusSchema = z.enum([
@@ -34,8 +91,28 @@ export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 // =============================================================================
 
 /**
- * Hook action - What did the hook decide to do?
- * Only present when status is "executed".
+ * Hook action indicating what decision the hook made.
+ *
+ * @remarks
+ * The action field is only present when `status` is `"executed"` or `"cached"`.
+ * Valid actions depend on the hook type:
+ *
+ * **Permission decisions** (PreToolUse, PermissionRequest):
+ * - `allow` - Permit the tool/action to proceed
+ * - `deny` - Reject the tool/action with a reason
+ * - `ask` - Defer decision to the user (PreToolUse only)
+ *
+ * **Continuation control** (Stop, SubagentStop, PostToolUse, UserPromptSubmit):
+ * - `block` - Prevent the agent from stopping (requires `reason`)
+ * - `continue` - Allow normal flow to proceed
+ *
+ * **Content modification** (SessionStart, PostToolUse, UserPromptSubmit):
+ * - `modify` - Changed the tool input (PreToolUse) via `updatedInput`
+ * - `context` - Added context for Claude via `claudeContext`
+ *
+ * **No-op** (all hooks):
+ * - `none` - Hook analyzed but took no action
+ *
  * @public
  */
 export const HookActionSchema = z.enum([
@@ -133,24 +210,31 @@ export type PipelineMetrics = z.infer<typeof PipelineMetricsSchema>;
 // =============================================================================
 
 /**
- * Token metrics calculated by the runtime.
- * These are auto-instrumented from the output fields.
+ * Token metrics automatically calculated by the runtime.
+ *
+ * @remarks
+ * These metrics are extracted from pipeline output fields to track context
+ * consumption. Token counts are estimated using a simple heuristic (4 chars = 1 token).
+ *
+ * The runtime calculates these automatically - hooks don't need to provide them.
+ *
+ * @see {@link extractTokenMetrics} - Extracts these from pipeline output
  * @public
  */
 export interface TokenMetrics {
-	/** Tokens in claudeContext */
+	/** Estimated tokens in `claudeContext` field */
 	claudeContext: number;
-	/** Tokens in userMessage */
+	/** Estimated tokens in `userMessage` field */
 	userMessage: number;
-	/** Tokens in reason */
+	/** Estimated tokens in `reason` field */
 	reason: number;
-	/** Sum of above */
+	/** Sum of claudeContext + userMessage + reason */
 	hookTotal: number;
-	/** Tokens in tool input (PreToolUse) */
+	/** Estimated tokens in tool input (PreToolUse only) */
 	toolInput?: number;
-	/** Tokens in tool response (PostToolUse) */
+	/** Estimated tokens in tool response (PostToolUse only) */
 	toolResponse?: number;
-	/** Tokens in file content (Write tool) */
+	/** Estimated tokens in file content (Write tool) */
 	fileContent?: number;
 }
 
@@ -169,8 +253,32 @@ export type ContentType = "code" | "json" | "markdown" | "prose";
 // =============================================================================
 
 /**
- * Base schema for all pipeline outputs.
- * Defines the three-audience model fields.
+ * Base schema for all pipeline outputs defining common fields.
+ *
+ * @remarks
+ * All hook-specific output schemas extend this base schema. Fields are organized
+ * by their target audience:
+ *
+ * **Required (Telemetry):**
+ * - `status` - Execution status (discriminator)
+ * - `summary` - Human-readable log message
+ *
+ * **Conditional (Based on status):**
+ * - `action` - Hook decision (required when `status === "executed"`)
+ * - `validation` - For linting/validation hooks
+ * - `quality` - Degradation indicators
+ * - `metrics` - Custom domain metrics
+ *
+ * **Optional (User-facing):**
+ * - `userMessage` - Shown in terminal via `systemMessage`
+ *
+ * **Optional (Claude-facing):**
+ * - `claudeContext` - Detailed context via `additionalContext`
+ * - `reason` - Concise decision reason
+ *
+ * **Hook-specific:**
+ * - `updatedInput` - Modified tool input (PreToolUse only)
+ *
  * @public
  */
 export const PipelineOutputBaseSchema = z.object({
@@ -696,7 +804,19 @@ export type NotificationOutput = PassthroughOutput;
 // =============================================================================
 
 /**
- * Map of hook types to their output schemas.
+ * Map of hook event names to their Zod output schemas.
+ *
+ * @remarks
+ * This map enables runtime validation of pipeline outputs based on hook type.
+ * Use with `OutputSchemas[hookType].parse(output)` to validate outputs.
+ *
+ * @example
+ * ```typescript
+ * const hookType = "PreToolUse";
+ * const schema = OutputSchemas[hookType];
+ * const validatedOutput = schema.parse(output);
+ * ```
+ *
  * @public
  */
 export const OutputSchemas = {
@@ -733,7 +853,25 @@ export type AnyPipelineOutput =
 	| PermissionRequestOutput;
 
 /**
- * Check if an output uses the pipeline format (has status and summary fields).
+ * Type guard to check if an output uses the pipeline format.
+ *
+ * @remarks
+ * Pipeline outputs are identified by having both `status` and `summary` fields.
+ * This guard is used by the runtime to distinguish between pipeline handlers
+ * (which return structured outputs) and raw handlers (which return arbitrary data).
+ *
+ * @param output - The output to check
+ * @returns `true` if the output is a pipeline output with `status` and `summary`
+ *
+ * @example
+ * ```typescript
+ * const result = await handler(context);
+ * if (isPipelineOutput(result)) {
+ *   // result is typed as AnyPipelineOutput
+ *   console.log(result.status, result.summary);
+ * }
+ * ```
+ *
  * @public
  */
 export function isPipelineOutput(output: unknown): output is AnyPipelineOutput {

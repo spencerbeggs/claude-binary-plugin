@@ -1,16 +1,37 @@
 /**
- * Runtime support for pipeline-based hooks.
+ * Runtime execution for pipeline-based hooks.
  *
- * This module provides the wrapper code that executes pipeline handlers
- * and converts their output to the proper Claude Code hook response format.
+ * @remarks
+ * This module provides the core execution infrastructure for pipeline handlers.
+ * It bridges the gap between the structured pipeline output format and Claude
+ * Code's expected response format.
  *
- * Pipeline Outputs:
- * When handlers return pipeline outputs (with status/summary fields), this runtime:
- * - Extracts auto-instrumented OTEL metrics
- * - Maps pipeline fields to response builder methods
- * - Emits structured telemetry events
+ * **Key Functions:**
+ * - {@link runPipeline} - Main entry point for executing pipeline handlers
+ * - {@link runRawHandler} - Entry point for raw handlers (direct HookEvent access)
+ * - {@link convertToResponse} - Converts pipeline outputs to response format
  *
- * @see docs/PIPELINE_TELEMETRY_DESIGN.md
+ * **Execution Flow:**
+ * 1. Parse stdin JSON and create HookEvent instance
+ * 2. Load environment via ClaudeBinaryPluginEnv
+ * 3. Run setup() if SessionStart to compute state
+ * 4. Apply tool filters for PreToolUse/PostToolUse
+ * 5. Call pipeline handler with `{ input, options, env }` context
+ * 6. Convert output to Claude Code response format
+ * 7. Extract metrics and emit OTEL telemetry
+ * 8. Write response to stdout and exit
+ *
+ * **Response Conversion:**
+ * Pipeline outputs use semantic field names that get mapped to Claude Code's
+ * response format:
+ * - `claudeContext` → `additionalContext`
+ * - `action: "deny"` → `permissionDecision: "deny"`
+ * - `action: "block"` → `decision: "block"`
+ * - `userMessage` → `systemMessage` (via HookEvent response builder)
+ *
+ * @see {@link runPipeline} - Execute a pipeline handler
+ * @see {@link runRawHandler} - Execute a raw handler
+ * @module
  */
 
 import { z } from "zod";
@@ -511,18 +532,39 @@ function applyPipelineOutput(event: any, hookType: HookEventType, output: unknow
 }
 
 /**
- * Run a pipeline hook.
+ * Execute a pipeline hook handler.
  *
- * This function:
- * 1. Creates the appropriate hook event from stdin
- * 2. Checks tool filter (for PreToolUse/PostToolUse)
- * 3. Calls the pipeline handler with `{ input, options, computed }`
- * 4. Validates the pipeline output
- * 5. For pipeline outputs: extracts auto-metrics and emits telemetry
- * 6. For SessionStart hooks, persists env vars to CLAUDE_ENV_FILE
- * 7. Converts output to hook response and ends the event
+ * @remarks
+ * This is the main entry point for compiled pipeline hooks. The generated
+ * entrypoint calls this function with the appropriate configuration for
+ * each hook type.
  *
- * @param options - Pipeline configuration
+ * **Execution steps:**
+ * 1. Create HookEvent from stdin JSON
+ * 2. Check tool filter (PreToolUse/PostToolUse only)
+ * 3. Load environment via `envClass.forContext()`
+ * 4. Run `setup()` and persist state if SessionStart
+ * 5. Call pipeline handler with `{ input, options, env }`
+ * 6. Validate output matches hook type schema
+ * 7. Extract metrics and emit OTEL telemetry
+ * 8. Convert to response format and write to stdout
+ * 9. Exit process with appropriate code
+ *
+ * **Tool filtering:**
+ * For PreToolUse and PostToolUse, if `tools` is specified, the hook
+ * only runs when the tool name matches. Non-matching tools passthrough
+ * immediately without calling the handler.
+ *
+ * **Error handling:**
+ * - Validation errors are logged to stderr and exit code 2
+ * - Uncaught exceptions are caught, logged, and exit code 2
+ * - Handler-thrown errors should return error status in output
+ *
+ * @param options - Pipeline configuration including hookType, handler, schema
+ *
+ * @typeParam TOptions - Type of validated options from plugin schema
+ * @typeParam TState - Type of computed state from setup()
+ *
  * @public
  */
 export async function runPipeline<TOptions = unknown, TState = Record<string, string>>(
@@ -955,10 +997,25 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
 }
 
 /**
- * Run a raw handler hook.
+ * Execute a raw handler hook.
  *
- * This function simply creates the event and passes it to the handler.
- * The handler is responsible for calling event.end().
+ * @remarks
+ * Raw handlers receive direct access to the HookEvent object instead of
+ * the pipeline abstraction. They are responsible for:
+ * - Calling `event.end()` or using response builder methods
+ * - Managing their own telemetry (optional)
+ * - Handling errors and exit codes
+ *
+ * Use raw handlers when you need:
+ * - Direct access to response builder fluent API
+ * - Custom response formatting not supported by pipeline outputs
+ * - Maximum control over the response flow
+ *
+ * @param options - Raw handler configuration
+ *
+ * @typeParam TOptions - Type of validated options from plugin schema
+ * @typeParam TState - Type of computed state from setup()
+ *
  * @public
  */
 export async function runRawHandler<TOptions, TState = Record<string, string>>(

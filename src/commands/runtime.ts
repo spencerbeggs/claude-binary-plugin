@@ -1,9 +1,45 @@
 /**
  * Runtime support for command-based plugins.
  *
- * This module provides the execution environment for command handlers,
- * including argument parsing, validation, and LLM-friendly error formatting.
+ * @remarks
+ * This module provides the execution environment for CLI commands exposed
+ * by plugins. Commands are invoked via `--cmd=name` and return markdown
+ * output for Claude to process.
  *
+ * **Key Functions:**
+ * - {@link runCommand} - Main entry point for executing commands
+ * - {@link parseRawArgs} - Parse CLI arguments into an object
+ * - {@link parseCommandArgs} - Parse and validate args against Zod schema
+ *
+ * **Execution Flow:**
+ * 1. Parse CLI arguments from `--cmd=name` invocation
+ * 2. Validate arguments against command's Zod schema
+ * 3. Load environment via `ClaudeBinaryPluginEnv.forContext("command")`
+ * 4. Call command handler with `{ args, options, env }`
+ * 5. Write markdown output to stdout
+ * 6. Exit with appropriate code (0=success, 1=issues found, 2=error)
+ *
+ * **State Access:**
+ * Commands can access computed state from SessionStart by using the
+ * session registry to locate persisted hook-*.sh files.
+ *
+ * @example
+ * ```typescript
+ * import { runCommand, emptyArgsSchema } from "claude-binary-plugin";
+ *
+ * await runCommand({
+ *   name: "lint",
+ *   argsSchema: emptyArgsSchema,
+ *   handler: async ({ args, options, env }) => ({
+ *     exitCode: 0,
+ *     output: "# Lint Results\n\nAll checks passed!",
+ *   }),
+ *   envClass: MyPluginEnv,
+ * });
+ * ```
+ *
+ * @see {@link CommandOutput} - Output format for command handlers
+ * @see {@link CommandHandler} - Handler function signature
  * @module
  */
 

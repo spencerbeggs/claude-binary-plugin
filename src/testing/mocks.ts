@@ -1,3 +1,44 @@
+/**
+ * Testing utilities for Claude Code plugins.
+ *
+ * @remarks
+ * This module provides mocking utilities for testing hook handlers and
+ * commands without requiring actual Claude Code integration.
+ *
+ * **Key Utilities:**
+ * - {@link mockIO} - Mock stdin/stdout for hook testing
+ * - {@link mockEnv} - Mock environment variables
+ * - {@link mockCommand} - Run command handlers with mocked I/O
+ * - {@link createMockShellExecutor} - Mock shell command execution
+ *
+ * **Testing Philosophy:**
+ * Plugin tests should be isolated and fast. These utilities enable:
+ * - Injecting JSON input to simulate Claude Code events
+ * - Capturing JSON output for assertion
+ * - Mocking environment variables without affecting real env
+ * - Mocking shell commands for deterministic results
+ *
+ * @example
+ * ```typescript
+ * import { mockIO, mockEnv, runMockedHook } from "claude-binary-plugin/mocks";
+ *
+ * test("hook blocks dangerous command", async () => {
+ *   const io = mockIO({
+ *     tool_name: "Bash",
+ *     tool_input: { command: "rm -rf /" },
+ *   });
+ *
+ *   await runMockedHook(myHook);
+ *
+ *   const output = JSON.parse(io.getStdout());
+ *   expect(output.hookSpecificOutput.permissionDecision).toBe("deny");
+ * });
+ * ```
+ *
+ * @see {@link MockIOResult} - Captured I/O interface
+ * @see {@link MockEnvContext} - Environment mock context
+ * @module
+ */
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
 import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";

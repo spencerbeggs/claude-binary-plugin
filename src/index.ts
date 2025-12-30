@@ -1,3 +1,44 @@
+/**
+ * Claude Binary Plugin SDK
+ *
+ * @remarks
+ * The `claude-binary-plugin` package provides a TypeScript SDK for building
+ * Claude Code plugins that compile to single-file Bun executables.
+ *
+ * **Key Features:**
+ * - Declarative pipeline system for hook handlers
+ * - Zod-validated inputs and outputs
+ * - OpenTelemetry observability integration
+ * - Type-safe environment management
+ * - SQLite-based session state persistence
+ *
+ * **Core Exports:**
+ * - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations
+ * - {@link ClaudeBinaryPluginEnv} - Base class for environment management
+ * - {@link buildPlugin} - Compile plugins to executables
+ * - Hook event classes (`PreToolUseHookEvent`, `SessionStartHookEvent`, etc.)
+ *
+ * @example
+ * ```typescript
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import { z } from "zod";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({
+ *   prefix: "MY_PLUGIN",
+ *   schema: z.object({ DEBUG: z.string().default("false") }),
+ *   setup: async ({ cwd }) => ({ detected: true }),
+ *   hooks: {
+ *     PreToolUse: [{ name: "security", pipeline: "./hooks/security.ts" }],
+ *   },
+ * });
+ *
+ * export default plugin;
+ * ```
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
+ * @packageDocumentation
+ */
+
 // =============================================================================
 // CORE TYPES
 // =============================================================================
@@ -34,6 +75,9 @@ export type {
 	ZodIssueMinimal,
 	ZodSchema,
 } from "./env/plugin-env.js";
+export type { SessionRecord, SessionRegistration } from "./env/session-registry.js";
+// Session registry for persistent session lookups
+export { SessionRegistry, closeDb } from "./env/session-registry.js";
 
 // =============================================================================
 // EVENTS MODULE
@@ -78,6 +122,8 @@ export type {
 	EnvValidationErrorResult,
 	EventData,
 	EventMessage,
+	FatalErrorResult,
+	HookExecutionDirectResult,
 	HookExecutionResult,
 	HookMetrics,
 	HookOutcome,
@@ -103,9 +149,13 @@ export {
 	SPAN_NAMES,
 	// Client
 	SidecarClient,
+	// Unified Telemetry namespace
+	Telemetry,
 	// Events
 	emitEnvValidationError,
+	emitFatalError,
 	emitHookExecution,
+	emitHookExecutionDirect,
 	emitSchemaValidationError,
 	getPluginInfo,
 	getSessionEnvDir,
@@ -340,7 +390,7 @@ export type {
 	BufferShellExecutorOptions,
 	BufferShellResult,
 	CommandOutput as MockCommandOutput,
-	FatalErrorResult,
+	FatalErrorResult as MockFatalErrorResult,
 	MockCommandContext,
 	MockEnvContext,
 	MockIOResult,

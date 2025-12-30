@@ -1,9 +1,39 @@
 /**
- * Event/log emitters for hooks.
+ * OTEL event emitters for hook telemetry.
  *
- * These functions serialize event data and send to the sidecar.
- * No OTEL SDK imports in hook code - just data serialization and IPC.
+ * @remarks
+ * This module provides functions for emitting telemetry events from hooks.
+ * Events are serialized and sent to the sidecar process via IPC.
  *
+ * **Key design principle:**
+ * No OTEL SDK imports in hook code - only data serialization and IPC.
+ * This keeps hooks lightweight and avoids bundling heavy OTEL dependencies.
+ *
+ * **Available emitters:**
+ * - {@link emitHookExecution} - Main event for hook completion
+ * - {@link emitSchemaValidationError} - Zod validation failures
+ * - {@link emitEnvValidationError} - Environment validation failures
+ *
+ * **Event attributes include:**
+ * - Session/tool context (session.id, tool.name, tool.use_id)
+ * - Hook metadata (hook.name, hook.type, hook.duration_ms)
+ * - Decision data (permission.decision, decision.source)
+ * - Plugin info (plugin.name, plugin.version)
+ *
+ * @example
+ * ```typescript
+ * await emitHookExecution(event, "my-hook", {
+ *   hookType: "PreToolUse",
+ *   pluginName: "workflow",
+ *   pluginVersion: "1.0.0",
+ *   durationMs: 42,
+ *   success: true,
+ *   outcome: "allowed",
+ *   summary: "auto-allowed: git status",
+ * });
+ * ```
+ *
+ * @see docs/SCHEMA.md - Event attribute specifications
  * @module
  */
 

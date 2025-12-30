@@ -1,4 +1,44 @@
 #!/usr/bin/env bun
+/**
+ * Build system for compiling Claude Code plugins.
+ *
+ * @remarks
+ * This module provides the {@link buildPlugin} function which compiles plugin
+ * configurations into single-file Bun executables with accompanying hooks.json
+ * manifests.
+ *
+ * **Build Process:**
+ * 1. Generate TypeScript entrypoint from plugin config
+ * 2. Compile to single-file executable with Bun.build()
+ * 3. Generate hooks.json manifest for Claude Code
+ * 4. Optionally sync to Claude Code plugins cache
+ *
+ * **Generated Artifacts:**
+ * - `{name}.plugin` - Compiled Bun executable
+ * - `hooks.json` - Hook manifest for Claude Code
+ * - `sidecar.js` - OTEL sidecar script (if telemetry enabled)
+ *
+ * **Key Functions:**
+ * - {@link buildPlugin} - Main entry point for building plugins
+ * - {@link generateHooksJson} - Generate hooks.json manifest
+ * - {@link generatePluginEntrypoint} - Generate TypeScript entrypoint
+ * - {@link syncPluginToCache} - Sync to Claude Code plugins cache
+ *
+ * @example
+ * ```typescript
+ * import { buildPlugin } from "claude-binary-plugin";
+ *
+ * const result = await buildPlugin({
+ *   pluginDir: "./my-plugin",
+ *   configPath: "./plugin.ts",
+ *   outputDir: "./dist",
+ * });
+ * ```
+ *
+ * @see {@link PluginManifest} - Plugin manifest configuration
+ * @see {@link BuildPluginOptions} - Build configuration options
+ * @module
+ */
 import { basename, relative, resolve } from "node:path";
 import type { PassthroughHookEntry } from "../pipeline/config.js";
 

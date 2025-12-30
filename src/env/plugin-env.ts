@@ -1,3 +1,55 @@
+/**
+ * Environment variable management for Claude Code plugins.
+ *
+ * @remarks
+ * This module provides the {@link ClaudeBinaryPluginEnv} base class for managing
+ * plugin configuration through environment variables. It implements a three-layer
+ * model for plugin configuration:
+ *
+ * 1. **Input Layer** - Event data from Claude Code (session_id, tool_input)
+ * 2. **Options Layer** - User-configurable settings via environment variables
+ * 3. **State Layer** - Computed values from `setup()` during SessionStart
+ *
+ * The class handles context-aware loading through {@link ClaudeBinaryPluginEnv.forContext | `forContext()`}:
+ * - `"sessionStart"` - Loads user `.env` files from project root
+ * - `"hook"` - Loads persisted state from session-env directory
+ * - `"command"` - Parses `--vars` argument for CLI commands
+ *
+ * State is persisted using Claude Code's `CLAUDE_ENV_FILE` mechanism and looked
+ * up via an SQLite {@link SessionRegistry} in subsequent hooks and commands.
+ *
+ * @example
+ * ```typescript
+ * import { ClaudeBinaryPluginEnv } from "claude-binary-plugin";
+ * import { z } from "zod";
+ *
+ * const schema = z.object({
+ *   MY_PLUGIN_DEBUG: z.enum(["true", "false"]).default("false"),
+ *   MY_PLUGIN_API_KEY: z.string().min(1),
+ * });
+ *
+ * class MyPluginEnv extends ClaudeBinaryPluginEnv<z.infer<typeof schema>> {
+ *   protected readonly prefix = "MY_PLUGIN";
+ *   protected readonly schema = schema;
+ *
+ *   get debug(): boolean {
+ *     return this.varsRequired.MY_PLUGIN_DEBUG === "true";
+ *   }
+ * }
+ *
+ * // SessionStart: load .env files
+ * const env = await MyPluginEnv.forContext("sessionStart", { hookName: "init" });
+ *
+ * // Other hooks: load persisted state
+ * const env = await MyPluginEnv.forContext("hook", { sessionId: event.session_id });
+ * ```
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
+ * @see {@link SessionRegistry} - SQLite registry for session lookups
+ * @see {@link https://zod.dev | Zod Documentation} - Schema validation library
+ * @module
+ */
+
 import type { EnvValidationErrorResult } from "../otel/events.js";
 import { emitEnvValidationError, isOTELEnabled } from "../otel/index.js";
 import { DebugLogger } from "../utils/debug-logger.js";
@@ -400,7 +452,32 @@ export class EnvFileLoadError extends Error {
 /**
  * Base class for plugin environment variable management.
  *
+ * @remarks
+ * This abstract class provides the infrastructure for loading, validating, and
+ * persisting environment variables in Claude Code plugins. Plugins extend this
+ * class and provide:
+ *
+ * - A `prefix` property for namespacing variables (e.g., `"MY_PLUGIN"`)
+ * - A `schema` property for Zod validation (optional)
+ * - Typed getter properties for accessing validated values
+ * - A `setupForSession()` method for SessionStart detection logic
+ *
+ * The class handles three contexts via the static `forContext()` method:
+ *
+ * | Context | When | Loading Strategy |
+ * |---------|------|------------------|
+ * | `sessionStart` | SessionStart hook | Loads `.env` files from project root |
+ * | `hook` | Other hooks | Loads from session-env directory |
+ * | `command` | CLI commands | Parses `--vars=path` argument |
+ *
+ * State persistence uses Claude Code's `CLAUDE_ENV_FILE` mechanism with
+ * {@link SessionRegistry} providing SQLite-based session lookups.
+ *
  * @typeParam TSchema - TypeScript interface defining the environment variable schema
+ *
+ * @see `forContext()` - Context-aware factory method (has overloads)
+ * @see {@link ClaudeBinaryPluginEnv.initializeSession | initializeSession()} - Session initialization
+ * @see {@link SessionRegistry} - SQLite session lookup
  * @public
  */
 export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {

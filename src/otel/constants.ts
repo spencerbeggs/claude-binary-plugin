@@ -1,14 +1,30 @@
 /**
  * OTEL attribute and metric name constants.
  *
- * These constants align with Claude Code's telemetry scheme while adding
- * plugin-specific attributes for richer observability.
+ * @remarks
+ * This module defines all attribute and metric names used in OTEL telemetry,
+ * aligned with Claude Code's native telemetry schema for consistency.
  *
- * Schema aligned with Claude Code native telemetry:
- * - scope_name: systems.savvyweb.claude_code.events
- * - service_name: claude-code
- * - All attributes use dot notation (e.g., "session.id", "tool.name", "hook.duration_ms")
+ * **Scope configuration:**
+ * - Plugin scope: `systems.savvyweb.claude_code.events`
+ * - Anthropic scope: `com.anthropic.claude_code.events`
+ * - Service name: `claude-code`
  *
+ * **Attribute naming convention:**
+ * All attributes use dot notation matching Claude Code's native schema:
+ * - `session.id` - Session identifier
+ * - `tool.name` - Tool being used
+ * - `hook.duration_ms` - Hook execution time
+ *
+ * **Available constant objects:**
+ * - {@link CLAUDE_ATTRS} - Claude Code session/tool attributes
+ * - {@link PLUGIN_ATTRS} - Plugin-specific attributes
+ * - {@link METRIC_NAMES} - Histogram and counter names
+ * - {@link SPAN_NAMES} - Trace span names
+ * - {@link EVENT_NAMES} - Log event names
+ *
+ * @see docs/SCHEMA.md - Complete telemetry schema documentation
+ * @see {@link https://opentelemetry.io/docs/concepts/semantic-conventions/ | OTEL Semantic Conventions}
  * @module
  */
 

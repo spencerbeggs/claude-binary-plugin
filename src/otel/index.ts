@@ -82,13 +82,20 @@ export type {
 	DecisionSource,
 	EnvValidationErrorResult,
 	FatalErrorResult,
+	HookExecutionDirectResult,
 	HookExecutionResult,
 	HookMetrics,
 	HookOutcome,
 	SchemaValidationErrorResult,
 } from "./events.js";
 // Events (hook-side event emitters)
-export { emitEnvValidationError, emitFatalError, emitHookExecution, emitSchemaValidationError } from "./events.js";
+export {
+	emitEnvValidationError,
+	emitFatalError,
+	emitHookExecution,
+	emitHookExecutionDirect,
+	emitSchemaValidationError,
+} from "./events.js";
 // Git info detection
 export type { GitInfo, GitProvider } from "./git-info.js";
 export { detectGitInfo, gitInfoToAttributes, parseGitRemoteUrl } from "./git-info.js";
@@ -134,3 +141,6 @@ export { parseMessage, serializeMessage } from "./protocol.js";
 // Spawn utilities
 export type { SpawnResult } from "./spawn.js";
 export { getPluginBinaryPath, socketExists, spawnSidecar } from "./spawn.js";
+
+// Unified Telemetry namespace
+export { Telemetry } from "./telemetry.js";
