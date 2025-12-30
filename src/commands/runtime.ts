@@ -261,7 +261,7 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 
 /**
  * Create the base env object.
- * @public
+ * @internal
  */
 function createBaseEnv(env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
 	const prefix = env.getPrefix() ?? "";
@@ -282,7 +282,7 @@ function createBaseEnv(env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
  *
  * @param env - The plugin environment instance
  * @returns State object parsed from {prefix}_PLUGIN_STATE
- * @public
+ * @internal
  */
 function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
 	const prefix = env.getPrefix();

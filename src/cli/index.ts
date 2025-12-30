@@ -29,7 +29,7 @@ import {
 	generatePipelinePluginEntrypoint,
 	readPluginManifest,
 } from "../build/builder.js";
-import type { CompiledPlugin } from "../pipeline/config.js";
+import type { ClaudeBinaryPlugin } from "../pipeline/config.js";
 import { getPackageVersion } from "./macros.js";
 
 // Package version - works both at runtime and when bundled
@@ -75,7 +75,7 @@ const buildCommand = Command.make(
 			const pluginDefinition = yield* Effect.tryPromise({
 				try: async () => {
 					const module = await import(absolutePluginFile);
-					const definition = module.default as CompiledPlugin<z.ZodTypeAny>;
+					const definition = module.default as ClaudeBinaryPlugin<z.ZodTypeAny>;
 					if (!definition?.config) {
 						throw new Error("Plugin file must export a default ClaudeBinaryPlugin.create() result");
 					}

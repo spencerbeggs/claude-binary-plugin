@@ -639,6 +639,64 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	static readonly commands?: Record<string, CommandConfig>;
 
 	// ─────────────────────────────────────────────────────────────────────────────
+	// Static factory for dynamic subclass creation
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Creates a concrete `ClaudeBinaryPluginEnv` subclass from configuration.
+	 *
+	 * @remarks
+	 * This factory method creates a runtime subclass of `ClaudeBinaryPluginEnv`
+	 * with the specified prefix, schema, and plugin name. It's primarily used
+	 * by the build system to generate plugin entrypoints that don't require
+	 * manually defining an env class.
+	 *
+	 * The returned class has a `validated` getter that provides typed access
+	 * to the validated environment variables.
+	 *
+	 * @typeParam T - The type of validated environment variables (inferred from schema)
+	 *
+	 * @param prefix - Environment variable prefix (e.g., `"MY_PLUGIN"`)
+	 * @param schema - Zod schema for validating environment variables
+	 * @param pluginName - Optional plugin name for logging (e.g., `"my-plugin"`)
+	 * @returns A constructor for the configured env class
+	 *
+	 * @example
+	 * ```typescript
+	 * import { ClaudeBinaryPluginEnv } from "claude-binary-plugin";
+	 * import { z } from "zod";
+	 *
+	 * const schema = z.object({
+	 *   MY_PLUGIN_DEBUG: z.enum(["true", "false"]).default("false"),
+	 * });
+	 *
+	 * const MyEnvClass = ClaudeBinaryPluginEnv.create("MY_PLUGIN", schema, "my-plugin");
+	 *
+	 * // Use in hook context
+	 * const env = await MyEnvClass.forContext("sessionStart", { hookName: "init" });
+	 * console.log(env.validated.MY_PLUGIN_DEBUG); // "false" (typed!)
+	 * ```
+	 *
+	 * @see `forContext()` - Loading environment by context
+	 * @public
+	 */
+	static create<T>(
+		prefix: string,
+		schema: ZodSchema<T>,
+		pluginName?: string,
+	): new () => ClaudeBinaryPluginEnv<T> & { validated: T } {
+		return class extends ClaudeBinaryPluginEnv<T> {
+			protected readonly prefix = prefix;
+			protected override readonly pluginName = pluginName ?? "";
+			protected override schema = schema;
+
+			get validated(): T {
+				return this.vars as T;
+			}
+		} as new () => ClaudeBinaryPluginEnv<T> & { validated: T };
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
 	// Universal context-based factory method
 	// ─────────────────────────────────────────────────────────────────────────────
 

@@ -29,6 +29,7 @@
 
 import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";
+import type { PluginBuildResult } from "../build/builder.js";
 import type {
 	NotificationEvent,
 	PermissionRequestEvent,
@@ -56,6 +57,9 @@ import type {
 	UserPromptSubmitOutput,
 } from "./types.js";
 import { OutputSchemas } from "./types.js";
+
+// Re-export PluginBuildResult so it's available from this module
+export type { PluginBuildResult };
 
 // =============================================================================
 // HANDLER TYPES
@@ -633,24 +637,6 @@ export interface HooksMap<TOptions> {
 }
 
 // =============================================================================
-// PLUGIN CONFIGURATION
-// =============================================================================
-
-/**
- * Command configuration for CLI commands (legacy format).
- * @deprecated Use CommandDefinition with args schema instead
- * @public
- */
-export interface CommandConfig {
-	/** Command name used in CLI */
-	name: string;
-	/** Import path relative to plugin root */
-	path: string;
-	/** Description shown in help text */
-	description?: string;
-}
-
-// =============================================================================
 // COMMAND PIPELINE TYPES
 // =============================================================================
 
@@ -928,33 +914,37 @@ export interface PluginConfig<
 	hooksOutputPath?: string;
 }
 
+// =============================================================================
+// PLUGIN CLASS
+// =============================================================================
+
 /**
- * Compiled plugin ready for building.
+ * Claude Code plugin with declarative hook definitions.
  *
- * @typeParam TEnv - Zod schema type
- * @typeParam TSetup - Setup function type (preserves return type for inference)
- * @typeParam TCommands - Map of command names to their definitions
- * @public
- */
-export interface CompiledPlugin<
-	TEnv extends $ZodType,
-	// Use function type constraint directly to avoid default type parameter issues
-	TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
-	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
-> {
-	config: PluginConfig<TEnv, TSetup, TCommands>;
-}
-
-// =============================================================================
-// PLUGIN FACTORY
-// =============================================================================
-
-/**
- * Factory for creating Claude Code plugins with declarative hook definitions.
+ * @remarks
+ * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins.
+ * Use the static `create()` factory to instantiate plugins with full type inference.
+ *
+ * **Three-Layer Model:**
+ * 1. **Input** - Hook event data from Claude Code (stdin JSON)
+ * 2. **Options** - User-configurable settings validated by Zod schema
+ * 3. **State** - Computed values from `setup()` function at SessionStart
+ *
+ * **Static Methods:**
+ * - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances
+ * - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)
+ *
+ * **Type Inference:**
+ * Use the namespace utilities to extract types from plugin instances:
+ * - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema
+ * - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup()
+ * - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks
+ * - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands
  *
  * @example
  * ```ts
- * export default ClaudeBinaryPlugin.create({
+ * // plugin.ts
+ * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   schema: z.object({
  *     DEBUG: z.boolean().default(false),
@@ -966,38 +956,222 @@ export interface CompiledPlugin<
  *         return { additionalContext: "Hello from plugin!" };
  *       }
  *     }],
- *     PreToolUse: [{
- *       name: "security-check",
- *       tools: ["Bash", "Write"],
- *       pipeline: ({ input, env }) => {
- *         if (input.tool_input.command?.includes("rm -rf")) {
- *           return { permissionDecision: "deny", reason: "Dangerous command" };
- *         }
- *         return { permissionDecision: "allow" };
- *       }
- *     }],
  *   }
  * });
+ *
+ * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
+ * export default plugin;
  * ```
+ *
+ * @example Building a plugin
+ * ```ts
+ * import plugin from "./plugin.ts";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ *
+ * await ClaudeBinaryPlugin.build(plugin, {
+ *   rootDir: import.meta.dir,
+ *   compile: true,
+ * });
+ * ```
+ *
+ * @typeParam TEnv - Zod schema type for environment validation
+ * @typeParam TSetup - Setup function type (used to infer state)
+ * @typeParam TCommands - Map of command names to their definitions
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
-export const ClaudeBinaryPlugin = {
+export class ClaudeBinaryPlugin<
+	TEnv extends $ZodType,
+	TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
+	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+> {
 	/**
-	 * Create a new plugin configuration.
-	 * This returns a config object that can be used by the builder.
+	 * The plugin configuration.
+	 * @public
+	 */
+	readonly config: PluginConfig<TEnv, TSetup, TCommands>;
+
+	/**
+	 * Private constructor - use `ClaudeBinaryPlugin.create()` instead.
+	 * @internal
+	 */
+	private constructor(config: PluginConfig<TEnv, TSetup, TCommands>) {
+		this.config = config;
+	}
+
+	/**
+	 * Create a new plugin instance.
 	 *
-	 * @typeParam TEnv - Zod schema type
+	 * @remarks
+	 * This is the primary factory for creating Claude Code plugins.
+	 * The returned instance contains the configuration and can be passed
+	 * to `ClaudeBinaryPlugin.build()` for compilation.
+	 *
+	 * @typeParam TEnv - Zod schema type for environment validation
 	 * @typeParam TSetup - Setup function type (inferred from config.setup)
 	 * @typeParam TCommands - Map of command names to their definitions
+	 *
+	 * @param config - Plugin configuration
+	 * @returns Plugin instance ready for building or export
+	 *
+	 * @example
+	 * ```ts
+	 * const plugin = ClaudeBinaryPlugin.create({
+	 *   prefix: "MY_PLUGIN",
+	 *   schema: z.object({ DEBUG: z.boolean().default(false) }),
+	 *   hooks: {
+	 *     PreToolUse: [{
+	 *       name: "security",
+	 *       tools: ["Bash"],
+	 *       pipeline: "./hooks/security.hook.ts",
+	 *     }],
+	 *   },
+	 * });
+	 * ```
+	 *
+	 * @public
 	 */
-	create<
+	static create<
 		TEnv extends $ZodType,
 		TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
 		TCommands extends Record<string, CommandDefinition> = Record<string, never>,
-	>(config: PluginConfig<TEnv, TSetup, TCommands>): CompiledPlugin<TEnv, TSetup, TCommands> {
-		return { config };
-	},
-};
+	>(config: PluginConfig<TEnv, TSetup, TCommands>): ClaudeBinaryPlugin<TEnv, TSetup, TCommands> {
+		return new ClaudeBinaryPlugin(config);
+	}
+
+	/**
+	 * Build a plugin to a compiled executable.
+	 *
+	 * @remarks
+	 * This static method compiles a plugin instance to a single-file Bun executable.
+	 * It uses dynamic import to load the build system, making the build code
+	 * tree-shakeable when not used.
+	 *
+	 * **Build Process:**
+	 * 1. Read plugin.json/marketplace.json manifests for name/version
+	 * 2. Extract hooks and commands from plugin configuration
+	 * 3. Generate TypeScript entrypoint
+	 * 4. Compile to single-file executable with Bun.build()
+	 * 5. Generate hooks.json manifest for Claude Code
+	 * 6. Optionally sync to Claude Code plugins cache
+	 *
+	 * @param plugin - The plugin instance to build
+	 * @param options - Build configuration options
+	 * @returns Result of the build operation
+	 *
+	 * @example
+	 * ```ts
+	 * import plugin from "./plugin.ts";
+	 * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+	 *
+	 * const result = await ClaudeBinaryPlugin.build(plugin, {
+	 *   rootDir: import.meta.dir,
+	 *   compile: true,
+	 * });
+	 *
+	 * if (result.success) {
+	 *   console.log(`Built: ${result.output}`);
+	 * }
+	 * ```
+	 *
+	 * @public
+	 */
+	static async build(
+		// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin type for build
+		plugin: ClaudeBinaryPlugin<any, any, any>,
+		options: PluginBuildOptions = {},
+	): Promise<PluginBuildResult> {
+		// Dynamic import to avoid circular dependency and enable tree-shaking
+		const { buildPluginFromConfig } = await import("../build/builder.js");
+		return buildPluginFromConfig(plugin, options);
+	}
+}
+
+/**
+ * Options for building a plugin via `ClaudeBinaryPlugin.build()`.
+ *
+ * @remarks
+ * These options control the build process. The plugin configuration
+ * (hooks, commands, schema) comes from the plugin instance itself.
+ *
+ * @public
+ */
+export interface PluginBuildOptions {
+	/**
+	 * Root directory containing the plugin (defaults to cwd).
+	 * This is where the entrypoint and output will be created.
+	 */
+	rootDir?: string;
+
+	/**
+	 * Path to plugin.json manifest file or directory containing .claude-plugin/plugin.json.
+	 * Used to discover plugin name and version.
+	 * @defaultValue `${rootDir}/.claude-plugin/plugin.json`
+	 */
+	plugin?: string;
+
+	/**
+	 * Path to marketplace.json manifest file.
+	 * Used for cache path when persistLocal is enabled.
+	 */
+	marketplace?: string;
+
+	/**
+	 * Output filename for the compiled binary.
+	 * @defaultValue Auto-derived from plugin.json name as `${name}.plugin`
+	 */
+	outputName?: string;
+
+	/**
+	 * Whether to compile to a standalone binary.
+	 * When false, bundles to JavaScript for easier debugging.
+	 * @defaultValue true
+	 */
+	compile?: boolean;
+
+	/**
+	 * Whether to minify output.
+	 * @defaultValue true
+	 */
+	minify?: boolean;
+
+	/**
+	 * Whether to embed sourcemaps.
+	 * @defaultValue true
+	 */
+	sourcemap?: boolean;
+
+	/**
+	 * Whether to compile to bytecode for faster startup.
+	 * @defaultValue false
+	 */
+	bytecode?: boolean;
+
+	/**
+	 * Cross-compilation target.
+	 * @defaultValue Current platform
+	 */
+	target?: string;
+
+	/**
+	 * Whether to clean existing plugin binary before building.
+	 * @defaultValue true
+	 */
+	clean?: boolean;
+
+	/**
+	 * Whether to persist to local Claude Code cache after build.
+	 * Requires marketplace name to be set.
+	 * @defaultValue false
+	 */
+	persistLocal?: boolean;
+
+	/**
+	 * External packages to exclude from bundle.
+	 */
+	external?: string[];
+}
 
 // =============================================================================
 // TYPE INFERENCE UTILITIES (Zod-like pattern)
@@ -1005,7 +1179,7 @@ export const ClaudeBinaryPlugin = {
 
 /**
  * Namespace for type inference utilities.
- * Merges with the ClaudeBinaryPlugin const to enable Zod-like patterns.
+ * Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.
  *
  * @example
  * ```ts
@@ -1032,18 +1206,39 @@ export const ClaudeBinaryPlugin = {
  */
 export namespace ClaudeBinaryPlugin {
 	/**
-	 * Extract the inferred Options type from a CompiledPlugin.
+	 * Helper type to extract schema from a ClaudeBinaryPlugin instance.
+	 * @public
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+	export type ExtractSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+
+	/**
+	 * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
+	 * @public
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+	export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, infer TSetup, any> ? TSetup : undefined;
+
+	/**
+	 * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
+	 * @public
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+	export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TCommands> ? TCommands : never;
+
+	/**
+	 * Extract the inferred Options type from a plugin.
 	 *
 	 * @example
 	 * ```ts
 	 * type Options = ClaudeBinaryPlugin.InferOptions<typeof plugin>;
 	 * ```
+	 * @public
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any to match CompiledPlugin with any setup/commands
-	export type InferOptions<T> = T extends CompiledPlugin<infer TSchema, any, any> ? z.infer<TSchema> : never;
+	export type InferOptions<T> = z.infer<ExtractSchema<T>>;
 
 	/**
-	 * Extract the inferred State type from a CompiledPlugin's setup function.
+	 * Extract the inferred State type from a plugin's setup function.
 	 * State is merged with BaseEnv to form the full PluginEnv passed to handlers.
 	 *
 	 * @example
@@ -1051,19 +1246,10 @@ export namespace ClaudeBinaryPlugin {
 	 * type State = ClaudeBinaryPlugin.InferState<typeof plugin>;
 	 * // { packageManager: string; typeChecker: string; ... }
 	 * ```
+	 * @public
 	 */
 	export type InferState<T> =
-		// biome-ignore lint/suspicious/noExplicitAny: Need any to match CompiledPlugin with any commands
-		T extends CompiledPlugin<infer _TSchema, infer TSetup, any>
-			? TSetup extends undefined
-				? Record<string, unknown>
-				: ExtractSetupReturn<TSetup>
-			: Record<string, unknown>;
-
-	/**
-	 * @deprecated Use InferOptions instead
-	 */
-	export type InferEnv<T> = InferOptions<T>;
+		ExtractSetup<T> extends undefined ? Record<string, unknown> : ExtractSetupReturn<NonNullable<ExtractSetup<T>>>;
 
 	/**
 	 * Infer all pipeline and handler types from a plugin.
@@ -1107,10 +1293,10 @@ export namespace ClaudeBinaryPlugin {
 	}
 
 	/**
-	 * Extract the commands map from a CompiledPlugin.
+	 * Extract the commands map from a plugin.
+	 * @public
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any to match CompiledPlugin with any type parameters
-	export type InferCommandsMap<T> = T extends CompiledPlugin<any, any, infer TCommands> ? TCommands : never;
+	export type InferCommandsMap<T> = ExtractCommands<T>;
 
 	/**
 	 * Infer command handler types from a plugin.

@@ -35,7 +35,6 @@
  */
 
 import { z } from "zod";
-import type { ZodSchema } from "../env/plugin-env.js";
 import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
 import {
 	NotificationHookEvent,
@@ -133,9 +132,9 @@ export type { ExecutionStatus, HookAction } from "./types.js";
  * Uses a function to avoid circular dependency issues when
  * index.ts re-exports from this module while we import event
  * classes from index.ts.
- * @public
+ * @internal
  */
-export function getHookEventClasses() {
+function getHookEventClasses() {
 	return {
 		PreToolUse: PreToolUseHookEvent,
 		PostToolUse: PostToolUseHookEvent,
@@ -803,7 +802,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 
 /**
  * Check if CLAUDE_DEBUG is enabled (handles "1", "true", etc.)
- * @public
+ * @internal
  */
 function isDebugEnabled(): boolean {
 	const val = Bun.env.CLAUDE_DEBUG;
@@ -816,7 +815,7 @@ function isDebugEnabled(): boolean {
  *
  * @param env - The plugin environment instance
  * @returns State object parsed from `prefix`_PLUGIN_STATE
- * @public
+ * @internal
  */
 function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
 	const prefix = env.getPrefix();
@@ -881,7 +880,7 @@ interface PersistSessionEnvOptions {
 
 /**
  * Create the base env object for the setup function.
- * @public
+ * @internal
  */
 function createBaseEnv(cwd: string, claudeEnvFile: string, env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
 	return {
@@ -1072,37 +1071,6 @@ export async function runRawHandler<TOptions, TState = Record<string, string>>(
 	await handler({ event, options: handlerOptions, env: pluginEnv });
 }
 
-// =============================================================================
-// ENV CLASS FACTORY
-// =============================================================================
-
-/**
- * Create a ClaudeBinaryPluginEnv subclass from a Zod schema, prefix, and plugin name.
- *
- * This is used by the generated plugin entrypoint to create the env class
- * dynamically based on the plugin configuration.
- *
- * @param prefixValue - Environment variable prefix (e.g., "SAVVY_WORKFLOW")
- * @param schemaValue - Zod schema for validating env vars
- * @param pluginNameValue - Plugin name for logging (e.g., "workflow")
- * @public
- */
-export function createEnvClass<T>(
-	prefixValue: string,
-	schemaValue: ZodSchema<T>,
-	pluginNameValue?: string,
-): new () => ClaudeBinaryPluginEnv<T> & { validated: T } {
-	return class extends ClaudeBinaryPluginEnv<T> {
-		protected readonly prefix = prefixValue;
-		protected override readonly pluginName = pluginNameValue ?? "";
-		protected override schema = schemaValue;
-
-		get validated(): T {
-			return this.vars as T;
-		}
-	} as new () => ClaudeBinaryPluginEnv<T> & { validated: T };
-}
-
 /**
  * Handle an unknown hook by emitting telemetry and exiting with error.
  *
@@ -1168,10 +1136,14 @@ export async function handleUnknownHook(hookKey: string, validHooks: string[]): 
 }
 
 // =============================================================================
-// EXPORTED UTILITIES
+// INTERNAL EXPORTS (for testing only - not re-exported from index.ts)
 // =============================================================================
 
 export {
+	createBaseEnv,
+	extractStateFromEnv,
+	getHookEventClasses,
+	isDebugEnabled,
 	mapToOutcome,
 	mapToPermissionDecision,
 	convertToPreToolUseResponse,
@@ -1181,7 +1153,4 @@ export {
 	convertToUserPromptSubmitResponse,
 	convertToPermissionRequestResponse,
 	convertToResponse,
-	isDebugEnabled,
-	extractStateFromEnv,
-	createBaseEnv,
 };
