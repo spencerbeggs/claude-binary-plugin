@@ -1,22 +1,77 @@
 /**
  * Zod schemas for Claude Code hook events.
  *
- * Provides runtime validation for hook event data received from Claude Code.
- * All schemas match the TypeScript interfaces defined in index.ts.
+ * @remarks
+ * This module provides runtime validation for hook event data received from
+ * Claude Code. All schemas match the TypeScript interfaces defined in the
+ * events module.
  *
- * @example
+ * **Using HookEventSchemas (Recommended):**
+ *
+ * The `HookEventSchemas` class provides all schemas with registry metadata:
+ *
  * ```typescript
- * import { parseHookEvent, PreToolUseEventSchema } from "claude-binary-plugin";
+ * import { HookEventSchemas } from "claude-binary-plugin";
  *
  * // Parse any hook event (discriminated union)
- * const event = parseHookEvent(jsonString);
+ * const event = HookEventSchemas.parse(jsonString);
  *
  * // Parse specific event type
- * const preToolUse = PreToolUseEventSchema.parse(data);
+ * const preToolUse = HookEventSchemas.parsePreToolUse(jsonString);
+ *
+ * // Access schema directly
+ * const validated = HookEventSchemas.PreToolUse.parse(data);
+ *
+ * // Access registry metadata
+ * const meta = HookEventSchemas.registry.get(HookEventSchemas.PreToolUse);
+ * console.log(meta.description); // "Fired before a tool executes..."
  * ```
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
+ * @see {@link https://zod.dev/metadata | Zod Registries}
+ * @module
  */
 
 import { z } from "zod";
+
+// =============================================================================
+// SCHEMA REGISTRY
+// =============================================================================
+
+/**
+ * Metadata structure for hook event schemas.
+ *
+ * @remarks
+ * This metadata is attached to schemas via the Zod v4 registry system,
+ * enabling documentation generation and introspection.
+ *
+ * @public
+ */
+export interface HookEventSchemaMetadata {
+	/** Human-readable description of when this event fires */
+	description: string;
+	/** Capabilities this hook provides (e.g., ["allow", "deny", "modify"]) */
+	capabilities?: string[];
+}
+
+/**
+ * Registry for hook event schema metadata.
+ *
+ * @remarks
+ * This registry stores metadata for all hook event schemas. Users can access
+ * this registry to generate documentation or introspect schema capabilities.
+ *
+ * @example
+ * ```typescript
+ * // Get metadata for a schema
+ * const meta = hookEventSchemaRegistry.get(HookEventSchemas.PreToolUse);
+ * console.log(meta.description);
+ * console.log(meta.capabilities); // ["allow", "deny", "modify"]
+ * ```
+ *
+ * @public
+ */
+export const hookEventSchemaRegistry = z.registry<HookEventSchemaMetadata>();
 
 // =============================================================================
 // ENUMS AND LITERALS
@@ -24,9 +79,9 @@ import { z } from "zod";
 
 /**
  * Hook event names as Zod enum.
- * Matches HookEventName enum in index.ts.
+ * @internal
  */
-export const HookEventNameSchema = z.enum([
+const _HookEventNameSchema = z.enum([
 	"PreToolUse",
 	"PostToolUse",
 	"PermissionRequest",
@@ -41,39 +96,39 @@ export const HookEventNameSchema = z.enum([
 
 /**
  * Permission modes for hook events.
- * Matches HookPermissionsMode type in index.ts.
+ * @internal
  */
-export const HookPermissionsModeSchema = z.enum(["default", "plan", "acceptEdits", "bypassPermissions"]);
+const _HookPermissionsModeSchema = z.enum(["default", "plan", "acceptEdits", "bypassPermissions"]);
 
 /**
  * Pre-tool-use permission decisions.
- * Matches PreToolUseDecision type in index.ts.
+ * @internal
  */
-export const PreToolUseDecisionSchema = z.enum(["allow", "deny", "ask"]);
+const _PreToolUseDecisionSchema = z.enum(["allow", "deny", "ask"]);
 
 /**
  * Permission request behavior.
- * Matches PermissionRequestBehavior type in index.ts.
+ * @internal
  */
-export const PermissionRequestBehaviorSchema = z.enum(["allow", "deny"]);
+const _PermissionRequestBehaviorSchema = z.enum(["allow", "deny"]);
 
 /**
  * Pre-compact trigger types.
- * Matches PreCompactTrigger type in index.ts.
+ * @internal
  */
-export const PreCompactTriggerSchema = z.enum(["manual", "auto"]);
+const _PreCompactTriggerSchema = z.enum(["manual", "auto"]);
 
 /**
  * Session start source types.
- * Matches SessionStartSource type in index.ts.
+ * @internal
  */
-export const SessionStartSourceSchema = z.enum(["startup", "resume", "clear", "compact"]);
+const _SessionStartSourceSchema = z.enum(["startup", "resume", "clear", "compact"]);
 
 /**
  * Session end reason types.
- * Matches SessionEndReason type in index.ts.
+ * @internal
  */
-export const SessionEndReasonSchema = z.enum(["clear", "logout", "prompt_input_exit", "other"]);
+const _SessionEndReasonSchema = z.enum(["clear", "logout", "prompt_input_exit", "other"]);
 
 // =============================================================================
 // BASE SCHEMA
@@ -81,140 +136,190 @@ export const SessionEndReasonSchema = z.enum(["clear", "logout", "prompt_input_e
 
 /**
  * Base fields present in all hook events.
- * Matches HookEventBase interface in index.ts.
+ * @internal
  */
-export const HookEventBaseSchema = z.object({
+const _HookEventBaseSchema = z.object({
 	/** Unique identifier for the current session (UUID format) */
 	session_id: z.string().uuid(),
-	/** Absolute path to the conversation transcript JSON file (optional - may not be present in all events) */
+	/** Absolute path to the conversation transcript JSON file (optional) */
 	transcript_path: z.string().optional(),
-	/** Current working directory (optional - may not be present in all events) */
+	/** Current working directory (optional) */
 	cwd: z.string().optional(),
 	/** Current permission mode (optional - not present in SessionStart) */
-	permission_mode: HookPermissionsModeSchema.optional(),
+	permission_mode: _HookPermissionsModeSchema.optional(),
 	/** The type of hook event */
-	hook_event_name: HookEventNameSchema,
+	hook_event_name: _HookEventNameSchema,
 });
 
 // =============================================================================
-// EVENT-SPECIFIC SCHEMAS
+// EVENT-SPECIFIC SCHEMAS (with registry metadata)
 // =============================================================================
 
 /**
  * Schema for PreToolUse events.
- * Fired after Claude creates tool parameters but before the tool executes.
+ * @internal
  */
-export const PreToolUseEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("PreToolUse"),
-	/** Name of the tool being invoked */
-	tool_name: z.string(),
-	/** Input parameters for the tool */
-	tool_input: z.record(z.string(), z.unknown()),
-	/** Unique identifier for this tool use */
-	tool_use_id: z.string(),
-});
+const _PreToolUseEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("PreToolUse"),
+		/** Name of the tool being invoked */
+		tool_name: z.string(),
+		/** Input parameters for the tool */
+		tool_input: z.record(z.string(), z.unknown()),
+		/** Unique identifier for this tool use */
+		tool_use_id: z.string(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired after Claude creates tool parameters but before the tool executes.",
+		capabilities: ["allow", "deny", "modify"],
+	});
 
 /**
  * Schema for PostToolUse events.
- * Fired immediately after a tool completes successfully.
+ * @internal
  */
-export const PostToolUseEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("PostToolUse"),
-	/** Name of the tool that was invoked */
-	tool_name: z.string(),
-	/** Input parameters that were passed to the tool */
-	tool_input: z.record(z.string(), z.unknown()),
-	/** Response returned by the tool */
-	tool_response: z.record(z.string(), z.unknown()),
-	/** Unique identifier for this tool use */
-	tool_use_id: z.string(),
-});
+const _PostToolUseEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("PostToolUse"),
+		/** Name of the tool that was invoked */
+		tool_name: z.string(),
+		/** Input parameters that were passed to the tool */
+		tool_input: z.record(z.string(), z.unknown()),
+		/** Response returned by the tool */
+		tool_response: z.record(z.string(), z.unknown()),
+		/** Unique identifier for this tool use */
+		tool_use_id: z.string(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired immediately after a tool completes successfully.",
+		capabilities: ["context", "block"],
+	});
 
 /**
  * Schema for PermissionRequest events.
- * Fired when a permission dialog is about to be shown to the user.
+ * @internal
  */
-export const PermissionRequestEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("PermissionRequest"),
-	/** The permission message being shown */
-	message: z.string(),
-	/** Type of notification/permission being requested */
-	notification_type: z.string(),
-});
+const _PermissionRequestEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("PermissionRequest"),
+		/** The permission message being shown */
+		message: z.string(),
+		/** Type of notification/permission being requested */
+		notification_type: z.string(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when a permission dialog is about to be shown to the user.",
+		capabilities: ["allow", "deny"],
+	});
 
 /**
  * Schema for Notification events.
- * Fired when Claude Code sends a notification.
+ * @internal
  */
-export const NotificationEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("Notification"),
-	/** The notification message */
-	message: z.string(),
-	/** Type of notification */
-	notification_type: z.string(),
-});
+const _NotificationEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("Notification"),
+		/** The notification message */
+		message: z.string(),
+		/** Type of notification */
+		notification_type: z.string(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when Claude Code sends a notification.",
+		capabilities: ["passthrough"],
+	});
 
 /**
  * Schema for UserPromptSubmit events.
- * Fired when the user submits a prompt, before Claude processes it.
+ * @internal
  */
-export const UserPromptSubmitEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("UserPromptSubmit"),
-	/** The user's prompt text */
-	prompt: z.string(),
-});
+const _UserPromptSubmitEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("UserPromptSubmit"),
+		/** The user's prompt text */
+		prompt: z.string(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when the user submits a prompt, before Claude processes it.",
+		capabilities: ["context", "block"],
+	});
 
 /**
  * Schema for Stop events.
- * Fired when the main Claude Code agent finishes responding.
+ * @internal
  */
-export const StopEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("Stop"),
-	/** Whether a stop hook is currently active */
-	stop_hook_active: z.boolean(),
-});
+const _StopEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("Stop"),
+		/** Whether a stop hook is currently active */
+		stop_hook_active: z.boolean(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when the main Claude Code agent finishes responding.",
+		capabilities: ["block"],
+	});
 
 /**
  * Schema for SubagentStop events.
- * Fired when a subagent (Task tool) finishes responding.
+ * @internal
  */
-export const SubagentStopEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("SubagentStop"),
-	/** Whether a stop hook is currently active */
-	stop_hook_active: z.boolean(),
-});
+const _SubagentStopEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("SubagentStop"),
+		/** Whether a stop hook is currently active */
+		stop_hook_active: z.boolean(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when a subagent (Task tool) finishes responding.",
+		capabilities: ["block"],
+	});
 
 /**
  * Schema for PreCompact events.
- * Fired before Claude Code compacts the context window.
+ * @internal
  */
-export const PreCompactEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("PreCompact"),
-	/** What triggered the compact operation */
-	trigger: PreCompactTriggerSchema,
-	/** Custom instructions for the compact operation */
-	custom_instructions: z.string(),
-});
+const _PreCompactEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("PreCompact"),
+		/** What triggered the compact operation */
+		trigger: _PreCompactTriggerSchema,
+		/** Custom instructions for the compact operation */
+		custom_instructions: z.string(),
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired before Claude Code compacts the context window.",
+		capabilities: ["passthrough"],
+	});
 
 /**
  * Schema for SessionStart events.
- * Fired when Claude Code starts or resumes a session.
+ * @internal
  */
-export const SessionStartEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("SessionStart"),
-	/** What triggered the session start */
-	source: SessionStartSourceSchema,
-});
+const _SessionStartEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("SessionStart"),
+		/** What triggered the session start */
+		source: _SessionStartSourceSchema,
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when Claude Code starts or resumes a session.",
+		capabilities: ["context", "setup"],
+	});
 
 /**
  * Schema for SessionEnd events.
- * Fired when a Claude Code session terminates.
+ * @internal
  */
-export const SessionEndEventSchema = HookEventBaseSchema.extend({
-	hook_event_name: z.literal("SessionEnd"),
-	/** Why the session is ending */
-	reason: SessionEndReasonSchema,
-});
+const _SessionEndEventSchema = _HookEventBaseSchema
+	.extend({
+		hook_event_name: z.literal("SessionEnd"),
+		/** Why the session is ending */
+		reason: _SessionEndReasonSchema,
+	})
+	.register(hookEventSchemaRegistry, {
+		description: "Fired when a Claude Code session terminates.",
+		capabilities: ["cleanup"],
+	});
 
 // =============================================================================
 // DISCRIMINATED UNION
@@ -222,219 +327,286 @@ export const SessionEndEventSchema = HookEventBaseSchema.extend({
 
 /**
  * Discriminated union schema for all hook event types.
- * Uses hook_event_name as the discriminator field.
- *
- * @example
- * ```typescript
- * const event = HookEventSchema.parse(data);
- * switch (event.hook_event_name) {
- *   case "PreToolUse":
- *     console.log(event.tool_name); // TypeScript knows this exists
- *     break;
- *   case "SessionStart":
- *     console.log(event.source); // TypeScript knows this exists
- *     break;
- * }
- * ```
+ * @internal
  */
-export const HookEventSchema = z.discriminatedUnion("hook_event_name", [
-	PreToolUseEventSchema,
-	PostToolUseEventSchema,
-	PermissionRequestEventSchema,
-	NotificationEventSchema,
-	UserPromptSubmitEventSchema,
-	StopEventSchema,
-	SubagentStopEventSchema,
-	PreCompactEventSchema,
-	SessionStartEventSchema,
-	SessionEndEventSchema,
+const _HookEventSchema = z.discriminatedUnion("hook_event_name", [
+	_PreToolUseEventSchema,
+	_PostToolUseEventSchema,
+	_PermissionRequestEventSchema,
+	_NotificationEventSchema,
+	_UserPromptSubmitEventSchema,
+	_StopEventSchema,
+	_SubagentStopEventSchema,
+	_PreCompactEventSchema,
+	_SessionStartEventSchema,
+	_SessionEndEventSchema,
 ]);
 
 // =============================================================================
 // TYPE INFERENCE
 // =============================================================================
 
-/** Inferred type for any hook event (discriminated union) */
-export type HookEventParsed = z.infer<typeof HookEventSchema>;
+/**
+ * Inferred type for any hook event (discriminated union).
+ * @public
+ */
+export type HookEventParsed = z.infer<typeof _HookEventSchema>;
 
-/** Inferred type for PreToolUse events */
-export type PreToolUseEventParsed = z.infer<typeof PreToolUseEventSchema>;
+/**
+ * Inferred type for PreToolUse events.
+ * @public
+ */
+export type PreToolUseEventParsed = z.infer<typeof _PreToolUseEventSchema>;
 
-/** Inferred type for PostToolUse events */
-export type PostToolUseEventParsed = z.infer<typeof PostToolUseEventSchema>;
+/**
+ * Inferred type for PostToolUse events.
+ * @public
+ */
+export type PostToolUseEventParsed = z.infer<typeof _PostToolUseEventSchema>;
 
-/** Inferred type for PermissionRequest events */
-export type PermissionRequestEventParsed = z.infer<typeof PermissionRequestEventSchema>;
+/**
+ * Inferred type for PermissionRequest events.
+ * @public
+ */
+export type PermissionRequestEventParsed = z.infer<typeof _PermissionRequestEventSchema>;
 
-/** Inferred type for Notification events */
-export type NotificationEventParsed = z.infer<typeof NotificationEventSchema>;
+/**
+ * Inferred type for Notification events.
+ * @public
+ */
+export type NotificationEventParsed = z.infer<typeof _NotificationEventSchema>;
 
-/** Inferred type for UserPromptSubmit events */
-export type UserPromptSubmitEventParsed = z.infer<typeof UserPromptSubmitEventSchema>;
+/**
+ * Inferred type for UserPromptSubmit events.
+ * @public
+ */
+export type UserPromptSubmitEventParsed = z.infer<typeof _UserPromptSubmitEventSchema>;
 
-/** Inferred type for Stop events */
-export type StopEventParsed = z.infer<typeof StopEventSchema>;
+/**
+ * Inferred type for Stop events.
+ * @public
+ */
+export type StopEventParsed = z.infer<typeof _StopEventSchema>;
 
-/** Inferred type for SubagentStop events */
-export type SubagentStopEventParsed = z.infer<typeof SubagentStopEventSchema>;
+/**
+ * Inferred type for SubagentStop events.
+ * @public
+ */
+export type SubagentStopEventParsed = z.infer<typeof _SubagentStopEventSchema>;
 
-/** Inferred type for PreCompact events */
-export type PreCompactEventParsed = z.infer<typeof PreCompactEventSchema>;
+/**
+ * Inferred type for PreCompact events.
+ * @public
+ */
+export type PreCompactEventParsed = z.infer<typeof _PreCompactEventSchema>;
 
-/** Inferred type for SessionStart events */
-export type SessionStartEventParsed = z.infer<typeof SessionStartEventSchema>;
+/**
+ * Inferred type for SessionStart events.
+ * @public
+ */
+export type SessionStartEventParsed = z.infer<typeof _SessionStartEventSchema>;
 
-/** Inferred type for SessionEnd events */
-export type SessionEndEventParsed = z.infer<typeof SessionEndEventSchema>;
+/**
+ * Inferred type for SessionEnd events.
+ * @public
+ */
+export type SessionEndEventParsed = z.infer<typeof _SessionEndEventSchema>;
 
 // =============================================================================
-// PARSING HELPERS
+// HOOK EVENT SCHEMAS CLASS
 // =============================================================================
 
 /**
- * Parse a JSON string into a validated hook event.
- * Throws ZodError with detailed message on invalid data.
+ * Unified class for all hook event schemas with registry metadata.
  *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated and typed hook event
- * @throws {z.ZodError} When the data doesn't match any hook event schema
- * @throws {SyntaxError} When the JSON is malformed
+ * @remarks
+ * `HookEventSchemas` provides a class-first API for hook event validation
+ * with Zod v4 registry integration. All schemas are registered with metadata
+ * enabling documentation generation and introspection.
+ *
+ * **Available Schemas:**
+ *
+ * | Property | Description |
+ * |----------|-------------|
+ * | `PreToolUse` | Before tool execution (allow/deny/modify) |
+ * | `PostToolUse` | After tool completes (context/block) |
+ * | `PermissionRequest` | Permission dialog (allow/deny) |
+ * | `Notification` | Notification event (passthrough) |
+ * | `UserPromptSubmit` | User prompt submission (context/block) |
+ * | `Stop` | Agent completion (block) |
+ * | `SubagentStop` | Subagent completion (block) |
+ * | `PreCompact` | Before context compaction (passthrough) |
+ * | `SessionStart` | Session begins (context/setup) |
+ * | `SessionEnd` | Session ends (cleanup) |
+ * | `Any` | Discriminated union of all events |
+ *
+ * **Parse Methods:**
+ *
+ * | Method | Description |
+ * |--------|-------------|
+ * | `parse(json)` | Parse any hook event (discriminated union) |
+ * | `parsePreToolUse(json)` | Parse PreToolUse event |
+ * | `parsePostToolUse(json)` | Parse PostToolUse event |
+ * | ... | (one for each event type) |
  *
  * @example
  * ```typescript
- * try {
- *   const event = parseHookEvent(jsonString);
- *   console.log(event.hook_event_name, event.session_id);
- * } catch (e) {
- *   if (e instanceof z.ZodError) {
- *     console.error("Invalid hook event:", e.issues);
- *   }
+ * import { HookEventSchemas } from "claude-binary-plugin";
+ *
+ * // Parse any hook event
+ * const event = HookEventSchemas.parse(jsonString);
+ * if (event.hook_event_name === "PreToolUse") {
+ *   console.log(event.tool_name);
  * }
+ *
+ * // Parse specific event type
+ * const preToolUse = HookEventSchemas.parsePreToolUse(jsonString);
+ * console.log(preToolUse.tool_input);
+ *
+ * // Access registry metadata
+ * const meta = HookEventSchemas.registry.get(HookEventSchemas.PreToolUse);
+ * console.log(meta.description);
+ * console.log(meta.capabilities); // ["allow", "deny", "modify"]
  * ```
- */
-export function parseHookEvent(json: string): HookEventParsed {
-	const data: unknown = JSON.parse(json);
-	return HookEventSchema.parse(data);
-}
-
-/**
- * Parse a JSON string into a PreToolUse event.
- * Use when you know the event type in advance (e.g., in a PreToolUse hook handler).
  *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated PreToolUse event
- * @throws {z.ZodError} When the data doesn't match PreToolUseEventSchema
+ * @see {@link hookEventSchemaRegistry} - The underlying Zod registry
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
+ * @public
  */
-export function parsePreToolUseEvent(json: string): PreToolUseEventParsed {
-	const data: unknown = JSON.parse(json);
-	return PreToolUseEventSchema.parse(data);
-}
+export const HookEventSchemas = {
+	/** The Zod registry containing metadata for all schemas */
+	registry: hookEventSchemaRegistry,
 
-/**
- * Parse a JSON string into a PostToolUse event.
- * Use when you know the event type in advance (e.g., in a PostToolUse hook handler).
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated PostToolUse event
- * @throws {z.ZodError} When the data doesn't match PostToolUseEventSchema
- */
-export function parsePostToolUseEvent(json: string): PostToolUseEventParsed {
-	const data: unknown = JSON.parse(json);
-	return PostToolUseEventSchema.parse(data);
-}
+	// ─────────────────────────────────────────────────────────────────────────
+	// Individual Schemas
+	// ─────────────────────────────────────────────────────────────────────────
 
-/**
- * Parse a JSON string into a PermissionRequest event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated PermissionRequest event
- * @throws {z.ZodError} When the data doesn't match PermissionRequestEventSchema
- */
-export function parsePermissionRequestEvent(json: string): PermissionRequestEventParsed {
-	const data: unknown = JSON.parse(json);
-	return PermissionRequestEventSchema.parse(data);
-}
+	/** Schema for PreToolUse events (allow/deny/modify tool execution) */
+	PreToolUse: _PreToolUseEventSchema,
 
-/**
- * Parse a JSON string into a Notification event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated Notification event
- * @throws {z.ZodError} When the data doesn't match NotificationEventSchema
- */
-export function parseNotificationEvent(json: string): NotificationEventParsed {
-	const data: unknown = JSON.parse(json);
-	return NotificationEventSchema.parse(data);
-}
+	/** Schema for PostToolUse events (add context/block after tool) */
+	PostToolUse: _PostToolUseEventSchema,
 
-/**
- * Parse a JSON string into a UserPromptSubmit event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated UserPromptSubmit event
- * @throws {z.ZodError} When the data doesn't match UserPromptSubmitEventSchema
- */
-export function parseUserPromptSubmitEvent(json: string): UserPromptSubmitEventParsed {
-	const data: unknown = JSON.parse(json);
-	return UserPromptSubmitEventSchema.parse(data);
-}
+	/** Schema for PermissionRequest events (auto allow/deny permissions) */
+	PermissionRequest: _PermissionRequestEventSchema,
 
-/**
- * Parse a JSON string into a Stop event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated Stop event
- * @throws {z.ZodError} When the data doesn't match StopEventSchema
- */
-export function parseStopEvent(json: string): StopEventParsed {
-	const data: unknown = JSON.parse(json);
-	return StopEventSchema.parse(data);
-}
+	/** Schema for Notification events (passthrough) */
+	Notification: _NotificationEventSchema,
 
-/**
- * Parse a JSON string into a SubagentStop event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated SubagentStop event
- * @throws {z.ZodError} When the data doesn't match SubagentStopEventSchema
- */
-export function parseSubagentStopEvent(json: string): SubagentStopEventParsed {
-	const data: unknown = JSON.parse(json);
-	return SubagentStopEventSchema.parse(data);
-}
+	/** Schema for UserPromptSubmit events (add context/block prompts) */
+	UserPromptSubmit: _UserPromptSubmitEventSchema,
 
-/**
- * Parse a JSON string into a PreCompact event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated PreCompact event
- * @throws {z.ZodError} When the data doesn't match PreCompactEventSchema
- */
-export function parsePreCompactEvent(json: string): PreCompactEventParsed {
-	const data: unknown = JSON.parse(json);
-	return PreCompactEventSchema.parse(data);
-}
+	/** Schema for Stop events (block agent completion) */
+	Stop: _StopEventSchema,
 
-/**
- * Parse a JSON string into a SessionStart event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated SessionStart event
- * @throws {z.ZodError} When the data doesn't match SessionStartEventSchema
- */
-export function parseSessionStartEvent(json: string): SessionStartEventParsed {
-	const data: unknown = JSON.parse(json);
-	return SessionStartEventSchema.parse(data);
-}
+	/** Schema for SubagentStop events (block subagent completion) */
+	SubagentStop: _SubagentStopEventSchema,
 
-/**
- * Parse a JSON string into a SessionEnd event.
- *
- * @param json - Raw JSON string from Claude Code
- * @returns Validated SessionEnd event
- * @throws {z.ZodError} When the data doesn't match SessionEndEventSchema
- */
-export function parseSessionEndEvent(json: string): SessionEndEventParsed {
-	const data: unknown = JSON.parse(json);
-	return SessionEndEventSchema.parse(data);
-}
+	/** Schema for PreCompact events (passthrough) */
+	PreCompact: _PreCompactEventSchema,
+
+	/** Schema for SessionStart events (setup/context) */
+	SessionStart: _SessionStartEventSchema,
+
+	/** Schema for SessionEnd events (cleanup) */
+	SessionEnd: _SessionEndEventSchema,
+
+	/** Discriminated union of all hook event schemas */
+	Any: _HookEventSchema,
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Parse Methods
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Parse a JSON string into a validated hook event (discriminated union).
+	 *
+	 * @param json - Raw JSON string from Claude Code
+	 * @returns Validated and typed hook event
+	 * @throws {z.ZodError} When the data doesn't match any hook event schema
+	 * @throws {SyntaxError} When the JSON is malformed
+	 */
+	parse(json: string): HookEventParsed {
+		return _HookEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a PreToolUse event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parsePreToolUse(json: string): PreToolUseEventParsed {
+		return _PreToolUseEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a PostToolUse event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parsePostToolUse(json: string): PostToolUseEventParsed {
+		return _PostToolUseEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a PermissionRequest event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parsePermissionRequest(json: string): PermissionRequestEventParsed {
+		return _PermissionRequestEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a Notification event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parseNotification(json: string): NotificationEventParsed {
+		return _NotificationEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a UserPromptSubmit event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parseUserPromptSubmit(json: string): UserPromptSubmitEventParsed {
+		return _UserPromptSubmitEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a Stop event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parseStop(json: string): StopEventParsed {
+		return _StopEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a SubagentStop event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parseSubagentStop(json: string): SubagentStopEventParsed {
+		return _SubagentStopEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a PreCompact event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parsePreCompact(json: string): PreCompactEventParsed {
+		return _PreCompactEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a SessionStart event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parseSessionStart(json: string): SessionStartEventParsed {
+		return _SessionStartEventSchema.parse(JSON.parse(json));
+	},
+
+	/**
+	 * Parse a JSON string into a SessionEnd event.
+	 * @param json - Raw JSON string from Claude Code
+	 */
+	parseSessionEnd(json: string): SessionEndEventParsed {
+		return _SessionEndEventSchema.parse(JSON.parse(json));
+	},
+} as const;

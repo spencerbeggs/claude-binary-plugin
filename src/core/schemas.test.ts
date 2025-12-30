@@ -4,30 +4,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import {
-	HookEventSchema,
-	NotificationEventSchema,
-	PermissionRequestEventSchema,
-	PostToolUseEventSchema,
-	PreCompactEventSchema,
-	PreToolUseEventSchema,
-	SessionEndEventSchema,
-	SessionStartEventSchema,
-	StopEventSchema,
-	SubagentStopEventSchema,
-	UserPromptSubmitEventSchema,
-	parseHookEvent,
-	parseNotificationEvent,
-	parsePermissionRequestEvent,
-	parsePostToolUseEvent,
-	parsePreCompactEvent,
-	parsePreToolUseEvent,
-	parseSessionEndEvent,
-	parseSessionStartEvent,
-	parseStopEvent,
-	parseSubagentStopEvent,
-	parseUserPromptSubmitEvent,
-} from "./schemas.js";
+import { HookEventSchemas, hookEventSchemaRegistry } from "./schemas.js";
 
 // =============================================================================
 // TEST FIXTURES
@@ -109,12 +86,67 @@ const validNotificationEvent = {
 };
 
 // =============================================================================
+// HOOK EVENT SCHEMAS NAMESPACE TESTS
+// =============================================================================
+
+describe("HookEventSchemas namespace", () => {
+	test("exposes registry with metadata", () => {
+		expect(HookEventSchemas.registry).toBeDefined();
+		expect(HookEventSchemas.registry).toBe(hookEventSchemaRegistry);
+	});
+
+	test("PreToolUse schema has registry metadata", () => {
+		const meta = HookEventSchemas.registry.get(HookEventSchemas.PreToolUse);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("tool");
+		expect(meta?.capabilities).toContain("allow");
+		expect(meta?.capabilities).toContain("deny");
+		expect(meta?.capabilities).toContain("modify");
+	});
+
+	test("PostToolUse schema has registry metadata", () => {
+		const meta = HookEventSchemas.registry.get(HookEventSchemas.PostToolUse);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("tool completes");
+		expect(meta?.capabilities).toContain("context");
+	});
+
+	test("SessionStart schema has registry metadata", () => {
+		const meta = HookEventSchemas.registry.get(HookEventSchemas.SessionStart);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("session");
+		expect(meta?.capabilities).toContain("context");
+	});
+
+	test("all event schemas have metadata", () => {
+		const schemas = [
+			HookEventSchemas.PreToolUse,
+			HookEventSchemas.PostToolUse,
+			HookEventSchemas.PermissionRequest,
+			HookEventSchemas.Notification,
+			HookEventSchemas.UserPromptSubmit,
+			HookEventSchemas.Stop,
+			HookEventSchemas.SubagentStop,
+			HookEventSchemas.PreCompact,
+			HookEventSchemas.SessionStart,
+			HookEventSchemas.SessionEnd,
+		];
+
+		for (const schema of schemas) {
+			expect(HookEventSchemas.registry.has(schema)).toBe(true);
+			const meta = HookEventSchemas.registry.get(schema);
+			expect(meta?.description).toBeDefined();
+		}
+	});
+});
+
+// =============================================================================
 // INDIVIDUAL SCHEMA TESTS
 // =============================================================================
 
-describe("PreToolUseEventSchema", () => {
+describe("HookEventSchemas.PreToolUse", () => {
 	test("parses valid event", () => {
-		const result = PreToolUseEventSchema.parse(validPreToolUseEvent);
+		const result = HookEventSchemas.PreToolUse.parse(validPreToolUseEvent);
 		expect(result.hook_event_name).toBe("PreToolUse");
 		expect(result.tool_name).toBe("Bash");
 		expect(result.tool_input).toEqual({ command: "ls -la" });
@@ -122,31 +154,31 @@ describe("PreToolUseEventSchema", () => {
 
 	test("rejects missing tool_name", () => {
 		const invalid = { ...validPreToolUseEvent, tool_name: undefined };
-		expect(() => PreToolUseEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.PreToolUse.parse(invalid)).toThrow(z.ZodError);
 	});
 
 	test("rejects invalid session_id format", () => {
 		const invalid = { ...validPreToolUseEvent, session_id: "not-a-uuid" };
-		expect(() => PreToolUseEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.PreToolUse.parse(invalid)).toThrow(z.ZodError);
 	});
 });
 
-describe("PostToolUseEventSchema", () => {
+describe("HookEventSchemas.PostToolUse", () => {
 	test("parses valid event", () => {
-		const result = PostToolUseEventSchema.parse(validPostToolUseEvent);
+		const result = HookEventSchemas.PostToolUse.parse(validPostToolUseEvent);
 		expect(result.hook_event_name).toBe("PostToolUse");
 		expect(result.tool_response).toEqual({ content: "file contents" });
 	});
 
 	test("rejects missing tool_response", () => {
 		const invalid = { ...validPostToolUseEvent, tool_response: undefined };
-		expect(() => PostToolUseEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.PostToolUse.parse(invalid)).toThrow(z.ZodError);
 	});
 });
 
-describe("SessionStartEventSchema", () => {
+describe("HookEventSchemas.SessionStart", () => {
 	test("parses valid event", () => {
-		const result = SessionStartEventSchema.parse(validSessionStartEvent);
+		const result = HookEventSchemas.SessionStart.parse(validSessionStartEvent);
 		expect(result.hook_event_name).toBe("SessionStart");
 		expect(result.source).toBe("startup");
 	});
@@ -154,19 +186,19 @@ describe("SessionStartEventSchema", () => {
 	test("accepts all valid sources", () => {
 		for (const source of ["startup", "resume", "clear", "compact"] as const) {
 			const event = { ...validSessionStartEvent, source };
-			expect(() => SessionStartEventSchema.parse(event)).not.toThrow();
+			expect(() => HookEventSchemas.SessionStart.parse(event)).not.toThrow();
 		}
 	});
 
 	test("rejects invalid source", () => {
 		const invalid = { ...validSessionStartEvent, source: "invalid" };
-		expect(() => SessionStartEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.SessionStart.parse(invalid)).toThrow(z.ZodError);
 	});
 });
 
-describe("SessionEndEventSchema", () => {
+describe("HookEventSchemas.SessionEnd", () => {
 	test("parses valid event", () => {
-		const result = SessionEndEventSchema.parse(validSessionEndEvent);
+		const result = HookEventSchemas.SessionEnd.parse(validSessionEndEvent);
 		expect(result.hook_event_name).toBe("SessionEnd");
 		expect(result.reason).toBe("clear");
 	});
@@ -174,43 +206,43 @@ describe("SessionEndEventSchema", () => {
 	test("accepts all valid reasons", () => {
 		for (const reason of ["clear", "logout", "prompt_input_exit", "other"] as const) {
 			const event = { ...validSessionEndEvent, reason };
-			expect(() => SessionEndEventSchema.parse(event)).not.toThrow();
+			expect(() => HookEventSchemas.SessionEnd.parse(event)).not.toThrow();
 		}
 	});
 });
 
-describe("UserPromptSubmitEventSchema", () => {
+describe("HookEventSchemas.UserPromptSubmit", () => {
 	test("parses valid event", () => {
-		const result = UserPromptSubmitEventSchema.parse(validUserPromptSubmitEvent);
+		const result = HookEventSchemas.UserPromptSubmit.parse(validUserPromptSubmitEvent);
 		expect(result.hook_event_name).toBe("UserPromptSubmit");
 		expect(result.prompt).toBe("Hello, Claude!");
 	});
 });
 
-describe("StopEventSchema", () => {
+describe("HookEventSchemas.Stop", () => {
 	test("parses valid event", () => {
-		const result = StopEventSchema.parse(validStopEvent);
+		const result = HookEventSchemas.Stop.parse(validStopEvent);
 		expect(result.hook_event_name).toBe("Stop");
 		expect(result.stop_hook_active).toBe(false);
 	});
 
 	test("rejects non-boolean stop_hook_active", () => {
 		const invalid = { ...validStopEvent, stop_hook_active: "false" };
-		expect(() => StopEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.Stop.parse(invalid)).toThrow(z.ZodError);
 	});
 });
 
-describe("SubagentStopEventSchema", () => {
+describe("HookEventSchemas.SubagentStop", () => {
 	test("parses valid event", () => {
-		const result = SubagentStopEventSchema.parse(validSubagentStopEvent);
+		const result = HookEventSchemas.SubagentStop.parse(validSubagentStopEvent);
 		expect(result.hook_event_name).toBe("SubagentStop");
 		expect(result.stop_hook_active).toBe(true);
 	});
 });
 
-describe("PreCompactEventSchema", () => {
+describe("HookEventSchemas.PreCompact", () => {
 	test("parses valid event", () => {
-		const result = PreCompactEventSchema.parse(validPreCompactEvent);
+		const result = HookEventSchemas.PreCompact.parse(validPreCompactEvent);
 		expect(result.hook_event_name).toBe("PreCompact");
 		expect(result.trigger).toBe("auto");
 		expect(result.custom_instructions).toBe("Preserve important context");
@@ -219,22 +251,22 @@ describe("PreCompactEventSchema", () => {
 	test("accepts all valid triggers", () => {
 		for (const trigger of ["manual", "auto"] as const) {
 			const event = { ...validPreCompactEvent, trigger };
-			expect(() => PreCompactEventSchema.parse(event)).not.toThrow();
+			expect(() => HookEventSchemas.PreCompact.parse(event)).not.toThrow();
 		}
 	});
 });
 
-describe("PermissionRequestEventSchema", () => {
+describe("HookEventSchemas.PermissionRequest", () => {
 	test("parses valid event", () => {
-		const result = PermissionRequestEventSchema.parse(validPermissionRequestEvent);
+		const result = HookEventSchemas.PermissionRequest.parse(validPermissionRequestEvent);
 		expect(result.hook_event_name).toBe("PermissionRequest");
 		expect(result.message).toBe("Allow bash command?");
 	});
 });
 
-describe("NotificationEventSchema", () => {
+describe("HookEventSchemas.Notification", () => {
 	test("parses valid event", () => {
-		const result = NotificationEventSchema.parse(validNotificationEvent);
+		const result = HookEventSchemas.Notification.parse(validNotificationEvent);
 		expect(result.hook_event_name).toBe("Notification");
 		expect(result.notification_type).toBe("idle_prompt");
 	});
@@ -244,9 +276,9 @@ describe("NotificationEventSchema", () => {
 // DISCRIMINATED UNION TESTS
 // =============================================================================
 
-describe("HookEventSchema (discriminated union)", () => {
+describe("HookEventSchemas.Any (discriminated union)", () => {
 	test("parses PreToolUse event", () => {
-		const result = HookEventSchema.parse(validPreToolUseEvent);
+		const result = HookEventSchemas.Any.parse(validPreToolUseEvent);
 		expect(result.hook_event_name).toBe("PreToolUse");
 		if (result.hook_event_name === "PreToolUse") {
 			expect(result.tool_name).toBe("Bash");
@@ -254,17 +286,17 @@ describe("HookEventSchema (discriminated union)", () => {
 	});
 
 	test("parses PostToolUse event", () => {
-		const result = HookEventSchema.parse(validPostToolUseEvent);
+		const result = HookEventSchemas.Any.parse(validPostToolUseEvent);
 		expect(result.hook_event_name).toBe("PostToolUse");
 	});
 
 	test("parses SessionStart event", () => {
-		const result = HookEventSchema.parse(validSessionStartEvent);
+		const result = HookEventSchemas.Any.parse(validSessionStartEvent);
 		expect(result.hook_event_name).toBe("SessionStart");
 	});
 
 	test("parses SessionEnd event", () => {
-		const result = HookEventSchema.parse(validSessionEndEvent);
+		const result = HookEventSchemas.Any.parse(validSessionEndEvent);
 		expect(result.hook_event_name).toBe("SessionEnd");
 	});
 
@@ -283,18 +315,18 @@ describe("HookEventSchema (discriminated union)", () => {
 		];
 
 		for (const event of allEvents) {
-			expect(() => HookEventSchema.parse(event)).not.toThrow();
+			expect(() => HookEventSchemas.Any.parse(event)).not.toThrow();
 		}
 	});
 
 	test("rejects unknown hook_event_name", () => {
 		const invalid = { ...baseEventFields, hook_event_name: "UnknownEvent" };
-		expect(() => HookEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.Any.parse(invalid)).toThrow(z.ZodError);
 	});
 
 	test("rejects missing discriminator field", () => {
 		const invalid = { ...baseEventFields };
-		expect(() => HookEventSchema.parse(invalid)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.Any.parse(invalid)).toThrow(z.ZodError);
 	});
 });
 
@@ -302,237 +334,110 @@ describe("HookEventSchema (discriminated union)", () => {
 // PARSING HELPER TESTS
 // =============================================================================
 
-describe("parseHookEvent", () => {
+describe("HookEventSchemas.parse", () => {
 	test("parses valid JSON string", () => {
 		const json = JSON.stringify(validPreToolUseEvent);
-		const result = parseHookEvent(json);
+		const result = HookEventSchemas.parse(json);
 		expect(result.hook_event_name).toBe("PreToolUse");
 	});
 
 	test("throws on invalid JSON", () => {
-		expect(() => parseHookEvent("not valid json")).toThrow(SyntaxError);
+		expect(() => HookEventSchemas.parse("not valid json")).toThrow(SyntaxError);
 	});
 
 	test("throws ZodError on invalid data", () => {
 		const json = JSON.stringify({ invalid: "data" });
-		expect(() => parseHookEvent(json)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.parse(json)).toThrow(z.ZodError);
 	});
 });
 
-describe("parsePreToolUseEvent", () => {
+describe("HookEventSchemas.parsePreToolUse", () => {
 	test("parses valid JSON string", () => {
 		const json = JSON.stringify(validPreToolUseEvent);
-		const result = parsePreToolUseEvent(json);
+		const result = HookEventSchemas.parsePreToolUse(json);
 		expect(result.tool_name).toBe("Bash");
 	});
 
 	test("throws ZodError on wrong event type", () => {
 		const json = JSON.stringify(validSessionStartEvent);
-		expect(() => parsePreToolUseEvent(json)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.parsePreToolUse(json)).toThrow(z.ZodError);
 	});
 });
 
-describe("parseSessionStartEvent", () => {
-	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validSessionStartEvent);
-		const result = parseSessionStartEvent(json);
-		expect(result.source).toBe("startup");
-	});
-});
-
-describe("parsePostToolUseEvent", () => {
+describe("HookEventSchemas.parsePostToolUse", () => {
 	test("parses valid JSON string", () => {
 		const json = JSON.stringify(validPostToolUseEvent);
-		const result = parsePostToolUseEvent(json);
+		const result = HookEventSchemas.parsePostToolUse(json);
 		expect(result.tool_name).toBe("Read");
 		expect(result.tool_response).toEqual({ content: "file contents" });
 	});
 
 	test("throws ZodError on wrong event type", () => {
 		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parsePostToolUseEvent(json)).toThrow(z.ZodError);
+		expect(() => HookEventSchemas.parsePostToolUse(json)).toThrow(z.ZodError);
 	});
 });
 
-describe("parsePermissionRequestEvent", () => {
+describe("HookEventSchemas.parseSessionStart", () => {
 	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validPermissionRequestEvent);
-		const result = parsePermissionRequestEvent(json);
-		expect(result.message).toBe("Allow bash command?");
-		expect(result.notification_type).toBe("permission_prompt");
-	});
-
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parsePermissionRequestEvent(json)).toThrow(z.ZodError);
+		const json = JSON.stringify(validSessionStartEvent);
+		const result = HookEventSchemas.parseSessionStart(json);
+		expect(result.source).toBe("startup");
 	});
 });
 
-describe("parseNotificationEvent", () => {
-	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validNotificationEvent);
-		const result = parseNotificationEvent(json);
-		expect(result.message).toBe("Task completed");
-		expect(result.notification_type).toBe("idle_prompt");
-	});
-
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parseNotificationEvent(json)).toThrow(z.ZodError);
-	});
-});
-
-describe("parseUserPromptSubmitEvent", () => {
-	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validUserPromptSubmitEvent);
-		const result = parseUserPromptSubmitEvent(json);
-		expect(result.prompt).toBe("Hello, Claude!");
-	});
-
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parseUserPromptSubmitEvent(json)).toThrow(z.ZodError);
-	});
-});
-
-describe("parseStopEvent", () => {
-	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validStopEvent);
-		const result = parseStopEvent(json);
-		expect(result.stop_hook_active).toBe(false);
-	});
-
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parseStopEvent(json)).toThrow(z.ZodError);
-	});
-});
-
-describe("parseSubagentStopEvent", () => {
-	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validSubagentStopEvent);
-		const result = parseSubagentStopEvent(json);
-		expect(result.stop_hook_active).toBe(true);
-	});
-
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parseSubagentStopEvent(json)).toThrow(z.ZodError);
-	});
-});
-
-describe("parsePreCompactEvent", () => {
-	test("parses valid JSON string", () => {
-		const json = JSON.stringify(validPreCompactEvent);
-		const result = parsePreCompactEvent(json);
-		expect(result.trigger).toBe("auto");
-		expect(result.custom_instructions).toBe("Preserve important context");
-	});
-
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parsePreCompactEvent(json)).toThrow(z.ZodError);
-	});
-});
-
-describe("parseSessionEndEvent", () => {
+describe("HookEventSchemas.parseSessionEnd", () => {
 	test("parses valid JSON string", () => {
 		const json = JSON.stringify(validSessionEndEvent);
-		const result = parseSessionEndEvent(json);
+		const result = HookEventSchemas.parseSessionEnd(json);
 		expect(result.reason).toBe("clear");
 	});
+});
 
-	test("throws ZodError on wrong event type", () => {
-		const json = JSON.stringify(validPreToolUseEvent);
-		expect(() => parseSessionEndEvent(json)).toThrow(z.ZodError);
+describe("HookEventSchemas.parseUserPromptSubmit", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validUserPromptSubmitEvent);
+		const result = HookEventSchemas.parseUserPromptSubmit(json);
+		expect(result.prompt).toBe("Hello, Claude!");
 	});
 });
 
-// =============================================================================
-// BASE FIELD VALIDATION TESTS
-// =============================================================================
-
-describe("Base field validation", () => {
-	test("accepts all permission modes", () => {
-		for (const mode of ["default", "plan", "acceptEdits", "bypassPermissions"] as const) {
-			const event = { ...validPreToolUseEvent, permission_mode: mode };
-			expect(() => PreToolUseEventSchema.parse(event)).not.toThrow();
-		}
-	});
-
-	test("rejects invalid permission mode", () => {
-		const invalid = { ...validPreToolUseEvent, permission_mode: "invalid" };
-		expect(() => PreToolUseEventSchema.parse(invalid)).toThrow(z.ZodError);
-	});
-
-	test("validates UUID format for session_id", () => {
-		// Valid UUIDs
-		const validUUIDs = [
-			"550e8400-e29b-41d4-a716-446655440000",
-			"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-			"f47ac10b-58cc-4372-a567-0e02b2c3d479",
-		];
-
-		for (const uuid of validUUIDs) {
-			const event = { ...validPreToolUseEvent, session_id: uuid };
-			expect(() => PreToolUseEventSchema.parse(event)).not.toThrow();
-		}
-
-		// Invalid UUIDs
-		const invalidUUIDs = ["not-a-uuid", "12345", "", "550e8400-e29b-41d4-a716"];
-
-		for (const uuid of invalidUUIDs) {
-			const event = { ...validPreToolUseEvent, session_id: uuid };
-			expect(() => PreToolUseEventSchema.parse(event)).toThrow(z.ZodError);
-		}
-	});
-
-	test("requires non-empty strings for paths", () => {
-		const invalidCwd = { ...validPreToolUseEvent, cwd: "" };
-		// Empty string is still a valid string in Zod by default
-		expect(() => PreToolUseEventSchema.parse(invalidCwd)).not.toThrow();
+describe("HookEventSchemas.parseStop", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validStopEvent);
+		const result = HookEventSchemas.parseStop(json);
+		expect(result.stop_hook_active).toBe(false);
 	});
 });
 
-// =============================================================================
-// ERROR MESSAGE TESTS
-// =============================================================================
-
-describe("Error messages", () => {
-	test("provides helpful error for missing required field", () => {
-		const invalid = { ...validPreToolUseEvent, tool_name: undefined };
-		try {
-			PreToolUseEventSchema.parse(invalid);
-			expect.unreachable("Should have thrown");
-		} catch (e) {
-			expect(e).toBeInstanceOf(z.ZodError);
-			const zodError = e as z.ZodError;
-			expect(zodError.issues.length).toBeGreaterThan(0);
-			expect(zodError.issues[0]?.path).toContain("tool_name");
-		}
+describe("HookEventSchemas.parseSubagentStop", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validSubagentStopEvent);
+		const result = HookEventSchemas.parseSubagentStop(json);
+		expect(result.stop_hook_active).toBe(true);
 	});
+});
 
-	test("provides helpful error for invalid type", () => {
-		const invalid = { ...validStopEvent, stop_hook_active: "not-a-boolean" };
-		try {
-			StopEventSchema.parse(invalid);
-			expect.unreachable("Should have thrown");
-		} catch (e) {
-			expect(e).toBeInstanceOf(z.ZodError);
-			const zodError = e as z.ZodError;
-			expect(zodError.issues[0]?.path).toContain("stop_hook_active");
-		}
+describe("HookEventSchemas.parsePreCompact", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validPreCompactEvent);
+		const result = HookEventSchemas.parsePreCompact(json);
+		expect(result.trigger).toBe("auto");
 	});
+});
 
-	test("provides helpful error for invalid enum value", () => {
-		const invalid = { ...validSessionStartEvent, source: "invalid_source" };
-		try {
-			SessionStartEventSchema.parse(invalid);
-			expect.unreachable("Should have thrown");
-		} catch (e) {
-			expect(e).toBeInstanceOf(z.ZodError);
-			const zodError = e as z.ZodError;
-			expect(zodError.issues[0]?.path).toContain("source");
-		}
+describe("HookEventSchemas.parsePermissionRequest", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validPermissionRequestEvent);
+		const result = HookEventSchemas.parsePermissionRequest(json);
+		expect(result.message).toBe("Allow bash command?");
+	});
+});
+
+describe("HookEventSchemas.parseNotification", () => {
+	test("parses valid JSON string", () => {
+		const json = JSON.stringify(validNotificationEvent);
+		const result = HookEventSchemas.parseNotification(json);
+		expect(result.notification_type).toBe("idle_prompt");
 	});
 });

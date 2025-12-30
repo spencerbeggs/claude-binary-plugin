@@ -48,7 +48,7 @@
  */
 
 import { z } from "zod";
-import { HookEventSchema } from "../core/schemas.js";
+import { HookEventSchemas } from "../core/schemas.js";
 import { ClaudeBinaryPluginEnv, formatZodError as formatZodErrorAsMarkdown } from "../env/plugin-env.js";
 import { DebugLogger } from "../utils/debug-logger.js";
 import type { HookEventName } from "./enums.js";
@@ -546,7 +546,7 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 
 		const params = await HookEvent.readInputText(options);
 		if (params) {
-			const parsed = (await parseWithOTEL(params, HookEventSchema, hookName)) as HookEventBase;
+			const parsed = (await parseWithOTEL(params, HookEventSchemas.Any, hookName)) as HookEventBase;
 			const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 			// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 			const env = (await (options.envClass as any).forContext("hook", {

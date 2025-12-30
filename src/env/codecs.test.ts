@@ -4,177 +4,243 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import {
-	boolEnvCodec,
-	enumEnvCodec,
-	floatEnvCodec,
-	intEnvCodec,
-	jsonArrayEnvCodec,
-	nullableEnvCodec,
-	optionalBoolEnvCodec,
-	optionalIntEnvCodec,
-	optionalNullableEnvCodec,
-} from "./codecs.js";
+import { EnvCodecs, envCodecRegistry } from "./codecs.js";
 
-describe("boolEnvCodec", () => {
+// =============================================================================
+// ENV CODECS NAMESPACE TESTS
+// =============================================================================
+
+describe("EnvCodecs namespace", () => {
+	test("exposes registry with metadata", () => {
+		expect(EnvCodecs.registry).toBeDefined();
+		expect(EnvCodecs.registry).toBe(envCodecRegistry);
+	});
+
+	test("bool codec has registry metadata", () => {
+		const meta = EnvCodecs.registry.get(EnvCodecs.bool);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("boolean");
+		expect(meta?.example).toEqual({ input: "true", output: true });
+	});
+
+	test("int codec has registry metadata", () => {
+		const meta = EnvCodecs.registry.get(EnvCodecs.int);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("Integer");
+		expect(meta?.example).toEqual({ input: "42", output: 42 });
+	});
+
+	test("float codec has registry metadata", () => {
+		const meta = EnvCodecs.registry.get(EnvCodecs.float);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("Float");
+		expect(meta?.example).toEqual({ input: "3.14", output: 3.14 });
+	});
+
+	test("nullable codec has registry metadata", () => {
+		const meta = EnvCodecs.registry.get(EnvCodecs.nullable);
+		expect(meta).toBeDefined();
+		expect(meta?.description).toContain("Nullable");
+	});
+
+	test("can use EnvCodecs in z.object schema", () => {
+		const schema = z.object({
+			DEBUG: EnvCodecs.bool,
+			PORT: EnvCodecs.optionalInt,
+			LOG_LEVEL: EnvCodecs.enum(["debug", "info", "warn"], "info"),
+		});
+
+		const result = schema.parse({
+			DEBUG: "true",
+			PORT: "3000",
+			LOG_LEVEL: "debug",
+		});
+
+		expect(result.DEBUG).toBe(true);
+		expect(result.PORT).toBe(3000);
+		expect(result.LOG_LEVEL).toBe("debug");
+	});
+});
+
+// =============================================================================
+// BOOL CODEC TESTS
+// =============================================================================
+
+describe("EnvCodecs.bool", () => {
 	test("decodes 'true' to true", () => {
-		expect(boolEnvCodec.decode("true")).toBe(true);
+		expect(EnvCodecs.bool.decode("true")).toBe(true);
 	});
 
 	test("decodes 'false' to false", () => {
-		expect(boolEnvCodec.decode("false")).toBe(false);
+		expect(EnvCodecs.bool.decode("false")).toBe(false);
 	});
 
 	test("encodes true to 'true'", () => {
-		expect(boolEnvCodec.encode(true)).toBe("true");
+		expect(EnvCodecs.bool.encode(true)).toBe("true");
 	});
 
 	test("encodes false to 'false'", () => {
-		expect(boolEnvCodec.encode(false)).toBe("false");
+		expect(EnvCodecs.bool.encode(false)).toBe("false");
 	});
 
 	test("parse validates input", () => {
-		expect(boolEnvCodec.parse("true")).toBe(true);
-		expect(boolEnvCodec.parse("false")).toBe(false);
+		expect(EnvCodecs.bool.parse("true")).toBe(true);
+		expect(EnvCodecs.bool.parse("false")).toBe(false);
 	});
 
 	test("parse rejects invalid input", () => {
-		expect(() => boolEnvCodec.parse("yes")).toThrow();
-		expect(() => boolEnvCodec.parse("1")).toThrow();
+		expect(() => EnvCodecs.bool.parse("yes")).toThrow();
+		expect(() => EnvCodecs.bool.parse("1")).toThrow();
 	});
 
 	test("roundtrip preserves value", () => {
-		expect(boolEnvCodec.decode(boolEnvCodec.encode(true))).toBe(true);
-		expect(boolEnvCodec.decode(boolEnvCodec.encode(false))).toBe(false);
+		expect(EnvCodecs.bool.decode(EnvCodecs.bool.encode(true))).toBe(true);
+		expect(EnvCodecs.bool.decode(EnvCodecs.bool.encode(false))).toBe(false);
 	});
 });
 
-describe("optionalBoolEnvCodec", () => {
+describe("EnvCodecs.optionalBool", () => {
 	test("decodes empty string to false", () => {
-		expect(optionalBoolEnvCodec.decode("")).toBe(false);
+		expect(EnvCodecs.optionalBool.decode("")).toBe(false);
 	});
 
 	test("decodes 'true' to true", () => {
-		expect(optionalBoolEnvCodec.decode("true")).toBe(true);
+		expect(EnvCodecs.optionalBool.decode("true")).toBe(true);
 	});
 
 	test("decodes 'false' to false", () => {
-		expect(optionalBoolEnvCodec.decode("false")).toBe(false);
+		expect(EnvCodecs.optionalBool.decode("false")).toBe(false);
 	});
 
 	test("encodes true to 'true'", () => {
-		expect(optionalBoolEnvCodec.encode(true)).toBe("true");
+		expect(EnvCodecs.optionalBool.encode(true)).toBe("true");
 	});
 
 	test("encodes false to 'false'", () => {
-		expect(optionalBoolEnvCodec.encode(false)).toBe("false");
+		expect(EnvCodecs.optionalBool.encode(false)).toBe("false");
 	});
 });
 
-describe("nullableEnvCodec", () => {
+// =============================================================================
+// NULLABLE CODEC TESTS
+// =============================================================================
+
+describe("EnvCodecs.nullable", () => {
 	test("decodes empty string to null", () => {
-		expect(nullableEnvCodec.decode("")).toBe(null);
+		expect(EnvCodecs.nullable.decode("")).toBe(null);
 	});
 
 	test("decodes non-empty string to string", () => {
-		expect(nullableEnvCodec.decode("/path/to/file")).toBe("/path/to/file");
+		expect(EnvCodecs.nullable.decode("/path/to/file")).toBe("/path/to/file");
 	});
 
 	test("encodes null to empty string", () => {
-		expect(nullableEnvCodec.encode(null)).toBe("");
+		expect(EnvCodecs.nullable.encode(null)).toBe("");
 	});
 
 	test("encodes string to string", () => {
-		expect(nullableEnvCodec.encode("/path/to/file")).toBe("/path/to/file");
+		expect(EnvCodecs.nullable.encode("/path/to/file")).toBe("/path/to/file");
 	});
 
 	test("roundtrip preserves null", () => {
-		expect(nullableEnvCodec.decode(nullableEnvCodec.encode(null))).toBe(null);
+		expect(EnvCodecs.nullable.decode(EnvCodecs.nullable.encode(null))).toBe(null);
 	});
 
 	test("roundtrip preserves string", () => {
 		const value = "/some/path";
-		expect(nullableEnvCodec.decode(nullableEnvCodec.encode(value))).toBe(value);
+		expect(EnvCodecs.nullable.decode(EnvCodecs.nullable.encode(value))).toBe(value);
 	});
 });
 
-describe("optionalNullableEnvCodec", () => {
+describe("EnvCodecs.optionalNullable", () => {
 	test("decodes empty string to null", () => {
-		expect(optionalNullableEnvCodec.decode("")).toBe(null);
+		expect(EnvCodecs.optionalNullable.decode("")).toBe(null);
 	});
 
 	test("decodes non-empty string to string", () => {
-		expect(optionalNullableEnvCodec.decode("/path/to/file")).toBe("/path/to/file");
+		expect(EnvCodecs.optionalNullable.decode("/path/to/file")).toBe("/path/to/file");
 	});
 
 	test("encodes null to empty string", () => {
-		expect(optionalNullableEnvCodec.encode(null)).toBe("");
+		expect(EnvCodecs.optionalNullable.encode(null)).toBe("");
 	});
 });
 
-describe("intEnvCodec", () => {
+// =============================================================================
+// INT CODEC TESTS
+// =============================================================================
+
+describe("EnvCodecs.int", () => {
 	test("decodes numeric string to integer", () => {
-		expect(intEnvCodec.decode("42")).toBe(42);
-		expect(intEnvCodec.decode("0")).toBe(0);
-		expect(intEnvCodec.decode("-10")).toBe(-10);
+		expect(EnvCodecs.int.decode("42")).toBe(42);
+		expect(EnvCodecs.int.decode("0")).toBe(0);
+		expect(EnvCodecs.int.decode("-10")).toBe(-10);
 	});
 
 	test("decodes invalid string to 0", () => {
-		expect(intEnvCodec.decode("")).toBe(0);
-		expect(intEnvCodec.decode("abc")).toBe(0);
+		expect(EnvCodecs.int.decode("")).toBe(0);
+		expect(EnvCodecs.int.decode("abc")).toBe(0);
 	});
 
 	test("encodes integer to string", () => {
-		expect(intEnvCodec.encode(42)).toBe("42");
-		expect(intEnvCodec.encode(0)).toBe("0");
-		expect(intEnvCodec.encode(-10)).toBe("-10");
+		expect(EnvCodecs.int.encode(42)).toBe("42");
+		expect(EnvCodecs.int.encode(0)).toBe("0");
+		expect(EnvCodecs.int.encode(-10)).toBe("-10");
 	});
 
 	test("roundtrip preserves integer", () => {
-		expect(intEnvCodec.decode(intEnvCodec.encode(42))).toBe(42);
-		expect(intEnvCodec.decode(intEnvCodec.encode(0))).toBe(0);
+		expect(EnvCodecs.int.decode(EnvCodecs.int.encode(42))).toBe(42);
+		expect(EnvCodecs.int.decode(EnvCodecs.int.encode(0))).toBe(0);
 	});
 });
 
-describe("optionalIntEnvCodec", () => {
+describe("EnvCodecs.optionalInt", () => {
 	test("decodes empty string to 0", () => {
-		expect(optionalIntEnvCodec.decode("")).toBe(0);
+		expect(EnvCodecs.optionalInt.decode("")).toBe(0);
 	});
 
 	test("decodes numeric string to integer", () => {
-		expect(optionalIntEnvCodec.decode("42")).toBe(42);
+		expect(EnvCodecs.optionalInt.decode("42")).toBe(42);
 	});
 
 	test("encodes integer to string", () => {
-		expect(optionalIntEnvCodec.encode(0)).toBe("0");
-		expect(optionalIntEnvCodec.encode(42)).toBe("42");
+		expect(EnvCodecs.optionalInt.encode(0)).toBe("0");
+		expect(EnvCodecs.optionalInt.encode(42)).toBe("42");
 	});
 });
 
-describe("floatEnvCodec", () => {
+// =============================================================================
+// FLOAT CODEC TESTS
+// =============================================================================
+
+describe("EnvCodecs.float", () => {
 	test("decodes numeric string to float", () => {
-		expect(floatEnvCodec.decode("3.14")).toBeCloseTo(3.14);
-		expect(floatEnvCodec.decode("0.5")).toBeCloseTo(0.5);
-		expect(floatEnvCodec.decode("42")).toBe(42);
+		expect(EnvCodecs.float.decode("3.14")).toBeCloseTo(3.14);
+		expect(EnvCodecs.float.decode("0.5")).toBeCloseTo(0.5);
+		expect(EnvCodecs.float.decode("42")).toBe(42);
 	});
 
 	test("decodes invalid string to 0", () => {
-		expect(floatEnvCodec.decode("")).toBe(0);
-		expect(floatEnvCodec.decode("abc")).toBe(0);
+		expect(EnvCodecs.float.decode("")).toBe(0);
+		expect(EnvCodecs.float.decode("abc")).toBe(0);
 	});
 
 	test("encodes float to string", () => {
-		expect(floatEnvCodec.encode(3.14)).toBe("3.14");
-		expect(floatEnvCodec.encode(0.5)).toBe("0.5");
+		expect(EnvCodecs.float.encode(3.14)).toBe("3.14");
+		expect(EnvCodecs.float.encode(0.5)).toBe("0.5");
 	});
 
 	test("roundtrip preserves float", () => {
-		expect(floatEnvCodec.decode(floatEnvCodec.encode(3.14))).toBeCloseTo(3.14);
+		expect(EnvCodecs.float.decode(EnvCodecs.float.encode(3.14))).toBeCloseTo(3.14);
 	});
 });
 
-describe("enumEnvCodec", () => {
-	const testRunnerCodec = enumEnvCodec(["vitest", "bun", "jest", "none"], "none");
+// =============================================================================
+// ENUM CODEC TESTS
+// =============================================================================
+
+describe("EnvCodecs.enum", () => {
+	const testRunnerCodec = EnvCodecs.enum(["vitest", "bun", "jest", "none"], "none");
 
 	test("decodes empty string to default", () => {
 		expect(testRunnerCodec.decode("")).toBe("none");
@@ -199,12 +265,16 @@ describe("enumEnvCodec", () => {
 	});
 });
 
-describe("jsonArrayEnvCodec", () => {
+// =============================================================================
+// JSON ARRAY CODEC TESTS
+// =============================================================================
+
+describe("EnvCodecs.jsonArray", () => {
 	const itemSchema = z.object({
 		name: z.string(),
 		version: z.string(),
 	});
-	const packagesCodec = jsonArrayEnvCodec(itemSchema);
+	const packagesCodec = EnvCodecs.jsonArray(itemSchema);
 
 	test("decodes empty string to empty array", () => {
 		expect(packagesCodec.decode("")).toEqual([]);

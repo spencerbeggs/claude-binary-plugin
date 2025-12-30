@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { SessionRegistry, closeDb } from "./session-registry.js";
+import { SessionRegistry } from "./session-registry.js";
 
 describe("SessionRegistry", () => {
 	const testDbPath = join(Bun.env.HOME || "", ".claude", "plugins", "sessions.db");
 
 	beforeEach(() => {
-		// Close any existing connection
-		closeDb();
+		// Close any existing connection (use SessionRegistry.close())
+		SessionRegistry.close();
 		// Remove test database if it exists
 		if (existsSync(testDbPath)) {
 			rmSync(testDbPath, { force: true });
@@ -23,7 +23,26 @@ describe("SessionRegistry", () => {
 	});
 
 	afterEach(() => {
-		closeDb();
+		SessionRegistry.close();
+	});
+
+	describe("close", () => {
+		test("SessionRegistry.close() works like closeDb", () => {
+			// Register a session to ensure DB is open
+			SessionRegistry.register({
+				sessionId: "close-test",
+				projectDir: "/test/project",
+				sessionEnvDir: "/home/user/.claude/session-env/close-test",
+			});
+			expect(SessionRegistry.count()).toBe(1);
+
+			// Close the database
+			SessionRegistry.close();
+
+			// Verify we can still reopen and use (count will be 0 because DB was reset)
+			// Actually, closing just closes the connection, not deletes the file
+			expect(SessionRegistry.count()).toBe(1);
+		});
 	});
 
 	describe("register", () => {

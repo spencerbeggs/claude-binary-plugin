@@ -11,218 +11,203 @@
  * Codecs are built using Zod v4's `z.codec()` function, which provides
  * bidirectional validation and transformation.
  *
+ * **Using EnvCodecs (Recommended):**
+ *
+ * The `EnvCodecs` namespace provides all codecs with registry metadata:
+ *
+ * ```typescript
+ * import { EnvCodecs } from "claude-binary-plugin";
+ * import { z } from "zod";
+ *
+ * const schema = z.object({
+ *   DEBUG: EnvCodecs.bool,
+ *   PORT: EnvCodecs.optionalInt,
+ *   LOG_LEVEL: EnvCodecs.enum(["debug", "info", "warn"], "info"),
+ * });
+ * ```
+ *
  * **Available Codecs:**
  *
  * | Codec | Input | Output | Notes |
  * |-------|-------|--------|-------|
- * | {@link boolEnvCodec} | `"true"\|"false"` | `boolean` | Strict boolean |
- * | {@link optionalBoolEnvCodec} | `string?` | `boolean` | Default `false` |
- * | {@link nullableEnvCodec} | `string` | `string\|null` | Empty → null |
- * | {@link optionalNullableEnvCodec} | `string?` | `string\|null` | Missing → null |
- * | {@link intEnvCodec} | `string` | `number` | Integer parsing |
- * | {@link optionalIntEnvCodec} | `string?` | `number` | Default `0` |
- * | {@link floatEnvCodec} | `string` | `number` | Float parsing |
+ * | `EnvCodecs.bool` | `"true"\|"false"` | `boolean` | Strict boolean |
+ * | `EnvCodecs.optionalBool` | `string?` | `boolean` | Default `false` |
+ * | `EnvCodecs.nullable` | `string` | `string\|null` | Empty → null |
+ * | `EnvCodecs.optionalNullable` | `string?` | `string\|null` | Missing → null |
+ * | `EnvCodecs.int` | `string` | `number` | Integer parsing |
+ * | `EnvCodecs.optionalInt` | `string?` | `number` | Default `0` |
+ * | `EnvCodecs.float` | `string` | `number` | Float parsing |
  *
  * **Codec Factories:**
  *
- * - {@link enumEnvCodec} - Create enum codecs with default values
- * - {@link jsonArrayEnvCodec} - Create JSON array codecs for complex data
+ * - `EnvCodecs.enum()` - Create enum codecs with default values
+ * - `EnvCodecs.jsonArray()` - Create JSON array codecs for complex data
  *
- * @example
+ * **Registry Access:**
+ *
+ * Access the registry for metadata or JSON Schema generation:
+ *
  * ```typescript
- * import { boolEnvCodec, enumEnvCodec } from "claude-binary-plugin/env";
- * import { z } from "zod";
- *
- * const schema = z.object({
- *   DEBUG: boolEnvCodec,
- *   LOG_LEVEL: enumEnvCodec(["debug", "info", "warn", "error"], "info"),
- * });
- *
- * const config = schema.parse({ DEBUG: "true", LOG_LEVEL: "debug" });
- * // config.DEBUG === true
- * // config.LOG_LEVEL === "debug"
+ * const metadata = EnvCodecs.registry.get(EnvCodecs.bool);
+ * // → { description: "Strict boolean codec...", example: { input: "true", output: true } }
  * ```
  *
  * @see {@link https://zod.dev | Zod Documentation}
+ * @see {@link https://zod.dev/metadata | Zod Registries}
  * @see {@link ClaudeBinaryPluginEnv} - Uses codecs for environment validation
  * @module
  */
 
 import { z } from "zod";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Boolean Codec
-// ─────────────────────────────────────────────────────────────────────────────
+// =============================================================================
+// CODEC REGISTRY
+// =============================================================================
 
 /**
- * Codec for boolean environment variables.
+ * Metadata structure for environment codecs.
  *
  * @remarks
- * Strictly parses `"true"` or `"false"` strings. For optional booleans
- * with a default, use {@link optionalBoolEnvCodec}.
+ * This metadata is attached to codecs via the Zod v4 registry system,
+ * enabling documentation generation and introspection.
+ *
+ * @public
+ */
+export interface EnvCodecMetadata {
+	/** Human-readable description of the codec behavior */
+	description: string;
+	/** Example showing input/output transformation */
+	example?: { input: string; output: unknown };
+}
+
+/**
+ * Registry for environment codec metadata.
+ *
+ * @remarks
+ * This registry stores metadata for all built-in codecs. Users can access
+ * this registry to generate documentation or extend with custom codecs.
  *
  * @example
  * ```typescript
- * boolEnvCodec.decode("true")  // → true
- * boolEnvCodec.encode(false)   // → "false"
+ * // Get metadata for a codec
+ * const meta = envCodecRegistry.get(EnvCodecs.bool);
+ * console.log(meta.description);
+ *
+ * // Register a custom codec
+ * const myCodec = z.codec(...).register(envCodecRegistry, {
+ *   description: "My custom codec",
+ * });
  * ```
  *
- * @see {@link optionalBoolEnvCodec} - For optional booleans with default false
  * @public
  */
-export const boolEnvCodec = z.codec(z.enum(["true", "false"]), z.boolean(), {
-	decode: (str) => str === "true",
-	encode: (bool) => (bool ? "true" : "false"),
-});
+export const envCodecRegistry = z.registry<EnvCodecMetadata>();
+
+// =============================================================================
+// CODEC DEFINITIONS
+// =============================================================================
 
 /**
- * Codec for optional boolean environment variables with default false.
- *
- * @remarks
- * Empty strings, undefined, or missing values decode to `false`.
- * Useful for optional feature flags that default to disabled.
- *
- * @example
- * ```typescript
- * optionalBoolEnvCodec.decode("")         // → false
- * optionalBoolEnvCodec.decode(undefined)  // → false
- * optionalBoolEnvCodec.decode("true")     // → true
- * optionalBoolEnvCodec.encode(false)      // → "false"
- * ```
- *
- * @see {@link boolEnvCodec} - For required booleans
- * @public
+ * Strict boolean codec: "true" | "false" → boolean
+ * @internal
  */
-export const optionalBoolEnvCodec = z.codec(z.string().optional().default(""), z.boolean(), {
-	decode: (str) => str === "true",
-	encode: (bool) => (bool ? "true" : "false"),
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Nullable String Codec
-// ─────────────────────────────────────────────────────────────────────────────
+const _boolCodec = z
+	.codec(z.enum(["true", "false"]), z.boolean(), {
+		decode: (str) => str === "true",
+		encode: (bool) => (bool ? "true" : "false"),
+	})
+	.register(envCodecRegistry, {
+		description: 'Strict boolean codec. Only accepts "true" or "false" strings.',
+		example: { input: "true", output: true },
+	});
 
 /**
- * Codec for nullable string environment variables.
- *
- * @remarks
- * Empty strings decode to `null`, and `null` encodes to empty string.
- * Useful for optional paths or identifiers that may not be set.
- *
- * @example
- * ```typescript
- * nullableEnvCodec.decode("")           // → null
- * nullableEnvCodec.decode("/path/file") // → "/path/file"
- * nullableEnvCodec.encode(null)         // → ""
- * ```
- *
- * @see {@link optionalNullableEnvCodec} - For missing/undefined handling
- * @public
+ * Optional boolean codec with false default
+ * @internal
  */
-export const nullableEnvCodec = z.codec(z.string(), z.string().nullable(), {
-	decode: (str) => (str === "" ? null : str),
-	encode: (val) => val ?? "",
-});
+const _optionalBoolCodec = z
+	.codec(z.string().optional().default(""), z.boolean(), {
+		decode: (str) => str === "true",
+		encode: (bool) => (bool ? "true" : "false"),
+	})
+	.register(envCodecRegistry, {
+		description: "Optional boolean codec. Empty/missing values decode to false.",
+		example: { input: "", output: false },
+	});
 
 /**
- * Codec for optional nullable string environment variables.
- *
- * @remarks
- * Missing, undefined, or empty strings decode to `null`.
- * Useful for optional configuration that may be completely absent.
- *
- * @example
- * ```typescript
- * optionalNullableEnvCodec.decode("")           // → null
- * optionalNullableEnvCodec.decode(undefined)    // → null (via empty string default)
- * optionalNullableEnvCodec.decode("/path/file") // → "/path/file"
- * optionalNullableEnvCodec.encode(null)         // → ""
- * ```
- *
- * @see {@link nullableEnvCodec} - For required but nullable strings
- * @public
+ * Nullable string codec: "" → null
+ * @internal
  */
-export const optionalNullableEnvCodec = z.codec(z.string().optional().default(""), z.string().nullable(), {
-	decode: (str) => (str === "" || str === undefined ? null : str),
-	encode: (val) => val ?? "",
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Integer Codec
-// ─────────────────────────────────────────────────────────────────────────────
+const _nullableCodec = z
+	.codec(z.string(), z.string().nullable(), {
+		decode: (str) => (str === "" ? null : str),
+		encode: (val) => val ?? "",
+	})
+	.register(envCodecRegistry, {
+		description: "Nullable string codec. Empty strings decode to null.",
+		example: { input: "", output: null },
+	});
 
 /**
- * Codec for integer environment variables.
- *
- * @remarks
- * Parses strings as base-10 integers. Invalid values fallback to `0`.
- *
- * @example
- * ```typescript
- * intEnvCodec.decode("42")    // → 42
- * intEnvCodec.decode("abc")   // → 0 (fallback)
- * intEnvCodec.encode(42)      // → "42"
- * ```
- *
- * @see {@link optionalIntEnvCodec} - For optional integers with default 0
- * @see {@link floatEnvCodec} - For floating-point numbers
- * @public
+ * Optional nullable string codec
+ * @internal
  */
-export const intEnvCodec = z.codec(z.string(), z.number().int(), {
-	decode: (str) => Number.parseInt(str, 10) || 0,
-	encode: (num) => num.toString(),
-});
+const _optionalNullableCodec = z
+	.codec(z.string().optional().default(""), z.string().nullable(), {
+		decode: (str) => (str === "" || str === undefined ? null : str),
+		encode: (val) => val ?? "",
+	})
+	.register(envCodecRegistry, {
+		description: "Optional nullable string codec. Empty/missing values decode to null.",
+		example: { input: "", output: null },
+	});
 
 /**
- * Codec for optional integer environment variables with default 0.
- *
- * @remarks
- * Missing, undefined, or empty strings decode to `0`.
- * Useful for optional numeric configuration with sensible defaults.
- *
- * @example
- * ```typescript
- * optionalIntEnvCodec.decode("")         // → 0
- * optionalIntEnvCodec.decode(undefined)  // → 0 (via empty string default)
- * optionalIntEnvCodec.decode("42")       // → 42
- * optionalIntEnvCodec.encode(0)          // → "0"
- * ```
- *
- * @see {@link intEnvCodec} - For required integers
- * @public
+ * Integer codec with 0 fallback
+ * @internal
  */
-export const optionalIntEnvCodec = z.codec(z.string().optional().default(""), z.number().int(), {
-	decode: (str) => (str === "" || str === undefined ? 0 : Number.parseInt(str, 10) || 0),
-	encode: (num) => num.toString(),
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Float Codec
-// ─────────────────────────────────────────────────────────────────────────────
+const _intCodec = z
+	.codec(z.string(), z.number().int(), {
+		decode: (str) => Number.parseInt(str, 10) || 0,
+		encode: (num) => num.toString(),
+	})
+	.register(envCodecRegistry, {
+		description: "Integer codec. Parses base-10 integers, invalid values fallback to 0.",
+		example: { input: "42", output: 42 },
+	});
 
 /**
- * Codec for float environment variables.
- *
- * @remarks
- * Parses strings as floating-point numbers. Invalid values fallback to `0`.
- *
- * @example
- * ```typescript
- * floatEnvCodec.decode("3.14")  // → 3.14
- * floatEnvCodec.encode(3.14)    // → "3.14"
- * ```
- *
- * @see {@link intEnvCodec} - For integer numbers
- * @public
+ * Optional integer codec with 0 default
+ * @internal
  */
-export const floatEnvCodec = z.codec(z.string(), z.number(), {
-	decode: (str) => Number.parseFloat(str) || 0,
-	encode: (num) => num.toString(),
-});
+const _optionalIntCodec = z
+	.codec(z.string().optional().default(""), z.number().int(), {
+		decode: (str) => (str === "" || str === undefined ? 0 : Number.parseInt(str, 10) || 0),
+		encode: (num) => num.toString(),
+	})
+	.register(envCodecRegistry, {
+		description: "Optional integer codec. Empty/missing values decode to 0.",
+		example: { input: "", output: 0 },
+	});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Enum with Default Codec Factory
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Float codec with 0 fallback
+ * @internal
+ */
+const _floatCodec = z
+	.codec(z.string(), z.number(), {
+		decode: (str) => Number.parseFloat(str) || 0,
+		encode: (num) => num.toString(),
+	})
+	.register(envCodecRegistry, {
+		description: "Float codec. Parses floating-point numbers, invalid values fallback to 0.",
+		example: { input: "3.14", output: 3.14 },
+	});
+
+// =============================================================================
+// CODEC FACTORY FUNCTIONS
+// =============================================================================
 
 /**
  * Creates a codec for enum environment variables with a default value.
@@ -238,32 +223,27 @@ export const floatEnvCodec = z.codec(z.string(), z.number(), {
  *
  * @example
  * ```typescript
- * const testRunnerCodec = enumEnvCodec(["vitest", "bun", "jest", "none"], "none");
- * testRunnerCodec.decode("")       // → "none"
- * testRunnerCodec.decode("vitest") // → "vitest"
- * testRunnerCodec.encode("bun")    // → "bun"
+ * const logLevelCodec = EnvCodecs.enum(["debug", "info", "warn", "error"], "info");
+ * logLevelCodec.decode("")       // → "info"
+ * logLevelCodec.decode("debug")  // → "debug"
+ * logLevelCodec.encode("warn")   // → "warn"
  * ```
  *
  * @public
  */
-export function enumEnvCodec<T extends readonly [string, ...string[]]>(values: T, defaultValue: T[number]) {
+function createEnumCodec<T extends readonly [string, ...string[]]>(values: T, defaultValue: T[number]) {
 	const enumSchema = z.enum(values);
 	type EnumType = z.infer<typeof enumSchema>;
 
 	return z.codec(z.string(), enumSchema, {
 		decode: (str): EnumType => {
 			if (str === "" || str === undefined) return defaultValue as EnumType;
-			// Validate it's a valid enum value, fallback to default if not
 			const result = enumSchema.safeParse(str);
 			return result.success ? result.data : (defaultValue as EnumType);
 		},
 		encode: (val) => val,
 	});
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// JSON Array Codec Factory
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Creates a codec for JSON-serialized arrays in environment variables.
@@ -279,20 +259,17 @@ export function enumEnvCodec<T extends readonly [string, ...string[]]>(values: T
  *
  * @example
  * ```typescript
- * const workspacePackageSchema = z.object({
- *   name: z.string(),
- *   version: z.string(),
- * });
- * const packagesCodec = jsonArrayEnvCodec(workspacePackageSchema);
- * packagesCodec.decode('[]')                           // → []
- * packagesCodec.decode(undefined)                      // → []
+ * const packageSchema = z.object({ name: z.string(), version: z.string() });
+ * const packagesCodec = EnvCodecs.jsonArray(packageSchema);
+ *
+ * packagesCodec.decode('[]')                              // → []
  * packagesCodec.decode('[{"name":"foo","version":"1.0"}]') // → [{name: "foo", version: "1.0"}]
  * packagesCodec.encode([{name: "foo", version: "1.0"}])    // → '[{"name":"foo","version":"1.0"}]'
  * ```
  *
  * @public
  */
-export function jsonArrayEnvCodec<T extends z.ZodType>(itemSchema: T) {
+function createJsonArrayCodec<T extends z.ZodType>(itemSchema: T) {
 	const arraySchema = z.array(itemSchema);
 	type ArrayType = z.input<typeof arraySchema>;
 
@@ -310,3 +287,200 @@ export function jsonArrayEnvCodec<T extends z.ZodType>(itemSchema: T) {
 		encode: (arr) => JSON.stringify(arr),
 	});
 }
+
+// =============================================================================
+// ENV CODECS NAMESPACE
+// =============================================================================
+
+/**
+ * Unified namespace for all environment variable codecs.
+ *
+ * @remarks
+ * `EnvCodecs` provides a class-first API for environment variable serialization
+ * with Zod v4 registry integration. All codecs are registered with metadata
+ * enabling documentation generation and introspection.
+ *
+ * **Available Codecs:**
+ *
+ * | Property | Description |
+ * |----------|-------------|
+ * | `bool` | Strict boolean: `"true"` \| `"false"` → `boolean` |
+ * | `optionalBool` | Optional boolean with `false` default |
+ * | `nullable` | Nullable string: `""` → `null` |
+ * | `optionalNullable` | Optional nullable with `null` default |
+ * | `int` | Integer parsing with `0` fallback |
+ * | `optionalInt` | Optional integer with `0` default |
+ * | `float` | Float parsing with `0` fallback |
+ *
+ * **Factory Methods:**
+ *
+ * | Method | Description |
+ * |--------|-------------|
+ * | `enum(values, default)` | Create enum codec with default value |
+ * | `jsonArray(schema)` | Create JSON array codec for complex data |
+ *
+ * @example
+ * ```typescript
+ * import { EnvCodecs } from "claude-binary-plugin";
+ * import { z } from "zod";
+ *
+ * // Define a schema using codecs
+ * const schema = z.object({
+ *   DEBUG: EnvCodecs.bool,
+ *   PORT: EnvCodecs.optionalInt,
+ *   LOG_LEVEL: EnvCodecs.enum(["debug", "info", "warn"], "info"),
+ *   PACKAGES: EnvCodecs.jsonArray(z.object({ name: z.string() })),
+ * });
+ *
+ * // Access registry for metadata
+ * const meta = EnvCodecs.registry.get(EnvCodecs.bool);
+ * console.log(meta.description); // "Strict boolean codec..."
+ * ```
+ *
+ * @see {@link envCodecRegistry} - The underlying Zod registry
+ * @see {@link ClaudeBinaryPluginEnv} - Uses codecs for environment validation
+ * @public
+ */
+export const EnvCodecs = {
+	/**
+	 * The Zod registry containing metadata for all codecs.
+	 *
+	 * @remarks
+	 * Use this registry to access codec metadata or register custom codecs.
+	 *
+	 * @example
+	 * ```typescript
+	 * const meta = EnvCodecs.registry.get(EnvCodecs.bool);
+	 * console.log(meta.description);
+	 * ```
+	 */
+	registry: envCodecRegistry,
+
+	/**
+	 * Strict boolean codec.
+	 *
+	 * @remarks
+	 * Only accepts `"true"` or `"false"` strings. Throws on invalid input.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.bool.decode("true")  // → true
+	 * EnvCodecs.bool.encode(false)   // → "false"
+	 * ```
+	 */
+	bool: _boolCodec,
+
+	/**
+	 * Optional boolean codec with false default.
+	 *
+	 * @remarks
+	 * Empty strings, undefined, or missing values decode to `false`.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.optionalBool.decode("")     // → false
+	 * EnvCodecs.optionalBool.decode("true") // → true
+	 * ```
+	 */
+	optionalBool: _optionalBoolCodec,
+
+	/**
+	 * Nullable string codec.
+	 *
+	 * @remarks
+	 * Empty strings decode to `null`, and `null` encodes to empty string.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.nullable.decode("")           // → null
+	 * EnvCodecs.nullable.decode("/path/file") // → "/path/file"
+	 * ```
+	 */
+	nullable: _nullableCodec,
+
+	/**
+	 * Optional nullable string codec.
+	 *
+	 * @remarks
+	 * Missing, undefined, or empty strings decode to `null`.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.optionalNullable.decode("")           // → null
+	 * EnvCodecs.optionalNullable.decode("/path/file") // → "/path/file"
+	 * ```
+	 */
+	optionalNullable: _optionalNullableCodec,
+
+	/**
+	 * Integer codec with 0 fallback.
+	 *
+	 * @remarks
+	 * Parses strings as base-10 integers. Invalid values fallback to `0`.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.int.decode("42")   // → 42
+	 * EnvCodecs.int.decode("abc")  // → 0
+	 * ```
+	 */
+	int: _intCodec,
+
+	/**
+	 * Optional integer codec with 0 default.
+	 *
+	 * @remarks
+	 * Missing, undefined, or empty strings decode to `0`.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.optionalInt.decode("")   // → 0
+	 * EnvCodecs.optionalInt.decode("42") // → 42
+	 * ```
+	 */
+	optionalInt: _optionalIntCodec,
+
+	/**
+	 * Float codec with 0 fallback.
+	 *
+	 * @remarks
+	 * Parses strings as floating-point numbers. Invalid values fallback to `0`.
+	 *
+	 * @example
+	 * ```typescript
+	 * EnvCodecs.float.decode("3.14") // → 3.14
+	 * EnvCodecs.float.encode(2.5)    // → "2.5"
+	 * ```
+	 */
+	float: _floatCodec,
+
+	/**
+	 * Create an enum codec with a default value.
+	 *
+	 * @param values - The enum values tuple
+	 * @param defaultValue - The default value when env is empty/undefined/invalid
+	 * @returns A Zod codec for the enum type
+	 *
+	 * @example
+	 * ```typescript
+	 * const logLevel = EnvCodecs.enum(["debug", "info", "warn"], "info");
+	 * logLevel.decode("")       // → "info"
+	 * logLevel.decode("debug")  // → "debug"
+	 * ```
+	 */
+	enum: createEnumCodec,
+
+	/**
+	 * Create a JSON array codec for complex data.
+	 *
+	 * @param itemSchema - The Zod schema for validating each array item
+	 * @returns A Zod codec for JSON-serialized arrays
+	 *
+	 * @example
+	 * ```typescript
+	 * const packages = EnvCodecs.jsonArray(z.object({ name: z.string() }));
+	 * packages.decode('[{"name":"foo"}]') // → [{name: "foo"}]
+	 * ```
+	 */
+	jsonArray: createJsonArrayCodec,
+} as const;

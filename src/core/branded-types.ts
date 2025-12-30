@@ -82,8 +82,8 @@ export type Brand<T, B extends string> = T & { readonly __brand: B };
  * directories, config files, or temporary files. This helps prevent
  * accidentally mixing different path types.
  *
- * @see {@link toFilePath} - Create without validation
- * @see {@link parseAbsoluteFilePath} - Create with validation
+ * @see {@link BrandedTypes.toFilePath} - Create without validation
+ * @see {@link BrandedTypes.parseAbsoluteFilePath} - Create with validation
  * @see {@link DirectoryPath} - For directory paths
  * @see {@link ConfigPath} - For configuration files
  * @public
@@ -97,8 +97,8 @@ export type FilePath = Brand<string, "FilePath">;
  * Use for paths that point to directories rather than files.
  * Helps distinguish directory operations from file operations at the type level.
  *
- * @see {@link toDirectoryPath} - Create without validation
- * @see {@link parseAbsoluteDirectoryPath} - Create with validation
+ * @see {@link BrandedTypes.toDirectoryPath} - Create without validation
+ * @see {@link BrandedTypes.parseAbsoluteDirectoryPath} - Create with validation
  * @see {@link FilePath} - For file paths
  * @public
  */
@@ -111,7 +111,7 @@ export type DirectoryPath = Brand<string, "DirectoryPath">;
  * Use for paths to configuration files like `biome.json`, `tsconfig.json`,
  * `.eslintrc`, etc. Distinguishes config files from regular source files.
  *
- * @see {@link toConfigPath} - Create without validation
+ * @see {@link BrandedTypes.toConfigPath} - Create without validation
  * @see {@link FilePath} - For regular file paths
  * @public
  */
@@ -124,7 +124,7 @@ export type ConfigPath = Brand<string, "ConfigPath">;
  * Use for paths in `/tmp` or similar temporary directories. Helps track
  * files that should be cleaned up after use.
  *
- * @see {@link toTempFilePath} - Create without validation
+ * @see {@link BrandedTypes.toTempFilePath} - Create without validation
  * @see {@link FilePath} - For regular file paths
  * @public
  */
@@ -137,7 +137,7 @@ export type TempFilePath = Brand<string, "TempFilePath">;
  * Use for paths to executable files like compilers, linters, or tools.
  * Helps ensure executable paths are validated before use.
  *
- * @see {@link toBinaryPath} - Create without validation
+ * @see {@link BrandedTypes.toBinaryPath} - Create without validation
  * @see {@link FilePath} - For regular file paths
  * @public
  */
@@ -154,7 +154,7 @@ export type BinaryPath = Brand<string, "BinaryPath">;
  * Session IDs uniquely identify a Claude Code conversation session. They are
  * used for correlating events, looking up persisted state, and OTEL telemetry.
  *
- * @see {@link toSessionId} - Create without validation
+ * @see {@link BrandedTypes.toSessionId} - Create without validation
  * @public
  */
 export type SessionId = Brand<string, "SessionId">;
@@ -166,7 +166,7 @@ export type SessionId = Brand<string, "SessionId">;
  * Tool use IDs are assigned by Claude Code to each tool invocation. They enable
  * correlation between PreToolUse and PostToolUse events for the same operation.
  *
- * @see {@link toToolUseId} - Create without validation
+ * @see {@link BrandedTypes.toToolUseId} - Create without validation
  * @public
  */
 export type ToolUseId = Brand<string, "ToolUseId">;
@@ -180,10 +180,10 @@ export type ToolUseId = Brand<string, "ToolUseId">;
  *
  * @remarks
  * Semantic versions follow the semver specification: MAJOR.MINOR.PATCH.
- * Use {@link parseSemanticVersion} for validated parsing.
+ * Use {@link BrandedTypes.parseSemanticVersion} for validated parsing.
  *
- * @see {@link toSemanticVersion} - Create without validation
- * @see {@link parseSemanticVersion} - Create with validation
+ * @see {@link BrandedTypes.toSemanticVersion} - Create without validation
+ * @see {@link BrandedTypes.parseSemanticVersion} - Create with validation
  * @public
  */
 export type SemanticVersion = Brand<string, "SemanticVersion">;
@@ -199,7 +199,7 @@ export type SemanticVersion = Brand<string, "SemanticVersion">;
  * Use for shell commands that have been validated or come from trusted sources.
  * This brand helps track which commands have passed security checks.
  *
- * @see {@link toShellCommand} - Create without validation
+ * @see {@link BrandedTypes.toShellCommand} - Create without validation
  * @see {@link BashToolInput} - Bash tool input interface
  * @see {@link BrandedBashToolInput} - Branded variant using ShellCommand
  * @public
@@ -207,243 +207,223 @@ export type SemanticVersion = Brand<string, "SemanticVersion">;
 export type ShellCommand = Brand<string, "ShellCommand">;
 
 // =============================================================================
-// CONSTRUCTOR FUNCTIONS
+// INTERNAL CONSTRUCTOR FUNCTIONS
 // =============================================================================
 
-/**
- * Creates a {@link FilePath} from a string without validation.
- *
- * @remarks
- * This is a zero-cost type assertion. Use when you have a path from a trusted
- * source and don't need validation. For validated paths, use {@link parseAbsoluteFilePath}.
- *
- * @param path - The file path string to brand
- * @returns The input string branded as FilePath
- *
- * @see {@link FilePath} - The resulting type
- * @see {@link parseAbsoluteFilePath} - Validated version
- * @public
- */
-export function toFilePath(path: string): FilePath {
+function _toFilePath(path: string): FilePath {
 	return path as FilePath;
 }
 
-/**
- * Creates a {@link DirectoryPath} from a string without validation.
- *
- * @remarks
- * This is a zero-cost type assertion. Use when you have a directory path from
- * a trusted source. For validated paths, use {@link parseAbsoluteDirectoryPath}.
- *
- * @param path - The directory path string to brand
- * @returns The input string branded as DirectoryPath
- *
- * @see {@link DirectoryPath} - The resulting type
- * @see {@link parseAbsoluteDirectoryPath} - Validated version
- * @public
- */
-export function toDirectoryPath(path: string): DirectoryPath {
+function _toDirectoryPath(path: string): DirectoryPath {
 	return path as DirectoryPath;
 }
 
-/**
- * Creates a {@link ConfigPath} from a string without validation.
- *
- * @remarks
- * Use for configuration file paths like `biome.json`, `tsconfig.json`, etc.
- * This is a zero-cost type assertion with no runtime validation.
- *
- * @param path - The configuration file path string to brand
- * @returns The input string branded as ConfigPath
- *
- * @see {@link ConfigPath} - The resulting type
- * @public
- */
-export function toConfigPath(path: string): ConfigPath {
+function _toConfigPath(path: string): ConfigPath {
 	return path as ConfigPath;
 }
 
-/**
- * Creates a {@link TempFilePath} from a string without validation.
- *
- * @remarks
- * Use for temporary file paths in `/tmp` or similar directories.
- * This is a zero-cost type assertion with no runtime validation.
- *
- * @param path - The temporary file path string to brand
- * @returns The input string branded as TempFilePath
- *
- * @see {@link TempFilePath} - The resulting type
- * @public
- */
-export function toTempFilePath(path: string): TempFilePath {
+function _toTempFilePath(path: string): TempFilePath {
 	return path as TempFilePath;
 }
 
-/**
- * Creates a {@link BinaryPath} from a string without validation.
- *
- * @remarks
- * Use for paths to executable binaries like compilers or linters.
- * This is a zero-cost type assertion with no runtime validation.
- *
- * @param path - The binary path string to brand
- * @returns The input string branded as BinaryPath
- *
- * @see {@link BinaryPath} - The resulting type
- * @public
- */
-export function toBinaryPath(path: string): BinaryPath {
+function _toBinaryPath(path: string): BinaryPath {
 	return path as BinaryPath;
 }
 
-/**
- * Creates a {@link SessionId} from a string without validation.
- *
- * @remarks
- * Session IDs are UUIDs provided by Claude Code to identify sessions.
- * This is a zero-cost type assertion with no runtime validation.
- *
- * @param id - The session ID string to brand
- * @returns The input string branded as SessionId
- *
- * @see {@link SessionId} - The resulting type
- * @public
- */
-export function toSessionId(id: string): SessionId {
+function _toSessionId(id: string): SessionId {
 	return id as SessionId;
 }
 
-/**
- * Creates a {@link ToolUseId} from a string without validation.
- *
- * @remarks
- * Tool use IDs are assigned by Claude Code to each tool invocation.
- * This is a zero-cost type assertion with no runtime validation.
- *
- * @param id - The tool use ID string to brand
- * @returns The input string branded as ToolUseId
- *
- * @see {@link ToolUseId} - The resulting type
- * @public
- */
-export function toToolUseId(id: string): ToolUseId {
+function _toToolUseId(id: string): ToolUseId {
 	return id as ToolUseId;
 }
 
-/**
- * Creates a {@link SemanticVersion} from a string without validation.
- *
- * @remarks
- * This does NOT validate the version format. For validated parsing that
- * returns `undefined` for invalid input, use {@link parseSemanticVersion}.
- *
- * @param version - The version string to brand
- * @returns The input string branded as SemanticVersion
- *
- * @see {@link SemanticVersion} - The resulting type
- * @see {@link parseSemanticVersion} - Validated version
- * @public
- */
-export function toSemanticVersion(version: string): SemanticVersion {
+function _toSemanticVersion(version: string): SemanticVersion {
 	return version as SemanticVersion;
 }
 
-/**
- * Creates a {@link ShellCommand} from a string without validation.
- *
- * @remarks
- * Use to mark shell commands that have passed security validation or come
- * from trusted sources. This is a zero-cost type assertion.
- *
- * @param command - The shell command string to brand
- * @returns The input string branded as ShellCommand
- *
- * @see {@link ShellCommand} - The resulting type
- * @public
- */
-export function toShellCommand(command: string): ShellCommand {
+function _toShellCommand(command: string): ShellCommand {
 	return command as ShellCommand;
 }
 
 // =============================================================================
-// VALIDATION CONSTRUCTORS
+// INTERNAL VALIDATION FUNCTIONS
 // =============================================================================
 
-/**
- * Parses and validates a semantic version string.
- *
- * @remarks
- * Extracts the MAJOR.MINOR.PATCH portion from the input. Returns `undefined`
- * if the input doesn't start with a valid version pattern. This allows parsing
- * versions with additional suffixes like "1.2.3-beta" or "1.2.3+build".
- *
- * @param input - The string to parse as a semantic version
- * @returns The validated SemanticVersion, or `undefined` if invalid
- *
- * @example
- * ```typescript
- * const version = parseSemanticVersion("1.2.3"); // SemanticVersion "1.2.3"
- * const withSuffix = parseSemanticVersion("1.2.3-beta"); // SemanticVersion "1.2.3"
- * const invalid = parseSemanticVersion("not-a-version"); // undefined
- * ```
- *
- * @see {@link SemanticVersion} - The resulting type
- * @see {@link toSemanticVersion} - Non-validating version
- * @public
- */
-export function parseSemanticVersion(input: string): SemanticVersion | undefined {
+function _parseSemanticVersion(input: string): SemanticVersion | undefined {
 	const match = input.match(/^(\d+\.\d+\.\d+)/);
 	return match ? (match[1] as SemanticVersion) : undefined;
 }
 
-/**
- * Validates that a path is absolute and returns a branded {@link FilePath}.
- *
- * @remarks
- * Checks that the path starts with "/" (Unix-style absolute path).
- * Returns `undefined` for relative paths.
- *
- * @param input - The path string to validate
- * @returns The validated FilePath, or `undefined` if not absolute
- *
- * @example
- * ```typescript
- * const valid = parseAbsoluteFilePath("/home/user/file.ts"); // FilePath
- * const invalid = parseAbsoluteFilePath("./relative/path"); // undefined
- * ```
- *
- * @see {@link FilePath} - The resulting type
- * @see {@link toFilePath} - Non-validating version
- * @public
- */
-export function parseAbsoluteFilePath(input: string): FilePath | undefined {
+function _parseAbsoluteFilePath(input: string): FilePath | undefined {
 	return input.startsWith("/") ? (input as FilePath) : undefined;
 }
 
-/**
- * Validates that a path is absolute and returns a branded {@link DirectoryPath}.
- *
- * @remarks
- * Checks that the path starts with "/" (Unix-style absolute path).
- * Returns `undefined` for relative paths.
- *
- * @param input - The path string to validate
- * @returns The validated DirectoryPath, or `undefined` if not absolute
- *
- * @example
- * ```typescript
- * const valid = parseAbsoluteDirectoryPath("/home/user/project"); // DirectoryPath
- * const invalid = parseAbsoluteDirectoryPath("./relative"); // undefined
- * ```
- *
- * @see {@link DirectoryPath} - The resulting type
- * @see {@link toDirectoryPath} - Non-validating version
- * @public
- */
-export function parseAbsoluteDirectoryPath(input: string): DirectoryPath | undefined {
+function _parseAbsoluteDirectoryPath(input: string): DirectoryPath | undefined {
 	return input.startsWith("/") ? (input as DirectoryPath) : undefined;
 }
+
+// =============================================================================
+// BRANDED TYPES NAMESPACE
+// =============================================================================
+
+/**
+ * `BrandedTypes` provides all branded type constructors and validators.
+ *
+ * @remarks
+ * This namespace consolidates all functions for creating and validating branded types.
+ * Branded types are compile-time-only type safety constructs - the `__brand` property
+ * is phantom and has zero runtime overhead.
+ *
+ * **Categories of functions:**
+ *
+ * - **Path constructors** - `toFilePath`, `toDirectoryPath`, `toConfigPath`,
+ *   `toTempFilePath`, `toBinaryPath`
+ * - **Identifier constructors** - `toSessionId`, `toToolUseId`
+ * - **Version constructors** - `toSemanticVersion`
+ * - **Shell constructors** - `toShellCommand`
+ * - **Validators** - `parseSemanticVersion`, `parseAbsoluteFilePath`,
+ *   `parseAbsoluteDirectoryPath`
+ *
+ * @example Creating branded values
+ * ```typescript
+ * import { BrandedTypes, FilePath, SessionId } from "claude-binary-plugin";
+ *
+ * // Path types
+ * const file: FilePath = BrandedTypes.toFilePath("/home/user/code.ts");
+ * const dir = BrandedTypes.toDirectoryPath("/home/user");
+ * const config = BrandedTypes.toConfigPath("/etc/biome.json");
+ *
+ * // Identifiers
+ * const sessionId: SessionId = BrandedTypes.toSessionId("abc-123");
+ * const toolUseId = BrandedTypes.toToolUseId("tool-use-456");
+ *
+ * // Versions
+ * const version = BrandedTypes.toSemanticVersion("1.2.3");
+ * ```
+ *
+ * @example Validating values
+ * ```typescript
+ * import { BrandedTypes } from "claude-binary-plugin";
+ *
+ * // Returns undefined for invalid input
+ * const version = BrandedTypes.parseSemanticVersion("1.2.3"); // SemanticVersion
+ * const invalid = BrandedTypes.parseSemanticVersion("abc"); // undefined
+ *
+ * // Path validation
+ * const abs = BrandedTypes.parseAbsoluteFilePath("/home/user"); // FilePath
+ * const rel = BrandedTypes.parseAbsoluteFilePath("./relative"); // undefined
+ * ```
+ *
+ * @see {@link Brand} - The generic branding helper type
+ * @see {@link Unbrand} - Extract the base type from a branded type
+ * @public
+ */
+export const BrandedTypes = {
+	// =========================================================================
+	// Path Constructors
+	// =========================================================================
+
+	/**
+	 * Creates a {@link FilePath} from a string without validation.
+	 * @param path - The file path string to brand
+	 * @returns The input string branded as FilePath
+	 */
+	toFilePath: _toFilePath,
+
+	/**
+	 * Creates a {@link DirectoryPath} from a string without validation.
+	 * @param path - The directory path string to brand
+	 * @returns The input string branded as DirectoryPath
+	 */
+	toDirectoryPath: _toDirectoryPath,
+
+	/**
+	 * Creates a {@link ConfigPath} from a string without validation.
+	 * @param path - The configuration file path string to brand
+	 * @returns The input string branded as ConfigPath
+	 */
+	toConfigPath: _toConfigPath,
+
+	/**
+	 * Creates a {@link TempFilePath} from a string without validation.
+	 * @param path - The temporary file path string to brand
+	 * @returns The input string branded as TempFilePath
+	 */
+	toTempFilePath: _toTempFilePath,
+
+	/**
+	 * Creates a {@link BinaryPath} from a string without validation.
+	 * @param path - The binary path string to brand
+	 * @returns The input string branded as BinaryPath
+	 */
+	toBinaryPath: _toBinaryPath,
+
+	// =========================================================================
+	// Identifier Constructors
+	// =========================================================================
+
+	/**
+	 * Creates a {@link SessionId} from a string without validation.
+	 * @param id - The session ID string to brand
+	 * @returns The input string branded as SessionId
+	 */
+	toSessionId: _toSessionId,
+
+	/**
+	 * Creates a {@link ToolUseId} from a string without validation.
+	 * @param id - The tool use ID string to brand
+	 * @returns The input string branded as ToolUseId
+	 */
+	toToolUseId: _toToolUseId,
+
+	// =========================================================================
+	// Version Constructors
+	// =========================================================================
+
+	/**
+	 * Creates a {@link SemanticVersion} from a string without validation.
+	 * @param version - The version string to brand
+	 * @returns The input string branded as SemanticVersion
+	 */
+	toSemanticVersion: _toSemanticVersion,
+
+	// =========================================================================
+	// Shell Constructors
+	// =========================================================================
+
+	/**
+	 * Creates a {@link ShellCommand} from a string without validation.
+	 * @param command - The shell command string to brand
+	 * @returns The input string branded as ShellCommand
+	 */
+	toShellCommand: _toShellCommand,
+
+	// =========================================================================
+	// Validation Functions
+	// =========================================================================
+
+	/**
+	 * Parses and validates a semantic version string.
+	 * @param input - The string to parse as a semantic version
+	 * @returns The validated SemanticVersion, or `undefined` if invalid
+	 */
+	parseSemanticVersion: _parseSemanticVersion,
+
+	/**
+	 * Validates that a path is absolute and returns a branded {@link FilePath}.
+	 * @param input - The path string to validate
+	 * @returns The validated FilePath, or `undefined` if not absolute
+	 */
+	parseAbsoluteFilePath: _parseAbsoluteFilePath,
+
+	/**
+	 * Validates that a path is absolute and returns a branded {@link DirectoryPath}.
+	 * @param input - The path string to validate
+	 * @returns The validated DirectoryPath, or `undefined` if not absolute
+	 */
+	parseAbsoluteDirectoryPath: _parseAbsoluteDirectoryPath,
+} as const;
 
 // =============================================================================
 // TYPE UTILITIES

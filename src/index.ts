@@ -61,6 +61,9 @@ import {
 	formatZodError as formatZodErrorAsMarkdown,
 } from "./env/plugin-env.js";
 export { ClaudeBinaryPluginEnv, EnvFileLoadError, escapeForBashDoubleQuotes, formatZodErrorAsMarkdown };
+export type { EnvCodecMetadata } from "./env/codecs.js";
+// Environment codecs with registry metadata
+export { EnvCodecs, envCodecRegistry } from "./env/codecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -77,7 +80,7 @@ export type {
 } from "./env/plugin-env.js";
 export type { SessionRecord, SessionRegistration } from "./env/session-registry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry, closeDb } from "./env/session-registry.js";
+export { SessionRegistry } from "./env/session-registry.js";
 
 // =============================================================================
 // EVENTS MODULE
@@ -97,6 +100,28 @@ export * from "./core/tool-inputs.js";
 // =============================================================================
 
 export * from "./core/branded-types.js";
+
+// =============================================================================
+// HOOK EVENT SCHEMAS
+// =============================================================================
+
+// Hook event schema types and registry
+export type {
+	HookEventParsed,
+	HookEventSchemaMetadata,
+	NotificationEventParsed,
+	PermissionRequestEventParsed,
+	PostToolUseEventParsed,
+	PreCompactEventParsed,
+	PreToolUseEventParsed,
+	SessionEndEventParsed,
+	SessionStartEventParsed,
+	StopEventParsed,
+	SubagentStopEventParsed,
+	UserPromptSubmitEventParsed,
+} from "./core/schemas.js";
+// Hook event schemas with registry metadata
+export { HookEventSchemas, hookEventSchemaRegistry } from "./core/schemas.js";
 
 // =============================================================================
 // COMMAND TYPES

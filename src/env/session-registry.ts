@@ -155,15 +155,10 @@ function getDb(): Database {
 }
 
 /**
- * Close the database connection.
- *
- * @remarks
- * Primarily used in tests to reset database state between test runs.
- * In production, the database connection persists for the process lifetime.
- *
- * @public
+ * Internal function to close the database connection.
+ * @internal
  */
-export function closeDb(): void {
+function _closeDb(): void {
 	if (db) {
 		db.close();
 		db = null;
@@ -463,4 +458,23 @@ export const SessionRegistry = {
 			return 0;
 		}
 	},
+
+	/**
+	 * Close the database connection.
+	 *
+	 * @remarks
+	 * Primarily used in tests to reset database state between test runs.
+	 * In production, the database connection persists for the process lifetime.
+	 *
+	 * @example
+	 * ```typescript
+	 * import { SessionRegistry } from "claude-binary-plugin";
+	 *
+	 * // In tests, close between test runs
+	 * afterEach(() => {
+	 *   SessionRegistry.close();
+	 * });
+	 * ```
+	 */
+	close: _closeDb,
 };

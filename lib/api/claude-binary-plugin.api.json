@@ -1382,6 +1382,137 @@
           "extendsTokenRanges": []
         },
         {
+          "kind": "Variable",
+          "canonicalReference": "claude-binary-plugin!BrandedTypes:var",
+          "docComment": "/**\n * `BrandedTypes` provides all branded type constructors and validators.\n *\n * @remarks\n *\n * This namespace consolidates all functions for creating and validating branded types. Branded types are compile-time-only type safety constructs - the `__brand` property is phantom and has zero runtime overhead.\n *\n * **Categories of functions:**\n *\n * - **Path constructors** - `toFilePath`, `toDirectoryPath`, `toConfigPath`, `toTempFilePath`, `toBinaryPath` - **Identifier constructors** - `toSessionId`, `toToolUseId` - **Version constructors** - `toSemanticVersion` - **Shell constructors** - `toShellCommand` - **Validators** - `parseSemanticVersion`, `parseAbsoluteFilePath`, `parseAbsoluteDirectoryPath`\n *\n * @example\n *\n * Creating branded values\n * ```typescript\n * import { BrandedTypes, FilePath, SessionId } from \"claude-binary-plugin\";\n *\n * // Path types\n * const file: FilePath = BrandedTypes.toFilePath(\"/home/user/code.ts\");\n * const dir = BrandedTypes.toDirectoryPath(\"/home/user\");\n * const config = BrandedTypes.toConfigPath(\"/etc/biome.json\");\n *\n * // Identifiers\n * const sessionId: SessionId = BrandedTypes.toSessionId(\"abc-123\");\n * const toolUseId = BrandedTypes.toToolUseId(\"tool-use-456\");\n *\n * // Versions\n * const version = BrandedTypes.toSemanticVersion(\"1.2.3\");\n * ```\n *\n * @example\n *\n * Validating values\n * ```typescript\n * import { BrandedTypes } from \"claude-binary-plugin\";\n *\n * // Returns undefined for invalid input\n * const version = BrandedTypes.parseSemanticVersion(\"1.2.3\"); // SemanticVersion\n * const invalid = BrandedTypes.parseSemanticVersion(\"abc\"); // undefined\n *\n * // Path validation\n * const abs = BrandedTypes.parseAbsoluteFilePath(\"/home/user\"); // FilePath\n * const rel = BrandedTypes.parseAbsoluteFilePath(\"./relative\"); // undefined\n * ```\n *\n * @see\n *\n * {@link Brand} - The generic branding helper type\n *\n * @see\n *\n * {@link Unbrand} - Extract the base type from a branded type\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "BrandedTypes: "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    readonly toFilePath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toFilePath",
+              "canonicalReference": "claude-binary-plugin!~_toFilePath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toDirectoryPath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toDirectoryPath",
+              "canonicalReference": "claude-binary-plugin!~_toDirectoryPath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toConfigPath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toConfigPath",
+              "canonicalReference": "claude-binary-plugin!~_toConfigPath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toTempFilePath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toTempFilePath",
+              "canonicalReference": "claude-binary-plugin!~_toTempFilePath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toBinaryPath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toBinaryPath",
+              "canonicalReference": "claude-binary-plugin!~_toBinaryPath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toSessionId: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toSessionId",
+              "canonicalReference": "claude-binary-plugin!~_toSessionId:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toToolUseId: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toToolUseId",
+              "canonicalReference": "claude-binary-plugin!~_toToolUseId:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toSemanticVersion: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toSemanticVersion",
+              "canonicalReference": "claude-binary-plugin!~_toSemanticVersion:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly toShellCommand: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_toShellCommand",
+              "canonicalReference": "claude-binary-plugin!~_toShellCommand:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly parseSemanticVersion: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_parseSemanticVersion",
+              "canonicalReference": "claude-binary-plugin!~_parseSemanticVersion:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly parseAbsoluteFilePath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_parseAbsoluteFilePath",
+              "canonicalReference": "claude-binary-plugin!~_parseAbsoluteFilePath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly parseAbsoluteDirectoryPath: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_parseAbsoluteDirectoryPath",
+              "canonicalReference": "claude-binary-plugin!~_parseAbsoluteDirectoryPath:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n}"
+            }
+          ],
+          "fileUrlPath": "src/core/branded-types.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "BrandedTypes",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 26
+          }
+        },
+        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!BrandedWriteToolInput:interface",
           "docComment": "/**\n * Branded version of {@link WriteToolInput} with {@link FilePath} type.\n *\n * @remarks\n *\n * Use this interface when you want compile-time enforcement that file paths have been validated. The {@link FilePath} brand ensures the path comes from a trusted source or has passed validation.\n *\n * @see\n *\n * {@link WriteToolInput} - Plain string variant\n *\n * @see\n *\n * {@link FilePath} - The branded path type\n *\n * @public\n */\n",
@@ -1940,38 +2071,6 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BuildPluginOptions#commands:member",
-              "docComment": "/**\n * Commands to include in the plugin (enables auto-generation of entrypoint)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "commands?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "PluginCommandConfig",
-                  "canonicalReference": "claude-binary-plugin!PluginCommandConfig:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "[]"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "commands",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              }
-            },
-            {
-              "kind": "PropertySignature",
               "canonicalReference": "claude-binary-plugin!BuildPluginOptions#compile:member",
               "docComment": "/**\n * Whether to compile to a standalone binary (default: true). When false, bundles to JavaScript for easier debugging.\n */\n",
               "excerptTokens": [
@@ -2000,7 +2099,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "claude-binary-plugin!BuildPluginOptions#entrypoint:member",
-              "docComment": "/**\n * Path to the plugin entrypoint file (relative to rootDir). If hooks or commands are provided, this is auto-generated and this option is ignored.\n */\n",
+              "docComment": "/**\n * Path to the plugin entrypoint file (relative to rootDir).\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2049,38 +2148,6 @@
               "propertyTypeTokenRange": {
                 "startIndex": 1,
                 "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!BuildPluginOptions#hooks:member",
-              "docComment": "/**\n * Hooks to include in the plugin (enables auto-generation of entrypoint)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "hooks?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "PluginHookConfig",
-                  "canonicalReference": "claude-binary-plugin!PluginHookConfig:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "[]"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "hooks",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
               }
             },
             {
@@ -6544,34 +6611,6 @@
           }
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!closeDb:function(1)",
-          "docComment": "/**\n * Close the database connection.\n *\n * @remarks\n *\n * Primarily used in tests to reset database state between test runs. In production, the database connection persists for the process lifetime.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function closeDb(): "
-            },
-            {
-              "kind": "Content",
-              "text": "void"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/env/session-registry.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [],
-          "name": "closeDb"
-        },
-        {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!CommandArgumentError:class",
           "docComment": "/**\n * Error thrown when command arguments fail validation. Provides LLM-friendly markdown error message.\n *\n * @public\n */\n",
@@ -9796,6 +9835,471 @@
           }
         },
         {
+          "kind": "Interface",
+          "canonicalReference": "claude-binary-plugin!EnvCodecMetadata:interface",
+          "docComment": "/**\n * Metadata structure for environment codecs.\n *\n * @remarks\n *\n * This metadata is attached to codecs via the Zod v4 registry system, enabling documentation generation and introspection.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface EnvCodecMetadata "
+            }
+          ],
+          "fileUrlPath": "src/env/codecs.ts",
+          "releaseTag": "Public",
+          "name": "EnvCodecMetadata",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!EnvCodecMetadata#description:member",
+              "docComment": "/**\n * Human-readable description of the codec behavior\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "description: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "description",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!EnvCodecMetadata#example:member",
+              "docComment": "/**\n * Example showing input/output transformation\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "example?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        input: string;\n        output: unknown;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "example",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "claude-binary-plugin!envCodecRegistry:var",
+          "docComment": "/**\n * Registry for environment codec metadata.\n *\n * @remarks\n *\n * This registry stores metadata for all built-in codecs. Users can access this registry to generate documentation or extend with custom codecs.\n *\n * @example\n * ```typescript\n * // Get metadata for a codec\n * const meta = envCodecRegistry.get(EnvCodecs.bool);\n * console.log(meta.description);\n *\n * // Register a custom codec\n * const myCodec = z.codec(...).register(envCodecRegistry, {\n *   description: \"My custom codec\",\n * });\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "envCodecRegistry: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodRegistry",
+              "canonicalReference": "zod!$ZodRegistry:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "EnvCodecMetadata",
+              "canonicalReference": "claude-binary-plugin!EnvCodecMetadata:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodType",
+              "canonicalReference": "zod!$ZodType:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodTypeInternals",
+              "canonicalReference": "zod!$ZodTypeInternals:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown>>>"
+            }
+          ],
+          "fileUrlPath": "src/env/codecs.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "envCodecRegistry",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 9
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "claude-binary-plugin!EnvCodecs:var",
+          "docComment": "/**\n * Unified namespace for all environment variable codecs.\n *\n * @remarks\n *\n * `EnvCodecs` provides a class-first API for environment variable serialization with Zod v4 registry integration. All codecs are registered with metadata enabling documentation generation and introspection.\n *\n * **Available Codecs:**\n *\n * | Property | Description | |----------|-------------| | `bool` | Strict boolean: `\"true\"` \\| `\"false\"` → `boolean` | | `optionalBool` | Optional boolean with `false` default | | `nullable` | Nullable string: `\"\"` → `null` | | `optionalNullable` | Optional nullable with `null` default | | `int` | Integer parsing with `0` fallback | | `optionalInt` | Optional integer with `0` default | | `float` | Float parsing with `0` fallback |\n *\n * **Factory Methods:**\n *\n * | Method | Description | |--------|-------------| | `enum(values, default)` | Create enum codec with default value | | `jsonArray(schema)` | Create JSON array codec for complex data |\n *\n * @example\n * ```typescript\n * import { EnvCodecs } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * // Define a schema using codecs\n * const schema = z.object({\n *   DEBUG: EnvCodecs.bool,\n *   PORT: EnvCodecs.optionalInt,\n *   LOG_LEVEL: EnvCodecs.enum([\"debug\", \"info\", \"warn\"], \"info\"),\n *   PACKAGES: EnvCodecs.jsonArray(z.object({ name: z.string() })),\n * });\n *\n * // Access registry for metadata\n * const meta = EnvCodecs.registry.get(EnvCodecs.bool);\n * console.log(meta.description); // \"Strict boolean codec...\"\n * ```\n *\n * @see\n *\n * {@link envCodecRegistry} - The underlying Zod registry\n *\n * @see\n *\n * {@link ClaudeBinaryPluginEnv} - Uses codecs for environment validation\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "EnvCodecs: "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    readonly registry: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodRegistry",
+              "canonicalReference": "zod!$ZodRegistry:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "EnvCodecMetadata",
+              "canonicalReference": "claude-binary-plugin!EnvCodecMetadata:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodType",
+              "canonicalReference": "zod!$ZodType:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodTypeInternals",
+              "canonicalReference": "zod!$ZodTypeInternals:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown>>>;\n    readonly bool: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        false: \"false\";\n        true: \"true\";\n    }>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodBoolean",
+              "canonicalReference": "zod!ZodBoolean:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly optionalBool: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodDefault",
+              "canonicalReference": "zod!ZodDefault:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodBoolean",
+              "canonicalReference": "zod!ZodBoolean:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly nullable: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodNullable",
+              "canonicalReference": "zod!ZodNullable:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">>;\n    readonly optionalNullable: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodDefault",
+              "canonicalReference": "zod!ZodDefault:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodNullable",
+              "canonicalReference": "zod!ZodNullable:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">>;\n    readonly int: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodNumber",
+              "canonicalReference": "zod!ZodNumber:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly optionalInt: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodDefault",
+              "canonicalReference": "zod!ZodDefault:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodNumber",
+              "canonicalReference": "zod!ZodNumber:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly float: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodCodec",
+              "canonicalReference": "zod!ZodCodec:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodNumber",
+              "canonicalReference": "zod!ZodNumber:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly enum: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "createEnumCodec",
+              "canonicalReference": "claude-binary-plugin!~createEnumCodec:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    readonly jsonArray: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "createJsonArrayCodec",
+              "canonicalReference": "claude-binary-plugin!~createJsonArrayCodec:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n}"
+            }
+          ],
+          "fileUrlPath": "src/env/codecs.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "EnvCodecs",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 72
+          }
+        },
+        {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!EnvContext:type",
           "docComment": "/**\n * Context types for environment loading strategies. Each context defines how environment variables are loaded.\n *\n * @public\n */\n",
@@ -12363,38 +12867,6 @@
           "members": [
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!GeneratePipelinePluginOptions#commands:member",
-              "docComment": "/**\n * Legacy commands (deprecated - use pipelineCommands instead)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "commands?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "PluginCommandConfig",
-                  "canonicalReference": "claude-binary-plugin!PluginCommandConfig:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "[]"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "commands",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              }
-            },
-            {
-              "kind": "PropertySignature",
               "canonicalReference": "claude-binary-plugin!GeneratePipelinePluginOptions#hooks:member",
               "docComment": "/**\n * Array of hook configurations extracted from the plugin definition\n */\n",
               "excerptTokens": [
@@ -12540,109 +13012,6 @@
             }
           ],
           "extendsTokenRanges": []
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!generatePluginEntrypoint:function(1)",
-          "docComment": "/**\n * Generates the TypeScript source code for a plugin entrypoint.\n *\n * The generated code includes: - Dynamic imports for all hooks and commands - CLI argument parsing with --hook and --cmd options - Help text with descriptions\n *\n * @param hooks - Hook configurations\n *\n * @param commands - Command configurations\n *\n * @param pluginName - Name shown in help text\n *\n * @param pluginVersion - Plugin version from plugin.json\n *\n * @returns Generated TypeScript source code\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function generatePluginEntrypoint(hooks: "
-            },
-            {
-              "kind": "Reference",
-              "text": "PluginHookConfig",
-              "canonicalReference": "claude-binary-plugin!PluginHookConfig:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]"
-            },
-            {
-              "kind": "Content",
-              "text": ", commands: "
-            },
-            {
-              "kind": "Reference",
-              "text": "PluginCommandConfig",
-              "canonicalReference": "claude-binary-plugin!PluginCommandConfig:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]"
-            },
-            {
-              "kind": "Content",
-              "text": ", pluginName: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ", pluginVersion: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 11,
-            "endIndex": 12
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "hooks",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "commands",
-              "parameterTypeTokenRange": {
-                "startIndex": 4,
-                "endIndex": 6
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "pluginName",
-              "parameterTypeTokenRange": {
-                "startIndex": 7,
-                "endIndex": 8
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "pluginVersion",
-              "parameterTypeTokenRange": {
-                "startIndex": 9,
-                "endIndex": 10
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "generatePluginEntrypoint"
         },
         {
           "kind": "Function",
@@ -14946,6 +15315,2527 @@
               "endIndex": 4
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!HookEventParsed:type",
+          "docComment": "/**\n * Inferred type for any hook event (discriminated union).\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type HookEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_HookEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_HookEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "HookEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "claude-binary-plugin!HookEventSchemaMetadata:interface",
+          "docComment": "/**\n * Metadata structure for hook event schemas.\n *\n * @remarks\n *\n * This metadata is attached to schemas via the Zod v4 registry system, enabling documentation generation and introspection.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface HookEventSchemaMetadata "
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "HookEventSchemaMetadata",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!HookEventSchemaMetadata#capabilities:member",
+              "docComment": "/**\n * Capabilities this hook provides (e.g., [\"allow\", \"deny\", \"modify\"])\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "capabilities?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "capabilities",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!HookEventSchemaMetadata#description:member",
+              "docComment": "/**\n * Human-readable description of when this event fires\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "description: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "description",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "claude-binary-plugin!hookEventSchemaRegistry:var",
+          "docComment": "/**\n * Registry for hook event schema metadata.\n *\n * @remarks\n *\n * This registry stores metadata for all hook event schemas. Users can access this registry to generate documentation or introspect schema capabilities.\n *\n * @example\n * ```typescript\n * // Get metadata for a schema\n * const meta = hookEventSchemaRegistry.get(HookEventSchemas.PreToolUse);\n * console.log(meta.description);\n * console.log(meta.capabilities); // [\"allow\", \"deny\", \"modify\"]\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "hookEventSchemaRegistry: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodRegistry",
+              "canonicalReference": "zod!$ZodRegistry:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "HookEventSchemaMetadata",
+              "canonicalReference": "claude-binary-plugin!HookEventSchemaMetadata:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodType",
+              "canonicalReference": "zod!$ZodType:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodTypeInternals",
+              "canonicalReference": "zod!$ZodTypeInternals:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown>>>"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "hookEventSchemaRegistry",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 9
+          }
+        },
+        {
+          "kind": "Variable",
+          "canonicalReference": "claude-binary-plugin!HookEventSchemas:var",
+          "docComment": "/**\n * Unified class for all hook event schemas with registry metadata.\n *\n * @remarks\n *\n * `HookEventSchemas` provides a class-first API for hook event validation with Zod v4 registry integration. All schemas are registered with metadata enabling documentation generation and introspection.\n *\n * **Available Schemas:**\n *\n * | Property | Description | |----------|-------------| | `PreToolUse` | Before tool execution (allow/deny/modify) | | `PostToolUse` | After tool completes (context/block) | | `PermissionRequest` | Permission dialog (allow/deny) | | `Notification` | Notification event (passthrough) | | `UserPromptSubmit` | User prompt submission (context/block) | | `Stop` | Agent completion (block) | | `SubagentStop` | Subagent completion (block) | | `PreCompact` | Before context compaction (passthrough) | | `SessionStart` | Session begins (context/setup) | | `SessionEnd` | Session ends (cleanup) | | `Any` | Discriminated union of all events |\n *\n * **Parse Methods:**\n *\n * | Method | Description | |--------|-------------| | `parse(json)` | Parse any hook event (discriminated union) | | `parsePreToolUse(json)` | Parse PreToolUse event | | `parsePostToolUse(json)` | Parse PostToolUse event | | ... | (one for each event type) |\n *\n * @example\n * ```typescript\n * import { HookEventSchemas } from \"claude-binary-plugin\";\n *\n * // Parse any hook event\n * const event = HookEventSchemas.parse(jsonString);\n * if (event.hook_event_name === \"PreToolUse\") {\n *   console.log(event.tool_name);\n * }\n *\n * // Parse specific event type\n * const preToolUse = HookEventSchemas.parsePreToolUse(jsonString);\n * console.log(preToolUse.tool_input);\n *\n * // Access registry metadata\n * const meta = HookEventSchemas.registry.get(HookEventSchemas.PreToolUse);\n * console.log(meta.description);\n * console.log(meta.capabilities); // [\"allow\", \"deny\", \"modify\"]\n * ```\n *\n * @see\n *\n * {@link hookEventSchemaRegistry} - The underlying Zod registry\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "HookEventSchemas: "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    readonly registry: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodRegistry",
+              "canonicalReference": "zod!$ZodRegistry:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "HookEventSchemaMetadata",
+              "canonicalReference": "claude-binary-plugin!HookEventSchemaMetadata:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodType",
+              "canonicalReference": "zod!$ZodType:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$ZodTypeInternals",
+              "canonicalReference": "zod!$ZodTypeInternals:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<unknown, unknown>>>;\n    readonly PreToolUse: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PreToolUse\">;\n        tool_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodRecord",
+              "canonicalReference": "zod!ZodRecord:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodUnknown",
+              "canonicalReference": "zod!ZodUnknown:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        tool_use_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly PostToolUse: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PostToolUse\">;\n        tool_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodRecord",
+              "canonicalReference": "zod!ZodRecord:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodUnknown",
+              "canonicalReference": "zod!ZodUnknown:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        tool_response: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodRecord",
+              "canonicalReference": "zod!ZodRecord:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodUnknown",
+              "canonicalReference": "zod!ZodUnknown:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        tool_use_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly PermissionRequest: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PermissionRequest\">;\n        message: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        notification_type: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly Notification: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"Notification\">;\n        message: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        notification_type: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly UserPromptSubmit: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"UserPromptSubmit\">;\n        prompt: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly Stop: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"Stop\">;\n        stop_hook_active: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodBoolean",
+              "canonicalReference": "zod!ZodBoolean:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly SubagentStop: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"SubagentStop\">;\n        stop_hook_active: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodBoolean",
+              "canonicalReference": "zod!ZodBoolean:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly PreCompact: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PreCompact\">;\n        trigger: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            auto: \"auto\";\n            manual: \"manual\";\n        }>;\n        custom_instructions: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly SessionStart: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"SessionStart\">;\n        source: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            clear: \"clear\";\n            compact: \"compact\";\n            resume: \"resume\";\n            startup: \"startup\";\n        }>;\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly SessionEnd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"SessionEnd\">;\n        reason: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            clear: \"clear\";\n            logout: \"logout\";\n            other: \"other\";\n            prompt_input_exit: \"prompt_input_exit\";\n        }>;\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n    readonly Any: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodDiscriminatedUnion",
+              "canonicalReference": "zod!ZodDiscriminatedUnion:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<["
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PreToolUse\">;\n        tool_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodRecord",
+              "canonicalReference": "zod!ZodRecord:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodUnknown",
+              "canonicalReference": "zod!ZodUnknown:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        tool_use_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PostToolUse\">;\n        tool_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodRecord",
+              "canonicalReference": "zod!ZodRecord:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodUnknown",
+              "canonicalReference": "zod!ZodUnknown:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        tool_response: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodRecord",
+              "canonicalReference": "zod!ZodRecord:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodUnknown",
+              "canonicalReference": "zod!ZodUnknown:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        tool_use_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PermissionRequest\">;\n        message: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        notification_type: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"Notification\">;\n        message: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        notification_type: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"UserPromptSubmit\">;\n        prompt: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"Stop\">;\n        stop_hook_active: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodBoolean",
+              "canonicalReference": "zod!ZodBoolean:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"SubagentStop\">;\n        stop_hook_active: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodBoolean",
+              "canonicalReference": "zod!ZodBoolean:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"PreCompact\">;\n        trigger: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            auto: \"auto\";\n            manual: \"manual\";\n        }>;\n        custom_instructions: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"SessionStart\">;\n        source: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            clear: \"clear\";\n            compact: \"compact\";\n            resume: \"resume\";\n            startup: \"startup\";\n        }>;\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodObject",
+              "canonicalReference": "zod!ZodObject:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n        session_id: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n        transcript_path: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        cwd: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodString",
+              "canonicalReference": "zod!ZodString:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">;\n        permission_mode: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodOptional",
+              "canonicalReference": "zod!ZodOptional:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            acceptEdits: \"acceptEdits\";\n            bypassPermissions: \"bypassPermissions\";\n            default: \"default\";\n            plan: \"plan\";\n        }>>;\n        hook_event_name: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodLiteral",
+              "canonicalReference": "zod!ZodLiteral:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<\"SessionEnd\">;\n        reason: "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.ZodEnum",
+              "canonicalReference": "zod!ZodEnum:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<{\n            clear: \"clear\";\n            logout: \"logout\";\n            other: \"other\";\n            prompt_input_exit: \"prompt_input_exit\";\n        }>;\n    }, "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.core.$strip",
+              "canonicalReference": "zod!$strip:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">], \"hook_event_name\">;\n    readonly parse: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PreToolUse\";\n        tool_name: string;\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>;\n        tool_use_id: string;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PostToolUse\";\n        tool_name: string;\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>;\n        tool_response: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>;\n        tool_use_id: string;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PermissionRequest\";\n        message: string;\n        notification_type: string;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"Notification\";\n        message: string;\n        notification_type: string;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"UserPromptSubmit\";\n        prompt: string;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"Stop\";\n        stop_hook_active: boolean;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"SubagentStop\";\n        stop_hook_active: boolean;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PreCompact\";\n        trigger: \"auto\" | \"manual\";\n        custom_instructions: string;\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"SessionStart\";\n        source: \"clear\" | \"compact\" | \"resume\" | \"startup\";\n    } | {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"SessionEnd\";\n        reason: \"clear\" | \"logout\" | \"other\" | \"prompt_input_exit\";\n    };\n    readonly parsePreToolUse: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PreToolUse\";\n        tool_name: string;\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>;\n        tool_use_id: string;\n    };\n    readonly parsePostToolUse: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PostToolUse\";\n        tool_name: string;\n        tool_input: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>;\n        tool_response: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown>;\n        tool_use_id: string;\n    };\n    readonly parsePermissionRequest: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PermissionRequest\";\n        message: string;\n        notification_type: string;\n    };\n    readonly parseNotification: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"Notification\";\n        message: string;\n        notification_type: string;\n    };\n    readonly parseUserPromptSubmit: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"UserPromptSubmit\";\n        prompt: string;\n    };\n    readonly parseStop: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"Stop\";\n        stop_hook_active: boolean;\n    };\n    readonly parseSubagentStop: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"SubagentStop\";\n        stop_hook_active: boolean;\n    };\n    readonly parsePreCompact: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"PreCompact\";\n        trigger: \"auto\" | \"manual\";\n        custom_instructions: string;\n    };\n    readonly parseSessionStart: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"SessionStart\";\n        source: \"clear\" | \"compact\" | \"resume\" | \"startup\";\n    };\n    readonly parseSessionEnd: (json: string) => {\n        session_id: string;\n        transcript_path?: string | undefined;\n        cwd?: string | undefined;\n        permission_mode?: \"acceptEdits\" | \"bypassPermissions\" | \"default\" | \"plan\" | undefined;\n        hook_event_name: \"SessionEnd\";\n        reason: \"clear\" | \"logout\" | \"other\" | \"prompt_input_exit\";\n    };\n}"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "isReadonly": true,
+          "releaseTag": "Public",
+          "name": "HookEventSchemas",
+          "variableTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 520
+          }
         },
         {
           "kind": "TypeAlias",
@@ -20228,6 +23118,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!NotificationEventParsed:type",
+          "docComment": "/**\n * Inferred type for Notification events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type NotificationEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_NotificationEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_NotificationEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "NotificationEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
@@ -27317,106 +30247,6 @@
         },
         {
           "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!parseAbsoluteDirectoryPath:function(1)",
-          "docComment": "/**\n * Validates that a path is absolute and returns a branded {@link DirectoryPath}.\n *\n * @remarks\n *\n * Checks that the path starts with \"/\" (Unix-style absolute path). Returns `undefined` for relative paths.\n *\n * @param input - The path string to validate\n *\n * @returns The validated DirectoryPath, or `undefined` if not absolute\n *\n * @example\n * ```typescript\n * const valid = parseAbsoluteDirectoryPath(\"/home/user/project\"); // DirectoryPath\n * const invalid = parseAbsoluteDirectoryPath(\"./relative\"); // undefined\n * ```\n *\n * @see\n *\n * {@link DirectoryPath} - The resulting type\n *\n * @see\n *\n * {@link toDirectoryPath} - Non-validating version\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function parseAbsoluteDirectoryPath(input: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "DirectoryPath",
-              "canonicalReference": "claude-binary-plugin!DirectoryPath:type"
-            },
-            {
-              "kind": "Content",
-              "text": " | undefined"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 5
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "input",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "parseAbsoluteDirectoryPath"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!parseAbsoluteFilePath:function(1)",
-          "docComment": "/**\n * Validates that a path is absolute and returns a branded {@link FilePath}.\n *\n * @remarks\n *\n * Checks that the path starts with \"/\" (Unix-style absolute path). Returns `undefined` for relative paths.\n *\n * @param input - The path string to validate\n *\n * @returns The validated FilePath, or `undefined` if not absolute\n *\n * @example\n * ```typescript\n * const valid = parseAbsoluteFilePath(\"/home/user/file.ts\"); // FilePath\n * const invalid = parseAbsoluteFilePath(\"./relative/path\"); // undefined\n * ```\n *\n * @see\n *\n * {@link FilePath} - The resulting type\n *\n * @see\n *\n * {@link toFilePath} - Non-validating version\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function parseAbsoluteFilePath(input: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "FilePath",
-              "canonicalReference": "claude-binary-plugin!FilePath:type"
-            },
-            {
-              "kind": "Content",
-              "text": " | undefined"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 5
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "input",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "parseAbsoluteFilePath"
-        },
-        {
-          "kind": "Function",
           "canonicalReference": "claude-binary-plugin!parseCommandArgs:function(1)",
           "docComment": "/**\n * Parse and validate CLI arguments against a Zod schema.\n *\n * @param rawArgs - Raw CLI arguments array\n *\n * @param schema - Zod schema for validation\n *\n * @returns Validated arguments\n *\n * @throws\n *\n * CommandArgumentError if validation fails\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -27590,56 +30420,6 @@
             }
           ],
           "name": "parseRawArgs"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!parseSemanticVersion:function(1)",
-          "docComment": "/**\n * Parses and validates a semantic version string.\n *\n * @remarks\n *\n * Extracts the MAJOR.MINOR.PATCH portion from the input. Returns `undefined` if the input doesn't start with a valid version pattern. This allows parsing versions with additional suffixes like \"1.2.3-beta\" or \"1.2.3+build\".\n *\n * @param input - The string to parse as a semantic version\n *\n * @returns The validated SemanticVersion, or `undefined` if invalid\n *\n * @example\n * ```typescript\n * const version = parseSemanticVersion(\"1.2.3\"); // SemanticVersion \"1.2.3\"\n * const withSuffix = parseSemanticVersion(\"1.2.3-beta\"); // SemanticVersion \"1.2.3\"\n * const invalid = parseSemanticVersion(\"not-a-version\"); // undefined\n * ```\n *\n * @see\n *\n * {@link SemanticVersion} - The resulting type\n *\n * @see\n *\n * {@link toSemanticVersion} - Non-validating version\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function parseSemanticVersion(input: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "SemanticVersion",
-              "canonicalReference": "claude-binary-plugin!SemanticVersion:type"
-            },
-            {
-              "kind": "Content",
-              "text": " | undefined"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 5
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "input",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "parseSemanticVersion"
         },
         {
           "kind": "Function",
@@ -28684,6 +31464,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!PermissionRequestEventParsed:type",
+          "docComment": "/**\n * Inferred type for PermissionRequest events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type PermissionRequestEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_PermissionRequestEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_PermissionRequestEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "PermissionRequestEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
@@ -32699,105 +35519,6 @@
         },
         {
           "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!PluginCommandConfig:interface",
-          "docComment": "/**\n * Configuration for a command handler in the plugin.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface PluginCommandConfig "
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "releaseTag": "Public",
-          "name": "PluginCommandConfig",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginCommandConfig#description:member",
-              "docComment": "/**\n * Description shown in help text\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "description?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "description",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginCommandConfig#name:member",
-              "docComment": "/**\n * Command name used in CLI (e.g., \"lint\")\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "name: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "name",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginCommandConfig#path:member",
-              "docComment": "/**\n * Import path relative to plugin root (e.g., \"./commands/scripts/lint.js\")\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "path: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "path",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
-          "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!PluginConfig:interface",
           "docComment": "/**\n * Plugin configuration options.\n *\n * @typeParam TEnv - Zod schema type for environment validation\n *\n * @typeParam TSetup - Setup function type (used to infer computed vars)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -33482,105 +36203,6 @@
         },
         {
           "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!PluginHookConfig:interface",
-          "docComment": "/**\n * Configuration for a hook handler in the plugin.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export interface PluginHookConfig "
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "releaseTag": "Public",
-          "name": "PluginHookConfig",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginHookConfig#description:member",
-              "docComment": "/**\n * Description shown in help text\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "description?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "description",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginHookConfig#name:member",
-              "docComment": "/**\n * Hook name used in CLI (e.g., \"pre-edit-code\")\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "name: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "name",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginHookConfig#path:member",
-              "docComment": "/**\n * Import path relative to plugin root (e.g., \"./hooks/edit-code/pre-tool-use/pre-edit-code.hook.js\")\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "path: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "path",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            }
-          ],
-          "extendsTokenRanges": []
-        },
-        {
-          "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!PluginInfo:interface",
           "docComment": "/**\n * Plugin info for telemetry attribution.\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -34055,6 +36677,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!PostToolUseEventParsed:type",
+          "docComment": "/**\n * Inferred type for PostToolUse events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type PostToolUseEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_PostToolUseEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_PostToolUseEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "PostToolUseEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
@@ -35830,6 +38492,46 @@
         },
         {
           "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!PreCompactEventParsed:type",
+          "docComment": "/**\n * Inferred type for PreCompact events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type PreCompactEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_PreCompactEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_PreCompactEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "PreCompactEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!PreCompactHookDefinition:type",
           "docComment": "/**\n * PreCompact hook definition\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -37132,6 +39834,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!PreToolUseEventParsed:type",
+          "docComment": "/**\n * Inferred type for PreToolUse events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type PreToolUseEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_PreToolUseEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_PreToolUseEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "PreToolUseEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
@@ -41711,6 +44453,46 @@
         },
         {
           "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!SessionEndEventParsed:type",
+          "docComment": "/**\n * Inferred type for SessionEnd events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type SessionEndEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_SessionEndEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_SessionEndEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "SessionEndEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!SessionEndHookDefinition:type",
           "docComment": "/**\n * SessionEnd hook definition\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -43086,7 +45868,16 @@
             },
             {
               "kind": "Content",
-              "text": "[];\n    count(): number;\n}"
+              "text": "[];\n    count(): number;\n    close: typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_closeDb",
+              "canonicalReference": "claude-binary-plugin!~_closeDb:function"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n}"
             }
           ],
           "fileUrlPath": "src/env/session-registry.ts",
@@ -43095,7 +45886,7 @@
           "name": "SessionRegistry",
           "variableTypeTokenRange": {
             "startIndex": 1,
-            "endIndex": 8
+            "endIndex": 10
           }
         },
         {
@@ -43344,6 +46135,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!SessionStartEventParsed:type",
+          "docComment": "/**\n * Inferred type for SessionStart events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type SessionStartEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_SessionStartEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_SessionStartEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "SessionStartEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
@@ -46361,6 +49192,46 @@
         },
         {
           "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!StopEventParsed:type",
+          "docComment": "/**\n * Inferred type for Stop events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type StopEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_StopEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_StopEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "StopEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!StopHookDefinition:type",
           "docComment": "/**\n * Stop hook definition\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -47779,6 +50650,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!SubagentStopEventParsed:type",
+          "docComment": "/**\n * Inferred type for SubagentStop events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type SubagentStopEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_SubagentStopEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_SubagentStopEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "SubagentStopEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
@@ -50079,144 +52990,6 @@
           "implementsTokenRanges": []
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toBinaryPath:function(1)",
-          "docComment": "/**\n * Creates a {@link BinaryPath} from a string without validation.\n *\n * @remarks\n *\n * Use for paths to executable binaries like compilers or linters. This is a zero-cost type assertion with no runtime validation.\n *\n * @param path - The binary path string to brand\n *\n * @returns The input string branded as BinaryPath\n *\n * @see\n *\n * {@link BinaryPath} - The resulting type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toBinaryPath(path: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "BinaryPath",
-              "canonicalReference": "claude-binary-plugin!BinaryPath:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "path",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toBinaryPath"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toConfigPath:function(1)",
-          "docComment": "/**\n * Creates a {@link ConfigPath} from a string without validation.\n *\n * @remarks\n *\n * Use for configuration file paths like `biome.json`, `tsconfig.json`, etc. This is a zero-cost type assertion with no runtime validation.\n *\n * @param path - The configuration file path string to brand\n *\n * @returns The input string branded as ConfigPath\n *\n * @see\n *\n * {@link ConfigPath} - The resulting type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toConfigPath(path: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "ConfigPath",
-              "canonicalReference": "claude-binary-plugin!ConfigPath:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "path",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toConfigPath"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toDirectoryPath:function(1)",
-          "docComment": "/**\n * Creates a {@link DirectoryPath} from a string without validation.\n *\n * @remarks\n *\n * This is a zero-cost type assertion. Use when you have a directory path from a trusted source. For validated paths, use {@link parseAbsoluteDirectoryPath}.\n *\n * @param path - The directory path string to brand\n *\n * @returns The input string branded as DirectoryPath\n *\n * @see\n *\n * {@link DirectoryPath} - The resulting type\n *\n * @see\n *\n * {@link parseAbsoluteDirectoryPath} - Validated version\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toDirectoryPath(path: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "DirectoryPath",
-              "canonicalReference": "claude-binary-plugin!DirectoryPath:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "path",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toDirectoryPath"
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!TodoItem:interface",
           "docComment": "/**\n * Todo item structure for the {@link TodoWriteToolInput}.\n *\n * @remarks\n *\n * Each todo item has two forms of its description: - `content` - Imperative form: \"Run tests\", \"Build the project\" - `activeForm` - Present continuous: \"Running tests\", \"Building the project\"\n *\n * Task states: - `\"pending\"` - Not yet started - `\"in_progress\"` - Currently being worked on (limit to ONE at a time) - `\"completed\"` - Task finished successfully\n *\n * @example\n * ```typescript\n * const item: TodoItem = {\n *   content: \"Fix lint errors\",\n *   activeForm: \"Fixing lint errors\",\n *   status: \"in_progress\"\n * };\n * ```\n *\n * @see\n *\n * {@link TodoWriteToolInput} - The containing tool input type\n *\n * @public\n */\n",
@@ -50364,52 +53137,6 @@
             }
           ],
           "extendsTokenRanges": []
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toFilePath:function(1)",
-          "docComment": "/**\n * Creates a {@link FilePath} from a string without validation.\n *\n * @remarks\n *\n * This is a zero-cost type assertion. Use when you have a path from a trusted source and don't need validation. For validated paths, use {@link parseAbsoluteFilePath}.\n *\n * @param path - The file path string to brand\n *\n * @returns The input string branded as FilePath\n *\n * @see\n *\n * {@link FilePath} - The resulting type\n *\n * @see\n *\n * {@link parseAbsoluteFilePath} - Validated version\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toFilePath(path: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "FilePath",
-              "canonicalReference": "claude-binary-plugin!FilePath:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "path",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toFilePath"
         },
         {
           "kind": "Interface",
@@ -51380,236 +54107,6 @@
           }
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toSemanticVersion:function(1)",
-          "docComment": "/**\n * Creates a {@link SemanticVersion} from a string without validation.\n *\n * @remarks\n *\n * This does NOT validate the version format. For validated parsing that returns `undefined` for invalid input, use {@link parseSemanticVersion}.\n *\n * @param version - The version string to brand\n *\n * @returns The input string branded as SemanticVersion\n *\n * @see\n *\n * {@link SemanticVersion} - The resulting type\n *\n * @see\n *\n * {@link parseSemanticVersion} - Validated version\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toSemanticVersion(version: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "SemanticVersion",
-              "canonicalReference": "claude-binary-plugin!SemanticVersion:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "version",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toSemanticVersion"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toSessionId:function(1)",
-          "docComment": "/**\n * Creates a {@link SessionId} from a string without validation.\n *\n * @remarks\n *\n * Session IDs are UUIDs provided by Claude Code to identify sessions. This is a zero-cost type assertion with no runtime validation.\n *\n * @param id - The session ID string to brand\n *\n * @returns The input string branded as SessionId\n *\n * @see\n *\n * {@link SessionId} - The resulting type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toSessionId(id: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "SessionId",
-              "canonicalReference": "claude-binary-plugin!SessionId:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "id",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toSessionId"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toShellCommand:function(1)",
-          "docComment": "/**\n * Creates a {@link ShellCommand} from a string without validation.\n *\n * @remarks\n *\n * Use to mark shell commands that have passed security validation or come from trusted sources. This is a zero-cost type assertion.\n *\n * @param command - The shell command string to brand\n *\n * @returns The input string branded as ShellCommand\n *\n * @see\n *\n * {@link ShellCommand} - The resulting type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toShellCommand(command: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "ShellCommand",
-              "canonicalReference": "claude-binary-plugin!ShellCommand:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "command",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toShellCommand"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toTempFilePath:function(1)",
-          "docComment": "/**\n * Creates a {@link TempFilePath} from a string without validation.\n *\n * @remarks\n *\n * Use for temporary file paths in `/tmp` or similar directories. This is a zero-cost type assertion with no runtime validation.\n *\n * @param path - The temporary file path string to brand\n *\n * @returns The input string branded as TempFilePath\n *\n * @see\n *\n * {@link TempFilePath} - The resulting type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toTempFilePath(path: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "TempFilePath",
-              "canonicalReference": "claude-binary-plugin!TempFilePath:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "path",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toTempFilePath"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!toToolUseId:function(1)",
-          "docComment": "/**\n * Creates a {@link ToolUseId} from a string without validation.\n *\n * @remarks\n *\n * Tool use IDs are assigned by Claude Code to each tool invocation. This is a zero-cost type assertion with no runtime validation.\n *\n * @param id - The tool use ID string to brand\n *\n * @returns The input string branded as ToolUseId\n *\n * @see\n *\n * {@link ToolUseId} - The resulting type\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function toToolUseId(id: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "ToolUseId",
-              "canonicalReference": "claude-binary-plugin!ToolUseId:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/core/branded-types.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "id",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "toToolUseId"
-        },
-        {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!TypedToolName:type",
           "docComment": "/**\n * Union of known tool names that have typed input interfaces.\n *\n * @remarks\n *\n * Use this type to constrain function parameters to only accept valid tool names from the {@link ToolInputMap}.\n *\n * @example\n * ```typescript\n * function logToolUse(toolName: TypedToolName) {\n *   console.log(`Using tool: ${toolName}`);\n * }\n *\n * logToolUse(\"Bash\");  // OK\n * logToolUse(\"Unknown\");  // Type error\n * ```\n *\n * @see\n *\n * {@link ToolInputMap} - Maps these names to input types\n *\n * @public\n */\n",
@@ -51774,6 +54271,46 @@
               "endIndex": 2
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!UserPromptSubmitEventParsed:type",
+          "docComment": "/**\n * Inferred type for UserPromptSubmit events.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type UserPromptSubmitEventParsed = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "_UserPromptSubmitEventSchema",
+              "canonicalReference": "claude-binary-plugin!~_UserPromptSubmitEventSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/core/schemas.ts",
+          "releaseTag": "Public",
+          "name": "UserPromptSubmitEventParsed",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
         },
         {
           "kind": "TypeAlias",
