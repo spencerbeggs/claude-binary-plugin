@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { chmod, copyFile, mkdir, rm } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
+import { Extractor, ExtractorConfig } from "@microsoft/api-extractor";
 import { Glob } from "bun";
 
 /**
@@ -171,6 +172,33 @@ function expandShorthand(target: Target): PublishTarget {
 type PackageJsonTransformer = (context: { pkg: PackageJson; directory: string; target: ResolvedTarget }) => PackageJson;
 
 /**
+ * API Model generation options for API Extractor
+ */
+interface ApiModelOptions {
+	/**
+	 * Path to copy the generated .api.json file to.
+	 * If relative, resolved from project root.
+	 * If not provided, only generates in the default location (lib/api/).
+	 */
+	path?: string;
+	/**
+	 * Path to api-extractor.json config file.
+	 * Defaults to lib/configs/api-extractor.json
+	 */
+	configPath?: string;
+	/**
+	 * Path to tsconfig for declaration compilation.
+	 * Defaults to lib/configs/tsconfig.declarations.json
+	 */
+	tsconfigPath?: string;
+	/**
+	 * Whether to run in CI mode (stricter validation).
+	 * Defaults to checking process.env.CI
+	 */
+	ci?: boolean;
+}
+
+/**
  * BunPackage configuration options
  */
 interface BunPackageOptions {
@@ -200,6 +228,11 @@ interface BunPackageOptions {
 	 * from the package's own node_modules (e.g., zod schemas).
 	 */
 	installDeps?: boolean;
+	/**
+	 * Generate API model documentation using API Extractor.
+	 * Compiles TypeScript declarations and generates .api.json.
+	 */
+	apiModel?: ApiModelOptions | boolean;
 }
 
 /**
@@ -238,6 +271,11 @@ export class BunPackage {
 		// Build binaries first (into bin/ directory)
 		if (this.options.bin) {
 			await this.buildBinaries();
+		}
+
+		// Build API model if requested
+		if (this.options.apiModel) {
+			await this.buildApiModel();
 		}
 
 		// Resolve publish targets
@@ -565,6 +603,78 @@ export class BunPackage {
 
 			const outPath = join(outdir, outname);
 			await chmod(outPath, 0o755);
+		}
+	}
+
+	/**
+	 * Build API model using API Extractor
+	 */
+	private async buildApiModel(): Promise<void> {
+		const apiModelOption = this.options.apiModel;
+		if (!apiModelOption) return;
+
+		const options: ApiModelOptions = typeof apiModelOption === "boolean" ? {} : apiModelOption;
+
+		const configPath = options.configPath
+			? resolve(this.root, options.configPath)
+			: join(this.root, "lib/configs/api-extractor.json");
+
+		const tsconfigPath = options.tsconfigPath
+			? resolve(this.root, options.tsconfigPath)
+			: join(this.root, "lib/configs/tsconfig.declarations.json");
+
+		const isCI = options.ci ?? process.env.CI === "true";
+		const isLocal = !isCI;
+
+		// Ensure output directories exist
+		const outputDirs = [join(this.root, "dist/types"), join(this.root, "lib/api")];
+		for (const dir of outputDirs) {
+			await mkdir(dir, { recursive: true });
+		}
+
+		// Compile TypeScript declarations
+		console.log("📝 Compiling TypeScript declarations...");
+		const tscResult = Bun.spawnSync(["tsgo", "-p", tsconfigPath], {
+			cwd: this.root,
+			stdio: ["inherit", "inherit", "inherit"],
+		});
+
+		if (tscResult.exitCode !== 0) {
+			console.error("❌ TypeScript declaration compilation failed");
+			process.exit(1);
+		}
+		console.log("   ✓ Declarations compiled");
+
+		// Run API Extractor
+		console.log("📦 Running API Extractor...");
+		const extractorConfig = ExtractorConfig.loadFileAndPrepare(configPath);
+
+		const extractorResult = Extractor.invoke(extractorConfig, {
+			localBuild: isLocal,
+			showVerboseMessages: false,
+		});
+
+		if (!extractorResult.succeeded) {
+			console.error(
+				`❌ API Extractor completed with ${extractorResult.errorCount} errors and ${extractorResult.warningCount} warnings`,
+			);
+			if (isCI) {
+				process.exit(1);
+			}
+		} else {
+			console.log("   ✓ API model generated");
+		}
+
+		// Copy to destination path if specified
+		if (options.path) {
+			const sourcePath = join(this.root, "lib/api/claude-binary-plugin.api.json");
+			const destPath = resolve(this.root, options.path);
+
+			// Ensure destination directory exists
+			await mkdir(dirname(destPath), { recursive: true });
+
+			await copyFile(sourcePath, destPath);
+			console.log(`   ✓ Copied API model to ${options.path}`);
 		}
 	}
 

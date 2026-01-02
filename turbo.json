@@ -2,17 +2,6 @@
 	"$schema": "https://turborepo.com/schema.v2.json",
 	"globalPassThroughEnv": ["HOME", "XDG_CONFIG_HOME"],
 	"tasks": {
-		"api": {
-			"dependsOn": ["typecheck"],
-			"inputs": [
-				"src/**/*.ts",
-				"tsconfig.json",
-				"lib/configs/tsconfig.declarations.json",
-				"lib/configs/api-extractor.json",
-				"lib/scripts/api.mts"
-			],
-			"outputs": ["dist/types/**", "lib/api/**"]
-		},
 		"compile": {
 			"dependsOn": ["typecheck"],
 			"inputs": [
