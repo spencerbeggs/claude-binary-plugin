@@ -890,3 +890,212 @@ export function testFatalErrorHandler(
 
 	return { exitCode, errorMessages };
 }
+
+// =============================================================================
+// MOCKS NAMESPACE
+// =============================================================================
+
+/**
+ * Organized namespace for testing utilities.
+ *
+ * @remarks
+ * The `Mocks` namespace groups related testing utilities for easier discovery
+ * and usage. Each sub-namespace provides utilities for a specific testing domain.
+ *
+ * **Sub-namespaces:**
+ * - `Mocks.IO` - I/O mocking (stdin, stdout, stderr)
+ * - `Mocks.Env` - Environment variable mocking
+ * - `Mocks.Command` - CLI command testing
+ * - `Mocks.Hook` - Hook handler testing
+ * - `Mocks.Shell` - Shell executor mocking
+ *
+ * @example
+ * ```typescript
+ * import { Mocks } from "claude-binary-plugin";
+ *
+ * // Mock environment
+ * const env = Mocks.Env.create({ CLAUDE_PROJECT_DIR: "/test" });
+ * afterEach(() => env.restore());
+ *
+ * // Mock I/O for hook testing
+ * const io = Mocks.IO.create({ tool_name: "Bash", tool_input: { command: "ls" } });
+ * const exitCode = await Mocks.Hook.run(main);
+ *
+ * // Mock shell executor
+ * const shell = Mocks.Shell.executor({
+ *   "git status": Mocks.Shell.result(0, "On branch main"),
+ * });
+ * ```
+ *
+ * @public
+ */
+export namespace Mocks {
+	/**
+	 * I/O mocking utilities for hook testing.
+	 *
+	 * @remarks
+	 * Mocks stdin, stdout, and stderr for testing hook handlers that
+	 * read JSON input and write JSON output.
+	 *
+	 * @public
+	 */
+	export const IO = {
+		/**
+		 * Create a mock I/O context for hook testing.
+		 * @see {@link mockIO}
+		 */
+		create: mockIO,
+
+		/**
+		 * Reset all I/O mocks. Call in afterEach().
+		 * @see {@link resetMockIO}
+		 */
+		reset: resetMockIO,
+	};
+
+	/**
+	 * Environment variable mocking utilities.
+	 *
+	 * @remarks
+	 * Provides complete isolation for environment variables in tests.
+	 * All existing env vars are hidden during the test.
+	 *
+	 * @public
+	 */
+	export const Env = {
+		/**
+		 * Create an isolated mock environment.
+		 * @see {@link mockEnv}
+		 */
+		create: mockEnv,
+
+		/**
+		 * Preset environment configurations.
+		 * @see {@link envPresets}
+		 */
+		presets: envPresets,
+
+		/**
+		 * Mock environment class for ClaudeBinaryPluginEnv.
+		 * @see {@link MockEnv}
+		 */
+		Class: MockEnv,
+	};
+
+	/**
+	 * CLI command testing utilities.
+	 *
+	 * @remarks
+	 * Mocks process.argv, console.log/error, and process.exit
+	 * for testing CLI command handlers.
+	 *
+	 * @public
+	 */
+	export const Command = {
+		/**
+		 * Create a mock command context.
+		 * @see {@link mockCommand}
+		 */
+		create: mockCommand,
+
+		/**
+		 * Run a command with mocked context.
+		 * @see {@link runMockedCommand}
+		 */
+		run: runMockedCommand,
+
+		/**
+		 * Test a fatal error handler.
+		 * @see {@link testFatalErrorHandler}
+		 */
+		testFatalError: testFatalErrorHandler,
+	};
+
+	/**
+	 * Hook handler testing utilities.
+	 *
+	 * @remarks
+	 * Mocks process.exit for testing hook handlers that
+	 * call event.end() which internally exits the process.
+	 *
+	 * @public
+	 */
+	export const Hook = {
+		/**
+		 * Run a hook main function with mocked process.exit.
+		 * @see {@link runMockedHook}
+		 */
+		run: runMockedHook,
+	};
+
+	/**
+	 * Shell executor mocking utilities.
+	 *
+	 * @remarks
+	 * Provides mock shell executors for testing code that
+	 * executes shell commands (e.g., tool detection, linting).
+	 *
+	 * @public
+	 */
+	export const Shell = {
+		/**
+		 * Create a ShellResult for mocking.
+		 * @see {@link createMockShellResult}
+		 */
+		result: createMockShellResult,
+
+		/**
+		 * Create a mock shell executor with predefined responses.
+		 * @see {@link createMockShellExecutor}
+		 */
+		executor: createMockShellExecutor,
+
+		/**
+		 * Default shell executor using Bun.$.
+		 * @see {@link defaultShellExecutor}
+		 */
+		default: defaultShellExecutor,
+
+		/**
+		 * Buffer-based shell utilities for linting tools.
+		 */
+		Buffer: {
+			/**
+			 * Create a BufferShellResult for mocking.
+			 * @see {@link createMockBufferShellResult}
+			 */
+			result: createMockBufferShellResult,
+
+			/**
+			 * Create a mock buffer shell executor.
+			 * @see {@link createMockBufferShellExecutor}
+			 */
+			executor: createMockBufferShellExecutor,
+
+			/**
+			 * Default buffer shell executor using Bun.$.
+			 * @see {@link defaultBufferShellExecutor}
+			 */
+			default: defaultBufferShellExecutor,
+		},
+	};
+
+	/**
+	 * Utility classes and types.
+	 *
+	 * @public
+	 */
+	export const Utils = {
+		/**
+		 * Error thrown when mocked process.exit is called.
+		 * @see {@link MockExitError}
+		 */
+		ExitError: MockExitError,
+
+		/**
+		 * No-op logger methods for testing.
+		 * @see {@link mockLogger}
+		 */
+		logger: mockLogger,
+	};
+}

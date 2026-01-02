@@ -43,6 +43,7 @@ import type {
 	ToolName,
 	UserPromptSubmitEvent,
 } from "../index.js";
+import type { PluginTestBuilder } from "../testing/builder.js";
 import type {
 	NotificationOutput,
 	PassthroughOutput,
@@ -1085,6 +1086,64 @@ export class ClaudeBinaryPlugin<
 		// Dynamic import to avoid circular dependency and enable tree-shaking
 		const { buildPluginFromConfig } = await import("../build/builder.js");
 		return buildPluginFromConfig(plugin, options);
+	}
+
+	/**
+	 * Create a test builder for this plugin.
+	 *
+	 * @remarks
+	 * Returns a fluent test builder with full type inference for options, state,
+	 * and hook inputs. Use this in your test files to create type-safe test contexts.
+	 *
+	 * **Lifecycle:**
+	 * 1. Create test context with `plugin.test()`
+	 * 2. Configure with `.withOptions()` and `.withState()` (required)
+	 * 3. Set hook input with hook-specific methods (e.g., `.withPreToolUseInput()`)
+	 * 4. Run test with `.runHook()` or `.runCommand()`
+	 * 5. Clean up with `.dispose()` in `afterEach()`
+	 *
+	 * @returns A new PluginTestBuilder instance with full type inference
+	 *
+	 * @example
+	 * ```ts
+	 * import plugin from "../plugin.js";
+	 *
+	 * describe("security hook", () => {
+	 *   let ctx: ReturnType<typeof plugin.test>;
+	 *
+	 *   beforeEach(() => {
+	 *     ctx = plugin.test()
+	 *       .withOptions({ DEBUG: false, API_KEY: "test" })
+	 *       .withState({ packageManager: "bun", gitRepo: true });
+	 *   });
+	 *
+	 *   afterEach(() => ctx.dispose());
+	 *
+	 *   test("blocks dangerous commands", async () => {
+	 *     const result = await ctx
+	 *       .withPreToolUseInput({
+	 *         tool_name: "Bash",
+	 *         tool_input: { command: "rm -rf /" },
+	 *       })
+	 *       .runHook("PreToolUse", "security");
+	 *
+	 *     expect(result.action).toBe("deny");
+	 *   });
+	 * });
+	 * ```
+	 *
+	 * @public
+	 */
+	test(): PluginTestBuilder<
+		z.infer<TEnv>,
+		ExtractSetupReturn<NonNullable<TSetup>>,
+		HooksMap<z.infer<TEnv>>,
+		TCommands
+	> {
+		// Dynamic import to enable tree-shaking when test() is not used
+		// biome-ignore lint/suspicious/noExplicitAny: Runtime creation doesn't need strict types
+		const { PluginTestBuilder } = require("../testing/builder.js") as any;
+		return new PluginTestBuilder(this.config);
 	}
 }
 
