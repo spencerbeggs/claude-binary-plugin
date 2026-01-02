@@ -63,7 +63,7 @@ import {
 export { ClaudeBinaryPluginEnv, EnvFileLoadError, escapeForBashDoubleQuotes, formatZodErrorAsMarkdown };
 export type { EnvCodecMetadata } from "./env/codecs.js";
 // Environment codecs with registry metadata
-export { createEnumCodec, createJsonArrayCodec, EnvCodecs, envCodecRegistry } from "./env/codecs.js";
+export { EnvCodecs, createEnumCodec, createJsonArrayCodec, envCodecRegistry } from "./env/codecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -80,7 +80,7 @@ export type {
 } from "./env/plugin-env.js";
 export type { SessionRecord, SessionRegistration } from "./env/session-registry.js";
 // Session registry for persistent session lookups
-export { closeDb, SessionRegistry } from "./env/session-registry.js";
+export { SessionRegistry, closeDb } from "./env/session-registry.js";
 
 // =============================================================================
 // EVENTS MODULE
@@ -115,7 +115,21 @@ export type {
 	UserPromptSubmitEventParsed,
 } from "./core/schemas.js";
 // Hook event schemas with registry metadata
-export { HookEventSchemas, hookEventSchemaRegistry } from "./core/schemas.js";
+export {
+	HookEventSchema,
+	HookEventSchemas,
+	NotificationEventSchema,
+	PermissionRequestEventSchema,
+	PostToolUseEventSchema,
+	PreCompactEventSchema,
+	PreToolUseEventSchema,
+	SessionEndEventSchema,
+	SessionStartEventSchema,
+	StopEventSchema,
+	SubagentStopEventSchema,
+	UserPromptSubmitEventSchema,
+	hookEventSchemaRegistry,
+} from "./core/schemas.js";
 
 // =============================================================================
 // COMMAND TYPES
@@ -388,6 +402,23 @@ export {
 // TESTING UTILITIES
 // =============================================================================
 
+// Test builder for fluent plugin testing API
+export type {
+	CommandTestResult,
+	HookInputBase,
+	HookTestResult,
+	NotificationInput,
+	PermissionRequestInput,
+	PostToolUseInput,
+	PreCompactInput,
+	PreToolUseInput,
+	SessionEndInput,
+	SessionStartInput,
+	StopInput,
+	SubagentStopInput,
+	UserPromptSubmitInput,
+} from "./testing/builder.js";
+export { PluginTestBuilder } from "./testing/builder.js";
 export type {
 	BufferShellExecutor,
 	BufferShellExecutorOptions,
@@ -401,6 +432,7 @@ export type {
 export {
 	MockEnv,
 	MockExitError,
+	Mocks,
 	createMockBufferShellExecutor,
 	createMockBufferShellResult,
 	createMockShellExecutor,

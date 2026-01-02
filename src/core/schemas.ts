@@ -156,10 +156,16 @@ const _HookEventBaseSchema = z.object({
 // =============================================================================
 
 /**
- * Schema for PreToolUse events.
- * @internal
+ * Zod schema for PreToolUse events.
+ *
+ * @remarks
+ * Use this schema to validate PreToolUse event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.PreToolUse} or
+ * {@link HookEventSchemas.parsePreToolUse}.
+ *
+ * @public
  */
-const _PreToolUseEventSchema = _HookEventBaseSchema
+export const PreToolUseEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("PreToolUse"),
 		/** Name of the tool being invoked */
@@ -175,10 +181,16 @@ const _PreToolUseEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for PostToolUse events.
- * @internal
+ * Zod schema for PostToolUse events.
+ *
+ * @remarks
+ * Use this schema to validate PostToolUse event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.PostToolUse} or
+ * {@link HookEventSchemas.parsePostToolUse}.
+ *
+ * @public
  */
-const _PostToolUseEventSchema = _HookEventBaseSchema
+export const PostToolUseEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("PostToolUse"),
 		/** Name of the tool that was invoked */
@@ -196,10 +208,16 @@ const _PostToolUseEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for PermissionRequest events.
- * @internal
+ * Zod schema for PermissionRequest events.
+ *
+ * @remarks
+ * Use this schema to validate PermissionRequest event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.PermissionRequest} or
+ * {@link HookEventSchemas.parsePermissionRequest}.
+ *
+ * @public
  */
-const _PermissionRequestEventSchema = _HookEventBaseSchema
+export const PermissionRequestEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("PermissionRequest"),
 		/** The permission message being shown */
@@ -213,10 +231,16 @@ const _PermissionRequestEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for Notification events.
- * @internal
+ * Zod schema for Notification events.
+ *
+ * @remarks
+ * Use this schema to validate Notification event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.Notification} or
+ * {@link HookEventSchemas.parseNotification}.
+ *
+ * @public
  */
-const _NotificationEventSchema = _HookEventBaseSchema
+export const NotificationEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("Notification"),
 		/** The notification message */
@@ -230,10 +254,16 @@ const _NotificationEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for UserPromptSubmit events.
- * @internal
+ * Zod schema for UserPromptSubmit events.
+ *
+ * @remarks
+ * Use this schema to validate UserPromptSubmit event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.UserPromptSubmit} or
+ * {@link HookEventSchemas.parseUserPromptSubmit}.
+ *
+ * @public
  */
-const _UserPromptSubmitEventSchema = _HookEventBaseSchema
+export const UserPromptSubmitEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("UserPromptSubmit"),
 		/** The user's prompt text */
@@ -245,10 +275,16 @@ const _UserPromptSubmitEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for Stop events.
- * @internal
+ * Zod schema for Stop events.
+ *
+ * @remarks
+ * Use this schema to validate Stop event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.Stop} or
+ * {@link HookEventSchemas.parseStop}.
+ *
+ * @public
  */
-const _StopEventSchema = _HookEventBaseSchema
+export const StopEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("Stop"),
 		/** Whether a stop hook is currently active */
@@ -260,10 +296,16 @@ const _StopEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for SubagentStop events.
- * @internal
+ * Zod schema for SubagentStop events.
+ *
+ * @remarks
+ * Use this schema to validate SubagentStop event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.SubagentStop} or
+ * {@link HookEventSchemas.parseSubagentStop}.
+ *
+ * @public
  */
-const _SubagentStopEventSchema = _HookEventBaseSchema
+export const SubagentStopEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("SubagentStop"),
 		/** Whether a stop hook is currently active */
@@ -275,10 +317,16 @@ const _SubagentStopEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for PreCompact events.
- * @internal
+ * Zod schema for PreCompact events.
+ *
+ * @remarks
+ * Use this schema to validate PreCompact event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.PreCompact} or
+ * {@link HookEventSchemas.parsePreCompact}.
+ *
+ * @public
  */
-const _PreCompactEventSchema = _HookEventBaseSchema
+export const PreCompactEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("PreCompact"),
 		/** What triggered the compact operation */
@@ -292,10 +340,16 @@ const _PreCompactEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for SessionStart events.
- * @internal
+ * Zod schema for SessionStart events.
+ *
+ * @remarks
+ * Use this schema to validate SessionStart event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.SessionStart} or
+ * {@link HookEventSchemas.parseSessionStart}.
+ *
+ * @public
  */
-const _SessionStartEventSchema = _HookEventBaseSchema
+export const SessionStartEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("SessionStart"),
 		/** What triggered the session start */
@@ -307,10 +361,16 @@ const _SessionStartEventSchema = _HookEventBaseSchema
 	});
 
 /**
- * Schema for SessionEnd events.
- * @internal
+ * Zod schema for SessionEnd events.
+ *
+ * @remarks
+ * Use this schema to validate SessionEnd event data from Claude Code.
+ * For most use cases, prefer {@link HookEventSchemas.SessionEnd} or
+ * {@link HookEventSchemas.parseSessionEnd}.
+ *
+ * @public
  */
-const _SessionEndEventSchema = _HookEventBaseSchema
+export const SessionEndEventSchema = _HookEventBaseSchema
 	.extend({
 		hook_event_name: z.literal("SessionEnd"),
 		/** Why the session is ending */
@@ -327,19 +387,26 @@ const _SessionEndEventSchema = _HookEventBaseSchema
 
 /**
  * Discriminated union schema for all hook event types.
- * @internal
+ *
+ * @remarks
+ * Use this schema to validate any hook event data from Claude Code.
+ * The schema automatically discriminates based on `hook_event_name`.
+ * For most use cases, prefer {@link HookEventSchemas.Any} or
+ * {@link HookEventSchemas.parse}.
+ *
+ * @public
  */
-const _HookEventSchema = z.discriminatedUnion("hook_event_name", [
-	_PreToolUseEventSchema,
-	_PostToolUseEventSchema,
-	_PermissionRequestEventSchema,
-	_NotificationEventSchema,
-	_UserPromptSubmitEventSchema,
-	_StopEventSchema,
-	_SubagentStopEventSchema,
-	_PreCompactEventSchema,
-	_SessionStartEventSchema,
-	_SessionEndEventSchema,
+export const HookEventSchema = z.discriminatedUnion("hook_event_name", [
+	PreToolUseEventSchema,
+	PostToolUseEventSchema,
+	PermissionRequestEventSchema,
+	NotificationEventSchema,
+	UserPromptSubmitEventSchema,
+	StopEventSchema,
+	SubagentStopEventSchema,
+	PreCompactEventSchema,
+	SessionStartEventSchema,
+	SessionEndEventSchema,
 ]);
 
 // =============================================================================
@@ -350,67 +417,67 @@ const _HookEventSchema = z.discriminatedUnion("hook_event_name", [
  * Inferred type for any hook event (discriminated union).
  * @public
  */
-export type HookEventParsed = z.infer<typeof _HookEventSchema>;
+export type HookEventParsed = z.infer<typeof HookEventSchema>;
 
 /**
  * Inferred type for PreToolUse events.
  * @public
  */
-export type PreToolUseEventParsed = z.infer<typeof _PreToolUseEventSchema>;
+export type PreToolUseEventParsed = z.infer<typeof PreToolUseEventSchema>;
 
 /**
  * Inferred type for PostToolUse events.
  * @public
  */
-export type PostToolUseEventParsed = z.infer<typeof _PostToolUseEventSchema>;
+export type PostToolUseEventParsed = z.infer<typeof PostToolUseEventSchema>;
 
 /**
  * Inferred type for PermissionRequest events.
  * @public
  */
-export type PermissionRequestEventParsed = z.infer<typeof _PermissionRequestEventSchema>;
+export type PermissionRequestEventParsed = z.infer<typeof PermissionRequestEventSchema>;
 
 /**
  * Inferred type for Notification events.
  * @public
  */
-export type NotificationEventParsed = z.infer<typeof _NotificationEventSchema>;
+export type NotificationEventParsed = z.infer<typeof NotificationEventSchema>;
 
 /**
  * Inferred type for UserPromptSubmit events.
  * @public
  */
-export type UserPromptSubmitEventParsed = z.infer<typeof _UserPromptSubmitEventSchema>;
+export type UserPromptSubmitEventParsed = z.infer<typeof UserPromptSubmitEventSchema>;
 
 /**
  * Inferred type for Stop events.
  * @public
  */
-export type StopEventParsed = z.infer<typeof _StopEventSchema>;
+export type StopEventParsed = z.infer<typeof StopEventSchema>;
 
 /**
  * Inferred type for SubagentStop events.
  * @public
  */
-export type SubagentStopEventParsed = z.infer<typeof _SubagentStopEventSchema>;
+export type SubagentStopEventParsed = z.infer<typeof SubagentStopEventSchema>;
 
 /**
  * Inferred type for PreCompact events.
  * @public
  */
-export type PreCompactEventParsed = z.infer<typeof _PreCompactEventSchema>;
+export type PreCompactEventParsed = z.infer<typeof PreCompactEventSchema>;
 
 /**
  * Inferred type for SessionStart events.
  * @public
  */
-export type SessionStartEventParsed = z.infer<typeof _SessionStartEventSchema>;
+export type SessionStartEventParsed = z.infer<typeof SessionStartEventSchema>;
 
 /**
  * Inferred type for SessionEnd events.
  * @public
  */
-export type SessionEndEventParsed = z.infer<typeof _SessionEndEventSchema>;
+export type SessionEndEventParsed = z.infer<typeof SessionEndEventSchema>;
 
 // =============================================================================
 // HOOK EVENT SCHEMAS CLASS
@@ -482,37 +549,37 @@ export const HookEventSchemas = {
 	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Schema for PreToolUse events (allow/deny/modify tool execution) */
-	PreToolUse: _PreToolUseEventSchema,
+	PreToolUse: PreToolUseEventSchema,
 
 	/** Schema for PostToolUse events (add context/block after tool) */
-	PostToolUse: _PostToolUseEventSchema,
+	PostToolUse: PostToolUseEventSchema,
 
 	/** Schema for PermissionRequest events (auto allow/deny permissions) */
-	PermissionRequest: _PermissionRequestEventSchema,
+	PermissionRequest: PermissionRequestEventSchema,
 
 	/** Schema for Notification events (passthrough) */
-	Notification: _NotificationEventSchema,
+	Notification: NotificationEventSchema,
 
 	/** Schema for UserPromptSubmit events (add context/block prompts) */
-	UserPromptSubmit: _UserPromptSubmitEventSchema,
+	UserPromptSubmit: UserPromptSubmitEventSchema,
 
 	/** Schema for Stop events (block agent completion) */
-	Stop: _StopEventSchema,
+	Stop: StopEventSchema,
 
 	/** Schema for SubagentStop events (block subagent completion) */
-	SubagentStop: _SubagentStopEventSchema,
+	SubagentStop: SubagentStopEventSchema,
 
 	/** Schema for PreCompact events (passthrough) */
-	PreCompact: _PreCompactEventSchema,
+	PreCompact: PreCompactEventSchema,
 
 	/** Schema for SessionStart events (setup/context) */
-	SessionStart: _SessionStartEventSchema,
+	SessionStart: SessionStartEventSchema,
 
 	/** Schema for SessionEnd events (cleanup) */
-	SessionEnd: _SessionEndEventSchema,
+	SessionEnd: SessionEndEventSchema,
 
 	/** Discriminated union of all hook event schemas */
-	Any: _HookEventSchema,
+	Any: HookEventSchema,
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// Parse Methods
@@ -527,7 +594,7 @@ export const HookEventSchemas = {
 	 * @throws `SyntaxError` when the JSON is malformed
 	 */
 	parse(json: string): HookEventParsed {
-		return _HookEventSchema.parse(JSON.parse(json));
+		return HookEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -535,7 +602,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parsePreToolUse(json: string): PreToolUseEventParsed {
-		return _PreToolUseEventSchema.parse(JSON.parse(json));
+		return PreToolUseEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -543,7 +610,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parsePostToolUse(json: string): PostToolUseEventParsed {
-		return _PostToolUseEventSchema.parse(JSON.parse(json));
+		return PostToolUseEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -551,7 +618,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parsePermissionRequest(json: string): PermissionRequestEventParsed {
-		return _PermissionRequestEventSchema.parse(JSON.parse(json));
+		return PermissionRequestEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -559,7 +626,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parseNotification(json: string): NotificationEventParsed {
-		return _NotificationEventSchema.parse(JSON.parse(json));
+		return NotificationEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -567,7 +634,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parseUserPromptSubmit(json: string): UserPromptSubmitEventParsed {
-		return _UserPromptSubmitEventSchema.parse(JSON.parse(json));
+		return UserPromptSubmitEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -575,7 +642,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parseStop(json: string): StopEventParsed {
-		return _StopEventSchema.parse(JSON.parse(json));
+		return StopEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -583,7 +650,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parseSubagentStop(json: string): SubagentStopEventParsed {
-		return _SubagentStopEventSchema.parse(JSON.parse(json));
+		return SubagentStopEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -591,7 +658,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parsePreCompact(json: string): PreCompactEventParsed {
-		return _PreCompactEventSchema.parse(JSON.parse(json));
+		return PreCompactEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -599,7 +666,7 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parseSessionStart(json: string): SessionStartEventParsed {
-		return _SessionStartEventSchema.parse(JSON.parse(json));
+		return SessionStartEventSchema.parse(JSON.parse(json));
 	},
 
 	/**
@@ -607,6 +674,6 @@ export const HookEventSchemas = {
 	 * @param json - Raw JSON string from Claude Code
 	 */
 	parseSessionEnd(json: string): SessionEndEventParsed {
-		return _SessionEndEventSchema.parse(JSON.parse(json));
+		return SessionEndEventSchema.parse(JSON.parse(json));
 	},
 } as const;
