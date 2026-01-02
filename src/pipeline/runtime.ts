@@ -48,8 +48,8 @@ import {
 	SubagentStopHookEvent,
 	UserPromptSubmitHookEvent,
 } from "../events/subclasses.js";
-import type { HookOutcome } from "../otel/events.js";
-import { emitHookExecution } from "../otel/events.js";
+import type { HookOutcome } from "../otel/classes/TelemetryEmitter.js";
+import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
 import type { BaseEnv, PipelineHandler, SetupFunction } from "./config.js";
 
 // =============================================================================
@@ -641,7 +641,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			const durationMs = Math.round(performance.now() - startTime);
 			const summary = `skipped: tool ${toolName} not in filter`;
 
-			emitHookExecution(event, hookName, {
+			TelemetryEmitter.emitHookExecution(event, hookName, {
 				hookType,
 				pluginName,
 				pluginVersion,
@@ -717,7 +717,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			}
 
 			// Emit hook execution telemetry
-			emitHookExecution(event, hookName, {
+			TelemetryEmitter.emitHookExecution(event, hookName, {
 				hookType,
 				pluginName,
 				pluginVersion,
@@ -765,7 +765,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 				`Pipeline outputs are required (must have status and summary fields). ` +
 				`Received: ${JSON.stringify(output)}`;
 
-			emitHookExecution(event, hookName, {
+			TelemetryEmitter.emitHookExecution(event, hookName, {
 				hookType,
 				pluginName,
 				pluginVersion,
@@ -790,7 +790,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 
 		if (error instanceof z.ZodError) {
 			// Output validation failed - emit error telemetry
-			emitHookExecution(event, hookName, {
+			TelemetryEmitter.emitHookExecution(event, hookName, {
 				hookType,
 				pluginName,
 				pluginVersion,
@@ -1125,8 +1125,8 @@ export async function handleUnknownHook(hookKey: string, validHooks: string[]): 
 	try {
 		const { isOTELEnabled } = await import("../otel/config.js");
 		if (isOTELEnabled()) {
-			const { emitHookExecutionDirect } = await import("../otel/events.js");
-			emitHookExecutionDirect({
+			const { TelemetryEmitter } = await import("../otel/classes/TelemetryEmitter.js");
+			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: sessionId ?? "unknown",
 				hookName: `${hookType}/${hookName}`,
 				hookType,

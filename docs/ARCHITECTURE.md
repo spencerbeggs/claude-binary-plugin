@@ -661,6 +661,60 @@ reliable state access for both hooks and commands.
 
 ## OTEL Integration
 
+### Class-Based API
+
+The OTEL module uses a class-based API for better discoverability and
+IDE autocomplete. All telemetry functionality is accessed through
+static class methods:
+
+```typescript
+import {
+  OTELConfig,
+  TelemetryEmitter,
+  TelemetryMetrics,
+  TelemetrySpan,
+  Platform,
+  GitInfo,
+} from "claude-binary-plugin";
+
+// Check if telemetry is enabled
+if (OTELConfig.isEnabled()) {
+  // Emit hook execution event
+  TelemetryEmitter.emitHookExecution(event, "pre-bash", {
+    hookType: "PreToolUse",
+    pluginName: "workflow",
+    pluginVersion: "1.0.0",
+    durationMs: 42,
+    success: true,
+    outcome: "allowed",
+  });
+
+  // Record metrics
+  TelemetryMetrics.recordCounter(event, "files.processed", 5);
+  TelemetryMetrics.recordHistogram(event, "parse.duration", 123, "ms");
+}
+
+// Instrument hooks with automatic span tracking
+const handler = TelemetrySpan.instrumentHook("pre-bash", async (event) => {
+  return { status: "executed", action: "allow", summary: "ok" };
+});
+```
+
+**Primary Classes:**
+
+| Class | Purpose |
+| ----- | ------- |
+| `OTELConfig` | Configuration parsing, `isEnabled()` check |
+| `TelemetryEmitter` | Event emission (`emitHookExecution`, etc.) |
+| `TelemetryMetrics` | Metric recording (counters, histograms, gauges) |
+| `TelemetrySpan` | Span instrumentation for tracing |
+| `Platform` | Platform detection, socket path utilities |
+| `GitInfo` | Git repository detection |
+| `PluginInfo` | Plugin metadata for telemetry attributes |
+| `SidecarClient` | IPC client for sidecar communication |
+| `SidecarClientPool` | Client lifecycle management |
+| `SidecarLauncher` | Sidecar process spawning |
+
 ### Sidecar Architecture Overview
 
 The OTEL system uses a sidecar process for telemetry collection. This
@@ -1077,29 +1131,64 @@ const handler: Commands["lint"] = async ({ env }) => {
 ```text
 src/
 ├── index.ts              # Hook events, response builders
-├── pipeline.ts           # ClaudeBinaryPlugin.create()
-├── pipeline-runtime.ts   # runPipeline(), runRawHandler()
-├── pipeline-types.ts     # Output types, Zod schemas
-├── pipeline-metrics.ts   # Token estimation, metrics
-├── command-runtime.ts    # runCommand(), arg parsing
-├── builder.ts            # buildPlugin(), entrypoint gen
-├── plugin-env.ts         # ClaudeBinaryPluginEnv base class
-├── schemas.ts            # Input Zod schemas
-├── session-registry.ts   # SQLite session lookup
-├── debug-logger.ts       # File-based debug logging
-├── mocks.ts              # Test utilities
+├── build/
+│   └── builder.ts        # buildPlugin(), entrypoint gen
+├── commands/
+│   └── runtime.ts        # runCommand(), arg parsing
+├── core/
+│   ├── schemas.ts        # Input Zod schemas
+│   └── tool-inputs.ts    # Tool input types
+├── env/
+│   ├── plugin-env.ts     # ClaudeBinaryPluginEnv base class
+│   ├── session-registry.ts # SQLite session lookup
+│   └── codecs.ts         # Zod codecs for env vars
+├── events/
+│   ├── base.ts           # HookEvent base class
+│   ├── subclasses.ts     # Hook event subclasses
+│   ├── types.ts          # Event types
+│   ├── enums.ts          # HookEventName enum
+│   ├── response-builders.ts # Response builder functions
+│   ├── response-types.ts # Response types
+│   └── validation.ts     # Input validation
+├── pipeline/
+│   ├── config.ts         # ClaudeBinaryPlugin.create()
+│   ├── runtime.ts        # runPipeline(), runRawHandler()
+│   ├── types.ts          # Output types, Zod schemas
+│   ├── metrics.ts        # Token estimation, metrics
+│   └── namespace.ts      # ClaudeBinaryPlugin namespace
+├── testing/
+│   ├── mocks.ts          # Test utilities, mockEnv()
+│   └── builder.ts        # PluginTestBuilder
+├── utils/
+│   └── debug-logger.ts   # File-based debug logging
 └── otel/
     ├── index.ts          # OTEL module exports
-    ├── client.ts         # SidecarClient for IPC
-    ├── config.ts         # OTEL configuration
+    ├── classes/          # Class-based API (primary)
+    │   ├── index.ts      # Barrel export
+    │   ├── OTELConfig.ts # Configuration parsing
+    │   ├── Platform.ts   # Platform detection
+    │   ├── GitInfo.ts    # Git repo detection
+    │   ├── PluginInfo.ts # Plugin metadata
+    │   ├── SessionEnv.ts # Session utilities
+    │   ├── ClaudeAccountInfo.ts # Account detection
+    │   ├── SidecarMessage.ts # Message serialization
+    │   ├── SidecarClientPool.ts # Client management
+    │   ├── SidecarLauncher.ts # Sidecar spawning
+    │   ├── TelemetryEmitter.ts # Event emission
+    │   ├── TelemetryMetrics.ts # Metric recording
+    │   └── TelemetrySpan.ts # Span instrumentation
+    ├── sidecar/          # Sidecar process
+    │   ├── main.ts       # Entry point
+    │   ├── server.ts     # Unix socket server
+    │   ├── providers.ts  # OTEL providers
+    │   ├── handlers/     # Message handlers
+    │   └── exporters.ts  # OTLP exporters
+    ├── client.ts         # SidecarClient class
+    ├── config.ts         # Low-level config
     ├── constants.ts      # Attribute/metric names
-    ├── events.ts         # Event emitters
-    ├── metrics.ts        # Metric recorders
-    ├── instrumentation.ts# Span wrappers
-    ├── protocol.ts       # Message serialization
-    ├── platform.ts       # Socket path handling
-    ├── spawn.ts          # Sidecar spawning
-    ├── git-info.ts       # Git repo detection
-    ├── plugin-info.ts    # Plugin metadata
-    └── sidecar.ts        # Sidecar entry point
+    ├── protocol.ts       # Message types
+    ├── platform.ts       # Low-level platform
+    ├── git-info.ts       # Low-level git
+    ├── plugin-info.ts    # Low-level plugin info
+    └── spawn.ts          # Low-level sidecar spawn
 ```

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import type { HookEventBase } from "../index.js";
-import { HookEventName } from "../index.js";
-import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
-import { clearSidecarClients } from "./client.js";
-import { instrumentHook, instrumentToolHook, withChildSpan, withHookSpan } from "./instrumentation.js";
+import { HookEventName } from "../../events/enums.js";
+import type { HookEventBase } from "../../events/types.js";
+import type { MockEnvContext } from "../../testing/mocks.js";
+import { mockEnv } from "../../testing/mocks.js";
+import { clearSidecarClients } from "../client.js";
+import { TelemetrySpan } from "./TelemetrySpan.js";
 
 // Mock HookEventBase for testing
 function createMockEvent(overrides: Partial<HookEventBase> = {}): HookEventBase {
@@ -18,7 +18,7 @@ function createMockEvent(overrides: Partial<HookEventBase> = {}): HookEventBase 
 	};
 }
 
-describe("instrumentation", () => {
+describe("TelemetrySpan", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
@@ -36,7 +36,7 @@ describe("instrumentation", () => {
 			const event = createMockEvent();
 			const handler = mock(async () => "result");
 
-			const result = await withHookSpan(event, "test-span", handler);
+			const result = await TelemetrySpan.withHookSpan(event, "test-span", handler);
 
 			expect(result).toBe("result");
 			expect(handler).toHaveBeenCalledTimes(1);
@@ -47,7 +47,7 @@ describe("instrumentation", () => {
 			const event = createMockEvent();
 			const handler = mock(async () => "result");
 
-			const result = await withHookSpan(event, "test-span", handler);
+			const result = await TelemetrySpan.withHookSpan(event, "test-span", handler);
 
 			expect(result).toBe("result");
 			expect(handler).toHaveBeenCalledTimes(1);
@@ -60,14 +60,14 @@ describe("instrumentation", () => {
 				throw error;
 			});
 
-			await expect(withHookSpan(event, "test-span", handler)).rejects.toThrow("test error");
+			await expect(TelemetrySpan.withHookSpan(event, "test-span", handler)).rejects.toThrow("test error");
 		});
 
 		test("accepts custom attributes", async () => {
 			const event = createMockEvent();
 			const handler = mock(async () => "result");
 
-			const result = await withHookSpan(event, "test-span", handler, {
+			const result = await TelemetrySpan.withHookSpan(event, "test-span", handler, {
 				"custom.attr": "value",
 			});
 
@@ -78,14 +78,14 @@ describe("instrumentation", () => {
 	describe("instrumentHook", () => {
 		test("creates a wrapped handler function", () => {
 			const handler = mock(async (_event: HookEventBase) => "result");
-			const wrapped = instrumentHook("test-hook", handler);
+			const wrapped = TelemetrySpan.instrumentHook("test-hook", handler);
 
 			expect(typeof wrapped).toBe("function");
 		});
 
 		test("wrapped handler calls original handler", async () => {
 			const handler = mock(async (_event: HookEventBase) => "result");
-			const wrapped = instrumentHook("test-hook", handler);
+			const wrapped = TelemetrySpan.instrumentHook("test-hook", handler);
 			const event = createMockEvent();
 
 			const result = await wrapped(event);
@@ -99,7 +99,7 @@ describe("instrumentation", () => {
 			const handler = mock(async (_event: HookEventBase) => {
 				throw new Error("handler error");
 			});
-			const wrapped = instrumentHook("test-hook", handler);
+			const wrapped = TelemetrySpan.instrumentHook("test-hook", handler);
 			const event = createMockEvent();
 
 			await expect(wrapped(event)).rejects.toThrow("handler error");
@@ -109,14 +109,14 @@ describe("instrumentation", () => {
 	describe("instrumentToolHook", () => {
 		test("creates a wrapped handler function for tool hooks", () => {
 			const handler = mock(async (_event: HookEventBase & { tool_name: string; tool_input: unknown }) => "result");
-			const wrapped = instrumentToolHook("test-tool-hook", handler);
+			const wrapped = TelemetrySpan.instrumentToolHook("test-tool-hook", handler);
 
 			expect(typeof wrapped).toBe("function");
 		});
 
 		test("wrapped handler calls original handler", async () => {
 			const handler = mock(async (_event: HookEventBase & { tool_name: string; tool_input: unknown }) => "result");
-			const wrapped = instrumentToolHook("test-tool-hook", handler);
+			const wrapped = TelemetrySpan.instrumentToolHook("test-tool-hook", handler);
 			const event = {
 				...createMockEvent(),
 				tool_name: "Write",
@@ -132,7 +132,7 @@ describe("instrumentation", () => {
 		test("includes tool input when OTEL_PLUGIN_INCLUDE_TOOL_INPUT is set", async () => {
 			env.set("OTEL_PLUGIN_INCLUDE_TOOL_INPUT", "1");
 			const handler = mock(async (_event: HookEventBase & { tool_name: string; tool_input: unknown }) => "result");
-			const wrapped = instrumentToolHook("test-tool-hook", handler);
+			const wrapped = TelemetrySpan.instrumentToolHook("test-tool-hook", handler);
 			const event = {
 				...createMockEvent(),
 				tool_name: "Write",
@@ -148,7 +148,7 @@ describe("instrumentation", () => {
 			env.set("OTEL_PLUGIN_INCLUDE_TOOL_INPUT", "1");
 			env.set("OTEL_PLUGIN_MAX_TOOL_INPUT_LENGTH", "50");
 			const handler = mock(async (_event: HookEventBase & { tool_name: string; tool_input: unknown }) => "result");
-			const wrapped = instrumentToolHook("test-tool-hook", handler);
+			const wrapped = TelemetrySpan.instrumentToolHook("test-tool-hook", handler);
 			const event = {
 				...createMockEvent(),
 				tool_name: "Write",
@@ -166,7 +166,7 @@ describe("instrumentation", () => {
 			const event = createMockEvent();
 			const handler = mock(async () => "child-result");
 
-			const result = await withChildSpan(event, "child-span", handler);
+			const result = await TelemetrySpan.withChildSpan(event, "child-span", handler);
 
 			expect(result).toBe("child-result");
 			expect(handler).toHaveBeenCalledTimes(1);
@@ -176,7 +176,7 @@ describe("instrumentation", () => {
 			const event = createMockEvent();
 			const handler = mock(async () => "result");
 
-			const result = await withChildSpan(event, "child-span", handler, {
+			const result = await TelemetrySpan.withChildSpan(event, "child-span", handler, {
 				"custom.child.attr": "value",
 			});
 
@@ -189,7 +189,7 @@ describe("instrumentation", () => {
 				throw new Error("child error");
 			});
 
-			await expect(withChildSpan(event, "child-span", handler)).rejects.toThrow("child error");
+			await expect(TelemetrySpan.withChildSpan(event, "child-span", handler)).rejects.toThrow("child error");
 		});
 	});
 });

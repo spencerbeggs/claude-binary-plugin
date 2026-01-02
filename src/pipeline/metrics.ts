@@ -413,7 +413,7 @@ export function extractAutoMetrics(
 export interface SessionTokenState {
 	/** Total tokens added to context by all hooks */
 	totalContextAdded: number;
-	/** Tokens added by each hook (hook name -> tokens) */
+	/** Tokens added by each hook (hook name to tokens) */
 	byHook: Record<string, number>;
 	/** Tokens added by each hook type */
 	byType: Record<string, number>;

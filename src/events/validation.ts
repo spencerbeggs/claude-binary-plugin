@@ -46,15 +46,15 @@ async function emitValidationErrorToOTEL(sessionId: string | null, hookName: str
 		const { isOTELEnabled } = require("../otel/config.js") as { isOTELEnabled: () => boolean };
 		if (!isOTELEnabled()) return;
 
-		const { emitSchemaValidationError } = require("../otel/events.js") as {
-			emitSchemaValidationError: typeof import("../otel/events.js").emitSchemaValidationError;
+		const { TelemetryEmitter } = require("../otel/classes/TelemetryEmitter.js") as {
+			TelemetryEmitter: typeof import("../otel/classes/TelemetryEmitter.js").TelemetryEmitter;
 		};
 		const { getSidecarClient } = require("../otel/client.js") as {
 			getSidecarClient: typeof import("../otel/client.js").getSidecarClient;
 		};
 
 		const formatted = formatZodError(error);
-		emitSchemaValidationError(sessionId, hookName, {
+		TelemetryEmitter.emitSchemaValidationError(sessionId, hookName, {
 			hookName,
 			issueCount: formatted.issueCount,
 			validationPath: formatted.path,
@@ -95,8 +95,8 @@ export async function parseWithOTEL<T>(rawJson: string, schema: z.ZodType<T>, ho
 	// Initialize OTEL if we have a session ID
 	if (sessionId) {
 		try {
-			const { preconnectTelemetry } = await import("../otel/index.js");
-			await preconnectTelemetry(sessionId);
+			const { TelemetryEmitter } = await import("../otel/index.js");
+			await TelemetryEmitter.preconnect(sessionId);
 		} catch {
 			// Silently ignore telemetry errors - don't block hook initialization
 		}

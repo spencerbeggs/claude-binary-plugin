@@ -1,15 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { HookEventName } from "../index.js";
-import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
-import { clearSidecarClients, getSidecarClient } from "./client.js";
-import {
-	emitEnvValidationError,
-	emitFatalError,
-	emitHookExecution,
-	emitHookExecutionDirect,
-	emitSchemaValidationError,
-} from "./events.js";
+import { HookEventName } from "../../events/enums.js";
+import type { MockEnvContext } from "../../testing/mocks.js";
+import { mockEnv } from "../../testing/mocks.js";
+import { clearSidecarClients, getSidecarClient } from "../client.js";
+import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
 // Type for mock call assertions
 interface MockEventMessage {
@@ -35,7 +29,7 @@ function getFirstCall(spy: ReturnType<typeof mock>): [MockEventMessage] {
 	return call as [MockEventMessage];
 }
 
-describe("otel/events", () => {
+describe("TelemetryEmitter", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
@@ -65,7 +59,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PreToolUse,
 			};
 
-			emitHookExecution(event, "pre-bash", {
+			TelemetryEmitter.emitHookExecution(event, "pre-bash", {
 				hookType: "PreToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -96,7 +90,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PreToolUse,
 			};
 
-			emitHookExecution(event, "security-check", {
+			TelemetryEmitter.emitHookExecution(event, "security-check", {
 				hookType: "PreToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -155,7 +149,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PreToolUse,
 			};
 
-			emitHookExecution(event, "test-hook", {
+			TelemetryEmitter.emitHookExecution(event, "test-hook", {
 				hookType: "PreToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -177,7 +171,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PreToolUse,
 			};
 
-			emitHookExecution(event, "test-hook", {
+			TelemetryEmitter.emitHookExecution(event, "test-hook", {
 				hookType: "PreToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -201,7 +195,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PostToolUse,
 			};
 
-			emitHookExecution(event, "test-hook", {
+			TelemetryEmitter.emitHookExecution(event, "test-hook", {
 				hookType: "PostToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -225,7 +219,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PreToolUse,
 			};
 
-			emitHookExecution(event, "test-hook", {
+			TelemetryEmitter.emitHookExecution(event, "test-hook", {
 				hookType: "PreToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -250,7 +244,7 @@ describe("otel/events", () => {
 				hook_event_name: HookEventName.PreToolUse,
 			};
 
-			emitHookExecution(event, "test-hook", {
+			TelemetryEmitter.emitHookExecution(event, "test-hook", {
 				hookType: "PreToolUse",
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
@@ -270,7 +264,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitSchemaValidationError("test-session", "pre-bash", {
+			TelemetryEmitter.emitSchemaValidationError("test-session", "pre-bash", {
 				hookName: "pre-bash",
 				issueCount: 2,
 				validationPath: "tool_input.command",
@@ -293,7 +287,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitSchemaValidationError("test-session", "pre-bash", {
+			TelemetryEmitter.emitSchemaValidationError("test-session", "pre-bash", {
 				hookName: "pre-bash",
 				issueCount: 1,
 				validationPath: "tool_input",
@@ -310,7 +304,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitEnvValidationError("test-session", "session-start", {
+			TelemetryEmitter.emitEnvValidationError("test-session", "session-start", {
 				hookName: "session-start",
 				issueCount: 1,
 				validationPath: "DEBUG",
@@ -332,7 +326,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitEnvValidationError("test-session", "session-start", {
+			TelemetryEmitter.emitEnvValidationError("test-session", "session-start", {
 				hookName: "session-start",
 				issueCount: 1,
 				validationPath: "API_KEY",
@@ -350,7 +344,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitEnvValidationError("test-session", "session-start", {
+			TelemetryEmitter.emitEnvValidationError("test-session", "session-start", {
 				hookName: "session-start",
 				issueCount: 1,
 				validationPath: "DEBUG",
@@ -369,7 +363,7 @@ describe("otel/events", () => {
 			client.emit = emitSpy as typeof client.emit;
 			client.flush = flushSpy;
 
-			const result = await emitFatalError("test-session", {
+			const result = await TelemetryEmitter.emitFatalError("test-session", {
 				hookName: "pre-bash",
 				errorType: "uncaughtException",
 				errorMessage: "Cannot read property of undefined",
@@ -398,7 +392,7 @@ describe("otel/events", () => {
 
 			const longStack = "x".repeat(2000);
 
-			await emitFatalError("test-session", {
+			await TelemetryEmitter.emitFatalError("test-session", {
 				hookName: "pre-bash",
 				errorType: "uncaughtException",
 				errorMessage: "Error",
@@ -417,7 +411,7 @@ describe("otel/events", () => {
 			client.emit = emitSpy as typeof client.emit;
 			client.flush = flushSpy;
 
-			await emitFatalError("test-session", {
+			await TelemetryEmitter.emitFatalError("test-session", {
 				hookName: "pre-bash",
 				errorType: "ZodError",
 				errorMessage: "Validation failed",
@@ -435,7 +429,7 @@ describe("otel/events", () => {
 		test("returns false when OTEL is disabled", async () => {
 			env.delete("CLAUDE_CODE_ENABLE_TELEMETRY");
 
-			const result = await emitFatalError("test-session", {
+			const result = await TelemetryEmitter.emitFatalError("test-session", {
 				hookName: "pre-bash",
 				errorType: "Error",
 				errorMessage: "Something failed",
@@ -451,7 +445,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitHookExecutionDirect({
+			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: "test-session",
 				hookName: "PreToolUse/unknown-hook",
 				hookType: "PreToolUse",
@@ -477,7 +471,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitHookExecutionDirect({
+			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: "test-session",
 				hookName: "test-hook",
 				hookType: "PreToolUse",
@@ -495,7 +489,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitHookExecutionDirect({
+			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: "test-session",
 				hookName: "test-hook",
 				hookType: "PreToolUse",
@@ -513,7 +507,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitHookExecutionDirect({
+			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: "test-session",
 				hookName: "test-hook",
 				hookType: "PreToolUse",
@@ -533,7 +527,7 @@ describe("otel/events", () => {
 			const emitSpy = mock((_msg: MockEventMessage) => {});
 			client.emit = emitSpy as typeof client.emit;
 
-			emitHookExecutionDirect({
+			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: "test-session",
 				hookName: "test-hook",
 				hookType: "PreToolUse",

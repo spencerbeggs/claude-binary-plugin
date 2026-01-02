@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { ClaudeBinaryPlugin, type SetupContext } from "../pipeline/config.js";
+import type { SetupContext } from "../pipeline/config.js";
+import { ClaudeBinaryPlugin } from "../pipeline/config.js";
 import type { MockEnvContext } from "./mocks.js";
 import { mockEnv } from "./mocks.js";
 

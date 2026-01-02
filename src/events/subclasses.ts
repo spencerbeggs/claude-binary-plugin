@@ -324,7 +324,11 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
 		if (!eventText) {
 			throw new Error("Failed to read PermissionRequestEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.PermissionRequest, hookName)) as PermissionRequestEvent;
+		const parsed = (await parseWithOTEL(
+			eventText,
+			HookEventSchemas.PermissionRequest,
+			hookName,
+		)) as PermissionRequestEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -472,7 +476,11 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
 		if (!eventText) {
 			throw new Error("Failed to read UserPromptSubmitEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.UserPromptSubmit, hookName)) as UserPromptSubmitEvent;
+		const parsed = (await parseWithOTEL(
+			eventText,
+			HookEventSchemas.UserPromptSubmit,
+			hookName,
+		)) as UserPromptSubmitEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {

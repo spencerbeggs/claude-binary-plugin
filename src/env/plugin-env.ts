@@ -50,8 +50,9 @@
  * @module
  */
 
-import type { EnvValidationErrorResult } from "../otel/events.js";
-import { emitEnvValidationError, isOTELEnabled } from "../otel/index.js";
+import { isOTELEnabled } from "../otel/config.js";
+import type { EnvValidationErrorResult } from "../otel/classes/TelemetryEmitter.js";
+import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
 import { DebugLogger } from "../utils/debug-logger.js";
 
 /**
@@ -1599,7 +1600,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 					envClassName: this.constructor.name,
 				};
 
-				emitEnvValidationError(sessionId, hookName, result);
+				TelemetryEmitter.emitEnvValidationError(sessionId, hookName, result);
 			}
 
 			// Throw with the formatted message

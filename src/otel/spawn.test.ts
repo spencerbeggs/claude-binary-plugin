@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { setPluginInfo } from "./index.js";
+import { PluginInfo } from "./classes/PluginInfo.js";
 import { getPluginBinaryPath, socketExists, spawnSidecar } from "./spawn.js";
 
 describe("spawn", () => {
@@ -27,28 +27,28 @@ describe("spawn", () => {
 	describe("getPluginBinaryPath", () => {
 		test("returns null when CLAUDE_PLUGIN_ROOT not set", () => {
 			delete process.env.CLAUDE_PLUGIN_ROOT;
-			setPluginInfo({ name: "workflow", version: "1.0.0" });
+			PluginInfo.set({ name: "workflow", version: "1.0.0" });
 
 			expect(getPluginBinaryPath()).toBeNull();
 		});
 
 		test("returns null when plugin name is unknown", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/path/to/plugin";
-			setPluginInfo({ name: "unknown", version: "0.0.0" });
+			PluginInfo.set({ name: "unknown", version: "0.0.0" });
 
 			expect(getPluginBinaryPath()).toBeNull();
 		});
 
 		test("returns null when neither CLAUDE_PLUGIN_ROOT nor valid plugin name is set", () => {
 			delete process.env.CLAUDE_PLUGIN_ROOT;
-			setPluginInfo({ name: "unknown", version: "0.0.0" });
+			PluginInfo.set({ name: "unknown", version: "0.0.0" });
 
 			expect(getPluginBinaryPath()).toBeNull();
 		});
 
 		test("returns null when plugin binary does not exist", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
-			setPluginInfo({ name: "workflow", version: "1.0.0" });
+			PluginInfo.set({ name: "workflow", version: "1.0.0" });
 
 			expect(getPluginBinaryPath()).toBeNull();
 		});
@@ -60,7 +60,7 @@ describe("spawn", () => {
 			await Bun.$`touch ${tempDir}/test.plugin`.quiet();
 
 			process.env.CLAUDE_PLUGIN_ROOT = tempDir;
-			setPluginInfo({ name: "test", version: "1.0.0" });
+			PluginInfo.set({ name: "test", version: "1.0.0" });
 
 			const result = getPluginBinaryPath();
 
@@ -89,7 +89,7 @@ describe("spawn", () => {
 	describe("spawnSidecar", () => {
 		test("returns error when plugin binary not found", async () => {
 			delete process.env.CLAUDE_PLUGIN_ROOT;
-			setPluginInfo({ name: "unknown", version: "0.0.0" });
+			PluginInfo.set({ name: "unknown", version: "0.0.0" });
 
 			const result = await spawnSidecar("test-session", {});
 
@@ -99,7 +99,7 @@ describe("spawn", () => {
 
 		test("returns error when CLAUDE_PLUGIN_ROOT points to non-existent path", async () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
-			setPluginInfo({ name: "test-plugin", version: "1.0.0" });
+			PluginInfo.set({ name: "test-plugin", version: "1.0.0" });
 
 			const result = await spawnSidecar("test-session", {});
 
@@ -111,7 +111,7 @@ describe("spawn", () => {
 			// Set up session env file so getSessionEnvDir returns a path
 			process.env.TEST_PLUGIN_SESSION_ENV_FILE = "/tmp/test-session-env/hook-0.sh";
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
-			setPluginInfo({ name: "test-plugin", version: "1.0.0" });
+			PluginInfo.set({ name: "test-plugin", version: "1.0.0" });
 
 			const result = await spawnSidecar("test-session", {});
 
@@ -128,7 +128,7 @@ describe("spawn", () => {
 				}
 			}
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
-			setPluginInfo({ name: "test-plugin", version: "1.0.0" });
+			PluginInfo.set({ name: "test-plugin", version: "1.0.0" });
 
 			const result = await spawnSidecar("test-session", {});
 
@@ -155,7 +155,7 @@ describe("spawn", () => {
 			}
 
 			process.env.CLAUDE_PLUGIN_ROOT = tempDir;
-			setPluginInfo({ name: "test", version: "1.0.0" });
+			PluginInfo.set({ name: "test", version: "1.0.0" });
 
 			const result = await spawnSidecar("test-session", {
 				endpoint: "http://localhost:4318",
@@ -189,7 +189,7 @@ describe("spawn", () => {
 
 			process.env.CLAUDE_PLUGIN_ROOT = tempDir;
 			process.env.TEST_PLUGIN_SESSION_ENV_FILE = `${sessionEnvDir}/hook-0.sh`;
-			setPluginInfo({ name: "test", version: "1.0.0" });
+			PluginInfo.set({ name: "test", version: "1.0.0" });
 
 			const result = await spawnSidecar("test-session", {});
 

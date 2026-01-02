@@ -15,15 +15,16 @@ For deeper context, reference these files:
 
 **Core Source Files (load as needed):**
 
-- `src/pipeline.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
-- `src/pipeline-runtime.ts` - `runPipeline()` execution and response mapping
-- `src/builder.ts` - `buildPlugin()` compilation and entrypoint generation
-- `src/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class for environment management
-- `src/command-runtime.ts` - `runCommand()` for CLI command execution
-- `src/session-registry.ts` - SQLite session lookup for state persistence
-- `src/schemas.ts` - Zod schemas for Claude Code hook event inputs
-- `src/otel/client.ts` - Sidecar client for fire-and-forget telemetry
+- `src/pipeline/config.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
+- `src/pipeline/runtime.ts` - `runPipeline()` execution and response mapping
+- `src/build/builder.ts` - `buildPlugin()` compilation and entrypoint generation
+- `src/env/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class for environment management
+- `src/commands/runtime.ts` - `runCommand()` for CLI command execution
+- `src/env/session-registry.ts` - SQLite session lookup for state persistence
+- `src/core/schemas.ts` - Zod schemas for Claude Code hook event inputs
+- `src/otel/client.ts` - SidecarClient for fire-and-forget telemetry
 - `src/otel/constants.ts` - OTEL attribute and metric name constants
+- `src/otel/classes/` - Class-based OTEL API (TelemetryEmitter, TelemetryMetrics, etc.)
 
 ## Overview
 
@@ -103,13 +104,13 @@ bun run build
 ### Source File Organization
 
 - `src/index.ts` - Hook event classes, response builders, type exports
-- `src/pipeline.ts` - Plugin config types, `ClaudeBinaryPlugin.create()`
-- `src/pipeline-runtime.ts` - `runPipeline()`, response mapping
-- `src/pipeline-types.ts` - Output schemas per hook type
-- `src/builder.ts` - `buildPlugin()`, entrypoint generation
-- `src/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class
-- `src/schemas.ts` - Zod schemas for hook event inputs
-- `src/otel/` - OpenTelemetry integration
+- `src/pipeline/config.ts` - Plugin config types, `ClaudeBinaryPlugin.create()`
+- `src/pipeline/runtime.ts` - `runPipeline()`, response mapping
+- `src/pipeline/types.ts` - Output schemas per hook type
+- `src/build/builder.ts` - `buildPlugin()`, entrypoint generation
+- `src/env/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class
+- `src/core/schemas.ts` - Zod schemas for hook event inputs
+- `src/otel/` - OpenTelemetry integration (class-based API)
 
 ### Data Flow
 
@@ -196,7 +197,51 @@ const result = await detectVersion(mockShell);
 
 ## OTEL Telemetry
 
-The SDK includes an OpenTelemetry sidecar for metrics and events:
+The SDK includes an OpenTelemetry sidecar for metrics and events,
+accessed via a class-based API:
+
+```typescript
+import {
+  OTELConfig,
+  TelemetryEmitter,
+  TelemetryMetrics,
+  TelemetrySpan,
+} from "claude-binary-plugin";
+
+// Check if telemetry is enabled
+if (OTELConfig.isEnabled()) {
+  // Emit hook execution event
+  TelemetryEmitter.emitHookExecution(event, "pre-bash", {
+    hookType: "PreToolUse",
+    pluginName: "my-plugin",
+    pluginVersion: "1.0.0",
+    durationMs: 42,
+    success: true,
+    outcome: "allowed",
+  });
+
+  // Record metrics
+  TelemetryMetrics.recordCounter(event, "files.processed", 5);
+  TelemetryMetrics.recordHistogram(event, "parse.duration", 123, "ms");
+}
+
+// Instrument hooks with automatic span tracking
+const handler = TelemetrySpan.instrumentHook("pre-bash", async (event) => {
+  return { status: "executed", action: "allow", summary: "ok" };
+});
+```
+
+**Key classes:**
+
+| Class | Purpose |
+| ----- | ------- |
+| `OTELConfig` | Configuration parsing, `isEnabled()` check |
+| `TelemetryEmitter` | Event emission (`emitHookExecution`, etc.) |
+| `TelemetryMetrics` | Metric recording (counters, histograms, gauges) |
+| `TelemetrySpan` | Span instrumentation for tracing |
+| `SidecarClient` | Low-level IPC client |
+
+**Architecture:**
 
 - Sidecar spawned at SessionStart if `CLAUDE_CODE_OTEL_ENDPOINT` set
 - Hooks communicate via Unix domain socket (IPC)

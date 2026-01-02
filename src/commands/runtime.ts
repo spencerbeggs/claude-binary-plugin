@@ -470,3 +470,260 @@ export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
 // =============================================================================
 
 export { createBaseEnv, extractStateFromEnv, findSessionEnvDir, validateCommandOutput, formatFatalError };
+
+// =============================================================================
+// COMMANDS NAMESPACE
+// =============================================================================
+
+/**
+ * Unified namespace for command execution and argument parsing.
+ *
+ * @remarks
+ * The `Commands` namespace consolidates all command-related functions into a
+ * single, discoverable API. Commands are CLI tools compiled into plugin binaries
+ * that output markdown for Claude to process.
+ *
+ * **Namespace Organization:**
+ *
+ * | Category | Methods |
+ * |----------|---------|
+ * | Execution | `run` |
+ * | Parsing | `parse`, `parseRaw` |
+ * | Validation | `validateOutput` |
+ * | Errors | `ArgumentError`, `formatError` |
+ * | Utilities | `findSessionEnvDir`, `emptySchema` |
+ *
+ * @example
+ * ```typescript
+ * import { Commands } from "claude-binary-plugin";
+ *
+ * // Run a command handler
+ * await Commands.run({
+ *   commandName: "lint",
+ *   handler: async ({ args, options, env }) => ({
+ *     exitCode: 0,
+ *     output: "# Results\n\nAll checks passed!",
+ *   }),
+ *   rawArgs: ["--fix", "src/"],
+ *   argsSchema: z.object({ fix: z.boolean().default(false) }),
+ *   envClass: MyEnv,
+ * });
+ *
+ * // Parse arguments without execution
+ * const args = await Commands.parse(rawArgs, schema);
+ *
+ * // Check for valid session
+ * const sessionDir = Commands.findSessionEnvDir();
+ * if (!sessionDir) {
+ *   console.error("No active session");
+ * }
+ * ```
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
+ * @public
+ */
+export const Commands = {
+	// =========================================================================
+	// EXECUTION
+	// =========================================================================
+
+	/**
+	 * Run a command handler.
+	 *
+	 * @remarks
+	 * Main entry point for executing CLI commands. Handles the full lifecycle:
+	 * parsing arguments, loading environment, calling the handler, and outputting
+	 * markdown results.
+	 *
+	 * **Exit Codes:**
+	 * - 0: Success
+	 * - 1: Issues found (lint errors, test failures)
+	 * - 2: Fatal error (invalid args, missing config)
+	 *
+	 * @param options - Command execution options
+	 * @returns Never (exits process after completion)
+	 *
+	 * @example
+	 * ```typescript
+	 * await Commands.run({
+	 *   commandName: "lint",
+	 *   pluginName: "my-plugin",
+	 *   pluginVersion: "1.0.0",
+	 *   handler: async ({ args, options, env }) => ({
+	 *     exitCode: 0,
+	 *     output: "# Lint Results\n\nAll checks passed!",
+	 *   }),
+	 *   rawArgs: process.argv.slice(2),
+	 *   argsSchema: Commands.emptySchema,
+	 *   envClass: MyEnv,
+	 * });
+	 * ```
+	 *
+	 * @see {@link RunCommandOptions}
+	 * @public
+	 */
+	run: runCommand,
+
+	// =========================================================================
+	// ARGUMENT PARSING
+	// =========================================================================
+
+	/**
+	 * Parse and validate CLI arguments against a Zod schema.
+	 *
+	 * @remarks
+	 * Parses raw CLI arguments and validates them against the provided schema.
+	 * Supports async validation (e.g., file existence checks).
+	 *
+	 * @param rawArgs - Raw CLI arguments array
+	 * @param schema - Zod schema for validation
+	 * @returns Validated and typed arguments
+	 * @throws {@link CommandArgumentError} if validation fails
+	 *
+	 * @example
+	 * ```typescript
+	 * const schema = z.object({
+	 *   fix: z.boolean().default(false),
+	 *   path: z.string().default("."),
+	 * });
+	 *
+	 * const args = await Commands.parse(["--fix", "--path=src/"], schema);
+	 * // args: { fix: true, path: "src/" }
+	 * ```
+	 *
+	 * @public
+	 */
+	parse: parseCommandArgs,
+
+	/**
+	 * Parse CLI arguments into an object without validation.
+	 *
+	 * @remarks
+	 * Low-level parser that converts CLI args to an object. Use {@link Commands.parse}
+	 * for validated parsing.
+	 *
+	 * **Supported formats:**
+	 * - `--key=value` - Named argument
+	 * - `--flag` - Boolean flag (true)
+	 * - `positional` - Stored in `_positionals` array
+	 *
+	 * @param rawArgs - Raw CLI arguments array
+	 * @returns Parsed arguments object
+	 *
+	 * @example
+	 * ```typescript
+	 * const parsed = Commands.parseRaw(["--fix", "--path=src/", "file.ts"]);
+	 * // { fix: true, path: "src/", _positionals: ["file.ts"] }
+	 * ```
+	 *
+	 * @public
+	 */
+	parseRaw: parseRawArgs,
+
+	// =========================================================================
+	// VALIDATION
+	// =========================================================================
+
+	/**
+	 * Validate command output structure.
+	 *
+	 * @remarks
+	 * Ensures the command handler returned a valid output object with
+	 * `exitCode` (0-255) and `output` (string).
+	 *
+	 * @param output - Output to validate
+	 * @param commandName - Command name for error messages
+	 * @throws Error if output is invalid
+	 *
+	 * @public
+	 */
+	validateOutput: validateCommandOutput,
+
+	// =========================================================================
+	// ERRORS
+	// =========================================================================
+
+	/**
+	 * Error class for argument validation failures.
+	 *
+	 * @remarks
+	 * Thrown when CLI arguments fail Zod validation. The error message is
+	 * formatted as LLM-friendly markdown with validation errors and usage hints.
+	 *
+	 * @example
+	 * ```typescript
+	 * try {
+	 *   await Commands.parse(args, schema);
+	 * } catch (error) {
+	 *   if (error instanceof Commands.ArgumentError) {
+	 *     console.log(error.message); // Markdown error
+	 *     process.exit(error.exitCode); // Always 2
+	 *   }
+	 * }
+	 * ```
+	 *
+	 * @public
+	 */
+	ArgumentError: CommandArgumentError,
+
+	/**
+	 * Format a fatal error as LLM-friendly markdown.
+	 *
+	 * @param commandName - Command that failed
+	 * @param error - Error to format
+	 * @returns Markdown error message
+	 *
+	 * @public
+	 */
+	formatError: formatFatalError,
+
+	// =========================================================================
+	// UTILITIES
+	// =========================================================================
+
+	/**
+	 * Find the session environment directory.
+	 *
+	 * @remarks
+	 * Commands need access to state computed during SessionStart. This function
+	 * locates the session-env directory using multiple strategies:
+	 *
+	 * 1. `CLAUDE_SESSION_ID` via SQLite registry
+	 * 2. `CLAUDE_ENV_FILE` parent directory
+	 * 3. Any `*_PLUGIN_ENV_FILE` env var
+	 * 4. Project directory via SQLite registry
+	 *
+	 * @returns Session env directory path, or undefined if not found
+	 *
+	 * @example
+	 * ```typescript
+	 * const sessionDir = Commands.findSessionEnvDir();
+	 * if (!sessionDir) {
+	 *   throw new Error("Run this within a Claude Code session");
+	 * }
+	 * ```
+	 *
+	 * @public
+	 */
+	findSessionEnvDir,
+
+	/**
+	 * Empty schema for commands that don't accept arguments.
+	 *
+	 * @remarks
+	 * Use this for commands that have no configurable arguments.
+	 *
+	 * @example
+	 * ```typescript
+	 * await Commands.run({
+	 *   commandName: "status",
+	 *   argsSchema: Commands.emptySchema,
+	 *   handler: async () => ({ exitCode: 0, output: "OK" }),
+	 *   // ...
+	 * });
+	 * ```
+	 *
+	 * @public
+	 */
+	emptySchema: emptyArgsSchema,
+} as const;

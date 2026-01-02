@@ -228,8 +228,8 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	 */
 	protected static async initTelemetry(sessionId: string): Promise<void> {
 		try {
-			const { preconnectTelemetry } = await import("../otel/index.js");
-			await preconnectTelemetry(sessionId);
+			const { TelemetryEmitter } = await import("../otel/index.js");
+			await TelemetryEmitter.preconnect(sessionId);
 		} catch {
 			// Silently ignore telemetry errors
 		}

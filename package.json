@@ -27,9 +27,9 @@
 	"scripts": {
 		"api": "bun lib/scripts/api.mts",
 		"ci:api": "bun lib/scripts/api.mts --ci",
-		"build": "turbo run typecheck compile api --log-order=grouped",
+		"build": "turbo run typecheck compile --log-order=grouped",
 		"compile": "bun lib/scripts/build.mts",
-		"ci:build": "turbo run typecheck compile ci:api --log-order=grouped",
+		"ci:build": "turbo run typecheck compile --log-order=grouped",
 		"ci:test": "bun test",
 		"ci:version": "changeset version && biome format --write .",
 		"lint": "biome check --max-diagnostics=none",

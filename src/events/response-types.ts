@@ -31,8 +31,8 @@ export interface HookResponse {
 	reason?: string;
 }
 
-// Re-export canonical definitions from otel/events.ts
-export type { HookMetrics, HookOutcome } from "../otel/events.js";
+// Re-export canonical definitions from TelemetryEmitter class
+export type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
 
 /**
  * Estimate token count for a string.

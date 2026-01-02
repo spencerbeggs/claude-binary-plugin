@@ -139,23 +139,35 @@ export type { EmptyArgs, RunCommandOptions } from "./commands/runtime.js";
 
 export {
 	CommandArgumentError,
+	// Unified namespace (preferred)
+	Commands,
 	emptyArgsSchema,
+	findSessionEnvDir,
+	formatFatalError,
 	parseCommandArgs,
 	parseRawArgs,
 	runCommand,
+	validateCommandOutput,
 } from "./commands/runtime.js";
 
 // =============================================================================
 // OTEL TELEMETRY
 // =============================================================================
 
+// Type exports
 export type {
+	// Configuration types
+	ClaudeAccountInfoData,
+	// Telemetry types
 	ClientState,
 	DecisionSource,
 	EnvValidationErrorResult,
+	// Protocol types
 	EventData,
 	EventMessage,
 	FatalErrorResult,
+	GitInfoData,
+	GitProvider,
 	HookExecutionDirectResult,
 	HookExecutionResult,
 	HookMetrics,
@@ -163,54 +175,46 @@ export type {
 	MetricData,
 	MetricMessage,
 	MetricType,
-	OTELConfig,
+	OTELConfigData,
+	OTELConfigProtocol,
 	PingMessage,
-	PluginInfo,
+	PlatformType,
+	PluginInfoData,
 	SchemaValidationErrorResult,
 	ScopeData,
 	ShutdownMessage,
-	SidecarMessage,
+	SidecarMessageProtocol,
 	SpanData,
 	SpanEvent,
 	SpanMessage,
+	SpawnResult,
+	SupportedPlatform,
 } from "./otel/index.js";
+
+// Class exports
 export {
 	// Constants
 	CLAUDE_ATTRS,
+	// Configuration classes
+	ClaudeAccountInfo,
+	GitInfo,
 	METRIC_NAMES,
+	OTELConfig,
 	PLUGIN_ATTRS,
+	// Platform utilities
+	Platform,
+	PluginInfo,
 	SPAN_NAMES,
-	// Client
+	SessionEnv,
+	// Sidecar management
 	SidecarClient,
-	// Unified Telemetry namespace
-	Telemetry,
-	// Events
-	emitEnvValidationError,
-	emitFatalError,
-	emitHookExecution,
-	emitHookExecutionDirect,
-	emitSchemaValidationError,
-	getPluginInfo,
-	getSessionEnvDir,
-	getSidecarClient,
-	instrumentHook,
-	instrumentToolHook,
-	// Config
-	isOTELEnabled,
-	parseOTELConfig,
-	// Pre-connect
-	preconnectTelemetry,
-	recordCounter,
-	recordGauge,
-	recordHistogram,
-	recordHookDecision,
-	// Metrics
-	recordHookExecution,
-	// Plugin info
-	setPluginInfo,
-	withChildSpan,
-	// Instrumentation
-	withHookSpan,
+	SidecarClientPool,
+	SidecarLauncher,
+	SidecarMessage,
+	// Telemetry
+	TelemetryEmitter,
+	TelemetryMetrics,
+	TelemetrySpan,
 } from "./otel/index.js";
 // Sidecar entry point (compiled separately by builder)
 export { main as sidecarMain } from "./otel/sidecar/main.js";
@@ -282,14 +286,22 @@ export {
 	isPipelineHook,
 	isRawHook,
 } from "./pipeline/config.js";
-
 // Pipeline metrics - explicit exports to avoid conflict with events/response-types.ts::estimateTokenCount
+export type { OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export {
+	DEFAULT_TOKEN_BUDGET,
+	checkTokenBudget,
+	createSessionTokenState,
 	detectContentType,
 	estimateTokenCount as estimatePipelineTokenCount,
+	extractAutoMetrics,
 	extractTokenMetrics,
 	extractToolTokenMetrics,
+	getSessionTokenAttributes,
+	updateSessionTokens,
 } from "./pipeline/metrics.js";
+// Unified Pipeline namespace (preferred)
+export { Pipeline } from "./pipeline/namespace.js";
 
 // Pipeline types - explicit exports to avoid conflicts with events/types.ts output interfaces
 export type {
@@ -384,6 +396,8 @@ export type {
 	ShellResult,
 } from "./build/builder.js";
 export {
+	// Unified namespace (preferred)
+	PluginBuilder,
 	buildPlugin,
 	buildPluginFromConfig,
 	defaultShellExecutor,

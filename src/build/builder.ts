@@ -1554,3 +1554,378 @@ export async function buildPluginFromConfig(
 		};
 	}
 }
+
+// =============================================================================
+// PLUGIN BUILDER NAMESPACE
+// =============================================================================
+
+/**
+ * Unified namespace for plugin build system operations.
+ *
+ * @remarks
+ * The `PluginBuilder` namespace consolidates all build-related functions into a
+ * single, discoverable API. This includes compiling plugins, generating manifests,
+ * extracting hook/command definitions, and managing the plugin cache.
+ *
+ * **Namespace Organization:**
+ *
+ * | Category | Methods |
+ * |----------|---------|
+ * | Build | `build`, `fromConfig` |
+ * | Code Generation | `generateEntrypoint`, `generateHooksJson` |
+ * | Extraction | `extractHookEntries`, `extractCommandEntries`, `extractPassthroughEntries` |
+ * | Cache | `getCachePath`, `syncToCache` |
+ * | Manifests | `readPluginManifest`, `readMarketplaceManifest` |
+ *
+ * @example
+ * ```typescript
+ * import { PluginBuilder } from "claude-binary-plugin";
+ *
+ * // Build from a ClaudeBinaryPlugin instance
+ * const result = await PluginBuilder.fromConfig(plugin, {
+ *   rootDir: import.meta.dir,
+ *   compile: true,
+ *   persistLocal: true,
+ * });
+ *
+ * // Or build with manual entrypoint
+ * const result = await PluginBuilder.build({
+ *   rootDir: ".",
+ *   entrypoint: "./plugin-entry.ts",
+ *   outputName: "my-plugin.plugin",
+ * });
+ *
+ * // Generate hooks.json
+ * const hooksJson = PluginBuilder.generateHooksJson({
+ *   pluginBinaryName: "my-plugin.plugin",
+ *   hooks: PluginBuilder.extractHookEntries(plugin.config),
+ * });
+ * ```
+ *
+ * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
+ * @public
+ */
+export const PluginBuilder = {
+	// =========================================================================
+	// BUILD OPERATIONS
+	// =========================================================================
+
+	/**
+	 * Compile a plugin into a single executable.
+	 *
+	 * @remarks
+	 * Creates a single Bun executable that bundles all hooks and commands.
+	 * Requires a manual entrypoint file - for auto-generated entrypoints,
+	 * use {@link PluginBuilder.fromConfig} instead.
+	 *
+	 * @param options - Build configuration options
+	 * @returns Result of the build operation
+	 *
+	 * @example
+	 * ```typescript
+	 * const result = await PluginBuilder.build({
+	 *   rootDir: import.meta.dir,
+	 *   entrypoint: "./plugin-entry.ts",
+	 *   outputName: "my-plugin.plugin",
+	 *   compile: true,
+	 *   minify: true,
+	 * });
+	 *
+	 * if (result.success) {
+	 *   console.log(`Built: ${result.output}`);
+	 * }
+	 * ```
+	 *
+	 * @see {@link BuildPluginOptions}
+	 * @public
+	 */
+	build: buildPlugin,
+
+	/**
+	 * Build a plugin from a ClaudeBinaryPlugin configuration.
+	 *
+	 * @remarks
+	 * This is the recommended build method. It automatically:
+	 * - Reads plugin.json/marketplace.json manifests
+	 * - Extracts hooks, commands, and passthrough entries
+	 * - Generates the TypeScript entrypoint
+	 * - Compiles to a single-file executable
+	 * - Generates hooks.json for Claude Code
+	 * - Optionally syncs to Claude Code plugins cache
+	 *
+	 * @param plugin - The plugin instance from ClaudeBinaryPlugin.create()
+	 * @param options - Build configuration options
+	 * @returns Result of the build operation
+	 *
+	 * @example
+	 * ```typescript
+	 * import plugin from "./plugin.ts";
+	 *
+	 * const result = await PluginBuilder.fromConfig(plugin, {
+	 *   rootDir: import.meta.dir,
+	 *   compile: true,
+	 *   persistLocal: true,
+	 * });
+	 * ```
+	 *
+	 * @public
+	 */
+	fromConfig: buildPluginFromConfig,
+
+	// =========================================================================
+	// CODE GENERATION
+	// =========================================================================
+
+	/**
+	 * Generate TypeScript source code for a pipeline plugin entrypoint.
+	 *
+	 * @remarks
+	 * Creates the entrypoint code that imports the plugin definition and
+	 * routes CLI arguments to the correct hook handlers. This is called
+	 * automatically by {@link PluginBuilder.fromConfig}.
+	 *
+	 * @param options - Generation options including plugin path, hooks, commands
+	 * @returns Generated TypeScript source code
+	 *
+	 * @example
+	 * ```typescript
+	 * const source = PluginBuilder.generateEntrypoint({
+	 *   pluginPath: "./plugin.ts",
+	 *   pluginName: "my-plugin",
+	 *   pluginVersion: "1.0.0",
+	 *   hooks: PluginBuilder.extractHookEntries(plugin.config),
+	 *   pipelineCommands: PluginBuilder.extractCommandEntries(plugin.config),
+	 * });
+	 *
+	 * await Bun.write(".plugin-entrypoint.ts", source);
+	 * ```
+	 *
+	 * @see {@link GeneratePipelinePluginOptions}
+	 * @public
+	 */
+	generateEntrypoint: generatePipelinePluginEntrypoint,
+
+	/**
+	 * Generate hooks.json content from hook entries.
+	 *
+	 * @remarks
+	 * Creates the Claude Code hooks.json format that maps hook event types
+	 * to their command handlers. All hooks use `${CLAUDE_PLUGIN_ROOT}` which
+	 * Claude Code provides for every hook invocation.
+	 *
+	 * @param options - Generation options
+	 * @returns The hooks.json object structure
+	 *
+	 * @example
+	 * ```typescript
+	 * const hooksJson = PluginBuilder.generateHooksJson({
+	 *   pluginBinaryName: "my-plugin.plugin",
+	 *   hooks: [
+	 *     { hookType: "SessionStart", name: "context", isPipeline: true },
+	 *     { hookType: "PreToolUse", name: "filter", isPipeline: true, tools: ["Bash"] },
+	 *   ],
+	 * });
+	 *
+	 * await Bun.write("hooks.json", JSON.stringify(hooksJson, null, 2));
+	 * ```
+	 *
+	 * @see {@link GenerateHooksJsonOptions}
+	 * @see {@link HooksJsonFile}
+	 * @public
+	 */
+	generateHooksJson,
+
+	// =========================================================================
+	// EXTRACTION UTILITIES
+	// =========================================================================
+
+	/**
+	 * Extract pipeline hook entries from a plugin configuration.
+	 *
+	 * @remarks
+	 * Extracts hook definitions that will be compiled into the plugin binary.
+	 * Skips passthrough hooks which are handled separately.
+	 *
+	 * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
+	 * @returns Array of hook entries ready for code generation
+	 *
+	 * @example
+	 * ```typescript
+	 * const hookEntries = PluginBuilder.extractHookEntries(plugin.config);
+	 * console.log(`Found ${hookEntries.length} hooks to compile`);
+	 * ```
+	 *
+	 * @see {@link PipelineHookEntry}
+	 * @public
+	 */
+	extractHookEntries: extractPipelineHookEntries,
+
+	/**
+	 * Extract pipeline command entries from a plugin configuration.
+	 *
+	 * @remarks
+	 * Extracts command definitions that will be compiled into the plugin binary.
+	 *
+	 * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
+	 * @returns Array of command entries ready for code generation
+	 *
+	 * @example
+	 * ```typescript
+	 * const commandEntries = PluginBuilder.extractCommandEntries(plugin.config);
+	 * console.log(`Found ${commandEntries.length} commands to compile`);
+	 * ```
+	 *
+	 * @see {@link PipelineCommandEntry}
+	 * @public
+	 */
+	extractCommandEntries: extractPipelineCommandEntries,
+
+	/**
+	 * Extract passthrough hook entries from a plugin configuration.
+	 *
+	 * @remarks
+	 * Passthrough entries are raw hooks.json entries that get included directly
+	 * without compilation into the binary. Useful for mixing compiled hooks
+	 * with external scripts.
+	 *
+	 * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
+	 * @returns Object mapping hook types to their passthrough entries
+	 *
+	 * @example
+	 * ```typescript
+	 * const passthrough = PluginBuilder.extractPassthroughEntries(plugin.config);
+	 * // passthrough.PreToolUse might contain external script hooks
+	 * ```
+	 *
+	 * @see {@link ExtractedPassthroughHooks}
+	 * @public
+	 */
+	extractPassthroughEntries: extractPassthroughHookEntries,
+
+	// =========================================================================
+	// CACHE OPERATIONS
+	// =========================================================================
+
+	/**
+	 * Get the cache path(s) for a plugin.
+	 *
+	 * @remarks
+	 * Reads plugin.json and returns the cache path where the plugin would
+	 * be persisted. The path is constructed as:
+	 * `${CLAUDE_CONFIG_DIR}/plugins/cache/${marketplaceName}/${pluginName}/${version}`
+	 *
+	 * @param config - Configuration for determining cache path
+	 * @returns Array of cache paths
+	 *
+	 * @example
+	 * ```typescript
+	 * const paths = await PluginBuilder.getCachePath({
+	 *   rootDir: import.meta.dir,
+	 *   marketplaceName: "my-marketplace",
+	 *   shell: PluginBuilder.defaultShellExecutor,
+	 * });
+	 * console.log(`Cache path: ${paths[0]}`);
+	 * ```
+	 *
+	 * @see {@link PersistLocalConfig}
+	 * @public
+	 */
+	getCachePath: getPluginCachePath,
+
+	/**
+	 * Sync a plugin directory to Claude's local cache.
+	 *
+	 * @remarks
+	 * Clears the existing cache and copies all plugin files to the cache
+	 * directory. This enables immediate testing of plugin changes without
+	 * reinstalling from the marketplace.
+	 *
+	 * @param config - Configuration for syncing
+	 * @returns true if successful, false otherwise
+	 *
+	 * @example
+	 * ```typescript
+	 * await PluginBuilder.syncToCache({
+	 *   rootDir: import.meta.dir,
+	 *   marketplaceName: "my-marketplace",
+	 *   shell: PluginBuilder.defaultShellExecutor,
+	 * });
+	 * ```
+	 *
+	 * @see {@link PersistLocalConfig}
+	 * @public
+	 */
+	syncToCache: syncPluginToCache,
+
+	// =========================================================================
+	// MANIFEST READING
+	// =========================================================================
+
+	/**
+	 * Read a plugin.json manifest.
+	 *
+	 * @remarks
+	 * Reads the plugin manifest from the given path or from the default
+	 * `.claude-plugin/plugin.json` location within a directory.
+	 *
+	 * @param pluginPath - Path to plugin.json or directory containing it
+	 * @returns Plugin manifest or null if not found
+	 *
+	 * @example
+	 * ```typescript
+	 * const manifest = await PluginBuilder.readPluginManifest(import.meta.dir);
+	 * if (manifest) {
+	 *   console.log(`Plugin: ${manifest.name} v${manifest.version}`);
+	 * }
+	 * ```
+	 *
+	 * @see {@link PluginManifest}
+	 * @public
+	 */
+	readPluginManifest,
+
+	/**
+	 * Read a marketplace.json manifest.
+	 *
+	 * @remarks
+	 * Reads the marketplace manifest from the given path or from the default
+	 * `.claude-plugin/marketplace.json` location within a directory.
+	 *
+	 * @param marketplacePath - Path to marketplace.json or directory containing it
+	 * @returns Marketplace manifest or null if not found
+	 *
+	 * @example
+	 * ```typescript
+	 * const manifest = await PluginBuilder.readMarketplaceManifest("../../");
+	 * if (manifest) {
+	 *   console.log(`Marketplace: ${manifest.name}`);
+	 * }
+	 * ```
+	 *
+	 * @see {@link MarketplaceManifest}
+	 * @public
+	 */
+	readMarketplaceManifest,
+
+	// =========================================================================
+	// UTILITIES
+	// =========================================================================
+
+	/**
+	 * Default shell executor using Bun.$.
+	 *
+	 * @remarks
+	 * Executes shell commands quietly with nothrow to capture all output.
+	 * Inject a mock executor for testing.
+	 *
+	 * @example
+	 * ```typescript
+	 * const result = await PluginBuilder.defaultShellExecutor("ls -la");
+	 * console.log(result.stdout);
+	 * ```
+	 *
+	 * @see {@link ShellExecutor}
+	 * @public
+	 */
+	defaultShellExecutor,
+} as const;
