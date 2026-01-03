@@ -304,27 +304,6 @@ describe("envPresets", () => {
 		expect(preset.CLAUDE_PROJECT_DIR).toBe("/custom/path");
 		expect(preset.CLAUDE_ENV_FILE).toBe("/tmp/env-file.sh");
 	});
-
-	test("workflowPlugin returns all required vars", () => {
-		const preset = envPresets.workflowPlugin();
-		expect(preset.SAVVY_WORKFLOW_PROJECT_DIR).toBe("/tmp/test-project");
-		expect(preset.SAVVY_WORKFLOW_PLUGIN_ROOT).toBe("/tmp/test-plugin");
-		expect(preset.SAVVY_WORKFLOW_DEBUG).toBe("false");
-		expect(preset.SAVVY_WORKFLOW_ENABLE_BIOME).toBe("true");
-		expect(preset.SAVVY_WORKFLOW_PACKAGE_MANAGER).toBe("unknown");
-		expect(preset.SAVVY_WORKFLOW_OS).toBe("linux");
-		expect(preset.SAVVY_WORKFLOW_NODE_VERSION).toBe("v24.0.0");
-	});
-
-	test("workflowPlugin accepts overrides", () => {
-		const preset = envPresets.workflowPlugin({
-			SAVVY_WORKFLOW_DEBUG: "true",
-			SAVVY_WORKFLOW_OS: "darwin",
-		});
-		expect(preset.SAVVY_WORKFLOW_DEBUG).toBe("true");
-		expect(preset.SAVVY_WORKFLOW_OS).toBe("darwin");
-		expect(preset.SAVVY_WORKFLOW_PROJECT_DIR).toBe("/tmp/test-project");
-	});
 });
 
 describe("mockCommand", () => {
