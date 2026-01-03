@@ -437,6 +437,7 @@ export interface PersistResult {
 
 /**
  * Error thrown when the env vars file specified by --vars cannot be loaded.
+ * @error
  * @public
  */
 export class EnvFileLoadError extends Error {

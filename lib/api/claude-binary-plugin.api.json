@@ -131,48 +131,18 @@
           "syntaxKind": "block"
         },
         {
-          "tagName": "@betaDocumentation",
+          "tagName": "@error",
           "syntaxKind": "modifier"
         },
         {
-          "tagName": "@internalRemarks",
-          "syntaxKind": "block"
+          "tagName": "@schema",
+          "syntaxKind": "modifier"
         },
         {
-          "tagName": "@preapproved",
+          "tagName": "@codec",
           "syntaxKind": "modifier"
         }
       ],
-      "supportForTags": {
-        "@alpha": true,
-        "@beta": true,
-        "@defaultValue": true,
-        "@decorator": true,
-        "@deprecated": true,
-        "@eventProperty": true,
-        "@example": true,
-        "@experimental": true,
-        "@inheritDoc": true,
-        "@internal": true,
-        "@label": true,
-        "@link": true,
-        "@override": true,
-        "@packageDocumentation": true,
-        "@param": true,
-        "@privateRemarks": true,
-        "@public": true,
-        "@readonly": true,
-        "@remarks": true,
-        "@returns": true,
-        "@sealed": true,
-        "@see": true,
-        "@throws": true,
-        "@typeParam": true,
-        "@virtual": true,
-        "@betaDocumentation": true,
-        "@internalRemarks": true,
-        "@preapproved": true
-      },
       "reportUnsupportedHtmlElements": false
     }
   },
@@ -6338,7 +6308,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!CommandArgumentError:class",
-          "docComment": "/**\n * Error thrown when command arguments fail validation. Provides LLM-friendly markdown error message.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Error thrown when command arguments fail validation. Provides LLM-friendly markdown error message.\n *\n * @error @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -9548,7 +9518,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!EnvCodecs.enum:member(1)",
-              "docComment": "/**\n * Create an enum codec with a default value.\n *\n * @param values - The enum values tuple\n *\n * @param defaultValue - The default value when env is empty/undefined/invalid\n *\n * @typeParam T - The enum values tuple type\n *\n * @returns A Zod codec for the enum type\n *\n * @example\n * ```typescript\n * const logLevel = EnvCodecs.enum([\"debug\", \"info\", \"warn\"], \"info\");\n * logLevel.decode(\"\")       // → \"info\"\n * logLevel.decode(\"debug\")  // → \"debug\"\n * ```\n *\n */\n",
+              "docComment": "/**\n * Create an enum codec with a default value.\n *\n * @param values - The enum values tuple\n *\n * @param defaultValue - The default value when env is empty/undefined/invalid\n *\n * @typeParam T - The enum values tuple type\n *\n * @returns A Zod codec for the enum type\n *\n * @example\n * ```typescript\n * const logLevel = EnvCodecs.enum([\"debug\", \"info\", \"warn\"], \"info\");\n * logLevel.decode(\"\")       // → \"info\"\n * logLevel.decode(\"debug\")  // → \"debug\"\n * ```\n *\n * @codec\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -9762,7 +9732,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!EnvCodecs.jsonArray:member(1)",
-              "docComment": "/**\n * Create a JSON array codec for complex data.\n *\n * @param itemSchema - The Zod schema for validating each array item\n *\n * @typeParam T - The Zod schema type for array items\n *\n * @returns A Zod codec for JSON-serialized arrays\n *\n * @example\n * ```typescript\n * const packages = EnvCodecs.jsonArray(z.object({ name: z.string() }));\n * packages.decode('[{\"name\":\"foo\"}]') // → [{name: \"foo\"}]\n * ```\n *\n */\n",
+              "docComment": "/**\n * Create a JSON array codec for complex data.\n *\n * @param itemSchema - The Zod schema for validating each array item\n *\n * @typeParam T - The Zod schema type for array items\n *\n * @returns A Zod codec for JSON-serialized arrays\n *\n * @example\n * ```typescript\n * const packages = EnvCodecs.jsonArray(z.object({ name: z.string() }));\n * packages.decode('[{\"name\":\"foo\"}]') // → [{name: \"foo\"}]\n * ```\n *\n * @codec\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -10248,7 +10218,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!EnvFileLoadError:class",
-          "docComment": "/**\n * Error thrown when the env vars file specified by --vars cannot be loaded.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Error thrown when the env vars file specified by --vars cannot be loaded.\n *\n * @error @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -10916,7 +10886,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!ExecutionQualitySchema:var",
-          "docComment": "/**\n * Execution quality indicators. Tracks degraded or partial execution states.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Execution quality indicators. Tracks degraded or partial execution states.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -11065,7 +11035,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!ExecutionStatusSchema:var",
-          "docComment": "/**\n * Execution status indicating whether the hook ran and how.\n *\n * @remarks\n *\n * The status field is the discriminator for pipeline output types. Each status has different valid fields and actions:\n *\n * | Status | Meaning | Has Action? | |--------|---------|-------------| | `executed` | Hook ran normally | Yes (required) | | `skipped` | Hook didn't apply (filter mismatch, not applicable) | No | | `disabled` | Preconditions failed (missing tool, config error) | No | | `cached` | Used cached result from previous invocation | Yes | | `error` | Uncaught exception during execution | No | | `timeout` | Exceeded configured time limit | No |\n *\n * @public\n */\n",
+          "docComment": "/**\n * Execution status indicating whether the hook ran and how.\n *\n * @remarks\n *\n * The status field is the discriminator for pipeline output types. Each status has different valid fields and actions:\n *\n * | Status | Meaning | Has Action? | |--------|---------|-------------| | `executed` | Hook ran normally | Yes (required) | | `skipped` | Hook didn't apply (filter mismatch, not applicable) | No | | `disabled` | Preconditions failed (missing tool, config error) | No | | `cached` | Used cached result from previous invocation | Yes | | `error` | Uncaught exception during execution | No | | `timeout` | Exceeded configured time limit | No |\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -13332,7 +13302,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!HookActionSchema:var",
-          "docComment": "/**\n * Hook action indicating what decision the hook made.\n *\n * @remarks\n *\n * The action field is only present when `status` is `\"executed\"` or `\"cached\"`. Valid actions depend on the hook type:\n *\n * **Permission decisions** (PreToolUse, PermissionRequest): - `allow` - Permit the tool/action to proceed - `deny` - Reject the tool/action with a reason - `ask` - Defer decision to the user (PreToolUse only)\n *\n * **Continuation control** (Stop, SubagentStop, PostToolUse, UserPromptSubmit): - `block` - Prevent the agent from stopping (requires `reason`) - `continue` - Allow normal flow to proceed\n *\n * **Content modification** (SessionStart, PostToolUse, UserPromptSubmit): - `modify` - Changed the tool input (PreToolUse) via `updatedInput` - `context` - Added context for Claude via `claudeContext`\n *\n * **No-op** (all hooks): - `none` - Hook analyzed but took no action\n *\n * @public\n */\n",
+          "docComment": "/**\n * Hook action indicating what decision the hook made.\n *\n * @remarks\n *\n * The action field is only present when `status` is `\"executed\"` or `\"cached\"`. Valid actions depend on the hook type:\n *\n * **Permission decisions** (PreToolUse, PermissionRequest): - `allow` - Permit the tool/action to proceed - `deny` - Reject the tool/action with a reason - `ask` - Defer decision to the user (PreToolUse only)\n *\n * **Continuation control** (Stop, SubagentStop, PostToolUse, UserPromptSubmit): - `block` - Prevent the agent from stopping (requires `reason`) - `continue` - Allow normal flow to proceed\n *\n * **Content modification** (SessionStart, PostToolUse, UserPromptSubmit): - `modify` - Changed the tool input (PreToolUse) via `updatedInput` - `context` - Added context for Claude via `claudeContext`\n *\n * **No-op** (all hooks): - `none` - Hook analyzed but took no action\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -14923,7 +14893,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!HookEventSchema:var",
-          "docComment": "/**\n * Discriminated union schema for all hook event types.\n *\n * @remarks\n *\n * Use this schema to validate any hook event data from Claude Code. The schema automatically discriminates based on `hook_event_name`. For most use cases, prefer {@link HookEventSchemas.Any} or {@link HookEventSchemas.parse}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Discriminated union schema for all hook event types.\n *\n * @remarks\n *\n * Use this schema to validate any hook event data from Claude Code. The schema automatically discriminates based on `hook_event_name`. For most use cases, prefer {@link HookEventSchemas.Any} or {@link HookEventSchemas.parse}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -22763,7 +22733,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!MockExitError:class",
-          "docComment": "/**\n * Error thrown when mocked process.exit is called. Catch this in tests to verify exit behavior.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Error thrown when mocked process.exit is called. Catch this in tests to verify exit behavior.\n *\n * @error @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -24366,7 +24336,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!NotificationEventSchema:var",
-          "docComment": "/**\n * Zod schema for Notification events.\n *\n * @remarks\n *\n * Use this schema to validate Notification event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.Notification} or {@link HookEventSchemas.parseNotification}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for Notification events.\n *\n * @remarks\n *\n * Use this schema to validate Notification event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.Notification} or {@link HookEventSchemas.parseNotification}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -24971,7 +24941,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!NotificationOutputSchema:var",
-          "docComment": "/**\n * @public\n */\n",
+          "docComment": "/**\n * Notification pipeline output (alias for PassthroughOutputSchema).\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -32625,7 +32595,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PassthroughOutputSchema:var",
-          "docComment": "/**\n * Passthrough hooks that only support executed/skipped/disabled/error states.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Passthrough hooks that only support executed/skipped/disabled/error states.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -33411,7 +33381,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PermissionRequestEventSchema:var",
-          "docComment": "/**\n * Zod schema for PermissionRequest events.\n *\n * @remarks\n *\n * Use this schema to validate PermissionRequest event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PermissionRequest} or {@link HookEventSchemas.parsePermissionRequest}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for PermissionRequest events.\n *\n * @remarks\n *\n * Use this schema to validate PermissionRequest event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PermissionRequest} or {@link HookEventSchemas.parsePermissionRequest}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -34120,7 +34090,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PermissionRequestOutputSchema:var",
-          "docComment": "/**\n * PermissionRequest pipeline output with discriminated union for type safety.\n *\n * @public\n */\n",
+          "docComment": "/**\n * PermissionRequest pipeline output with discriminated union for type safety.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -37233,7 +37203,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PipelineMetricsSchema:var",
-          "docComment": "/**\n * User-provided metrics for telemetry. Domain-specific metrics that require hook knowledge.\n *\n * @public\n */\n",
+          "docComment": "/**\n * User-provided metrics for telemetry. Domain-specific metrics that require hook knowledge.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -37436,7 +37406,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PipelineOutputBaseSchema:var",
-          "docComment": "/**\n * Base schema for all pipeline outputs defining common fields.\n *\n * @remarks\n *\n * All hook-specific output schemas extend this base schema. Fields are organized by their target audience:\n *\n * **Required (Telemetry):** - `status` - Execution status (discriminator) - `summary` - Human-readable log message\n *\n * **Conditional (Based on status):** - `action` - Hook decision (required when `status === \"executed\"`) - `validation` - For linting/validation hooks - `quality` - Degradation indicators - `metrics` - Custom domain metrics\n *\n * **Optional (User-facing):** - `userMessage` - Shown in terminal via `systemMessage`\n *\n * **Optional (Claude-facing):** - `claudeContext` - Detailed context via `additionalContext` - `reason` - Concise decision reason\n *\n * **Hook-specific:** - `updatedInput` - Modified tool input (PreToolUse only)\n *\n * @public\n */\n",
+          "docComment": "/**\n * Base schema for all pipeline outputs defining common fields.\n *\n * @remarks\n *\n * All hook-specific output schemas extend this base schema. Fields are organized by their target audience:\n *\n * **Required (Telemetry):** - `status` - Execution status (discriminator) - `summary` - Human-readable log message\n *\n * **Conditional (Based on status):** - `action` - Hook decision (required when `status === \"executed\"`) - `validation` - For linting/validation hooks - `quality` - Degradation indicators - `metrics` - Custom domain metrics\n *\n * **Optional (User-facing):** - `userMessage` - Shown in terminal via `systemMessage`\n *\n * **Optional (Claude-facing):** - `claudeContext` - Detailed context via `additionalContext` - `reason` - Concise decision reason\n *\n * **Hook-specific:** - `updatedInput` - Modified tool input (PreToolUse only)\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -42120,7 +42090,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PostToolUseEventSchema:var",
-          "docComment": "/**\n * Zod schema for PostToolUse events.\n *\n * @remarks\n *\n * Use this schema to validate PostToolUse event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PostToolUse} or {@link HookEventSchemas.parsePostToolUse}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for PostToolUse events.\n *\n * @remarks\n *\n * Use this schema to validate PostToolUse event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PostToolUse} or {@link HookEventSchemas.parsePostToolUse}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -43014,7 +42984,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PostToolUseOutputSchema:var",
-          "docComment": "/**\n * PostToolUse pipeline output with discriminated union for type safety.\n *\n * @public\n */\n",
+          "docComment": "/**\n * PostToolUse pipeline output with discriminated union for type safety.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -44263,7 +44233,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PreCompactEventSchema:var",
-          "docComment": "/**\n * Zod schema for PreCompact events.\n *\n * @remarks\n *\n * Use this schema to validate PreCompact event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PreCompact} or {@link HookEventSchemas.parsePreCompact}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for PreCompact events.\n *\n * @remarks\n *\n * Use this schema to validate PreCompact event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PreCompact} or {@link HookEventSchemas.parsePreCompact}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -44868,7 +44838,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PreCompactOutputSchema:var",
-          "docComment": "/**\n * @public\n */\n",
+          "docComment": "/**\n * PreCompact pipeline output (alias for PassthroughOutputSchema).\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -45771,7 +45741,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PreToolUseEventSchema:var",
-          "docComment": "/**\n * Zod schema for PreToolUse events.\n *\n * @remarks\n *\n * Use this schema to validate PreToolUse event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PreToolUse} or {@link HookEventSchemas.parsePreToolUse}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for PreToolUse events.\n *\n * @remarks\n *\n * Use this schema to validate PreToolUse event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.PreToolUse} or {@link HookEventSchemas.parsePreToolUse}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -46631,7 +46601,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PreToolUseOutputSchema:var",
-          "docComment": "/**\n * PreToolUse pipeline output with discriminated union for type safety.\n *\n * @public\n */\n",
+          "docComment": "/**\n * PreToolUse pipeline output with discriminated union for type safety.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -49678,7 +49648,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!SessionEndEventSchema:var",
-          "docComment": "/**\n * Zod schema for SessionEnd events.\n *\n * @remarks\n *\n * Use this schema to validate SessionEnd event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.SessionEnd} or {@link HookEventSchemas.parseSessionEnd}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for SessionEnd events.\n *\n * @remarks\n *\n * Use this schema to validate SessionEnd event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.SessionEnd} or {@link HookEventSchemas.parseSessionEnd}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -50217,7 +50187,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!SessionEndOutputSchema:var",
-          "docComment": "/**\n * @public\n */\n",
+          "docComment": "/**\n * SessionEnd pipeline output (alias for PassthroughOutputSchema).\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -51669,7 +51639,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!SessionStartEventSchema:var",
-          "docComment": "/**\n * Zod schema for SessionStart events.\n *\n * @remarks\n *\n * Use this schema to validate SessionStart event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.SessionStart} or {@link HookEventSchemas.parseSessionStart}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for SessionStart events.\n *\n * @remarks\n *\n * Use this schema to validate SessionStart event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.SessionStart} or {@link HookEventSchemas.parseSessionStart}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -52312,7 +52282,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!SessionStartOutputSchema:var",
-          "docComment": "/**\n * SessionStart pipeline output with discriminated union for type safety.\n *\n * @public\n */\n",
+          "docComment": "/**\n * SessionStart pipeline output with discriminated union for type safety.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -55533,7 +55503,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!StopEventSchema:var",
-          "docComment": "/**\n * Zod schema for Stop events.\n *\n * @remarks\n *\n * Use this schema to validate Stop event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.Stop} or {@link HookEventSchemas.parseStop}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for Stop events.\n *\n * @remarks\n *\n * Use this schema to validate Stop event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.Stop} or {@link HookEventSchemas.parseStop}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -56103,7 +56073,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!StopOutputSchema:var",
-          "docComment": "/**\n * Stop/SubagentStop pipeline output with discriminated union for type safety.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Stop/SubagentStop pipeline output with discriminated union for type safety.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -57171,7 +57141,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!SubagentStopEventSchema:var",
-          "docComment": "/**\n * Zod schema for SubagentStop events.\n *\n * @remarks\n *\n * Use this schema to validate SubagentStop event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.SubagentStop} or {@link HookEventSchemas.parseSubagentStop}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for SubagentStop events.\n *\n * @remarks\n *\n * Use this schema to validate SubagentStop event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.SubagentStop} or {@link HookEventSchemas.parseSubagentStop}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -57741,7 +57711,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!SubagentStopOutputSchema:var",
-          "docComment": "/**\n * @public\n */\n",
+          "docComment": "/**\n * SubagentStop pipeline output (alias for StopOutputSchema).\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -62818,7 +62788,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!UserPromptSubmitEventSchema:var",
-          "docComment": "/**\n * Zod schema for UserPromptSubmit events.\n *\n * @remarks\n *\n * Use this schema to validate UserPromptSubmit event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.UserPromptSubmit} or {@link HookEventSchemas.parseUserPromptSubmit}.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Zod schema for UserPromptSubmit events.\n *\n * @remarks\n *\n * Use this schema to validate UserPromptSubmit event data from Claude Code. For most use cases, prefer {@link HookEventSchemas.UserPromptSubmit} or {@link HookEventSchemas.parseUserPromptSubmit}.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -63460,7 +63430,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!UserPromptSubmitOutputSchema:var",
-          "docComment": "/**\n * UserPromptSubmit pipeline output with discriminated union for type safety.\n *\n * @public\n */\n",
+          "docComment": "/**\n * UserPromptSubmit pipeline output with discriminated union for type safety.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -64476,7 +64446,7 @@
         {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!ValidationResultSchema:var",
-          "docComment": "/**\n * Validation result - For hooks that perform linting/checking. Optional field, only for validation-oriented hooks.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Validation result - For hooks that perform linting/checking. Optional field, only for validation-oriented hooks.\n *\n * @schema @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",

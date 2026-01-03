@@ -163,6 +163,7 @@ const _HookEventBaseSchema = z.object({
  * For most use cases, prefer {@link HookEventSchemas.PreToolUse} or
  * {@link HookEventSchemas.parsePreToolUse}.
  *
+ * @schema
  * @public
  */
 export const PreToolUseEventSchema = _HookEventBaseSchema
@@ -188,6 +189,7 @@ export const PreToolUseEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.PostToolUse} or
  * {@link HookEventSchemas.parsePostToolUse}.
  *
+ * @schema
  * @public
  */
 export const PostToolUseEventSchema = _HookEventBaseSchema
@@ -215,6 +217,7 @@ export const PostToolUseEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.PermissionRequest} or
  * {@link HookEventSchemas.parsePermissionRequest}.
  *
+ * @schema
  * @public
  */
 export const PermissionRequestEventSchema = _HookEventBaseSchema
@@ -238,6 +241,7 @@ export const PermissionRequestEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.Notification} or
  * {@link HookEventSchemas.parseNotification}.
  *
+ * @schema
  * @public
  */
 export const NotificationEventSchema = _HookEventBaseSchema
@@ -261,6 +265,7 @@ export const NotificationEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.UserPromptSubmit} or
  * {@link HookEventSchemas.parseUserPromptSubmit}.
  *
+ * @schema
  * @public
  */
 export const UserPromptSubmitEventSchema = _HookEventBaseSchema
@@ -282,6 +287,7 @@ export const UserPromptSubmitEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.Stop} or
  * {@link HookEventSchemas.parseStop}.
  *
+ * @schema
  * @public
  */
 export const StopEventSchema = _HookEventBaseSchema
@@ -303,6 +309,7 @@ export const StopEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.SubagentStop} or
  * {@link HookEventSchemas.parseSubagentStop}.
  *
+ * @schema
  * @public
  */
 export const SubagentStopEventSchema = _HookEventBaseSchema
@@ -324,6 +331,7 @@ export const SubagentStopEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.PreCompact} or
  * {@link HookEventSchemas.parsePreCompact}.
  *
+ * @schema
  * @public
  */
 export const PreCompactEventSchema = _HookEventBaseSchema
@@ -347,6 +355,7 @@ export const PreCompactEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.SessionStart} or
  * {@link HookEventSchemas.parseSessionStart}.
  *
+ * @schema
  * @public
  */
 export const SessionStartEventSchema = _HookEventBaseSchema
@@ -368,6 +377,7 @@ export const SessionStartEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.SessionEnd} or
  * {@link HookEventSchemas.parseSessionEnd}.
  *
+ * @schema
  * @public
  */
 export const SessionEndEventSchema = _HookEventBaseSchema
@@ -394,6 +404,7 @@ export const SessionEndEventSchema = _HookEventBaseSchema
  * For most use cases, prefer {@link HookEventSchemas.Any} or
  * {@link HookEventSchemas.parse}.
  *
+ * @schema
  * @public
  */
 export const HookEventSchema = z.discriminatedUnion("hook_event_name", [

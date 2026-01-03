@@ -273,6 +273,7 @@ export function mockCommand(args: string[]): MockCommandContext {
  * Error thrown when mocked process.exit is called.
  * Catch this in tests to verify exit behavior.
  *
+ * @error
  * @public
  */
 export class MockExitError extends Error {

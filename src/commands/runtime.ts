@@ -154,6 +154,7 @@ function formatArgumentError(rawArgs: string[], schema: z.ZodType, error: z.ZodE
 /**
  * Error thrown when command arguments fail validation.
  * Provides LLM-friendly markdown error message.
+ * @error
  * @public
  */
 export class CommandArgumentError extends Error {
@@ -294,9 +295,7 @@ export class Commands {
 	 * @see {@link RunCommandOptions}
 	 * @public
 	 */
-	static async run<TArgs, TOptions, TState>(
-		options: RunCommandOptions<TArgs, TOptions, TState>,
-	): Promise<never> {
+	static async run<TArgs, TOptions, TState>(options: RunCommandOptions<TArgs, TOptions, TState>): Promise<never> {
 		const { commandName, handler, rawArgs, argsSchema, envClass } = options;
 
 		try {

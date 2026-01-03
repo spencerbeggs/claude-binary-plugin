@@ -72,6 +72,7 @@ import { z } from "zod";
  * | `error` | Uncaught exception during execution | No |
  * | `timeout` | Exceeded configured time limit | No |
  *
+ * @schema
  * @public
  */
 export const ExecutionStatusSchema = z.enum([
@@ -113,6 +114,7 @@ export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
  * **No-op** (all hooks):
  * - `none` - Hook analyzed but took no action
  *
+ * @schema
  * @public
  */
 export const HookActionSchema = z.enum([
@@ -143,6 +145,7 @@ export type HookAction = z.infer<typeof HookActionSchema>;
 /**
  * Validation result - For hooks that perform linting/checking.
  * Optional field, only for validation-oriented hooks.
+ * @schema
  * @public
  */
 export const ValidationResultSchema = z.enum([
@@ -162,6 +165,7 @@ export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 /**
  * Execution quality indicators.
  * Tracks degraded or partial execution states.
+ * @schema
  * @public
  */
 export const ExecutionQualitySchema = z
@@ -187,6 +191,7 @@ export type ExecutionQuality = z.infer<typeof ExecutionQualitySchema>;
 /**
  * User-provided metrics for telemetry.
  * Domain-specific metrics that require hook knowledge.
+ * @schema
  * @public
  */
 export const PipelineMetricsSchema = z
@@ -279,6 +284,7 @@ export type ContentType = "code" | "json" | "markdown" | "prose";
  * **Hook-specific:**
  * - `updatedInput` - Modified tool input (PreToolUse only)
  *
+ * @schema
  * @public
  */
 export const PipelineOutputBaseSchema = z.object({
@@ -342,6 +348,7 @@ export type PipelineOutputBase = z.infer<typeof PipelineOutputBaseSchema>;
 
 /**
  * PreToolUse pipeline output with discriminated union for type safety.
+ * @schema
  * @public
  */
 export const PreToolUseOutputSchema = z.discriminatedUnion("status", [
@@ -422,6 +429,7 @@ export type PreToolUseOutput = z.infer<typeof PreToolUseOutputSchema>;
 
 /**
  * PostToolUse pipeline output with discriminated union for type safety.
+ * @schema
  * @public
  */
 export const PostToolUseOutputSchema = z.discriminatedUnion("status", [
@@ -499,6 +507,7 @@ export type PostToolUseOutput = z.infer<typeof PostToolUseOutputSchema>;
 
 /**
  * SessionStart pipeline output with discriminated union for type safety.
+ * @schema
  * @public
  */
 export const SessionStartOutputSchema = z.discriminatedUnion("status", [
@@ -556,6 +565,7 @@ export type SessionStartOutput = z.infer<typeof SessionStartOutputSchema>;
 
 /**
  * Stop/SubagentStop pipeline output with discriminated union for type safety.
+ * @schema
  * @public
  */
 export const StopOutputSchema = z.discriminatedUnion("status", [
@@ -611,7 +621,11 @@ export const StopOutputSchema = z.discriminatedUnion("status", [
 export type StopOutput = z.infer<typeof StopOutputSchema>;
 
 // Alias for SubagentStop
-/** @public */
+/**
+ * SubagentStop pipeline output (alias for StopOutputSchema).
+ * @schema
+ * @public
+ */
 export const SubagentStopOutputSchema = StopOutputSchema;
 /** @public */
 export type SubagentStopOutput = StopOutput;
@@ -622,6 +636,7 @@ export type SubagentStopOutput = StopOutput;
 
 /**
  * UserPromptSubmit pipeline output with discriminated union for type safety.
+ * @schema
  * @public
  */
 export const UserPromptSubmitOutputSchema = z.discriminatedUnion("status", [
@@ -679,6 +694,7 @@ export type UserPromptSubmitOutput = z.infer<typeof UserPromptSubmitOutputSchema
 
 /**
  * PermissionRequest pipeline output with discriminated union for type safety.
+ * @schema
  * @public
  */
 export const PermissionRequestOutputSchema = z.discriminatedUnion("status", [
@@ -738,6 +754,7 @@ export type PermissionRequestOutput = z.infer<typeof PermissionRequestOutputSche
 
 /**
  * Passthrough hooks that only support executed/skipped/disabled/error states.
+ * @schema
  * @public
  */
 export const PassthroughOutputSchema = z.discriminatedUnion("status", [
@@ -784,17 +801,29 @@ export const PassthroughOutputSchema = z.discriminatedUnion("status", [
 export type PassthroughOutput = z.infer<typeof PassthroughOutputSchema>;
 
 // Aliases for specific passthrough hooks
-/** @public */
+/**
+ * SessionEnd pipeline output (alias for PassthroughOutputSchema).
+ * @schema
+ * @public
+ */
 export const SessionEndOutputSchema = PassthroughOutputSchema;
 /** @public */
 export type SessionEndOutput = PassthroughOutput;
 
-/** @public */
+/**
+ * PreCompact pipeline output (alias for PassthroughOutputSchema).
+ * @schema
+ * @public
+ */
 export const PreCompactOutputSchema = PassthroughOutputSchema;
 /** @public */
 export type PreCompactOutput = PassthroughOutput;
 
-/** @public */
+/**
+ * Notification pipeline output (alias for PassthroughOutputSchema).
+ * @schema
+ * @public
+ */
 export const NotificationOutputSchema = PassthroughOutputSchema;
 /** @public */
 export type NotificationOutput = PassthroughOutput;
