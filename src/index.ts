@@ -60,10 +60,23 @@ import {
 	escapeForBashDoubleQuotes,
 	formatZodError as formatZodErrorAsMarkdown,
 } from "./env/plugin-env.js";
-export { ClaudeBinaryPluginEnv, EnvFileLoadError, escapeForBashDoubleQuotes, formatZodErrorAsMarkdown };
+export {
+	// Core classes
+	ClaudeBinaryPluginEnv,
+	EnvFileLoadError,
+	// Legacy exports - prefer ClaudeBinaryPluginEnv.escapeForBash, ClaudeBinaryPluginEnv.formatZodError
+	escapeForBashDoubleQuotes,
+	formatZodErrorAsMarkdown,
+};
 export type { EnvCodecMetadata } from "./env/codecs.js";
-// Environment codecs with registry metadata
-export { EnvCodecs, createEnumCodec, createJsonArrayCodec, envCodecRegistry } from "./env/codecs.js";
+// Environment codecs class (preferred)
+export {
+	EnvCodecs,
+	// Legacy exports - prefer EnvCodecs.enum, EnvCodecs.jsonArray
+	createEnumCodec,
+	createJsonArrayCodec,
+	envCodecRegistry,
+} from "./env/codecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,

@@ -1617,4 +1617,53 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	listVarNames(prefix: string): string[] {
 		return Object.keys(Bun.env).filter((key) => key.startsWith(prefix));
 	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Static utility methods
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Escape a string value for safe use in bash double-quoted strings.
+	 *
+	 * @remarks
+	 * In bash double quotes, these characters have special meaning and must be escaped:
+	 * - `"` (double quote) - terminates the string
+	 * - backtick - command substitution
+	 * - `$` (dollar sign) - variable expansion
+	 * - `\` (backslash) - escape character (only when followed by special chars)
+	 *
+	 * @param value - The string to escape
+	 * @returns The escaped string safe for bash double quotes
+	 *
+	 * @example
+	 * ```typescript
+	 * ClaudeBinaryPluginEnv.escapeForBash('Hello "world"') // 'Hello \\"world\\"'
+	 * ClaudeBinaryPluginEnv.escapeForBash('Run `cmd`') // 'Run \\`cmd\\`'
+	 * ClaudeBinaryPluginEnv.escapeForBash('Cost: $50') // 'Cost: \\$50'
+	 * ```
+	 * @public
+	 */
+	static escapeForBash(value: string): string {
+		return escapeForBashDoubleQuotes(value);
+	}
+
+	/**
+	 * Format a Zod validation error for LLM consumption.
+	 *
+	 * @param error - The Zod error to format
+	 * @param maxErrors - Maximum number of errors to show (default 10)
+	 * @returns Formatted markdown string
+	 *
+	 * @example
+	 * ```typescript
+	 * const result = schema.safeParse(data);
+	 * if (!result.success) {
+	 *   console.log(ClaudeBinaryPluginEnv.formatZodError(result.error));
+	 * }
+	 * ```
+	 * @public
+	 */
+	static formatZodError(error: ZodErrorMinimal, maxErrors = 10): string {
+		return formatZodError(error, maxErrors);
+	}
 }

@@ -289,14 +289,14 @@ export function createJsonArrayCodec<T extends z.ZodType>(itemSchema: T) {
 }
 
 // =============================================================================
-// ENV CODECS NAMESPACE
+// ENV CODECS CLASS
 // =============================================================================
 
 /**
- * Unified namespace for all environment variable codecs.
+ * Environment variable codecs for type-safe serialization.
  *
  * @remarks
- * `EnvCodecs` provides a class-first API for environment variable serialization
+ * `EnvCodecs` provides a class-based API for environment variable serialization
  * with Zod v4 registry integration. All codecs are registered with metadata
  * enabling documentation generation and introspection.
  *
@@ -341,7 +341,10 @@ export function createJsonArrayCodec<T extends z.ZodType>(itemSchema: T) {
  * @see {@link ClaudeBinaryPluginEnv} - Uses codecs for environment validation
  * @public
  */
-export const EnvCodecs = {
+export class EnvCodecs {
+	// Private constructor prevents instantiation
+	private constructor() {}
+
 	/**
 	 * The Zod registry containing metadata for all codecs.
 	 *
@@ -354,7 +357,7 @@ export const EnvCodecs = {
 	 * console.log(meta.description);
 	 * ```
 	 */
-	registry: envCodecRegistry,
+	static readonly registry = envCodecRegistry;
 
 	/**
 	 * Strict boolean codec.
@@ -368,7 +371,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.bool.encode(false)   // → "false"
 	 * ```
 	 */
-	bool: _boolCodec,
+	static readonly bool = _boolCodec;
 
 	/**
 	 * Optional boolean codec with false default.
@@ -382,7 +385,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.optionalBool.decode("true") // → true
 	 * ```
 	 */
-	optionalBool: _optionalBoolCodec,
+	static readonly optionalBool = _optionalBoolCodec;
 
 	/**
 	 * Nullable string codec.
@@ -396,7 +399,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.nullable.decode("/path/file") // → "/path/file"
 	 * ```
 	 */
-	nullable: _nullableCodec,
+	static readonly nullable = _nullableCodec;
 
 	/**
 	 * Optional nullable string codec.
@@ -410,7 +413,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.optionalNullable.decode("/path/file") // → "/path/file"
 	 * ```
 	 */
-	optionalNullable: _optionalNullableCodec,
+	static readonly optionalNullable = _optionalNullableCodec;
 
 	/**
 	 * Integer codec with 0 fallback.
@@ -424,7 +427,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.int.decode("abc")  // → 0
 	 * ```
 	 */
-	int: _intCodec,
+	static readonly int = _intCodec;
 
 	/**
 	 * Optional integer codec with 0 default.
@@ -438,7 +441,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.optionalInt.decode("42") // → 42
 	 * ```
 	 */
-	optionalInt: _optionalIntCodec,
+	static readonly optionalInt = _optionalIntCodec;
 
 	/**
 	 * Float codec with 0 fallback.
@@ -452,7 +455,7 @@ export const EnvCodecs = {
 	 * EnvCodecs.float.encode(2.5)    // → "2.5"
 	 * ```
 	 */
-	float: _floatCodec,
+	static readonly float = _floatCodec;
 
 	/**
 	 * Create an enum codec with a default value.
@@ -468,7 +471,7 @@ export const EnvCodecs = {
 	 * logLevel.decode("debug")  // → "debug"
 	 * ```
 	 */
-	enum: createEnumCodec,
+	static readonly enum = createEnumCodec;
 
 	/**
 	 * Create a JSON array codec for complex data.
@@ -482,5 +485,5 @@ export const EnvCodecs = {
 	 * packages.decode('[{"name":"foo"}]') // → [{name: "foo"}]
 	 * ```
 	 */
-	jsonArray: createJsonArrayCodec,
-} as const;
+	static readonly jsonArray = createJsonArrayCodec;
+}
