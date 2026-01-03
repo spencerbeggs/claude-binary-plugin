@@ -139,15 +139,9 @@ export type { EmptyArgs, RunCommandOptions } from "./commands/runtime.js";
 
 export {
 	CommandArgumentError,
-	// Unified namespace (preferred)
+	// Main class (preferred)
 	Commands,
 	emptyArgsSchema,
-	findSessionEnvDir,
-	formatFatalError,
-	parseCommandArgs,
-	parseRawArgs,
-	runCommand,
-	validateCommandOutput,
 } from "./commands/runtime.js";
 
 // =============================================================================
