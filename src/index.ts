@@ -43,8 +43,6 @@
 // CORE TYPES
 // =============================================================================
 
-import { DebugLogger } from "./utils/debug-logger.js";
-export { DebugLogger };
 export type { EnvCodecMetadata } from "./env/codecs.js";
 export { EnvCodecs } from "./env/codecs.js";
 export type {
@@ -69,10 +67,11 @@ export type {
 	DebugLoggerOptions,
 	FileSystem,
 	LogLevel,
-	Timer,
+	TimerHandle,
 	TimingEntry,
 	TimingTracker,
 } from "./utils/debug-logger.js";
+export { DebugLogger } from "./utils/debug-logger.js";
 
 // =============================================================================
 // EVENTS MODULE
@@ -235,15 +234,10 @@ export { Platform } from "./otel/classes/Platform.js";
 export type { PluginInfoData } from "./otel/classes/PluginInfo.js";
 export { PluginInfo } from "./otel/classes/PluginInfo.js";
 export { SessionEnv } from "./otel/classes/SessionEnv.js";
-
-// Sidecar management
-export type { ClientState } from "./otel/client.js";
-export { SidecarClient } from "./otel/client.js";
 export { SidecarClientPool } from "./otel/classes/SidecarClientPool.js";
 export type { SpawnResult } from "./otel/classes/SidecarLauncher.js";
 export { SidecarLauncher } from "./otel/classes/SidecarLauncher.js";
 export { SidecarMessage } from "./otel/classes/SidecarMessage.js";
-
 // Telemetry emission
 export type {
 	DecisionSource,
@@ -258,6 +252,9 @@ export type {
 export { TelemetryEmitter } from "./otel/classes/TelemetryEmitter.js";
 export { TelemetryMetrics } from "./otel/classes/TelemetryMetrics.js";
 export { TelemetrySpan } from "./otel/classes/TelemetrySpan.js";
+// Sidecar management
+export type { ClientState } from "./otel/client.js";
+export { SidecarClient } from "./otel/client.js";
 
 // Constants
 export { CLAUDE_ATTRS, METRIC_NAMES, PLUGIN_ATTRS, SPAN_NAMES } from "./otel/constants.js";

@@ -8662,8 +8662,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "Timer",
-                  "canonicalReference": "claude-binary-plugin!Timer_2:interface"
+                  "text": "TimerHandle",
+                  "canonicalReference": "claude-binary-plugin!TimerHandle:interface"
                 },
                 {
                   "kind": "Content",
@@ -60162,22 +60162,22 @@
         },
         {
           "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!Timer_2:interface",
+          "canonicalReference": "claude-binary-plugin!TimerHandle:interface",
           "docComment": "/**\n * Timer handle returned by `time()` for stopping measurements\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export interface Timer "
+              "text": "export interface TimerHandle "
             }
           ],
           "fileUrlPath": "src/utils/debug-logger.ts",
           "releaseTag": "Public",
-          "name": "Timer_2",
+          "name": "TimerHandle",
           "preserveMemberOrder": false,
           "members": [
             {
               "kind": "MethodSignature",
-              "canonicalReference": "claude-binary-plugin!Timer_2#elapsed:member(1)",
+              "canonicalReference": "claude-binary-plugin!TimerHandle#elapsed:member(1)",
               "docComment": "/**\n * Get elapsed time without stopping\n */\n",
               "excerptTokens": [
                 {
@@ -60205,7 +60205,7 @@
             },
             {
               "kind": "MethodSignature",
-              "canonicalReference": "claude-binary-plugin!Timer_2#stop:member(1)",
+              "canonicalReference": "claude-binary-plugin!TimerHandle#stop:member(1)",
               "docComment": "/**\n * Stop the timer and log the duration\n */\n",
               "excerptTokens": [
                 {

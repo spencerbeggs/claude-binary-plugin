@@ -49,7 +49,7 @@ export interface TimingEntry {
  *
  * @public
  */
-export interface Timer {
+export interface TimerHandle {
 	/** Stop the timer and log the duration */
 	stop(): number;
 	/** Get elapsed time without stopping */
@@ -331,7 +331,7 @@ export class DebugLogger {
 	 * timer.stop(); // Logs: [timing] fetchData: 123.45ms
 	 * ```
 	 */
-	time(label: string): Timer {
+	time(label: string): TimerHandle {
 		const startTime = performance.now();
 		const enabled = this.isCurrentlyEnabled();
 
