@@ -276,6 +276,7 @@ export type {
 // Re-export pipeline config (explicit to avoid conflicts)
 export {
 	ClaudeBinaryPlugin,
+	// Legacy exports - prefer Pipeline.getOutputSchema, Pipeline.isPipelineHook, etc.
 	getOutputSchema,
 	isPipelineHook,
 	isRawHook,
@@ -283,7 +284,7 @@ export {
 // Pipeline metrics
 export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./pipeline/metrics.js";
-// Unified Pipeline namespace (preferred)
+// Unified Pipeline class (preferred)
 export { Pipeline } from "./pipeline/namespace.js";
 
 // Pipeline types - explicit exports to avoid conflicts with events/types.ts output interfaces
@@ -328,6 +329,7 @@ export {
 	SubagentStopOutputSchema,
 	UserPromptSubmitOutputSchema,
 	ValidationResultSchema,
+	// Legacy export - prefer Pipeline.isOutput
 	isPipelineOutput,
 } from "./pipeline/types.js";
 
@@ -348,6 +350,7 @@ export type {
 	UserPromptSubmitResponse,
 } from "./pipeline/runtime.js";
 export {
+	// Legacy exports - prefer Pipeline.handleUnknown, Pipeline.run, Pipeline.runRaw
 	handleUnknownHook,
 	runPipeline,
 	runRawHandler,

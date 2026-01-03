@@ -1,8 +1,8 @@
 /**
- * Unified Pipeline namespace for hook execution and metrics.
+ * Unified Pipeline class for hook execution and metrics.
  *
  * @remarks
- * The `Pipeline` namespace consolidates all pipeline-related functions into a
+ * The `Pipeline` class consolidates all pipeline-related functions into a
  * single, discoverable API. This includes hook execution, output validation,
  * type guards, and token/metric utilities.
  *
@@ -15,20 +15,20 @@ import { handleUnknownHook, runPipeline, runRawHandler } from "./runtime.js";
 import { isPipelineOutput } from "./types.js";
 
 /**
- * Unified namespace for pipeline execution and utilities.
+ * Pipeline execution and utilities.
  *
  * @remarks
- * The `Pipeline` namespace provides a single entry point for all pipeline-related
+ * The `Pipeline` class provides a single entry point for all pipeline-related
  * operations including hook execution, output validation, and metrics extraction.
  *
- * **Namespace Organization:**
+ * **Class Organization:**
  *
  * | Category | Methods |
  * |----------|---------|
  * | Execution | `run`, `runRaw`, `handleUnknown` |
  * | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` |
  * | Schema | `getOutputSchema` |
- * | Metrics | `Metrics.*` (sub-namespace) |
+ * | Metrics | `Metrics.*` (static property) |
  *
  * @example
  * ```typescript
@@ -54,7 +54,10 @@ import { isPipelineOutput } from "./types.js";
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
-export const Pipeline = {
+export class Pipeline {
+	// Private constructor prevents instantiation
+	private constructor() {}
+
 	// =========================================================================
 	// EXECUTION
 	// =========================================================================
@@ -88,7 +91,7 @@ export const Pipeline = {
 	 * @see {@link RunPipelineOptions}
 	 * @public
 	 */
-	run: runPipeline,
+	static readonly run = runPipeline;
 
 	/**
 	 * Execute a raw handler.
@@ -115,7 +118,7 @@ export const Pipeline = {
 	 * @see {@link RunRawHandlerOptions}
 	 * @public
 	 */
-	runRaw: runRawHandler,
+	static readonly runRaw = runRawHandler;
 
 	/**
 	 * Handle an unknown hook key.
@@ -137,7 +140,7 @@ export const Pipeline = {
 	 *
 	 * @public
 	 */
-	handleUnknown: handleUnknownHook,
+	static readonly handleUnknown = handleUnknownHook;
 
 	// =========================================================================
 	// TYPE GUARDS
@@ -163,7 +166,7 @@ export const Pipeline = {
 	 *
 	 * @public
 	 */
-	isOutput: isPipelineOutput,
+	static readonly isOutput = isPipelineOutput;
 
 	/**
 	 * Check if a hook definition uses pipeline mode.
@@ -177,7 +180,7 @@ export const Pipeline = {
 	 *
 	 * @public
 	 */
-	isPipelineHook,
+	static readonly isPipelineHook = isPipelineHook;
 
 	/**
 	 * Check if a hook definition uses raw handler mode.
@@ -191,7 +194,7 @@ export const Pipeline = {
 	 *
 	 * @public
 	 */
-	isRawHook,
+	static readonly isRawHook = isRawHook;
 
 	// =========================================================================
 	// SCHEMA
@@ -214,7 +217,7 @@ export const Pipeline = {
 	 *
 	 * @public
 	 */
-	getOutputSchema,
+	static readonly getOutputSchema = getOutputSchema;
 
 	// =========================================================================
 	// METRICS SUB-NAMESPACE
@@ -224,7 +227,7 @@ export const Pipeline = {
 	 * Token and metric utilities for pipeline telemetry.
 	 *
 	 * @remarks
-	 * The `Metrics` sub-namespace provides utilities for estimating token counts,
+	 * The `Metrics` property provides utilities for estimating token counts,
 	 * extracting metrics from outputs, and tracking session-level token usage.
 	 *
 	 * @example
@@ -242,7 +245,7 @@ export const Pipeline = {
 	 *
 	 * @public
 	 */
-	Metrics: {
+	static readonly Metrics = {
 		/**
 		 * Estimate token count for a string.
 		 *
@@ -365,5 +368,5 @@ export const Pipeline = {
 		 * @public
 		 */
 		checkBudget: TokenMetrics.checkBudget,
-	},
-} as const;
+	} as const;
+}
