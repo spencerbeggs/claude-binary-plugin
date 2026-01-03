@@ -6,10 +6,10 @@
  * commands without requiring actual Claude Code integration.
  *
  * **Key Utilities:**
- * - {@link mockIO} - Mock stdin/stdout for hook testing
- * - {@link mockEnv} - Mock environment variables
- * - {@link mockCommand} - Run command handlers with mocked I/O
- * - {@link createMockShellExecutor} - Mock shell command execution
+ * - {@link Mocks.IO} - Mock stdin/stdout for hook testing
+ * - {@link Mocks.Env} - Mock environment variables
+ * - {@link Mocks.Command} - Run command handlers with mocked I/O
+ * - {@link Mocks.Shell} - Mock shell command execution
  *
  * **Testing Philosophy:**
  * Plugin tests should be isolated and fast. These utilities enable:
@@ -20,15 +20,15 @@
  *
  * @example
  * ```typescript
- * import { mockIO, mockEnv, runMockedHook } from "claude-binary-plugin/mocks";
+ * import { Mocks } from "claude-binary-plugin";
  *
  * test("hook blocks dangerous command", async () => {
- *   const io = mockIO({
+ *   const io = Mocks.IO.create({
  *     tool_name: "Bash",
  *     tool_input: { command: "rm -rf /" },
  *   });
  *
- *   await runMockedHook(myHook);
+ *   await Mocks.Hook.run(myHook);
  *
  *   const output = JSON.parse(io.getStdout());
  *   expect(output.hookSpecificOutput.permissionDecision).toBe("deny");
@@ -944,16 +944,10 @@ export class Mocks {
 	 * @public
 	 */
 	static readonly IO = {
-		/**
-		 * Create a mock I/O context for hook testing.
-		 * @see {@link mockIO}
-		 */
+		/** Create a mock I/O context for hook testing. */
 		create: mockIO,
 
-		/**
-		 * Reset all I/O mocks. Call in afterEach().
-		 * @see {@link resetMockIO}
-		 */
+		/** Reset all I/O mocks. Call in afterEach(). */
 		reset: resetMockIO,
 	} as const;
 
@@ -967,22 +961,13 @@ export class Mocks {
 	 * @public
 	 */
 	static readonly Env = {
-		/**
-		 * Create an isolated mock environment.
-		 * @see {@link mockEnv}
-		 */
+		/** Create an isolated mock environment. */
 		create: mockEnv,
 
-		/**
-		 * Preset environment configurations.
-		 * @see {@link envPresets}
-		 */
+		/** Preset environment configurations. */
 		presets: envPresets,
 
-		/**
-		 * Mock environment class for ClaudeBinaryPluginEnv.
-		 * @see {@link MockEnv}
-		 */
+		/** Mock environment class for ClaudeBinaryPluginEnv. */
 		Class: MockEnv,
 	} as const;
 
@@ -996,22 +981,13 @@ export class Mocks {
 	 * @public
 	 */
 	static readonly Command = {
-		/**
-		 * Create a mock command context.
-		 * @see {@link mockCommand}
-		 */
+		/** Create a mock command context. */
 		create: mockCommand,
 
-		/**
-		 * Run a command with mocked context.
-		 * @see {@link runMockedCommand}
-		 */
+		/** Run a command with mocked context. */
 		run: runMockedCommand,
 
-		/**
-		 * Test a fatal error handler.
-		 * @see {@link testFatalErrorHandler}
-		 */
+		/** Test a fatal error handler. */
 		testFatalError: testFatalErrorHandler,
 	} as const;
 
@@ -1025,10 +1001,7 @@ export class Mocks {
 	 * @public
 	 */
 	static readonly Hook = {
-		/**
-		 * Run a hook main function with mocked process.exit.
-		 * @see {@link runMockedHook}
-		 */
+		/** Run a hook main function with mocked process.exit. */
 		run: runMockedHook,
 	} as const;
 
@@ -1042,44 +1015,24 @@ export class Mocks {
 	 * @public
 	 */
 	static readonly Shell = {
-		/**
-		 * Create a ShellResult for mocking.
-		 * @see {@link createMockShellResult}
-		 */
+		/** Create a ShellResult for mocking. */
 		result: createMockShellResult,
 
-		/**
-		 * Create a mock shell executor with predefined responses.
-		 * @see {@link createMockShellExecutor}
-		 */
+		/** Create a mock shell executor with predefined responses. */
 		executor: createMockShellExecutor,
 
-		/**
-		 * Default shell executor using Bun.$.
-		 * @see {@link defaultShellExecutor}
-		 */
+		/** Default shell executor using Bun.$. */
 		default: defaultShellExecutor,
 
-		/**
-		 * Buffer-based shell utilities for linting tools.
-		 */
+		/** Buffer-based shell utilities for linting tools. */
 		Buffer: {
-			/**
-			 * Create a BufferShellResult for mocking.
-			 * @see {@link createMockBufferShellResult}
-			 */
+			/** Create a BufferShellResult for mocking. */
 			result: createMockBufferShellResult,
 
-			/**
-			 * Create a mock buffer shell executor.
-			 * @see {@link createMockBufferShellExecutor}
-			 */
+			/** Create a mock buffer shell executor. */
 			executor: createMockBufferShellExecutor,
 
-			/**
-			 * Default buffer shell executor using Bun.$.
-			 * @see {@link defaultBufferShellExecutor}
-			 */
+			/** Default buffer shell executor using Bun.$. */
 			default: defaultBufferShellExecutor,
 		},
 	} as const;
@@ -1090,16 +1043,10 @@ export class Mocks {
 	 * @public
 	 */
 	static readonly Utils = {
-		/**
-		 * Error thrown when mocked process.exit is called.
-		 * @see {@link MockExitError}
-		 */
+		/** Error thrown when mocked process.exit is called. */
 		ExitError: MockExitError,
 
-		/**
-		 * No-op logger methods for testing.
-		 * @see {@link mockLogger}
-		 */
+		/** No-op logger methods for testing. */
 		logger: mockLogger,
 	} as const;
 }

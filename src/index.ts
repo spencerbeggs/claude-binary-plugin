@@ -45,38 +45,8 @@
 
 import { DebugLogger } from "./utils/debug-logger.js";
 export { DebugLogger };
-export type {
-	DebugLoggerOptions,
-	FileSystem,
-	LogLevel,
-	Timer,
-	TimingEntry,
-	TimingTracker,
-} from "./utils/debug-logger.js";
-
-import {
-	ClaudeBinaryPluginEnv,
-	EnvFileLoadError,
-	escapeForBashDoubleQuotes,
-	formatZodError as formatZodErrorAsMarkdown,
-} from "./env/plugin-env.js";
-export {
-	// Core classes
-	ClaudeBinaryPluginEnv,
-	EnvFileLoadError,
-	// Legacy exports - prefer ClaudeBinaryPluginEnv.escapeForBash, ClaudeBinaryPluginEnv.formatZodError
-	escapeForBashDoubleQuotes,
-	formatZodErrorAsMarkdown,
-};
 export type { EnvCodecMetadata } from "./env/codecs.js";
-// Environment codecs class (preferred)
-export {
-	EnvCodecs,
-	// Legacy exports - prefer EnvCodecs.enum, EnvCodecs.jsonArray
-	createEnumCodec,
-	createJsonArrayCodec,
-	envCodecRegistry,
-} from "./env/codecs.js";
+export { EnvCodecs } from "./env/codecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -91,9 +61,18 @@ export type {
 	ZodIssueMinimal,
 	ZodSchema,
 } from "./env/plugin-env.js";
+export { ClaudeBinaryPluginEnv, EnvFileLoadError } from "./env/plugin-env.js";
 export type { SessionRecord, SessionRegistration } from "./env/session-registry.js";
 // Session registry for persistent session lookups
 export { SessionRegistry, closeDb } from "./env/session-registry.js";
+export type {
+	DebugLoggerOptions,
+	FileSystem,
+	LogLevel,
+	Timer,
+	TimingEntry,
+	TimingTracker,
+} from "./utils/debug-logger.js";
 
 // =============================================================================
 // EVENTS MODULE
@@ -286,14 +265,7 @@ export type {
 	UserPromptSubmitPipeline,
 	UserPromptSubmitRawHandler,
 } from "./pipeline/config.js";
-// Re-export pipeline config (explicit to avoid conflicts)
-export {
-	ClaudeBinaryPlugin,
-	// Legacy exports - prefer Pipeline.getOutputSchema, Pipeline.isPipelineHook, etc.
-	getOutputSchema,
-	isPipelineHook,
-	isRawHook,
-} from "./pipeline/config.js";
+export { ClaudeBinaryPlugin } from "./pipeline/config.js";
 // Pipeline metrics
 export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./pipeline/metrics.js";
@@ -342,8 +314,6 @@ export {
 	SubagentStopOutputSchema,
 	UserPromptSubmitOutputSchema,
 	ValidationResultSchema,
-	// Legacy export - prefer Pipeline.isOutput
-	isPipelineOutput,
 } from "./pipeline/types.js";
 
 // =============================================================================
@@ -361,12 +331,6 @@ export type {
 	SessionStartResponse,
 	StopResponse,
 	UserPromptSubmitResponse,
-} from "./pipeline/runtime.js";
-export {
-	// Legacy exports - prefer Pipeline.handleUnknown, Pipeline.run, Pipeline.runRaw
-	handleUnknownHook,
-	runPipeline,
-	runRawHandler,
 } from "./pipeline/runtime.js";
 
 // =============================================================================
@@ -427,26 +391,4 @@ export type {
 	MockEnvContext,
 	MockIOResult,
 } from "./testing/mocks.js";
-export {
-	// Core classes
-	MockEnv,
-	MockExitError,
-	// Main class (preferred) - use Mocks.IO, Mocks.Env, Mocks.Shell, etc.
-	Mocks,
-	// Legacy standalone exports for backward compatibility
-	// Prefer using Mocks.Env.create, Mocks.IO.create, etc.
-	createMockBufferShellExecutor,
-	createMockBufferShellResult,
-	createMockShellExecutor,
-	createMockShellResult,
-	defaultBufferShellExecutor,
-	envPresets,
-	mockCommand,
-	mockEnv,
-	mockIO,
-	mockLogger,
-	resetMockIO,
-	runMockedCommand,
-	runMockedHook,
-	testFatalErrorHandler,
-} from "./testing/mocks.js";
+export { MockEnv, MockExitError, Mocks } from "./testing/mocks.js";

@@ -736,8 +736,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 		// Check that tools filter is included
 		expect(entrypoint).toContain('["Bash", "Write"]');
 
-		// Check for runPipeline call
-		expect(entrypoint).toContain("runPipeline(");
+		// Check for Pipeline.run call
+		expect(entrypoint).toContain("Pipeline.run(");
 	});
 
 	test("generates valid entrypoint with raw handler hooks", () => {
@@ -759,8 +759,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
-		// Check for runRawHandler call
-		expect(entrypoint).toContain("runRawHandler(");
+		// Check for Pipeline.runRaw call
+		expect(entrypoint).toContain("Pipeline.runRaw(");
 		expect(entrypoint).toContain('case "PreToolUse/raw-handler"');
 	});
 

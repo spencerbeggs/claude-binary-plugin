@@ -217,7 +217,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 				if (fileHookImport) {
 					// File-based pipeline hook
 					hookCases.push(`    case "${hookKey}": {
-      return runPipeline({
+      return Pipeline.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -234,7 +234,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("pipeline" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return runPipeline({
+      return Pipeline.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -251,7 +251,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 				if (fileHookImport) {
 					// File-based handler hook
 					hookCases.push(`    case "${hookKey}": {
-      return runRawHandler({
+      return Pipeline.runRaw({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -265,7 +265,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return runRawHandler({
+      return Pipeline.runRaw({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -322,7 +322,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { runPipeline, runRawHandler, ClaudeBinaryPluginEnv, handleUnknownHook, setPluginInfo } from "claude-binary-plugin";
+import { Pipeline, ClaudeBinaryPluginEnv, setPluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -413,7 +413,7 @@ async function main(): Promise<void> {
     const hookKey = values.hook;
 
     if (!validHooks.includes(hookKey)) {
-      await handleUnknownHook(hookKey, validHooks);
+      await Pipeline.handleUnknown(hookKey, validHooks);
     }
 
     await runHook(hookKey);

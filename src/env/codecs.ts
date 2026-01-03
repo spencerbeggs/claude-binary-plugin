@@ -337,7 +337,7 @@ export function createJsonArrayCodec<T extends z.ZodType>(itemSchema: T) {
  * console.log(meta.description); // "Strict boolean codec..."
  * ```
  *
- * @see {@link envCodecRegistry} - The underlying Zod registry
+ * @see {@link EnvCodecs.registry} - Access the underlying Zod registry
  * @see {@link ClaudeBinaryPluginEnv} - Uses codecs for environment validation
  * @public
  */
