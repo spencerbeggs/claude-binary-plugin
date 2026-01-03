@@ -31,6 +31,18 @@ import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";
 import type { PluginBuildResult } from "../build/builder.js";
 import type {
+	NotificationHookEvent,
+	PermissionRequestHookEvent,
+	PostToolUseHookEvent,
+	PreCompactHookEvent,
+	PreToolUseHookEvent,
+	SessionEndHookEvent,
+	SessionStartHookEvent,
+	StopHookEvent,
+	SubagentStopHookEvent,
+	UserPromptSubmitHookEvent,
+} from "../events/subclasses.js";
+import type {
 	NotificationEvent,
 	PermissionRequestEvent,
 	PostToolUseEvent,
@@ -42,7 +54,7 @@ import type {
 	SubagentStopEvent,
 	ToolName,
 	UserPromptSubmitEvent,
-} from "../index.js";
+} from "../events/types.js";
 import type { PluginTestBuilder } from "../testing/builder.js";
 import type {
 	NotificationOutput,
@@ -58,9 +70,6 @@ import type {
 	UserPromptSubmitOutput,
 } from "./types.js";
 import { OutputSchemas } from "./types.js";
-
-// Re-export PluginBuildResult so it's available from this module
-export type { PluginBuildResult };
 
 // =============================================================================
 // HANDLER TYPES
@@ -273,7 +282,7 @@ export type PermissionRequestPipeline<TOptions, TState = Record<string, string>>
  * @public
  */
 export type SessionStartRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").SessionStartHookEvent<TOptions>,
+	SessionStartHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -283,7 +292,7 @@ export type SessionStartRawHandler<TOptions, TState = Record<string, string>> = 
  * @public
  */
 export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").SessionEndHookEvent<TOptions>,
+	SessionEndHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -303,7 +312,7 @@ export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = Ra
  * @public
  */
 export type PreToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").PreToolUseHookEvent<TOptions>,
+	PreToolUseHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -313,7 +322,7 @@ export type PreToolUseRawHandler<TOptions, TState = Record<string, string>> = Ra
  * @public
  */
 export type PostToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").PostToolUseHookEvent<TOptions>,
+	PostToolUseHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -323,7 +332,7 @@ export type PostToolUseRawHandler<TOptions, TState = Record<string, string>> = R
  * @public
  */
 export type StopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").StopHookEvent<TOptions>,
+	StopHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -333,7 +342,7 @@ export type StopRawHandler<TOptions, TState = Record<string, string>> = RawHandl
  * @public
  */
 export type SubagentStopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").SubagentStopHookEvent<TOptions>,
+	SubagentStopHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -343,7 +352,7 @@ export type SubagentStopRawHandler<TOptions, TState = Record<string, string>> = 
  * @public
  */
 export type UserPromptSubmitRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").UserPromptSubmitHookEvent<TOptions>,
+	UserPromptSubmitHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -353,7 +362,7 @@ export type UserPromptSubmitRawHandler<TOptions, TState = Record<string, string>
  * @public
  */
 export type PreCompactRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").PreCompactHookEvent<TOptions>,
+	PreCompactHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -363,7 +372,7 @@ export type PreCompactRawHandler<TOptions, TState = Record<string, string>> = Ra
  * @public
  */
 export type NotificationRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").NotificationHookEvent<TOptions>,
+	NotificationHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -373,7 +382,7 @@ export type NotificationRawHandler<TOptions, TState = Record<string, string>> = 
  * @public
  */
 export type PermissionRequestRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	import("../index.js").PermissionRequestHookEvent<TOptions>,
+	PermissionRequestHookEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -511,7 +520,7 @@ export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<st
 export type SessionStartHookDefinition<TOptions> = HookDefinition<
 	SessionStartEvent,
 	SessionStartOutput,
-	import("../index.js").SessionStartHookEvent<TOptions>,
+	SessionStartHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -522,7 +531,7 @@ export type SessionStartHookDefinition<TOptions> = HookDefinition<
 export type SessionEndHookDefinition<TOptions> = HookDefinition<
 	SessionEndEvent,
 	SessionEndOutput,
-	import("../index.js").SessionEndHookEvent<TOptions>,
+	SessionEndHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -533,7 +542,7 @@ export type SessionEndHookDefinition<TOptions> = HookDefinition<
 export type PreToolUseHookDefinition<TOptions> = HookDefinition<
 	PreToolUseEvent,
 	PreToolUseOutput,
-	import("../index.js").PreToolUseHookEvent<TOptions>,
+	PreToolUseHookEvent<TOptions>,
 	TOptions
 > &
 	ToolFilter;
@@ -545,7 +554,7 @@ export type PreToolUseHookDefinition<TOptions> = HookDefinition<
 export type PostToolUseHookDefinition<TOptions> = HookDefinition<
 	PostToolUseEvent,
 	PostToolUseOutput,
-	import("../index.js").PostToolUseHookEvent<TOptions>,
+	PostToolUseHookEvent<TOptions>,
 	TOptions
 > &
 	ToolFilter;
@@ -557,7 +566,7 @@ export type PostToolUseHookDefinition<TOptions> = HookDefinition<
 export type StopHookDefinition<TOptions> = HookDefinition<
 	StopEvent,
 	StopOutput,
-	import("../index.js").StopHookEvent<TOptions>,
+	StopHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -568,7 +577,7 @@ export type StopHookDefinition<TOptions> = HookDefinition<
 export type SubagentStopHookDefinition<TOptions> = HookDefinition<
 	SubagentStopEvent,
 	SubagentStopOutput,
-	import("../index.js").SubagentStopHookEvent<TOptions>,
+	SubagentStopHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -579,7 +588,7 @@ export type SubagentStopHookDefinition<TOptions> = HookDefinition<
 export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
 	UserPromptSubmitEvent,
 	UserPromptSubmitOutput,
-	import("../index.js").UserPromptSubmitHookEvent<TOptions>,
+	UserPromptSubmitHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -590,7 +599,7 @@ export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
 export type PreCompactHookDefinition<TOptions> = HookDefinition<
 	PreCompactEvent,
 	PreCompactOutput,
-	import("../index.js").PreCompactHookEvent<TOptions>,
+	PreCompactHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -601,7 +610,7 @@ export type PreCompactHookDefinition<TOptions> = HookDefinition<
 export type NotificationHookDefinition<TOptions> = HookDefinition<
 	NotificationEvent,
 	NotificationOutput,
-	import("../index.js").NotificationHookEvent<TOptions>,
+	NotificationHookEvent<TOptions>,
 	TOptions
 >;
 
@@ -612,7 +621,7 @@ export type NotificationHookDefinition<TOptions> = HookDefinition<
 export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
 	PermissionRequestEvent,
 	PermissionRequestOutput,
-	import("../index.js").PermissionRequestHookEvent<TOptions>,
+	PermissionRequestHookEvent<TOptions>,
 	TOptions
 >;
 

@@ -23024,42 +23024,6 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<string, string>;\n            readonly workflowPlugin: (overrides?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>) => "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>;\n            readonly bunPluginBuilder: (overrides?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>) => "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
                   "text": "<string, string>;\n        };\n        readonly Class: typeof "
                 },
                 {
@@ -23082,7 +23046,7 @@
               "name": "Env",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 22
+                "endIndex": 14
               },
               "isStatic": true,
               "isProtected": false,
@@ -23779,7 +23743,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -24843,7 +24807,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -32824,7 +32788,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -34167,7 +34131,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -41179,7 +41143,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -42725,7 +42689,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -43268,7 +43232,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -44332,7 +44296,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -44803,7 +44767,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -46432,7 +46396,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -48674,7 +48638,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -49681,7 +49645,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -50665,7 +50629,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -51888,7 +51852,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -54529,7 +54493,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -55688,7 +55652,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -56167,7 +56131,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -57313,7 +57277,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",
@@ -61814,7 +61778,7 @@
             },
             {
               "kind": "Content",
-              "text": ", import(\"../index.js\")."
+              "text": ", "
             },
             {
               "kind": "Reference",
@@ -63045,7 +63009,7 @@
             },
             {
               "kind": "Content",
-              "text": "<import(\"../index.js\")."
+              "text": "<"
             },
             {
               "kind": "Reference",

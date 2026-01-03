@@ -38,7 +38,8 @@
  * @module
  */
 
-import type { HookMetrics, HookOutcome, HookResponse } from "./response-types.js";
+import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
+import type { HookResponse } from "./response-types.js";
 import { estimateTokenCount } from "./response-types.js";
 import type { PermissionRequestDecision, ToolInput } from "./types.js";
 

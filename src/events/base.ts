@@ -52,9 +52,10 @@ import { HookEventSchemas } from "../core/schemas.js";
 import { ClaudeBinaryPluginEnv, formatZodError as formatZodErrorAsMarkdown } from "../env/plugin-env.js";
 import { DebugLogger } from "../utils/debug-logger.js";
 import type { HookEventName } from "./enums.js";
+import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
+import type { HookPermissionsMode } from "./enums.js";
 import { HookResponseBuilder } from "./response-builders.js";
-import type { HookMetrics, HookOutcome } from "./response-types.js";
-import type { HookEventBase, HookEventOptions, HookPermissionsMode, IO } from "./types.js";
+import type { HookEventBase, HookEventOptions, IO } from "./types.js";
 import { SchemaValidator } from "./validation.js";
 
 /**
@@ -228,7 +229,7 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	 */
 	protected static async initTelemetry(sessionId: string): Promise<void> {
 		try {
-			const { TelemetryEmitter } = await import("../otel/index.js");
+			const { TelemetryEmitter } = await import("../otel/classes/TelemetryEmitter.js");
 			await TelemetryEmitter.preconnect(sessionId);
 		} catch {
 			// Silently ignore telemetry errors

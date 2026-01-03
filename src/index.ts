@@ -78,14 +78,95 @@ export type {
 // EVENTS MODULE
 // =============================================================================
 
-// Re-export all event types, classes, and utilities from the events module
-export * from "./events/index.js";
+// Base HookEvent class
+export { HookEvent } from "./events/base.js";
+export type { HookPermissionsMode } from "./events/enums.js";
+// Enums
+export { HookEventName } from "./events/enums.js";
+// Response builders
+export {
+	HookResponseBuilder,
+	PermissionRequestResponseBuilder,
+	PostToolUseResponseBuilder,
+	PreToolUseResponseBuilder,
+	SessionStartResponseBuilder,
+	StopResponseBuilder,
+	UserPromptSubmitResponseBuilder,
+} from "./events/response-builders.js";
+
+// Response types
+export type { BlockDecision, HookResponse } from "./events/response-types.js";
+export { estimateTokenCount } from "./events/response-types.js";
+// HookEvent subclasses
+export {
+	NotificationHookEvent,
+	PermissionRequestHookEvent,
+	PostToolUseHookEvent,
+	PreCompactHookEvent,
+	PreToolUseHookEvent,
+	SessionEndHookEvent,
+	SessionStartHookEvent,
+	StopHookEvent,
+	SubagentStopHookEvent,
+	UserPromptSubmitHookEvent,
+} from "./events/subclasses.js";
+// Event type definitions
+export type {
+	HookEventBase,
+	HookEventOptions,
+	IO,
+	NotificationEvent,
+	NotificationType,
+	PermissionRequestBehavior,
+	PermissionRequestDecision,
+	PermissionRequestEvent,
+	PermissionRequestOutput,
+	PostToolUseEvent,
+	PostToolUseOutput,
+	PreCompactEvent,
+	PreCompactTrigger,
+	PreToolUseDecision,
+	PreToolUseEvent,
+	PreToolUseOutput,
+	SessionEndEvent,
+	SessionEndReason,
+	SessionStartEvent,
+	SessionStartOutput,
+	SessionStartSource,
+	StopEvent,
+	SubagentStopEvent,
+	ToolInput,
+	ToolName,
+	ToolResponse,
+	UserPromptSubmitEvent,
+	UserPromptSubmitOutput,
+} from "./events/types.js";
+
+// Schema validation
+export type { FormattedValidationError } from "./events/validation.js";
+export { SchemaValidator } from "./events/validation.js";
 
 // =============================================================================
 // TYPED TOOL INPUTS
 // =============================================================================
 
-export * from "./core/tool-inputs.js";
+export type {
+	BashToolInput,
+	EditToolInput,
+	GlobToolInput,
+	GrepToolInput,
+	NotebookEditToolInput,
+	ReadToolInput,
+	TaskToolInput,
+	TodoItem,
+	TodoWriteToolInput,
+	ToolInputMap,
+	TypedToolName,
+	WebFetchToolInput,
+	WebSearchToolInput,
+	WriteToolInput,
+} from "./core/tool-inputs.js";
+export { ToolInputGuard } from "./core/tool-inputs.js";
 
 // =============================================================================
 // HOOK EVENT SCHEMAS
@@ -140,68 +221,64 @@ export {
 // OTEL TELEMETRY
 // =============================================================================
 
-// Type exports
+// Configuration classes
+export type { ClaudeAccountInfoData } from "./otel/classes/ClaudeAccountInfo.js";
+export { ClaudeAccountInfo } from "./otel/classes/ClaudeAccountInfo.js";
+export type { GitInfoData, GitProvider } from "./otel/classes/GitInfo.js";
+export { GitInfo } from "./otel/classes/GitInfo.js";
+export type { OTELConfigData } from "./otel/classes/OTELConfig.js";
+export { OTELConfig } from "./otel/classes/OTELConfig.js";
+
+// Platform utilities
+export type { PlatformType, SupportedPlatform } from "./otel/classes/Platform.js";
+export { Platform } from "./otel/classes/Platform.js";
+export type { PluginInfoData } from "./otel/classes/PluginInfo.js";
+export { PluginInfo } from "./otel/classes/PluginInfo.js";
+export { SessionEnv } from "./otel/classes/SessionEnv.js";
+
+// Sidecar management
+export type { ClientState } from "./otel/client.js";
+export { SidecarClient } from "./otel/client.js";
+export { SidecarClientPool } from "./otel/classes/SidecarClientPool.js";
+export type { SpawnResult } from "./otel/classes/SidecarLauncher.js";
+export { SidecarLauncher } from "./otel/classes/SidecarLauncher.js";
+export { SidecarMessage } from "./otel/classes/SidecarMessage.js";
+
+// Telemetry emission
 export type {
-	// Configuration types
-	ClaudeAccountInfoData,
-	// Telemetry types
-	ClientState,
 	DecisionSource,
 	EnvValidationErrorResult,
-	// Protocol types
-	EventData,
-	EventMessage,
 	FatalErrorResult,
-	GitInfoData,
-	GitProvider,
 	HookExecutionDirectResult,
 	HookExecutionResult,
 	HookMetrics,
 	HookOutcome,
+	SchemaValidationErrorResult,
+} from "./otel/classes/TelemetryEmitter.js";
+export { TelemetryEmitter } from "./otel/classes/TelemetryEmitter.js";
+export { TelemetryMetrics } from "./otel/classes/TelemetryMetrics.js";
+export { TelemetrySpan } from "./otel/classes/TelemetrySpan.js";
+
+// Constants
+export { CLAUDE_ATTRS, METRIC_NAMES, PLUGIN_ATTRS, SPAN_NAMES } from "./otel/constants.js";
+
+// Protocol types (for advanced usage)
+export type {
+	EventData,
+	EventMessage,
 	MetricData,
 	MetricMessage,
 	MetricType,
-	OTELConfigData,
-	OTELConfigProtocol,
+	OTELConfig as OTELConfigProtocol,
 	PingMessage,
-	PlatformType,
-	PluginInfoData,
-	SchemaValidationErrorResult,
 	ScopeData,
 	ShutdownMessage,
-	SidecarMessageProtocol,
+	SidecarMessage as SidecarMessageProtocol,
 	SpanData,
 	SpanEvent,
 	SpanMessage,
-	SpawnResult,
-	SupportedPlatform,
-} from "./otel/index.js";
+} from "./otel/protocol.js";
 
-// Class exports
-export {
-	// Constants
-	CLAUDE_ATTRS,
-	// Configuration classes
-	ClaudeAccountInfo,
-	GitInfo,
-	METRIC_NAMES,
-	OTELConfig,
-	PLUGIN_ATTRS,
-	// Platform utilities
-	Platform,
-	PluginInfo,
-	SPAN_NAMES,
-	SessionEnv,
-	// Sidecar management
-	SidecarClient,
-	SidecarClientPool,
-	SidecarLauncher,
-	SidecarMessage,
-	// Telemetry
-	TelemetryEmitter,
-	TelemetryMetrics,
-	TelemetrySpan,
-} from "./otel/index.js";
 // Sidecar entry point (compiled separately by builder)
 export { main as sidecarMain } from "./otel/sidecar/main.js";
 

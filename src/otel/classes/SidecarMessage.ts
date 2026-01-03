@@ -23,23 +23,6 @@
  * @public
  */
 
-// Re-export types from protocol.ts for convenience
-export type {
-	EventData,
-	EventMessage,
-	MetricData,
-	MetricMessage,
-	MetricType,
-	OTELConfig,
-	PingMessage,
-	ScopeData,
-	ShutdownMessage,
-	SidecarResponse,
-	SpanData,
-	SpanEvent,
-	SpanMessage,
-} from "../protocol.js";
-
 import type { SidecarMessage as SidecarMessageType } from "../protocol.js";
 
 /**

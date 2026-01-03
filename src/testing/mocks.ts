@@ -42,10 +42,7 @@
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
 import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
-import type { HookEventBase, IO } from "../index.js";
-
-// Re-export shell types from canonical location
-export type { ShellExecutor, ShellResult } from "../build/builder.js";
+import type { HookEventBase, IO } from "../events/types.js";
 
 // =============================================================================
 // LOGGER MOCKS

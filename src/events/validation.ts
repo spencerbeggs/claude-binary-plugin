@@ -63,7 +63,7 @@ export class SchemaValidator {
 		// Initialize OTEL if we have a session ID
 		if (sessionId) {
 			try {
-				const { TelemetryEmitter } = await import("../otel/index.js");
+				const { TelemetryEmitter } = await import("../otel/classes/TelemetryEmitter.js");
 				await TelemetryEmitter.preconnect(sessionId);
 			} catch {
 				// Silently ignore telemetry errors - don't block hook initialization

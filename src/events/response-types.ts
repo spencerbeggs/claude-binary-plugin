@@ -31,9 +31,6 @@ export interface HookResponse {
 	reason?: string;
 }
 
-// Re-export canonical definitions from TelemetryEmitter class
-export type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
-
 /**
  * Estimate token count for a string.
  * Uses a simple heuristic: ~4 characters per token on average.

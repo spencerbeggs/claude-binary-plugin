@@ -19,7 +19,10 @@
 import { Platform } from "../classes/Platform.js";
 import { DEFAULTS, ENV_VARS } from "../constants.js";
 import type { SidecarMessage, SidecarResponse } from "../protocol.js";
-import { SidecarLifecycle, SidecarLog, SidecarRouter, SidecarServer } from "./classes/index.js";
+import { SidecarLifecycle } from "./classes/SidecarLifecycle.js";
+import { SidecarLog } from "./classes/SidecarLog.js";
+import { SidecarRouter } from "./classes/SidecarRouter.js";
+import { SidecarServer } from "./classes/SidecarServer.js";
 
 /**
  * Sidecar version - should match package version.

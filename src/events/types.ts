@@ -5,9 +5,6 @@
 
 import type { HookEventName, HookPermissionsMode } from "./enums.js";
 
-// Re-export HookPermissionsMode for base.ts
-export type { HookPermissionsMode };
-
 // =============================================================================
 // I/O TYPES
 // =============================================================================

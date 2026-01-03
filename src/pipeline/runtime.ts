@@ -120,9 +120,6 @@ import { TokenMetrics } from "./metrics.js";
 import type { AnyPipelineOutput, ExecutionStatus, HookAction } from "./types.js";
 import { isPipelineOutput } from "./types.js";
 
-// Re-export types that are used in exports
-export type { ExecutionStatus, HookAction } from "./types.js";
-
 // =============================================================================
 // HOOK EVENT CONSTRUCTORS MAP
 // =============================================================================
