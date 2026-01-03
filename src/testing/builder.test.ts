@@ -285,56 +285,57 @@ describe("PluginTestBuilder", () => {
 	});
 });
 
-describe("Mocks namespace", () => {
-	test("Mocks.IO has create and reset methods", async () => {
+describe("Mocks class", () => {
+	test("Mocks has I/O methods", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(typeof Mocks.IO.create).toBe("function");
-		expect(typeof Mocks.IO.reset).toBe("function");
+		expect(typeof Mocks.createIO).toBe("function");
+		expect(typeof Mocks.resetIO).toBe("function");
 	});
 
-	test("Mocks.Env has create and presets", async () => {
+	test("Mocks has environment methods and presets", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(typeof Mocks.Env.create).toBe("function");
-		expect(Mocks.Env.presets).toBeDefined();
-		expect(typeof Mocks.Env.presets.claudeHook).toBe("function");
+		expect(typeof Mocks.createEnv).toBe("function");
+		expect(Mocks.envPresets).toBeDefined();
+		expect(typeof Mocks.envPresets.claudeHook).toBe("function");
+		expect(Mocks.MockEnvClass).toBeDefined();
 	});
 
-	test("Mocks.Command has create and run methods", async () => {
+	test("Mocks has command methods", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(typeof Mocks.Command.create).toBe("function");
-		expect(typeof Mocks.Command.run).toBe("function");
-		expect(typeof Mocks.Command.testFatalError).toBe("function");
+		expect(typeof Mocks.createCommand).toBe("function");
+		expect(typeof Mocks.runCommand).toBe("function");
+		expect(typeof Mocks.testFatalError).toBe("function");
 	});
 
-	test("Mocks.Hook has run method", async () => {
+	test("Mocks has hook methods", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(typeof Mocks.Hook.run).toBe("function");
+		expect(typeof Mocks.runHook).toBe("function");
 	});
 
-	test("Mocks.Shell has result and executor methods", async () => {
+	test("Mocks has shell methods", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(typeof Mocks.Shell.result).toBe("function");
-		expect(typeof Mocks.Shell.executor).toBe("function");
-		expect(Mocks.Shell.default).toBeDefined();
+		expect(typeof Mocks.shellResult).toBe("function");
+		expect(typeof Mocks.shellExecutor).toBe("function");
+		expect(Mocks.defaultShellExecutor).toBeDefined();
 	});
 
-	test("Mocks.Shell.Buffer has result and executor methods", async () => {
+	test("Mocks has buffer shell methods", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(typeof Mocks.Shell.Buffer.result).toBe("function");
-		expect(typeof Mocks.Shell.Buffer.executor).toBe("function");
-		expect(Mocks.Shell.Buffer.default).toBeDefined();
+		expect(typeof Mocks.bufferShellResult).toBe("function");
+		expect(typeof Mocks.bufferShellExecutor).toBe("function");
+		expect(Mocks.defaultBufferShellExecutor).toBeDefined();
 	});
 
-	test("Mocks.Utils has ExitError and logger", async () => {
+	test("Mocks has utility properties", async () => {
 		const { Mocks } = await import("./mocks.js");
 
-		expect(Mocks.Utils.ExitError).toBeDefined();
-		expect(typeof Mocks.Utils.logger).toBe("function");
+		expect(Mocks.ExitError).toBeDefined();
+		expect(typeof Mocks.logger).toBe("function");
 	});
 });

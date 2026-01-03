@@ -460,6 +460,7 @@ export class EnvCodecs {
 	/**
 	 * Create an enum codec with a default value.
 	 *
+	 * @typeParam T - The enum values tuple type
 	 * @param values - The enum values tuple
 	 * @param defaultValue - The default value when env is empty/undefined/invalid
 	 * @returns A Zod codec for the enum type
@@ -471,11 +472,14 @@ export class EnvCodecs {
 	 * logLevel.decode("debug")  // → "debug"
 	 * ```
 	 */
-	static readonly enum = createEnumCodec;
+	static enum<T extends readonly [string, ...string[]]>(values: T, defaultValue: T[number]) {
+		return createEnumCodec(values, defaultValue);
+	}
 
 	/**
 	 * Create a JSON array codec for complex data.
 	 *
+	 * @typeParam T - The Zod schema type for array items
 	 * @param itemSchema - The Zod schema for validating each array item
 	 * @returns A Zod codec for JSON-serialized arrays
 	 *
@@ -485,5 +489,7 @@ export class EnvCodecs {
 	 * packages.decode('[{"name":"foo"}]') // → [{name: "foo"}]
 	 * ```
 	 */
-	static readonly jsonArray = createJsonArrayCodec;
+	static jsonArray<T extends z.ZodType>(itemSchema: T) {
+		return createJsonArrayCodec(itemSchema);
+	}
 }

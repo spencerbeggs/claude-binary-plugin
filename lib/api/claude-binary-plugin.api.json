@@ -9546,39 +9546,112 @@
               "isAbstract": false
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!EnvCodecs.enum:member",
-              "docComment": "/**\n * Create an enum codec with a default value.\n *\n * @param values - The enum values tuple\n *\n * @param defaultValue - The default value when env is empty/undefined/invalid\n *\n * @returns A Zod codec for the enum type\n *\n * @example\n * ```typescript\n * const logLevel = EnvCodecs.enum([\"debug\", \"info\", \"warn\"], \"info\");\n * logLevel.decode(\"\")       // → \"info\"\n * logLevel.decode(\"debug\")  // → \"debug\"\n * ```\n *\n */\n",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!EnvCodecs.enum:member(1)",
+              "docComment": "/**\n * Create an enum codec with a default value.\n *\n * @param values - The enum values tuple\n *\n * @param defaultValue - The default value when env is empty/undefined/invalid\n *\n * @typeParam T - The enum values tuple type\n *\n * @returns A Zod codec for the enum type\n *\n * @example\n * ```typescript\n * const logLevel = EnvCodecs.enum([\"debug\", \"info\", \"warn\"], \"info\");\n * logLevel.decode(\"\")       // → \"info\"\n * logLevel.decode(\"debug\")  // → \"debug\"\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly enum: "
+                  "text": "static enum<T extends "
                 },
                 {
                   "kind": "Content",
-                  "text": "typeof "
+                  "text": "readonly [string, ...string[]]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(values: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", defaultValue: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T[number]"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
                 },
                 {
                   "kind": "Reference",
-                  "text": "createEnumCodec",
-                  "canonicalReference": "claude-binary-plugin!~createEnumCodec:function"
+                  "text": "z.ZodCodec",
+                  "canonicalReference": "zod!ZodCodec:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodString",
+                  "canonicalReference": "zod!ZodString:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodEnum",
+                  "canonicalReference": "zod!ZodEnum:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<{ [k in T[number]]: k; } extends infer T_1 ? { [k in keyof T_1]: T_1[k]; } : never>>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "enum",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 13
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "values",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "defaultValue",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 5,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "enum"
             },
             {
               "kind": "Property",
@@ -9687,39 +9760,115 @@
               "isAbstract": false
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!EnvCodecs.jsonArray:member",
-              "docComment": "/**\n * Create a JSON array codec for complex data.\n *\n * @param itemSchema - The Zod schema for validating each array item\n *\n * @returns A Zod codec for JSON-serialized arrays\n *\n * @example\n * ```typescript\n * const packages = EnvCodecs.jsonArray(z.object({ name: z.string() }));\n * packages.decode('[{\"name\":\"foo\"}]') // → [{name: \"foo\"}]\n * ```\n *\n */\n",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!EnvCodecs.jsonArray:member(1)",
+              "docComment": "/**\n * Create a JSON array codec for complex data.\n *\n * @param itemSchema - The Zod schema for validating each array item\n *\n * @typeParam T - The Zod schema type for array items\n *\n * @returns A Zod codec for JSON-serialized arrays\n *\n * @example\n * ```typescript\n * const packages = EnvCodecs.jsonArray(z.object({ name: z.string() }));\n * packages.decode('[{\"name\":\"foo\"}]') // → [{name: \"foo\"}]\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly jsonArray: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "typeof "
+                  "text": "static jsonArray<T extends "
                 },
                 {
                   "kind": "Reference",
-                  "text": "createJsonArrayCodec",
-                  "canonicalReference": "claude-binary-plugin!~createJsonArrayCodec:function"
+                  "text": "z.ZodType",
+                  "canonicalReference": "zod!ZodType:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(itemSchema: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodCodec",
+                  "canonicalReference": "zod!ZodCodec:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodDefault",
+                  "canonicalReference": "zod!ZodDefault:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodOptional",
+                  "canonicalReference": "zod!ZodOptional:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodString",
+                  "canonicalReference": "zod!ZodString:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodArray",
+                  "canonicalReference": "zod!ZodArray:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "jsonArray",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 15
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "itemSchema",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "jsonArray"
             },
             {
               "kind": "Property",
@@ -22898,7 +23047,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!Mocks:class",
-          "docComment": "/**\n * Testing utilities for Claude Code plugins.\n *\n * @remarks\n *\n * The `Mocks` class provides static properties grouping related testing utilities for easier discovery and usage. Each sub-object provides utilities for a specific testing domain.\n *\n * **Sub-namespaces:** - `Mocks.IO` - I/O mocking (stdin, stdout, stderr) - `Mocks.Env` - Environment variable mocking - `Mocks.Command` - CLI command testing - `Mocks.Hook` - Hook handler testing - `Mocks.Shell` - Shell executor mocking\n *\n * @example\n * ```typescript\n * import { Mocks } from \"claude-binary-plugin\";\n *\n * // Mock environment\n * const env = Mocks.Env.create({ CLAUDE_PROJECT_DIR: \"/test\" });\n * afterEach(() => env.restore());\n *\n * // Mock I/O for hook testing\n * const io = Mocks.IO.create({ tool_name: \"Bash\", tool_input: { command: \"ls\" } });\n * const exitCode = await Mocks.Hook.run(main);\n *\n * // Mock shell executor\n * const shell = Mocks.Shell.executor({\n *   \"git status\": Mocks.Shell.result(0, \"On branch main\"),\n * });\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Testing utilities for Claude Code plugins.\n *\n * @remarks\n *\n * The `Mocks` class provides static methods grouping related testing utilities for easier discovery and usage.\n *\n * **Method Categories:** - I/O: `createIO`, `resetIO` - Environment: `createEnv`, `envPresets` - Command: `createCommand`, `runCommand`, `testFatalError` - Hook: `runHook` - Shell: `shellResult`, `shellExecutor`, `bufferShellResult`, `bufferShellExecutor`\n *\n * @example\n * ```typescript\n * import { Mocks } from \"claude-binary-plugin\";\n *\n * // Mock environment\n * const env = Mocks.createEnv({ CLAUDE_PROJECT_DIR: \"/test\" });\n * afterEach(() => env.restore());\n *\n * // Mock I/O for hook testing\n * const io = Mocks.createIO({ tool_name: \"Bash\", tool_input: { command: \"ls\" } });\n * const exitCode = await Mocks.runHook(main);\n *\n * // Mock shell executor\n * const shell = Mocks.shellExecutor({\n *   \"git status\": Mocks.shellResult(0, \"On branch main\"),\n * });\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -22912,290 +23061,48 @@
           "preserveMemberOrder": false,
           "members": [
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Mocks.Command:member",
-              "docComment": "/**\n * CLI command testing utilities.\n *\n * @remarks\n *\n * Mocks process.argv, console.log/error, and process.exit for testing CLI command handlers.\n *\n * @public\n */\n",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.bufferShellExecutor:member(1)",
+              "docComment": "/**\n * Create a mock buffer shell executor.\n *\n * @param handler - Function that determines response based on command\n *\n * @returns A BufferShellExecutor that returns predefined results\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly Command: "
+                  "text": "static bufferShellExecutor(handler: "
                 },
                 {
                   "kind": "Content",
-                  "text": "{\n        readonly create: typeof "
+                  "text": "(cmd: string[], options?: "
                 },
                 {
                   "kind": "Reference",
-                  "text": "mockCommand",
-                  "canonicalReference": "claude-binary-plugin!~mockCommand:function"
+                  "text": "BufferShellExecutorOptions",
+                  "canonicalReference": "claude-binary-plugin!BufferShellExecutorOptions:interface"
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n        readonly run: typeof "
+                  "text": ") => "
                 },
                 {
                   "kind": "Reference",
-                  "text": "runMockedCommand",
-                  "canonicalReference": "claude-binary-plugin!~runMockedCommand:function"
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n        readonly testFatalError: typeof "
+                  "text": "<"
                 },
                 {
                   "kind": "Reference",
-                  "text": "testFatalErrorHandler",
-                  "canonicalReference": "claude-binary-plugin!~testFatalErrorHandler:function"
+                  "text": "BufferShellResult",
+                  "canonicalReference": "claude-binary-plugin!BufferShellResult:interface"
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n    }"
+                  "text": ">"
                 },
                 {
                   "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "Command",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 8
-              },
-              "isStatic": true,
-              "isProtected": false,
-              "isAbstract": false
-            },
-            {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Mocks.Env:member",
-              "docComment": "/**\n * Environment variable mocking utilities.\n *\n * @remarks\n *\n * Provides complete isolation for environment variables in tests. All existing env vars are hidden during the test.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static readonly Env: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "{\n        readonly create: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "mockEnv",
-                  "canonicalReference": "claude-binary-plugin!~mockEnv:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n        readonly presets: {\n            readonly claudeHook: (overrides?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>) => "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>;\n            readonly withEnvFile: (envFilePath: string, overrides?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>) => "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>;\n        };\n        readonly Class: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "MockEnv",
-                  "canonicalReference": "claude-binary-plugin!MockEnv:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n    }"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "Env",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 14
-              },
-              "isStatic": true,
-              "isProtected": false,
-              "isAbstract": false
-            },
-            {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Mocks.Hook:member",
-              "docComment": "/**\n * Hook handler testing utilities.\n *\n * @remarks\n *\n * Mocks process.exit for testing hook handlers that call event.end() which internally exits the process.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static readonly Hook: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "{\n        readonly run: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "runMockedHook",
-                  "canonicalReference": "claude-binary-plugin!~runMockedHook:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n    }"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "Hook",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 4
-              },
-              "isStatic": true,
-              "isProtected": false,
-              "isAbstract": false
-            },
-            {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Mocks.IO:member",
-              "docComment": "/**\n * I/O mocking utilities for hook testing.\n *\n * @remarks\n *\n * Mocks stdin, stdout, and stderr for testing hook handlers that read JSON input and write JSON output.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static readonly IO: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "{\n        readonly create: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "mockIO",
-                  "canonicalReference": "claude-binary-plugin!~mockIO:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n        readonly reset: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "resetMockIO",
-                  "canonicalReference": "claude-binary-plugin!~resetMockIO:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n    }"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "IO",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 6
-              },
-              "isStatic": true,
-              "isProtected": false,
-              "isAbstract": false
-            },
-            {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Mocks.Shell:member",
-              "docComment": "/**\n * Shell executor mocking utilities.\n *\n * @remarks\n *\n * Provides mock shell executors for testing code that executes shell commands (e.g., tool detection, linting).\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static readonly Shell: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "{\n        readonly result: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "createMockShellResult",
-                  "canonicalReference": "claude-binary-plugin!~createMockShellResult:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n        readonly executor: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "createMockShellExecutor",
-                  "canonicalReference": "claude-binary-plugin!~createMockShellExecutor:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n        readonly default: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ShellExecutor",
-                  "canonicalReference": "claude-binary-plugin!ShellExecutor:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n        readonly Buffer: {\n            readonly result: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "createMockBufferShellResult",
-                  "canonicalReference": "claude-binary-plugin!~createMockBufferShellResult:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n            readonly executor: typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "createMockBufferShellExecutor",
-                  "canonicalReference": "claude-binary-plugin!~createMockBufferShellExecutor:function"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n            readonly default: "
+                  "text": "): "
                 },
                 {
                   "kind": "Reference",
@@ -23204,7 +23111,325 @@
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n        };\n    }"
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 10
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "handler",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 8
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "bufferShellExecutor"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.bufferShellResult:member(1)",
+              "docComment": "/**\n * Create a BufferShellResult for mocking.\n *\n * @param exitCode - The exit code (0 for success)\n *\n * @param stdout - Standard output content\n *\n * @param stderr - Standard error content\n *\n * @returns A BufferShellResult object\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static bufferShellResult(exitCode: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", stdout?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string | "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Buffer",
+                  "canonicalReference": "!\"\\\"node:buffer\\\"\".__global.Buffer:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", stderr?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string | "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Buffer",
+                  "canonicalReference": "!\"\\\"node:buffer\\\"\".__global.Buffer:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "BufferShellResult",
+                  "canonicalReference": "claude-binary-plugin!BufferShellResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 10
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "exitCode",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "stdout",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  },
+                  "isOptional": true
+                },
+                {
+                  "parameterName": "stderr",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 8
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "bufferShellResult"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.createCommand:member(1)",
+              "docComment": "/**\n * Create a mock command context.\n *\n * @remarks\n *\n * Mocks process.argv, console.log/error, and process.exit for testing CLI command handlers.\n *\n * @param args - CLI arguments\n *\n * @returns MockCommandContext with captured output and restore function\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static createCommand(args: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "MockCommandContext",
+                  "canonicalReference": "claude-binary-plugin!MockCommandContext:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "args",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "createCommand"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.createEnv:member(1)",
+              "docComment": "/**\n * Create an isolated mock environment.\n *\n * @remarks\n *\n * Provides complete isolation for environment variables in tests. All existing env vars are hidden during the test.\n *\n * @param vars - Environment variables to set\n *\n * @param options - Configuration options\n *\n * @returns MockEnvContext for managing the mock\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static createEnv(vars?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string | undefined>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        clearPrefix?: string;\n        clearSuffix?: string;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "MockEnvContext",
+                  "canonicalReference": "claude-binary-plugin!MockEnvContext:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 6,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "vars",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": true
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 5
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "createEnv"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.createIO:member(1)",
+              "docComment": "/**\n * Create a mock I/O context for hook testing.\n *\n * @remarks\n *\n * Mocks stdin, stdout, and stderr for testing hook handlers that read JSON input and write JSON output.\n *\n * @param input - The hook event input to mock\n *\n * @typeParam T - The type of the hook event input\n *\n * @returns MockIOResult with IO interface plus getStdout() and getStderr() methods\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static createIO<T extends "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "HookEventBase",
+                  "canonicalReference": "claude-binary-plugin!HookEventBase:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(input: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "T"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "MockIOResult",
+                  "canonicalReference": "claude-binary-plugin!MockIOResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "input",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "createIO"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!Mocks.defaultBufferShellExecutor:member",
+              "docComment": "/**\n * Default buffer shell executor using Bun.$.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly defaultBufferShellExecutor: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "BufferShellExecutor",
+                  "canonicalReference": "claude-binary-plugin!BufferShellExecutor:type"
                 },
                 {
                   "kind": "Content",
@@ -23214,10 +23439,10 @@
               "isReadonly": true,
               "isOptional": false,
               "releaseTag": "Public",
-              "name": "Shell",
+              "name": "defaultBufferShellExecutor",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 14
+                "endIndex": 2
               },
               "isStatic": true,
               "isProtected": false,
@@ -23225,16 +23450,113 @@
             },
             {
               "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Mocks.Utils:member",
-              "docComment": "/**\n * Utility classes and types.\n *\n * @public\n */\n",
+              "canonicalReference": "claude-binary-plugin!Mocks.defaultShellExecutor:member",
+              "docComment": "/**\n * Default shell executor using Bun.$.\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly Utils: "
+                  "text": "static readonly defaultShellExecutor: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellExecutor",
+                  "canonicalReference": "claude-binary-plugin!ShellExecutor:type"
                 },
                 {
                   "kind": "Content",
-                  "text": "{\n        readonly ExitError: typeof "
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "defaultShellExecutor",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!Mocks.envPresets:member",
+              "docComment": "/**\n * Preset environment configurations.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly envPresets: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        readonly claudeHook: (overrides?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>) => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>;\n        readonly withEnvFile: (envFilePath: string, overrides?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>) => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "envPresets",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 10
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!Mocks.ExitError:member",
+              "docComment": "/**\n * Error thrown when mocked process.exit is called.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly ExitError: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "typeof "
                 },
                 {
                   "kind": "Reference",
@@ -23243,16 +23565,69 @@
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n        readonly logger: typeof "
-                },
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "ExitError",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.logger:member(1)",
+              "docComment": "/**\n * No-op logger methods for testing.\n *\n * @returns Object with log, info, debug methods\n *\n * @public\n */\n",
+              "excerptTokens": [
                 {
-                  "kind": "Reference",
-                  "text": "mockLogger",
-                  "canonicalReference": "claude-binary-plugin!~mockLogger:function"
+                  "kind": "Content",
+                  "text": "static logger(): "
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n    }"
+                  "text": "{\n        log: (message: string, ...args: unknown[]) => void;\n        info: (message: string, ...args: unknown[]) => void;\n        debug: (message: string, ...args: unknown[]) => void;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "logger"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!Mocks.MockEnvClass:member",
+              "docComment": "/**\n * Mock environment class for ClaudeBinaryPluginEnv.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly MockEnvClass: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "typeof "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "MockEnv",
+                  "canonicalReference": "claude-binary-plugin!MockEnv:class"
                 },
                 {
                   "kind": "Content",
@@ -23262,14 +23637,420 @@
               "isReadonly": true,
               "isOptional": false,
               "releaseTag": "Public",
-              "name": "Utils",
+              "name": "MockEnvClass",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 3
               },
               "isStatic": true,
               "isProtected": false,
               "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.resetIO:member(1)",
+              "docComment": "/**\n * Reset all I/O mocks.\n *\n * @remarks\n *\n * Call this in afterEach() to clean up between tests.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static resetIO(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "resetIO"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.runCommand:member(1)",
+              "docComment": "/**\n * Run a command with mocked context.\n *\n * @param args - CLI arguments\n *\n * @param mainFn - The main function to run\n *\n * @returns CommandOutput with captured logs, errors, and exit code\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static runCommand(args: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", mainFn: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "() => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "CommandOutput",
+                  "canonicalReference": "claude-binary-plugin!MockCommandOutput:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "args",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "mainFn",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "runCommand"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.runHook:member(1)",
+              "docComment": "/**\n * Run a hook main function with mocked process.exit.\n *\n * @remarks\n *\n * Hook main functions call event.end() which internally calls process.exit(). This helper mocks process.exit to throw MockExitError instead of terminating.\n *\n * @param mainFn - The hook main function to run\n *\n * @returns The exit code passed to process.exit\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static runHook(mainFn: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "() => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<number>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "mainFn",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "runHook"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.shellExecutor:member(1)",
+              "docComment": "/**\n * Create a mock shell executor with predefined responses.\n *\n * @param responses - Map of command patterns to results\n *\n * @param defaultResult - Result for unmatched commands\n *\n * @returns A ShellExecutor that returns predefined results\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static shellExecutor(responses: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellResult",
+                  "canonicalReference": "claude-binary-plugin!ShellResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", defaultResult?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellResult",
+                  "canonicalReference": "claude-binary-plugin!ShellResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellExecutor",
+                  "canonicalReference": "claude-binary-plugin!ShellExecutor:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 8,
+                "endIndex": 9
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "responses",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 5
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "defaultResult",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 7
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "shellExecutor"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.shellResult:member(1)",
+              "docComment": "/**\n * Create a ShellResult for mocking.\n *\n * @param exitCode - The exit code (0 for success)\n *\n * @param stdout - Standard output content\n *\n * @param stderr - Standard error content\n *\n * @returns A ShellResult object\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static shellResult(exitCode: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", stdout?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", stderr?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellResult",
+                  "canonicalReference": "claude-binary-plugin!ShellResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 8
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "exitCode",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "stdout",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                },
+                {
+                  "parameterName": "stderr",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 5,
+                    "endIndex": 6
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "shellResult"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Mocks.testFatalError:member(1)",
+              "docComment": "/**\n * Test a fatal error handler.\n *\n * @param handler - The fatal error handler function to test\n *\n * @param error - The error to pass to the handler\n *\n * @returns FatalErrorResult with captured exit code and error messages\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static testFatalError(handler: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(error: unknown) => never"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", error?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "unknown"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "FatalErrorResult",
+                  "canonicalReference": "claude-binary-plugin!MockFatalErrorResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "handler",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "error",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "testFatalError"
             }
           ],
           "implementsTokenRanges": []
@@ -34834,179 +35615,459 @@
           "preserveMemberOrder": false,
           "members": [
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.getOutputSchema:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.getOutputSchema:member(1)",
               "docComment": "/**\n * Get the output schema for a hook event type.\n *\n * @remarks\n *\n * Returns the Zod schema for validating outputs of the given hook type.\n *\n * @param hookType - Hook event type (e.g., \"PreToolUse\", \"SessionStart\")\n *\n * @returns Zod schema for the hook's output type\n *\n * @example\n * ```typescript\n * const schema = Pipeline.getOutputSchema(\"PreToolUse\");\n * const result = schema.safeParse(output);\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly getOutputSchema: "
+                  "text": "static getOutputSchema(hookType: "
                 },
                 {
                   "kind": "Content",
-                  "text": "typeof "
+                  "text": "keyof typeof "
                 },
                 {
                   "kind": "Reference",
-                  "text": "getOutputSchema",
-                  "canonicalReference": "claude-binary-plugin!~getOutputSchema:function"
+                  "text": "OutputSchemas",
+                  "canonicalReference": "claude-binary-plugin!OutputSchemas:var"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "$ZodType",
+                  "canonicalReference": "zod!$ZodType:interface"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "getOutputSchema",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 4,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "hookType",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "getOutputSchema"
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.handleUnknown:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.handleUnknown:member(1)",
               "docComment": "/**\n * Handle an unknown hook key.\n *\n * @remarks\n *\n * Called when the plugin receives an unrecognized hook key. Emits telemetry, logs an error, and exits with a passthrough response.\n *\n * @param hookKey - The unknown hook key (e.g., \"PreToolUse/unknown\")\n *\n * @param validHooks - Array of valid hook keys for error message\n *\n * @returns Never (exits process)\n *\n * @example\n * ```typescript\n * if (!validHooks.includes(hookKey)) {\n *   await Pipeline.handleUnknown(hookKey, validHooks);\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly handleUnknown: "
+                  "text": "static handleUnknown(hookKey: "
                 },
                 {
                   "kind": "Content",
-                  "text": "typeof "
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", validHooks: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
                 },
                 {
                   "kind": "Reference",
-                  "text": "handleUnknownHook",
-                  "canonicalReference": "claude-binary-plugin!~handleUnknownHook:function"
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<never>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "handleUnknown",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "hookKey",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "validHooks",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "handleUnknown"
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.isOutput:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.isOutput:member(1)",
               "docComment": "/**\n * Check if a value is a valid pipeline output.\n *\n * @remarks\n *\n * Type guard that checks for the required `status` and `summary` fields. Used by the runtime to distinguish pipeline outputs from raw handler returns.\n *\n * @param output - Value to check\n *\n * @returns `true` if output has `status` and `summary` fields\n *\n * @example\n * ```typescript\n * const result = await handler(context);\n * if (Pipeline.isOutput(result)) {\n *   console.log(result.status, result.action);\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly isOutput: "
+                  "text": "static isOutput(output: "
                 },
                 {
                   "kind": "Content",
-                  "text": "typeof "
+                  "text": "unknown"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
                 },
                 {
                   "kind": "Reference",
-                  "text": "isPipelineOutput",
-                  "canonicalReference": "claude-binary-plugin!~isPipelineOutput:function"
+                  "text": "output",
+                  "canonicalReference": "claude-binary-plugin!~output"
+                },
+                {
+                  "kind": "Content",
+                  "text": " is "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "AnyPipelineOutput",
+                  "canonicalReference": "claude-binary-plugin!AnyPipelineOutput:type"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "isOutput",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "output",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "isOutput"
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.isPipelineHook:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.isPipelineHook:member(1)",
               "docComment": "/**\n * Check if a hook definition uses pipeline mode.\n *\n * @remarks\n *\n * Returns true if the hook has a `pipeline` property, indicating it returns structured output rather than using raw HookEvent access.\n *\n * @param hook - Hook definition to check\n *\n * @returns `true` if hook uses pipeline mode\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly isPipelineHook: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "typeof "
+                  "text": "static isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = "
                 },
                 {
                   "kind": "Reference",
-                  "text": "isPipelineHook",
-                  "canonicalReference": "claude-binary-plugin!~isPipelineHook:function"
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(hook: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "HookDefinition",
+                  "canonicalReference": "claude-binary-plugin!HookDefinition:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TInput, TOutput, TEvent, TOptions, TState>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "hook",
+                  "canonicalReference": "claude-binary-plugin!~hook"
+                },
+                {
+                  "kind": "Content",
+                  "text": " is "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineHookDefinition",
+                  "canonicalReference": "claude-binary-plugin!PipelineHookDefinition:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TInput, TOutput, TOptions>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "isPipelineHook",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
+              "typeParameters": [
+                {
+                  "typeParameterName": "TInput",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TOutput",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TEvent",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TOptions",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TState",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  }
+                }
+              ],
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "hook",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "isPipelineHook"
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.isRawHook:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.isRawHook:member(1)",
               "docComment": "/**\n * Check if a hook definition uses raw handler mode.\n *\n * @remarks\n *\n * Returns true if the hook has a `handler` property, indicating it receives the full HookEvent object and manages its own response.\n *\n * @param hook - Hook definition to check\n *\n * @returns `true` if hook uses raw handler mode\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly isRawHook: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "typeof "
+                  "text": "static isRawHook<TInput, TOutput, TEvent, TOptions, TState = "
                 },
                 {
                   "kind": "Reference",
-                  "text": "isRawHook",
-                  "canonicalReference": "claude-binary-plugin!~isRawHook:function"
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(hook: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "HookDefinition",
+                  "canonicalReference": "claude-binary-plugin!HookDefinition:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TInput, TOutput, TEvent, TOptions, TState>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "hook",
+                  "canonicalReference": "claude-binary-plugin!~hook"
+                },
+                {
+                  "kind": "Content",
+                  "text": " is "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "RawHookDefinition",
+                  "canonicalReference": "claude-binary-plugin!RawHookDefinition:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TEvent, TOptions, TState>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "isRawHook",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
+              "typeParameters": [
+                {
+                  "typeParameterName": "TInput",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TOutput",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TEvent",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TOptions",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TState",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  }
+                }
+              ],
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "hook",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "isRawHook"
             },
             {
               "kind": "Property",
@@ -35129,74 +36190,202 @@
               "isAbstract": false
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.run:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.run:member(1)",
               "docComment": "/**\n * Execute a pipeline handler.\n *\n * @remarks\n *\n * Main entry point for executing pipeline-style hooks. Handles the full lifecycle: parsing stdin, loading environment, running the handler, emitting telemetry, and writing the response.\n *\n * @param options - Pipeline execution options\n *\n * @returns Never (exits process after writing response)\n *\n * @example\n * ```typescript\n * await Pipeline.run({\n *   hookType: \"PreToolUse\",\n *   hookName: \"security\",\n *   pluginName: \"my-plugin\",\n *   pluginVersion: \"1.0.0\",\n *   pipeline: async ({ input, options, env }) => {\n *     return { status: \"executed\", action: \"allow\", summary: \"allowed\" };\n *   },\n *   envClass: MyEnv,\n *   tools: [\"Bash\", \"Write\"],\n * });\n * ```\n *\n * @see\n *\n * {@link RunPipelineOptions}\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly run: "
+                  "text": "static run<TOptions = "
                 },
                 {
                   "kind": "Content",
-                  "text": "typeof "
+                  "text": "unknown"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", TState = "
                 },
                 {
                   "kind": "Reference",
-                  "text": "runPipeline",
-                  "canonicalReference": "claude-binary-plugin!~runPipeline:function"
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "RunPipelineOptions",
+                  "canonicalReference": "claude-binary-plugin!RunPipelineOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TOptions, TState>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<never>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "run",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
+              "typeParameters": [
+                {
+                  "typeParameterName": "TOptions",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  }
+                },
+                {
+                  "typeParameterName": "TState",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  }
+                }
+              ],
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 8
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "run"
             },
             {
-              "kind": "Property",
-              "canonicalReference": "claude-binary-plugin!Pipeline.runRaw:member",
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!Pipeline.runRaw:member(1)",
               "docComment": "/**\n * Execute a raw handler.\n *\n * @remarks\n *\n * Entry point for raw handlers that need direct access to the HookEvent object. Raw handlers are responsible for calling `event.end()` themselves.\n *\n * @param options - Raw handler execution options\n *\n * @returns Never (exits process after handler completes)\n *\n * @example\n * ```typescript\n * await Pipeline.runRaw({\n *   hookType: \"PreToolUse\",\n *   hookName: \"custom\",\n *   handler: async ({ event, options, env }) => {\n *     event.end(event.response().allow());\n *   },\n *   envClass: MyEnv,\n * });\n * ```\n *\n * @see\n *\n * {@link RunRawHandlerOptions}\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static readonly runRaw: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "typeof "
+                  "text": "static runRaw<TOptions, TState = "
                 },
                 {
                   "kind": "Reference",
-                  "text": "runRawHandler",
-                  "canonicalReference": "claude-binary-plugin!~runRawHandler:function"
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "RunRawHandlerOptions",
+                  "canonicalReference": "claude-binary-plugin!RunRawHandlerOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TOptions, TState>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "runRaw",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
+              "typeParameters": [
+                {
+                  "typeParameterName": "TOptions",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TState",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  }
+                }
+              ],
               "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 9
+              },
+              "releaseTag": "Public",
               "isProtected": false,
-              "isAbstract": false
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "runRaw"
             }
           ],
           "implementsTokenRanges": []

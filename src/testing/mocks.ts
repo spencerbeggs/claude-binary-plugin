@@ -814,32 +814,31 @@ export function testFatalErrorHandler(
  * Testing utilities for Claude Code plugins.
  *
  * @remarks
- * The `Mocks` class provides static properties grouping related testing
- * utilities for easier discovery and usage. Each sub-object provides
- * utilities for a specific testing domain.
+ * The `Mocks` class provides static methods grouping related testing
+ * utilities for easier discovery and usage.
  *
- * **Sub-namespaces:**
- * - `Mocks.IO` - I/O mocking (stdin, stdout, stderr)
- * - `Mocks.Env` - Environment variable mocking
- * - `Mocks.Command` - CLI command testing
- * - `Mocks.Hook` - Hook handler testing
- * - `Mocks.Shell` - Shell executor mocking
+ * **Method Categories:**
+ * - I/O: `createIO`, `resetIO`
+ * - Environment: `createEnv`, `envPresets`
+ * - Command: `createCommand`, `runCommand`, `testFatalError`
+ * - Hook: `runHook`
+ * - Shell: `shellResult`, `shellExecutor`, `bufferShellResult`, `bufferShellExecutor`
  *
  * @example
  * ```typescript
  * import { Mocks } from "claude-binary-plugin";
  *
  * // Mock environment
- * const env = Mocks.Env.create({ CLAUDE_PROJECT_DIR: "/test" });
+ * const env = Mocks.createEnv({ CLAUDE_PROJECT_DIR: "/test" });
  * afterEach(() => env.restore());
  *
  * // Mock I/O for hook testing
- * const io = Mocks.IO.create({ tool_name: "Bash", tool_input: { command: "ls" } });
- * const exitCode = await Mocks.Hook.run(main);
+ * const io = Mocks.createIO({ tool_name: "Bash", tool_input: { command: "ls" } });
+ * const exitCode = await Mocks.runHook(main);
  *
  * // Mock shell executor
- * const shell = Mocks.Shell.executor({
- *   "git status": Mocks.Shell.result(0, "On branch main"),
+ * const shell = Mocks.shellExecutor({
+ *   "git status": Mocks.shellResult(0, "On branch main"),
  * });
  * ```
  *
@@ -849,119 +848,249 @@ export class Mocks {
 	// Private constructor prevents instantiation
 	private constructor() {}
 
+	// =========================================================================
+	// I/O MOCKING
+	// =========================================================================
+
 	/**
-	 * I/O mocking utilities for hook testing.
+	 * Create a mock I/O context for hook testing.
 	 *
 	 * @remarks
 	 * Mocks stdin, stdout, and stderr for testing hook handlers that
 	 * read JSON input and write JSON output.
 	 *
+	 * @typeParam T - The type of the hook event input
+	 * @param input - The hook event input to mock
+	 * @returns MockIOResult with IO interface plus getStdout() and getStderr() methods
+	 *
 	 * @public
 	 */
-	static readonly IO = {
-		/** Create a mock I/O context for hook testing. */
-		create: mockIO,
-
-		/** Reset all I/O mocks. Call in afterEach(). */
-		reset: resetMockIO,
-	} as const;
+	static createIO<T extends HookEventBase>(input: T): MockIOResult {
+		return mockIO(input);
+	}
 
 	/**
-	 * Environment variable mocking utilities.
+	 * Reset all I/O mocks.
+	 *
+	 * @remarks
+	 * Call this in afterEach() to clean up between tests.
+	 *
+	 * @public
+	 */
+	static resetIO(): void {
+		resetMockIO();
+	}
+
+	// =========================================================================
+	// ENVIRONMENT MOCKING
+	// =========================================================================
+
+	/**
+	 * Create an isolated mock environment.
 	 *
 	 * @remarks
 	 * Provides complete isolation for environment variables in tests.
 	 * All existing env vars are hidden during the test.
 	 *
+	 * @param vars - Environment variables to set
+	 * @param options - Configuration options
+	 * @returns MockEnvContext for managing the mock
+	 *
 	 * @public
 	 */
-	static readonly Env = {
-		/** Create an isolated mock environment. */
-		create: mockEnv,
-
-		/** Preset environment configurations. */
-		presets: envPresets,
-
-		/** Mock environment class for ClaudeBinaryPluginEnv. */
-		Class: MockEnv,
-	} as const;
+	static createEnv(
+		vars: Record<string, string | undefined> = {},
+		options: { clearPrefix?: string; clearSuffix?: string } = {},
+	): MockEnvContext {
+		return mockEnv(vars, options);
+	}
 
 	/**
-	 * CLI command testing utilities.
+	 * Preset environment configurations.
+	 *
+	 * @public
+	 */
+	static readonly envPresets = envPresets;
+
+	/**
+	 * Mock environment class for ClaudeBinaryPluginEnv.
+	 *
+	 * @public
+	 */
+	static readonly MockEnvClass = MockEnv;
+
+	// =========================================================================
+	// COMMAND MOCKING
+	// =========================================================================
+
+	/**
+	 * Create a mock command context.
 	 *
 	 * @remarks
 	 * Mocks process.argv, console.log/error, and process.exit
 	 * for testing CLI command handlers.
 	 *
+	 * @param args - CLI arguments
+	 * @returns MockCommandContext with captured output and restore function
+	 *
 	 * @public
 	 */
-	static readonly Command = {
-		/** Create a mock command context. */
-		create: mockCommand,
-
-		/** Run a command with mocked context. */
-		run: runMockedCommand,
-
-		/** Test a fatal error handler. */
-		testFatalError: testFatalErrorHandler,
-	} as const;
+	static createCommand(args: string[]): MockCommandContext {
+		return mockCommand(args);
+	}
 
 	/**
-	 * Hook handler testing utilities.
+	 * Run a command with mocked context.
+	 *
+	 * @param args - CLI arguments
+	 * @param mainFn - The main function to run
+	 * @returns CommandOutput with captured logs, errors, and exit code
+	 *
+	 * @public
+	 */
+	static async runCommand(args: string[], mainFn: () => Promise<void>): Promise<CommandOutput> {
+		return runMockedCommand(args, mainFn);
+	}
+
+	/**
+	 * Test a fatal error handler.
+	 *
+	 * @param handler - The fatal error handler function to test
+	 * @param error - The error to pass to the handler
+	 * @returns FatalErrorResult with captured exit code and error messages
+	 *
+	 * @public
+	 */
+	static testFatalError(
+		handler: (error: unknown) => never,
+		error: unknown = new Error("Test error"),
+	): FatalErrorResult {
+		return testFatalErrorHandler(handler, error);
+	}
+
+	// =========================================================================
+	// HOOK MOCKING
+	// =========================================================================
+
+	/**
+	 * Run a hook main function with mocked process.exit.
 	 *
 	 * @remarks
-	 * Mocks process.exit for testing hook handlers that
-	 * call event.end() which internally exits the process.
+	 * Hook main functions call event.end() which internally calls process.exit().
+	 * This helper mocks process.exit to throw MockExitError instead of terminating.
+	 *
+	 * @param mainFn - The hook main function to run
+	 * @returns The exit code passed to process.exit
 	 *
 	 * @public
 	 */
-	static readonly Hook = {
-		/** Run a hook main function with mocked process.exit. */
-		run: runMockedHook,
-	} as const;
+	static async runHook(mainFn: () => Promise<void>): Promise<number> {
+		return runMockedHook(mainFn);
+	}
+
+	// =========================================================================
+	// SHELL MOCKING
+	// =========================================================================
 
 	/**
-	 * Shell executor mocking utilities.
+	 * Create a ShellResult for mocking.
 	 *
-	 * @remarks
-	 * Provides mock shell executors for testing code that
-	 * executes shell commands (e.g., tool detection, linting).
+	 * @param exitCode - The exit code (0 for success)
+	 * @param stdout - Standard output content
+	 * @param stderr - Standard error content
+	 * @returns A ShellResult object
 	 *
 	 * @public
 	 */
-	static readonly Shell = {
-		/** Create a ShellResult for mocking. */
-		result: createMockShellResult,
-
-		/** Create a mock shell executor with predefined responses. */
-		executor: createMockShellExecutor,
-
-		/** Default shell executor using Bun.$. */
-		default: defaultShellExecutor,
-
-		/** Buffer-based shell utilities for linting tools. */
-		Buffer: {
-			/** Create a BufferShellResult for mocking. */
-			result: createMockBufferShellResult,
-
-			/** Create a mock buffer shell executor. */
-			executor: createMockBufferShellExecutor,
-
-			/** Default buffer shell executor using Bun.$. */
-			default: defaultBufferShellExecutor,
-		},
-	} as const;
+	static shellResult(exitCode: number, stdout = "", stderr = ""): ShellResult {
+		return createMockShellResult(exitCode, stdout, stderr);
+	}
 
 	/**
-	 * Utility classes and types.
+	 * Create a mock shell executor with predefined responses.
+	 *
+	 * @param responses - Map of command patterns to results
+	 * @param defaultResult - Result for unmatched commands
+	 * @returns A ShellExecutor that returns predefined results
 	 *
 	 * @public
 	 */
-	static readonly Utils = {
-		/** Error thrown when mocked process.exit is called. */
-		ExitError: MockExitError,
+	static shellExecutor(
+		responses: Record<string, ShellResult>,
+		defaultResult: ShellResult = createMockShellResult(127, "", "command not found"),
+	): ShellExecutor {
+		return createMockShellExecutor(responses, defaultResult);
+	}
 
-		/** No-op logger methods for testing. */
-		logger: mockLogger,
-	} as const;
+	/**
+	 * Default shell executor using Bun.$.
+	 *
+	 * @public
+	 */
+	static readonly defaultShellExecutor = defaultShellExecutor;
+
+	/**
+	 * Create a BufferShellResult for mocking.
+	 *
+	 * @param exitCode - The exit code (0 for success)
+	 * @param stdout - Standard output content
+	 * @param stderr - Standard error content
+	 * @returns A BufferShellResult object
+	 *
+	 * @public
+	 */
+	static bufferShellResult(
+		exitCode: number,
+		stdout: string | Buffer = "",
+		stderr: string | Buffer = "",
+	): BufferShellResult {
+		return createMockBufferShellResult(exitCode, stdout, stderr);
+	}
+
+	/**
+	 * Create a mock buffer shell executor.
+	 *
+	 * @param handler - Function that determines response based on command
+	 * @returns A BufferShellExecutor that returns predefined results
+	 *
+	 * @public
+	 */
+	static bufferShellExecutor(
+		handler: (cmd: string[], options?: BufferShellExecutorOptions) => Promise<BufferShellResult>,
+	): BufferShellExecutor {
+		return createMockBufferShellExecutor(handler);
+	}
+
+	/**
+	 * Default buffer shell executor using Bun.$.
+	 *
+	 * @public
+	 */
+	static readonly defaultBufferShellExecutor = defaultBufferShellExecutor;
+
+	// =========================================================================
+	// UTILITY CLASSES
+	// =========================================================================
+
+	/**
+	 * Error thrown when mocked process.exit is called.
+	 *
+	 * @public
+	 */
+	static readonly ExitError = MockExitError;
+
+	/**
+	 * No-op logger methods for testing.
+	 *
+	 * @returns Object with log, info, debug methods
+	 *
+	 * @public
+	 */
+	static logger(): {
+		log: (message: string, ...args: unknown[]) => void;
+		info: (message: string, ...args: unknown[]) => void;
+		debug: (message: string, ...args: unknown[]) => void;
+	} {
+		return mockLogger();
+	}
 }

@@ -636,10 +636,10 @@ export class Commands {
 
 	/**
 	 * Extract state from the environment.
-	 * Reads {prefix}_PLUGIN_STATE and parses it as JSON.
+	 * Reads `PREFIX_PLUGIN_STATE` and parses it as JSON.
 	 *
 	 * @param env - The plugin environment instance
-	 * @returns State object parsed from {prefix}_PLUGIN_STATE
+	 * @returns State object parsed from `PREFIX_PLUGIN_STATE`
 	 * @internal
 	 */
 	private static extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {

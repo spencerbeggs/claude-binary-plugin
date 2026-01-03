@@ -9,10 +9,12 @@
  * @module
  */
 
-import { getOutputSchema, isPipelineHook, isRawHook } from "./config.js";
+import type { $ZodType } from "zod/v4/core";
+import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "./config.js";
 import { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./metrics.js";
-import { handleUnknownHook, runPipeline, runRawHandler } from "./runtime.js";
-import { isPipelineOutput } from "./types.js";
+import type { RunPipelineOptions, RunRawHandlerOptions } from "./runtime.js";
+import type { AnyPipelineOutput } from "./types.js";
+import { OutputSchemas } from "./types.js";
 
 /**
  * Pipeline execution and utilities.
@@ -91,7 +93,13 @@ export class Pipeline {
 	 * @see {@link RunPipelineOptions}
 	 * @public
 	 */
-	static readonly run = runPipeline;
+	static async run<TOptions = unknown, TState = Record<string, string>>(
+		options: RunPipelineOptions<TOptions, TState>,
+	): Promise<never> {
+		// Dynamic import to avoid circular dependency
+		const { runPipeline } = await import("./runtime.js");
+		return runPipeline(options);
+	}
 
 	/**
 	 * Execute a raw handler.
@@ -118,7 +126,13 @@ export class Pipeline {
 	 * @see {@link RunRawHandlerOptions}
 	 * @public
 	 */
-	static readonly runRaw = runRawHandler;
+	static async runRaw<TOptions, TState = Record<string, string>>(
+		options: RunRawHandlerOptions<TOptions, TState>,
+	): Promise<void> {
+		// Dynamic import to avoid circular dependency
+		const { runRawHandler } = await import("./runtime.js");
+		return runRawHandler(options);
+	}
 
 	/**
 	 * Handle an unknown hook key.
@@ -140,7 +154,11 @@ export class Pipeline {
 	 *
 	 * @public
 	 */
-	static readonly handleUnknown = handleUnknownHook;
+	static async handleUnknown(hookKey: string, validHooks: string[]): Promise<never> {
+		// Dynamic import to avoid circular dependency
+		const { handleUnknownHook } = await import("./runtime.js");
+		return handleUnknownHook(hookKey, validHooks);
+	}
 
 	// =========================================================================
 	// TYPE GUARDS
@@ -166,7 +184,9 @@ export class Pipeline {
 	 *
 	 * @public
 	 */
-	static readonly isOutput = isPipelineOutput;
+	static isOutput(output: unknown): output is AnyPipelineOutput {
+		return typeof output === "object" && output !== null && "status" in output && "summary" in output;
+	}
 
 	/**
 	 * Check if a hook definition uses pipeline mode.
@@ -180,7 +200,11 @@ export class Pipeline {
 	 *
 	 * @public
 	 */
-	static readonly isPipelineHook = isPipelineHook;
+	static isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
+		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
+	): hook is PipelineHookDefinition<TInput, TOutput, TOptions> {
+		return "pipeline" in hook && hook.pipeline !== undefined;
+	}
 
 	/**
 	 * Check if a hook definition uses raw handler mode.
@@ -194,7 +218,11 @@ export class Pipeline {
 	 *
 	 * @public
 	 */
-	static readonly isRawHook = isRawHook;
+	static isRawHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
+		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
+	): hook is RawHookDefinition<TEvent, TOptions, TState> {
+		return "handler" in hook && hook.handler !== undefined;
+	}
 
 	// =========================================================================
 	// SCHEMA
@@ -217,7 +245,9 @@ export class Pipeline {
 	 *
 	 * @public
 	 */
-	static readonly getOutputSchema = getOutputSchema;
+	static getOutputSchema(hookType: keyof typeof OutputSchemas): $ZodType {
+		return OutputSchemas[hookType];
+	}
 
 	// =========================================================================
 	// METRICS SUB-NAMESPACE
