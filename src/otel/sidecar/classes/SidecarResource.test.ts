@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
-import { DEFAULTS, PLUGIN_ATTRS, RESOURCE_ATTRS } from "../../constants.js";
+import { PluginInfo } from "../../classes/PluginInfo.js";
+import { DEFAULTS, RESOURCE_ATTRS } from "../../constants.js";
 import type { ResourceConfig } from "./SidecarResource.js";
 import { SidecarResource } from "./SidecarResource.js";
 
@@ -77,10 +78,10 @@ describe("SidecarResource", () => {
 
 			// These should NOT be in the resource - they go in event attributes
 			expect(attrs[ATTR_SERVICE_VERSION]).toBeUndefined();
-			expect(attrs[PLUGIN_ATTRS.NAME]).toBeUndefined();
-			expect(attrs[PLUGIN_ATTRS.VERSION]).toBeUndefined();
-			expect(attrs[PLUGIN_ATTRS.MARKETPLACE]).toBeUndefined();
-			expect(attrs[PLUGIN_ATTRS.MARKETPLACE_VERSION]).toBeUndefined();
+			expect(attrs[PluginInfo.ATTRS.NAME]).toBeUndefined();
+			expect(attrs[PluginInfo.ATTRS.VERSION]).toBeUndefined();
+			expect(attrs[PluginInfo.ATTRS.MARKETPLACE]).toBeUndefined();
+			expect(attrs[PluginInfo.ATTRS.MARKETPLACE_VERSION]).toBeUndefined();
 		});
 
 		test("merges custom resource attributes", () => {

@@ -36,13 +36,7 @@
  */
 
 import { extname } from "node:path";
-import type {
-	AnyPipelineOutput,
-	ContentType,
-	ExecutionQuality,
-	PipelineMetrics,
-	TokenMetricsData,
-} from "./types.js";
+import type { AnyPipelineOutput, ContentType, ExecutionQuality, PipelineMetrics, TokenMetricsData } from "./types.js";
 
 // =============================================================================
 // TYPES
@@ -96,16 +90,6 @@ export interface BudgetCheckResult {
 	usagePercent: number;
 }
 
-/**
- * Default token budget (200k context window).
- * @public
- */
-export const DEFAULT_TOKEN_BUDGET: TokenBudget = {
-	contextWindow: 200_000,
-	warningThreshold: 0.8,
-	criticalThreshold: 0.95,
-};
-
 // =============================================================================
 // TOKEN METRICS CLASS
 // =============================================================================
@@ -144,6 +128,16 @@ export const DEFAULT_TOKEN_BUDGET: TokenBudget = {
  * @public
  */
 export class TokenMetrics {
+	/**
+	 * Default token budget (200k context window).
+	 * @public
+	 */
+	static readonly DEFAULT_BUDGET: TokenBudget = {
+		contextWindow: 200_000,
+		warningThreshold: 0.8,
+		criticalThreshold: 0.95,
+	};
+
 	// =========================================================================
 	// TOKEN ESTIMATION
 	// =========================================================================
@@ -312,9 +306,7 @@ export class TokenMetrics {
 		const result: Pick<TokenMetricsData, "toolInput" | "toolResponse" | "fileContent"> = {};
 
 		if (event.tool_input) {
-			const contentType = TokenMetrics.detectContentType(
-				event.tool_input as { file_path?: string; content?: string },
-			);
+			const contentType = TokenMetrics.detectContentType(event.tool_input as { file_path?: string; content?: string });
 
 			// File content (Write tool)
 			const content = event.tool_input.content;
@@ -608,7 +600,7 @@ export class TokenMetrics {
 	 * }
 	 * ```
 	 */
-	static checkBudget(contextAdded: number, budget: TokenBudget = DEFAULT_TOKEN_BUDGET): BudgetCheckResult {
+	static checkBudget(contextAdded: number, budget: TokenBudget = TokenMetrics.DEFAULT_BUDGET): BudgetCheckResult {
 		const usagePercent = (contextAdded / budget.contextWindow) * 100;
 
 		if (contextAdded / budget.contextWindow >= budget.criticalThreshold) {

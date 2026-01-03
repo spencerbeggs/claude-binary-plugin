@@ -22,9 +22,9 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { CLAUDE_ATTRS, METRIC_NAMES, PLUGIN_ATTRS } from "../constants.js";
 import { OTELConfig } from "./OTELConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
+import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
 /**
  * Build metric attributes with cardinality controls.
@@ -37,18 +37,18 @@ function getMetricAttributes(
 ): Record<string, string | number | boolean> {
 	const pluginInfo = PluginInfo.get();
 	const attrs: Record<string, string | number | boolean> = {
-		[CLAUDE_ATTRS.HOOK_NAME]: hookName,
-		[CLAUDE_ATTRS.HOOK_TYPE]: event.hook_event_name,
-		[PLUGIN_ATTRS.NAME]: pluginInfo.name,
+		[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
+		[TelemetryEmitter.ATTRS.HOOK_TYPE]: event.hook_event_name,
+		[PluginInfo.ATTRS.NAME]: pluginInfo.name,
 	};
 
 	// Cardinality controls (aligned with Claude Code)
 	if (Bun.env.OTEL_METRICS_INCLUDE_SESSION_ID !== "false") {
-		attrs[CLAUDE_ATTRS.SESSION_ID] = event.session_id;
+		attrs[TelemetryEmitter.ATTRS.SESSION_ID] = event.session_id;
 	}
 
 	if (Bun.env.OTEL_METRICS_INCLUDE_PLUGIN_VERSION === "true") {
-		attrs[PLUGIN_ATTRS.VERSION] = pluginInfo.version;
+		attrs[PluginInfo.ATTRS.VERSION] = pluginInfo.version;
 	}
 
 	return { ...attrs, ...extra };
@@ -80,6 +80,34 @@ function getMetricAttributes(
  * @public
  */
 export class TelemetryMetrics {
+	/**
+	 * Metric names for hook telemetry.
+	 * Uses `claude_code.hook.*` prefix to align with Anthropic's naming.
+	 * @public
+	 */
+	static readonly NAMES = {
+		/** Counter: Number of hook invocations. */
+		HOOK_COUNT: "claude_code.hook.count",
+		/** Histogram: Hook execution duration in milliseconds. */
+		HOOK_DURATION_MS: "claude_code.hook.duration_ms",
+		/** Counter: Number of tool uses processed by hooks. */
+		TOOL_USE_COUNT: "claude_code.hook.tool_use.count",
+		/** Counter: Number of denied tool uses. */
+		TOOL_DENIED_COUNT: "claude_code.hook.tool_denied.count",
+		/** Gauge: Number of active sessions. */
+		ACTIVE_SESSIONS: "claude_code.hook.session.active",
+		/** Counter: Total sessions started. */
+		SESSION_START_COUNT: "claude_code.hook.session.start.count",
+		/** Counter: Total sessions ended. */
+		SESSION_END_COUNT: "claude_code.hook.session.end.count",
+		/** Counter: IPC messages sent to sidecar. */
+		IPC_MESSAGES_SENT: "claude_code.hook.sidecar.ipc.messages.sent",
+		/** Counter: IPC errors. */
+		IPC_ERRORS: "claude_code.hook.sidecar.ipc.errors",
+		/** Histogram: IPC message latency in milliseconds. */
+		IPC_LATENCY_MS: "claude_code.hook.sidecar.ipc.latency_ms",
+	} as const;
+
 	/**
 	 * Record a hook execution (counter + histogram).
 	 *
@@ -117,7 +145,7 @@ export class TelemetryMetrics {
 			type: "metric",
 			sessionId: event.session_id,
 			data: {
-				name: METRIC_NAMES.HOOK_COUNT,
+				name: TelemetryMetrics.NAMES.HOOK_COUNT,
 				type: { kind: "counter", value: 1 },
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				attributes: baseAttrs,
@@ -129,7 +157,7 @@ export class TelemetryMetrics {
 			type: "metric",
 			sessionId: event.session_id,
 			data: {
-				name: METRIC_NAMES.HOOK_DURATION_MS,
+				name: TelemetryMetrics.NAMES.HOOK_DURATION_MS,
 				type: { kind: "histogram", value: durationMs },
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				unit: "ms",
@@ -181,15 +209,15 @@ export class TelemetryMetrics {
 
 		const client = getSidecarClient(event.session_id);
 		const attrs = getMetricAttributes(event, hookName, {
-			[CLAUDE_ATTRS.HOOK_DECISION]: decision,
-			...(toolName && { [CLAUDE_ATTRS.TOOL_NAME]: toolName }),
+			[TelemetryEmitter.ATTRS.HOOK_DECISION]: decision,
+			...(toolName && { [TelemetryEmitter.ATTRS.TOOL_NAME]: toolName }),
 		});
 
 		client.emit({
 			type: "metric",
 			sessionId: event.session_id,
 			data: {
-				name: METRIC_NAMES.TOOL_DENIED_COUNT,
+				name: TelemetryMetrics.NAMES.TOOL_DENIED_COUNT,
 				type: { kind: "counter", value: 1 },
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				attributes: attrs,
@@ -237,8 +265,8 @@ export class TelemetryMetrics {
 				type: { kind: "counter", value },
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				attributes: {
-					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+					[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
+					[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 			},
@@ -288,8 +316,8 @@ export class TelemetryMetrics {
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				unit,
 				attributes: {
-					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+					[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
+					[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 			},
@@ -336,8 +364,8 @@ export class TelemetryMetrics {
 				type: { kind: "gauge", value },
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				attributes: {
-					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+					[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
+					[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 			},

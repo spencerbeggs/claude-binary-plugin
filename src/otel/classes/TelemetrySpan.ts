@@ -29,7 +29,6 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { CLAUDE_ATTRS, PLUGIN_ATTRS, SPAN_NAMES } from "../constants.js";
 import type { SpanData } from "../protocol.js";
 import { OTELConfig } from "./OTELConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
@@ -84,6 +83,24 @@ function randomHex(bytes: number): string {
  */
 export class TelemetrySpan {
 	/**
+	 * Span names for tracing.
+	 * Uses `claude_code.hook.*` prefix for consistency.
+	 * @public
+	 */
+	static readonly NAMES = {
+		/** Root span for a hook execution. */
+		HOOK_EXECUTION: "claude_code.hook.execute",
+		/** Span for tool input processing. */
+		TOOL_INPUT_PROCESS: "claude_code.hook.tool.input.process",
+		/** Span for tool output processing. */
+		TOOL_OUTPUT_PROCESS: "claude_code.hook.tool.output.process",
+		/** Span for IPC message send. */
+		IPC_SEND: "claude_code.hook.sidecar.ipc.send",
+		/** Span for OTEL export. */
+		OTEL_EXPORT: "claude_code.hook.sidecar.otel.export",
+	} as const;
+
+	/**
 	 * Execute a function within a traced span.
 	 *
 	 * @remarks
@@ -137,7 +154,7 @@ export class TelemetrySpan {
 			const durationMs = Math.round(Number(endTimeNs - startTimeNs) / 1_000_000);
 
 			// Use aligned span name from constants
-			const resolvedSpanName = spanName.startsWith("hook.") ? SPAN_NAMES.HOOK_EXECUTION : spanName;
+			const resolvedSpanName = spanName.startsWith("hook.") ? TelemetrySpan.NAMES.HOOK_EXECUTION : spanName;
 
 			const spanData: SpanData = {
 				spanId: randomHex(8),
@@ -147,9 +164,9 @@ export class TelemetrySpan {
 				startTimeNs,
 				endTimeNs,
 				attributes: {
-					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[CLAUDE_ATTRS.HOOK_TYPE]: event.hook_event_name,
-					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+					[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
+					[TelemetryEmitter.ATTRS.HOOK_TYPE]: event.hook_event_name,
+					[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 				status: {
@@ -165,7 +182,7 @@ export class TelemetrySpan {
 			});
 
 			// Emit consolidated hook execution event
-			const hookName = (attributes?.[CLAUDE_ATTRS.HOOK_NAME] as string) || spanName.replace("hook.", "");
+			const hookName = (attributes?.[TelemetryEmitter.ATTRS.HOOK_NAME] as string) || spanName.replace("hook.", "");
 			TelemetryEmitter.emitHookExecution(event, hookName, {
 				hookType: event.hook_event_name,
 				pluginName: PluginInfo.get().name,
@@ -173,7 +190,7 @@ export class TelemetrySpan {
 				durationMs,
 				success: statusCode === "ok",
 				error: errorMessage,
-				toolName: attributes?.[CLAUDE_ATTRS.TOOL_NAME] as string | undefined,
+				toolName: attributes?.[TelemetryEmitter.ATTRS.TOOL_NAME] as string | undefined,
 			});
 		}
 	}
@@ -257,7 +274,7 @@ export class TelemetrySpan {
 	): (event: TEvent) => Promise<TResult> {
 		return (event) =>
 			TelemetrySpan.withHookSpan(event, `hook.${hookName}`, () => handler(event), {
-				[CLAUDE_ATTRS.HOOK_NAME]: hookName,
+				[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
 			});
 	}
 
@@ -295,8 +312,8 @@ export class TelemetrySpan {
 	): (event: TEvent) => Promise<TResult> {
 		return (event) => {
 			const attributes: Record<string, string | number | boolean> = {
-				[CLAUDE_ATTRS.HOOK_NAME]: hookName,
-				[CLAUDE_ATTRS.TOOL_NAME]: event.tool_name,
+				[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
+				[TelemetryEmitter.ATTRS.TOOL_NAME]: event.tool_name,
 			};
 
 			// Optionally include tool input (privacy controlled)

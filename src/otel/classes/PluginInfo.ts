@@ -58,6 +58,42 @@ export interface PluginInfoData {
  */
 export class PluginInfo {
 	/**
+	 * Plugin-specific OTEL attributes.
+	 * @public
+	 */
+	static readonly ATTRS = {
+		/**
+		 * The plugin name (e.g., "workflow", "bun-plugin-builder").
+		 */
+		NAME: "plugin.name",
+
+		/**
+		 * The plugin version from package.json.
+		 */
+		VERSION: "plugin.version",
+
+		/**
+		 * The marketplace the plugin belongs to.
+		 */
+		MARKETPLACE: "plugin.marketplace",
+
+		/**
+		 * The marketplace version.
+		 */
+		MARKETPLACE_VERSION: "plugin.marketplace.version",
+
+		/**
+		 * The hook handler file path (relative to plugin root).
+		 */
+		HOOK_HANDLER: "plugin.hook.handler",
+
+		/**
+		 * The command name for command hooks.
+		 */
+		COMMAND: "plugin.command",
+	} as const;
+
+	/**
 	 * The plugin name.
 	 * @public
 	 */

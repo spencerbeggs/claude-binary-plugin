@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./metrics.js";
+import { TokenMetrics } from "./metrics.js";
 import type { AnyPipelineOutput } from "./types.js";
 
 describe("TokenMetrics.estimate", () => {
@@ -489,14 +489,14 @@ describe("TokenMetrics.checkBudget", () => {
 	});
 
 	test("returns warning at warning threshold", () => {
-		const contextAdded = DEFAULT_TOKEN_BUDGET.contextWindow * DEFAULT_TOKEN_BUDGET.warningThreshold;
+		const contextAdded = TokenMetrics.DEFAULT_BUDGET.contextWindow * TokenMetrics.DEFAULT_BUDGET.warningThreshold;
 		const result = TokenMetrics.checkBudget(contextAdded);
 		expect(result.level).toBe("warning");
 		expect(result.usagePercent).toBe(80);
 	});
 
 	test("returns critical at critical threshold", () => {
-		const contextAdded = DEFAULT_TOKEN_BUDGET.contextWindow * DEFAULT_TOKEN_BUDGET.criticalThreshold;
+		const contextAdded = TokenMetrics.DEFAULT_BUDGET.contextWindow * TokenMetrics.DEFAULT_BUDGET.criticalThreshold;
 		const result = TokenMetrics.checkBudget(contextAdded);
 		expect(result.level).toBe("critical");
 		expect(result.usagePercent).toBe(95);

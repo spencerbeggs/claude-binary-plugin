@@ -28,7 +28,7 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { CLAUDE_ATTRS, EVENT_NAMES, PLUGIN_ATTRS, SCOPE } from "../constants.js";
+import { EVENT_NAMES, SCOPE } from "../constants.js";
 import type { EventData } from "../protocol.js";
 import { getSdkVersion } from "../version.macro.js";
 import { OTELConfig } from "./OTELConfig.js";
@@ -240,6 +240,79 @@ export interface HookExecutionDirectResult {
  */
 export class TelemetryEmitter {
 	/**
+	 * Claude Code OTEL attributes.
+	 * These align with Claude Code's native telemetry cardinality scheme.
+	 *
+	 * All attributes use dot notation for consistency with Anthropic's native telemetry
+	 * (e.g., "session.id", "tool.name", "hook.duration_ms").
+	 * @public
+	 */
+	static readonly ATTRS = {
+		/** The Claude Code session ID. */
+		SESSION_ID: "session.id",
+		/** The Claude Code binary version (e.g., "1.0.30"). */
+		APP_VERSION: "app.version",
+		/** The terminal type (e.g., "iTerm", "vscode", "cursor", "tmux"). */
+		TERMINAL_TYPE: "terminal.type",
+		/** Organization ID from the user's Claude account. */
+		ORGANIZATION_ID: "organization.id",
+		/** User account UUID from the user's Claude account. */
+		USER_ACCOUNT_UUID: "user.account_uuid",
+		/** User email from the user's Claude account. */
+		USER_EMAIL: "user.email",
+		/** The custom hook name (e.g., "pre-edit-code", "docs-access"). */
+		HOOK_NAME: "hook.name",
+		/** The hook event type (e.g., "PreToolUse", "SessionStart", "PostToolUse"). */
+		HOOK_TYPE: "hook.type",
+		/** The tool name for tool-related hooks. */
+		TOOL_NAME: "tool.name",
+		/** The tool use ID for correlation with Claude Code events. */
+		TOOL_USE_ID: "tool.use_id",
+		/** Tool input hash for deduplication (not the actual input). */
+		TOOL_INPUT_HASH: "tool.input_hash",
+		/** Whether the hook allowed or denied the tool use. */
+		HOOK_DECISION: "hook.decision",
+		/** Semantic outcome of hook execution. */
+		HOOK_OUTCOME: "hook.outcome",
+		/** Source of the permission decision. */
+		DECISION_SOURCE: "decision.source",
+		/** The Claude Code project directory. */
+		PROJECT_DIR: "project.dir",
+		/** The model being used (e.g., "claude-3-opus"). */
+		MODEL: "model",
+		/** Source of the telemetry event (always "hook" for plugin events). */
+		SOURCE: "source",
+		/** ISO 8601 timestamp of when the event occurred. */
+		EVENT_TIMESTAMP: "event.timestamp",
+		/** The event name (e.g., "claude_code.hook.execution"). */
+		EVENT_NAME: "event.name",
+		/** Duration of hook execution in milliseconds. */
+		DURATION_MS: "hook.duration_ms",
+		/** Error message if hook execution failed. */
+		ERROR: "error",
+		/** Permission decision for PreToolUse hooks. */
+		PERMISSION_DECISION: "permission.decision",
+		/** Reason for permission denial. */
+		PERMISSION_DECISION_REASON: "permission.decision_reason",
+		/** Whether the tool input was modified by the hook. */
+		HAS_UPDATED_INPUT: "tool.input_modified",
+		/** Reason for blocking an operation. */
+		REASON: "reason",
+		/** Whether additional context was provided. */
+		HAS_ADDITIONAL_CONTEXT: "response.has_context",
+		/** Schema validation error path (which field failed). */
+		VALIDATION_PATH: "validation.path",
+		/** Number of validation issues found. */
+		VALIDATION_ISSUE_COUNT: "validation.issue_count",
+		/** Environment class name that failed validation. */
+		ENV_CLASS: "env.class",
+		/** Error type for fatal errors. */
+		ERROR_TYPE: "error.type",
+		/** Whether an error was a validation error. */
+		IS_VALIDATION_ERROR: "error.is_validation",
+	} as const;
+
+	/**
 	 * Pre-connect to the OTEL sidecar for faster emission.
 	 *
 	 * @remarks
@@ -298,56 +371,56 @@ export class TelemetryEmitter {
 
 		// Build attributes with aligned naming
 		const attributes: Record<string, string | number | boolean> = {
-			[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
-			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
-			[CLAUDE_ATTRS.HOOK_NAME]: hookName,
-			[CLAUDE_ATTRS.HOOK_TYPE]: result.hookType,
-			[CLAUDE_ATTRS.SOURCE]: "hook",
-			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
-			[CLAUDE_ATTRS.DURATION_MS]: result.durationMs,
-			[PLUGIN_ATTRS.NAME]: result.pluginName,
-			[PLUGIN_ATTRS.VERSION]: result.pluginVersion,
+			[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
+			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
+			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
+			[TelemetryEmitter.ATTRS.HOOK_TYPE]: result.hookType,
+			[TelemetryEmitter.ATTRS.SOURCE]: "hook",
+			[TelemetryEmitter.ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
+			[TelemetryEmitter.ATTRS.DURATION_MS]: result.durationMs,
+			[PluginInfo.ATTRS.NAME]: result.pluginName,
+			[PluginInfo.ATTRS.VERSION]: result.pluginVersion,
 		};
 
 		// Add semantic outcome for easy filtering
 		if (result.outcome) {
-			attributes[CLAUDE_ATTRS.HOOK_OUTCOME] = result.outcome;
+			attributes[TelemetryEmitter.ATTRS.HOOK_OUTCOME] = result.outcome;
 		}
 
 		// Add tool.use_id for correlation with Claude Code events
 		if (result.toolUseId) {
-			attributes[CLAUDE_ATTRS.TOOL_USE_ID] = result.toolUseId;
+			attributes[TelemetryEmitter.ATTRS.TOOL_USE_ID] = result.toolUseId;
 		}
 
 		// Add optional attributes
 		if (result.toolName) {
-			attributes[CLAUDE_ATTRS.TOOL_NAME] = result.toolName;
+			attributes[TelemetryEmitter.ATTRS.TOOL_NAME] = result.toolName;
 		}
 		if (result.error) {
-			attributes[CLAUDE_ATTRS.ERROR] = result.error;
+			attributes[TelemetryEmitter.ATTRS.ERROR] = result.error;
 		}
 		if (result.permissionDecision) {
-			attributes[CLAUDE_ATTRS.PERMISSION_DECISION] = result.permissionDecision;
+			attributes[TelemetryEmitter.ATTRS.PERMISSION_DECISION] = result.permissionDecision;
 		}
 		if (result.decisionSource) {
-			attributes[CLAUDE_ATTRS.DECISION_SOURCE] = result.decisionSource;
+			attributes[TelemetryEmitter.ATTRS.DECISION_SOURCE] = result.decisionSource;
 		}
 		if (result.permissionDecisionReason) {
-			attributes[CLAUDE_ATTRS.PERMISSION_DECISION_REASON] = result.permissionDecisionReason;
+			attributes[TelemetryEmitter.ATTRS.PERMISSION_DECISION_REASON] = result.permissionDecisionReason;
 		}
 		if (result.hasUpdatedInput !== undefined) {
-			attributes[CLAUDE_ATTRS.HAS_UPDATED_INPUT] = result.hasUpdatedInput;
+			attributes[TelemetryEmitter.ATTRS.HAS_UPDATED_INPUT] = result.hasUpdatedInput;
 		}
 		if (result.decision) {
-			attributes[CLAUDE_ATTRS.HOOK_DECISION] = result.decision;
+			attributes[TelemetryEmitter.ATTRS.HOOK_DECISION] = result.decision;
 		}
 		if (result.reason) {
-			attributes[CLAUDE_ATTRS.REASON] = result.reason;
+			attributes[TelemetryEmitter.ATTRS.REASON] = result.reason;
 		}
 		if (result.hasAdditionalContext !== undefined) {
-			attributes[CLAUDE_ATTRS.HAS_ADDITIONAL_CONTEXT] = result.hasAdditionalContext;
+			attributes[TelemetryEmitter.ATTRS.HAS_ADDITIONAL_CONTEXT] = result.hasAdditionalContext;
 		}
 
 		// Add operational metrics for performance analysis
@@ -424,27 +497,27 @@ export class TelemetryEmitter {
 
 		// Build attributes with aligned naming
 		const attributes: Record<string, string | number | boolean> = {
-			[CLAUDE_ATTRS.SESSION_ID]: result.sessionId,
-			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
-			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
-			[CLAUDE_ATTRS.HOOK_NAME]: result.hookName,
-			[CLAUDE_ATTRS.HOOK_TYPE]: result.hookType,
-			[CLAUDE_ATTRS.SOURCE]: "hook",
-			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
-			[CLAUDE_ATTRS.DURATION_MS]: result.durationMs,
-			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
-			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
+			[TelemetryEmitter.ATTRS.SESSION_ID]: result.sessionId,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
+			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
+			[TelemetryEmitter.ATTRS.HOOK_NAME]: result.hookName,
+			[TelemetryEmitter.ATTRS.HOOK_TYPE]: result.hookType,
+			[TelemetryEmitter.ATTRS.SOURCE]: "hook",
+			[TelemetryEmitter.ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
+			[TelemetryEmitter.ATTRS.DURATION_MS]: result.durationMs,
+			[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
+			[PluginInfo.ATTRS.VERSION]: PluginInfo.get().version,
 		};
 
 		// Add semantic outcome for easy filtering
 		if (result.outcome) {
-			attributes[CLAUDE_ATTRS.HOOK_OUTCOME] = result.outcome;
+			attributes[TelemetryEmitter.ATTRS.HOOK_OUTCOME] = result.outcome;
 		}
 
 		// Add error
 		if (result.error) {
-			attributes[CLAUDE_ATTRS.ERROR] = result.error;
+			attributes[TelemetryEmitter.ATTRS.ERROR] = result.error;
 		}
 
 		// Body priority: summary > error > generic message
@@ -502,18 +575,18 @@ export class TelemetryEmitter {
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
-			[CLAUDE_ATTRS.SESSION_ID]: sessionId,
-			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
-			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
-			[CLAUDE_ATTRS.HOOK_NAME]: hookName,
-			[CLAUDE_ATTRS.SOURCE]: "hook",
-			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
-			[CLAUDE_ATTRS.ERROR]: result.errorMessage,
-			[CLAUDE_ATTRS.VALIDATION_PATH]: result.validationPath,
-			[CLAUDE_ATTRS.VALIDATION_ISSUE_COUNT]: result.issueCount,
-			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
-			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
+			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
+			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
+			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
+			[TelemetryEmitter.ATTRS.SOURCE]: "hook",
+			[TelemetryEmitter.ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
+			[TelemetryEmitter.ATTRS.ERROR]: result.errorMessage,
+			[TelemetryEmitter.ATTRS.VALIDATION_PATH]: result.validationPath,
+			[TelemetryEmitter.ATTRS.VALIDATION_ISSUE_COUNT]: result.issueCount,
+			[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
+			[PluginInfo.ATTRS.VERSION]: PluginInfo.get().version,
 		};
 
 		// Body contains the formatted error for searchability
@@ -569,22 +642,22 @@ export class TelemetryEmitter {
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
-			[CLAUDE_ATTRS.SESSION_ID]: sessionId,
-			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.ENV_VALIDATION_ERROR,
-			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
-			[CLAUDE_ATTRS.HOOK_NAME]: hookName,
-			[CLAUDE_ATTRS.SOURCE]: "hook",
-			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
-			[CLAUDE_ATTRS.ERROR]: result.errorMessage,
-			[CLAUDE_ATTRS.VALIDATION_PATH]: result.validationPath,
-			[CLAUDE_ATTRS.VALIDATION_ISSUE_COUNT]: result.issueCount,
-			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
-			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
+			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.ENV_VALIDATION_ERROR,
+			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
+			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
+			[TelemetryEmitter.ATTRS.SOURCE]: "hook",
+			[TelemetryEmitter.ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
+			[TelemetryEmitter.ATTRS.ERROR]: result.errorMessage,
+			[TelemetryEmitter.ATTRS.VALIDATION_PATH]: result.validationPath,
+			[TelemetryEmitter.ATTRS.VALIDATION_ISSUE_COUNT]: result.issueCount,
+			[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
+			[PluginInfo.ATTRS.VERSION]: PluginInfo.get().version,
 		};
 
 		if (result.envClassName) {
-			attributes[CLAUDE_ATTRS.ENV_CLASS] = result.envClassName;
+			attributes[TelemetryEmitter.ATTRS.ENV_CLASS] = result.envClassName;
 		}
 
 		// Body contains the formatted error for searchability
@@ -644,27 +717,27 @@ export class TelemetryEmitter {
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
-			[CLAUDE_ATTRS.SESSION_ID]: sessionId,
-			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.FATAL_ERROR,
-			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
-			[CLAUDE_ATTRS.HOOK_NAME]: result.hookName,
-			[CLAUDE_ATTRS.SOURCE]: "hook",
-			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
-			[CLAUDE_ATTRS.ERROR]: result.errorMessage,
-			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
-			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
-			[CLAUDE_ATTRS.ERROR_TYPE]: result.errorType,
+			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.FATAL_ERROR,
+			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
+			[TelemetryEmitter.ATTRS.HOOK_NAME]: result.hookName,
+			[TelemetryEmitter.ATTRS.SOURCE]: "hook",
+			[TelemetryEmitter.ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
+			[TelemetryEmitter.ATTRS.ERROR]: result.errorMessage,
+			[PluginInfo.ATTRS.NAME]: PluginInfo.get().name,
+			[PluginInfo.ATTRS.VERSION]: PluginInfo.get().version,
+			[TelemetryEmitter.ATTRS.ERROR_TYPE]: result.errorType,
 		};
 
 		if (result.isValidationError !== undefined) {
-			attributes[CLAUDE_ATTRS.IS_VALIDATION_ERROR] = result.isValidationError;
+			attributes[TelemetryEmitter.ATTRS.IS_VALIDATION_ERROR] = result.isValidationError;
 		}
 		if (result.issueCount !== undefined) {
-			attributes[CLAUDE_ATTRS.VALIDATION_ISSUE_COUNT] = result.issueCount;
+			attributes[TelemetryEmitter.ATTRS.VALIDATION_ISSUE_COUNT] = result.issueCount;
 		}
 		if (result.validationPath !== undefined) {
-			attributes[CLAUDE_ATTRS.VALIDATION_PATH] = result.validationPath;
+			attributes[TelemetryEmitter.ATTRS.VALIDATION_PATH] = result.validationPath;
 		}
 
 		// Body contains error message and stack for searchability

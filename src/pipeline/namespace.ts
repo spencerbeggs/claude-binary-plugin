@@ -11,7 +11,7 @@
 
 import type { $ZodType } from "zod/v4/core";
 import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "./config.js";
-import { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./metrics.js";
+import { TokenMetrics } from "./metrics.js";
 import type { RunPipelineOptions, RunRawHandlerOptions } from "./runtime.js";
 import type { AnyPipelineOutput } from "./types.js";
 import { OutputSchemas } from "./types.js";
@@ -386,7 +386,7 @@ export class Pipeline {
 		 *
 		 * @public
 		 */
-		DEFAULT_BUDGET: DEFAULT_TOKEN_BUDGET,
+		DEFAULT_BUDGET: TokenMetrics.DEFAULT_BUDGET,
 
 		/**
 		 * Check if token count exceeds budget thresholds.

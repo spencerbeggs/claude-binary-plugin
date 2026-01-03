@@ -1478,29 +1478,6 @@
           "extendsTokenRanges": []
         },
         {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!CLAUDE_ATTRS:var",
-          "docComment": "/**\n * Claude Code specific attributes. These align with Claude Code's native telemetry cardinality scheme.\n *\n * All attributes use dot notation for consistency with Anthropic's native telemetry (e.g., \"session.id\", \"tool.name\", \"hook.duration_ms\").\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "CLAUDE_ATTRS: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly SESSION_ID: \"session.id\";\n    readonly APP_VERSION: \"app.version\";\n    readonly TERMINAL_TYPE: \"terminal.type\";\n    readonly ORGANIZATION_ID: \"organization.id\";\n    readonly USER_ACCOUNT_UUID: \"user.account_uuid\";\n    readonly USER_EMAIL: \"user.email\";\n    readonly HOOK_NAME: \"hook.name\";\n    readonly HOOK_TYPE: \"hook.type\";\n    readonly TOOL_NAME: \"tool.name\";\n    readonly TOOL_USE_ID: \"tool.use_id\";\n    readonly TOOL_INPUT_HASH: \"tool.input_hash\";\n    readonly HOOK_DECISION: \"hook.decision\";\n    readonly HOOK_OUTCOME: \"hook.outcome\";\n    readonly DECISION_SOURCE: \"decision.source\";\n    readonly PROJECT_DIR: \"project.dir\";\n    readonly MODEL: \"model\";\n    readonly SOURCE: \"source\";\n    readonly EVENT_TIMESTAMP: \"event.timestamp\";\n    readonly EVENT_NAME: \"event.name\";\n    readonly DURATION_MS: \"hook.duration_ms\";\n    readonly ERROR: \"error\";\n    readonly PERMISSION_DECISION: \"permission.decision\";\n    readonly PERMISSION_DECISION_REASON: \"permission.decision_reason\";\n    readonly HAS_UPDATED_INPUT: \"tool.input_modified\";\n    readonly REASON: \"reason\";\n    readonly HAS_ADDITIONAL_CONTEXT: \"response.has_context\";\n    readonly VALIDATION_PATH: \"validation.path\";\n    readonly VALIDATION_ISSUE_COUNT: \"validation.issue_count\";\n    readonly ENV_CLASS: \"env.class\";\n    readonly ERROR_TYPE: \"error.type\";\n    readonly IS_VALIDATION_ERROR: \"error.is_validation\";\n}"
-            }
-          ],
-          "fileUrlPath": "src/otel/constants.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "CLAUDE_ATTRS",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          }
-        },
-        {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!ClaudeAccountInfo:class",
           "docComment": "/**\n * Claude account information for telemetry.\n *\n * @remarks\n *\n * Represents account info read from ~/.claude.json. Used to add user and organization identifiers to OTEL resource attributes.\n *\n * @example\n * ```typescript\n * // Detect account info (cached)\n * const info = ClaudeAccountInfo.detect();\n *\n * // Use in telemetry\n * if (info.organizationUuid) {\n *   attributes[\"organization.id\"] = info.organizationUuid;\n * }\n * if (info.accountUuid) {\n *   attributes[\"user.account_uuid\"] = info.accountUuid;\n * }\n * ```\n *\n * @public\n */\n",
@@ -9143,30 +9120,6 @@
           "releaseTag": "Public",
           "name": "DecisionSource",
           "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          }
-        },
-        {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!DEFAULT_TOKEN_BUDGET:var",
-          "docComment": "/**\n * Default token budget (200k context window).\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "DEFAULT_TOKEN_BUDGET: "
-            },
-            {
-              "kind": "Reference",
-              "text": "TokenBudget",
-              "canonicalReference": "claude-binary-plugin!TokenBudget:interface"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/metrics.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "DEFAULT_TOKEN_BUDGET",
-          "variableTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
           }
@@ -22030,29 +21983,6 @@
             }
           ],
           "extendsTokenRanges": []
-        },
-        {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!METRIC_NAMES:var",
-          "docComment": "/**\n * Metric names for hook telemetry. Uses `claude_code.hook.*` prefix to align with Anthropic's naming.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "METRIC_NAMES: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly HOOK_COUNT: \"claude_code.hook.count\";\n    readonly HOOK_DURATION_MS: \"claude_code.hook.duration_ms\";\n    readonly TOOL_USE_COUNT: \"claude_code.hook.tool_use.count\";\n    readonly TOOL_DENIED_COUNT: \"claude_code.hook.tool_denied.count\";\n    readonly ACTIVE_SESSIONS: \"claude_code.hook.session.active\";\n    readonly SESSION_START_COUNT: \"claude_code.hook.session.start.count\";\n    readonly SESSION_END_COUNT: \"claude_code.hook.session.end.count\";\n    readonly IPC_MESSAGES_SENT: \"claude_code.hook.sidecar.ipc.messages.sent\";\n    readonly IPC_ERRORS: \"claude_code.hook.sidecar.ipc.errors\";\n    readonly IPC_LATENCY_MS: \"claude_code.hook.sidecar.ipc.latency_ms\";\n}"
-            }
-          ],
-          "fileUrlPath": "src/otel/constants.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "METRIC_NAMES",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          }
         },
         {
           "kind": "Interface",
@@ -38251,29 +38181,6 @@
           }
         },
         {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!PLUGIN_ATTRS:var",
-          "docComment": "/**\n * Plugin-specific attributes.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "PLUGIN_ATTRS: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly NAME: \"plugin.name\";\n    readonly VERSION: \"plugin.version\";\n    readonly MARKETPLACE: \"plugin.marketplace\";\n    readonly MARKETPLACE_VERSION: \"plugin.marketplace.version\";\n    readonly HOOK_HANDLER: \"plugin.hook.handler\";\n    readonly COMMAND: \"plugin.command\";\n}"
-            }
-          ],
-          "fileUrlPath": "src/otel/constants.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "PLUGIN_ATTRS",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          }
-        },
-        {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!PluginBuilder:class",
           "docComment": "/**\n * Static class for plugin build system operations.\n *\n * @remarks\n *\n * The `PluginBuilder` class consolidates all build-related functions into a single, discoverable API. This includes compiling plugins, generating manifests, extracting hook/command definitions, and managing the plugin cache.\n *\n * **Class Organization:**\n *\n * | Category | Methods | |----------|---------| | Build | `build`, `fromConfig` | | Code Generation | `generateEntrypoint`, `generateHooksJson` | | Extraction | `extractHookEntries`, `extractCommandEntries`, `extractPassthroughEntries` | | Cache | `getCachePath`, `syncToCache` | | Manifests | `readPluginManifest`, `readMarketplaceManifest` |\n *\n * @example\n * ```typescript\n * import { PluginBuilder } from \"claude-binary-plugin\";\n *\n * // Build from a ClaudeBinaryPlugin instance\n * const result = await PluginBuilder.fromConfig(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n *   persistLocal: true,\n * });\n *\n * // Or build with manual entrypoint\n * const result = await PluginBuilder.build({\n *   rootDir: \".\",\n *   entrypoint: \"./plugin-entry.ts\",\n *   outputName: \"my-plugin.plugin\",\n * });\n *\n * // Generate hooks.json\n * const hooksJson = PluginBuilder.generateHooksJson({\n *   pluginBinaryName: \"my-plugin.plugin\",\n *   hooks: PluginBuilder.extractHookEntries(plugin.config),\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
@@ -40313,6 +40220,36 @@
                   "isOptional": false
                 }
               ]
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!PluginInfo.ATTRS:member",
+              "docComment": "/**\n * Plugin-specific OTEL attributes.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly ATTRS: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        readonly NAME: \"plugin.name\";\n        readonly VERSION: \"plugin.version\";\n        readonly MARKETPLACE: \"plugin.marketplace\";\n        readonly MARKETPLACE_VERSION: \"plugin.marketplace.version\";\n        readonly HOOK_HANDLER: \"plugin.hook.handler\";\n        readonly COMMAND: \"plugin.command\";\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "ATTRS",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -54750,29 +54687,6 @@
           }
         },
         {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!SPAN_NAMES:var",
-          "docComment": "/**\n * Span names for tracing. Uses `claude_code.hook.*` prefix for consistency.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "SPAN_NAMES: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly HOOK_EXECUTION: \"claude_code.hook.execute\";\n    readonly TOOL_INPUT_PROCESS: \"claude_code.hook.tool.input.process\";\n    readonly TOOL_OUTPUT_PROCESS: \"claude_code.hook.tool.output.process\";\n    readonly IPC_SEND: \"claude_code.hook.sidecar.ipc.send\";\n    readonly OTEL_EXPORT: \"claude_code.hook.sidecar.otel.export\";\n}"
-            }
-          ],
-          "fileUrlPath": "src/otel/constants.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "SPAN_NAMES",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          }
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!SpanData:interface",
           "docComment": "/**\n * Span data for tracing. Represents a single unit of work in a distributed trace.\n *\n * @public\n */\n",
@@ -58680,6 +58594,36 @@
           "preserveMemberOrder": false,
           "members": [
             {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!TelemetryEmitter.ATTRS:member",
+              "docComment": "/**\n * Claude Code OTEL attributes. These align with Claude Code's native telemetry cardinality scheme.\n *\n * All attributes use dot notation for consistency with Anthropic's native telemetry (e.g., \"session.id\", \"tool.name\", \"hook.duration_ms\").\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly ATTRS: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        readonly SESSION_ID: \"session.id\";\n        readonly APP_VERSION: \"app.version\";\n        readonly TERMINAL_TYPE: \"terminal.type\";\n        readonly ORGANIZATION_ID: \"organization.id\";\n        readonly USER_ACCOUNT_UUID: \"user.account_uuid\";\n        readonly USER_EMAIL: \"user.email\";\n        readonly HOOK_NAME: \"hook.name\";\n        readonly HOOK_TYPE: \"hook.type\";\n        readonly TOOL_NAME: \"tool.name\";\n        readonly TOOL_USE_ID: \"tool.use_id\";\n        readonly TOOL_INPUT_HASH: \"tool.input_hash\";\n        readonly HOOK_DECISION: \"hook.decision\";\n        readonly HOOK_OUTCOME: \"hook.outcome\";\n        readonly DECISION_SOURCE: \"decision.source\";\n        readonly PROJECT_DIR: \"project.dir\";\n        readonly MODEL: \"model\";\n        readonly SOURCE: \"source\";\n        readonly EVENT_TIMESTAMP: \"event.timestamp\";\n        readonly EVENT_NAME: \"event.name\";\n        readonly DURATION_MS: \"hook.duration_ms\";\n        readonly ERROR: \"error\";\n        readonly PERMISSION_DECISION: \"permission.decision\";\n        readonly PERMISSION_DECISION_REASON: \"permission.decision_reason\";\n        readonly HAS_UPDATED_INPUT: \"tool.input_modified\";\n        readonly REASON: \"reason\";\n        readonly HAS_ADDITIONAL_CONTEXT: \"response.has_context\";\n        readonly VALIDATION_PATH: \"validation.path\";\n        readonly VALIDATION_ISSUE_COUNT: \"validation.issue_count\";\n        readonly ENV_CLASS: \"env.class\";\n        readonly ERROR_TYPE: \"error.type\";\n        readonly IS_VALIDATION_ERROR: \"error.is_validation\";\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "ATTRS",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.emitEnvValidationError:member(1)",
               "docComment": "/**\n * Emit an environment validation error event.\n *\n * @remarks\n *\n * Emitted when hook environment variables don't match the expected schema. Useful for debugging misconfigured environments or missing env vars.\n *\n * @param sessionId - The session ID\n *\n * @param hookName - The custom hook name\n *\n * @param result - The validation error details\n *\n * @example\n * ```typescript\n * TelemetryEmitter.emitEnvValidationError(sessionId, \"pre-bash\", {\n *   hookName: \"pre-bash\",\n *   issueCount: 1,\n *   validationPath: \"API_KEY\",\n *   errorMessage: \"Required environment variable missing\",\n *   envClassName: \"WorkflowEnv\",\n * });\n * ```\n *\n * @public\n */\n",
@@ -59130,6 +59074,36 @@
           "name": "TelemetryMetrics",
           "preserveMemberOrder": false,
           "members": [
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!TelemetryMetrics.NAMES:member",
+              "docComment": "/**\n * Metric names for hook telemetry. Uses `claude_code.hook.*` prefix to align with Anthropic's naming.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly NAMES: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        readonly HOOK_COUNT: \"claude_code.hook.count\";\n        readonly HOOK_DURATION_MS: \"claude_code.hook.duration_ms\";\n        readonly TOOL_USE_COUNT: \"claude_code.hook.tool_use.count\";\n        readonly TOOL_DENIED_COUNT: \"claude_code.hook.tool_denied.count\";\n        readonly ACTIVE_SESSIONS: \"claude_code.hook.session.active\";\n        readonly SESSION_START_COUNT: \"claude_code.hook.session.start.count\";\n        readonly SESSION_END_COUNT: \"claude_code.hook.session.end.count\";\n        readonly IPC_MESSAGES_SENT: \"claude_code.hook.sidecar.ipc.messages.sent\";\n        readonly IPC_ERRORS: \"claude_code.hook.sidecar.ipc.errors\";\n        readonly IPC_LATENCY_MS: \"claude_code.hook.sidecar.ipc.latency_ms\";\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "NAMES",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryMetrics.recordCounter:member(1)",
@@ -59898,6 +59872,36 @@
               "isOptional": false,
               "isAbstract": false,
               "name": "instrumentToolHook"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!TelemetrySpan.NAMES:member",
+              "docComment": "/**\n * Span names for tracing. Uses `claude_code.hook.*` prefix for consistency.\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly NAMES: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        readonly HOOK_EXECUTION: \"claude_code.hook.execute\";\n        readonly TOOL_INPUT_PROCESS: \"claude_code.hook.tool.input.process\";\n        readonly TOOL_OUTPUT_PROCESS: \"claude_code.hook.tool.output.process\";\n        readonly IPC_SEND: \"claude_code.hook.sidecar.ipc.send\";\n        readonly OTEL_EXPORT: \"claude_code.hook.sidecar.otel.export\";\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "NAMES",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -61168,6 +61172,37 @@
               "isOptional": false,
               "isAbstract": false,
               "name": "createSessionState"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!TokenMetrics.DEFAULT_BUDGET:member",
+              "docComment": "/**\n * Default token budget (200k context window).\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readonly DEFAULT_BUDGET: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "TokenBudget",
+                  "canonicalReference": "claude-binary-plugin!TokenBudget:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": true,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "DEFAULT_BUDGET",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",

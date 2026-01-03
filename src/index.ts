@@ -256,9 +256,6 @@ export { TelemetrySpan } from "./otel/classes/TelemetrySpan.js";
 export type { ClientState } from "./otel/client.js";
 export { SidecarClient } from "./otel/client.js";
 
-// Constants
-export { CLAUDE_ATTRS, METRIC_NAMES, PLUGIN_ATTRS, SPAN_NAMES } from "./otel/constants.js";
-
 // Protocol types (for advanced usage)
 export type {
 	EventData,
@@ -342,7 +339,7 @@ export type {
 export { ClaudeBinaryPlugin } from "./pipeline/config.js";
 // Pipeline metrics
 export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
-export { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./pipeline/metrics.js";
+export { TokenMetrics } from "./pipeline/metrics.js";
 // Unified Pipeline class (preferred)
 export { Pipeline } from "./pipeline/namespace.js";
 
