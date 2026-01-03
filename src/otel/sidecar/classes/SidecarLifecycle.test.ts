@@ -1,23 +1,23 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { createLifecycleManager, parseIdleTimeout } from "./lifecycle.js";
-import type { SidecarServer } from "./server.js";
+import { SidecarLifecycle } from "./SidecarLifecycle.js";
+import type { SidecarServer } from "./SidecarServer.js";
 
-describe("lifecycle", () => {
+describe("SidecarLifecycle", () => {
 	describe("parseIdleTimeout", () => {
 		test("returns default when env value is undefined", () => {
-			const result = parseIdleTimeout(undefined, 300000);
+			const result = SidecarLifecycle.parseIdleTimeout(undefined, 300000);
 
 			expect(result).toBe(300000);
 		});
 
 		test("returns default when env value is empty string", () => {
-			const result = parseIdleTimeout("", 300000);
+			const result = SidecarLifecycle.parseIdleTimeout("", 300000);
 
 			expect(result).toBe(300000);
 		});
 
 		test("parses valid integer value", () => {
-			const result = parseIdleTimeout("60000", 300000);
+			const result = SidecarLifecycle.parseIdleTimeout("60000", 300000);
 
 			expect(result).toBe(60000);
 		});
@@ -27,7 +27,7 @@ describe("lifecycle", () => {
 			const originalWarn = console.warn;
 			console.warn = mock(() => {});
 
-			const result = parseIdleTimeout("not-a-number", 300000);
+			const result = SidecarLifecycle.parseIdleTimeout("not-a-number", 300000);
 
 			expect(result).toBe(300000);
 			console.warn = originalWarn;
@@ -37,7 +37,7 @@ describe("lifecycle", () => {
 			const originalWarn = console.warn;
 			console.warn = mock(() => {});
 
-			const result = parseIdleTimeout("0", 300000);
+			const result = SidecarLifecycle.parseIdleTimeout("0", 300000);
 
 			expect(result).toBe(300000);
 			console.warn = originalWarn;
@@ -47,20 +47,20 @@ describe("lifecycle", () => {
 			const originalWarn = console.warn;
 			console.warn = mock(() => {});
 
-			const result = parseIdleTimeout("-1000", 300000);
+			const result = SidecarLifecycle.parseIdleTimeout("-1000", 300000);
 
 			expect(result).toBe(300000);
 			console.warn = originalWarn;
 		});
 
 		test("uses provided default value", () => {
-			const result = parseIdleTimeout(undefined, 120000);
+			const result = SidecarLifecycle.parseIdleTimeout(undefined, 120000);
 
 			expect(result).toBe(120000);
 		});
 
 		test("uses DEFAULTS.IDLE_TIMEOUT_MS when no default provided", () => {
-			const result = parseIdleTimeout(undefined);
+			const result = SidecarLifecycle.parseIdleTimeout(undefined);
 
 			// DEFAULTS.IDLE_TIMEOUT_MS is 5 * 60 * 1000 = 300000
 			expect(result).toBe(300000);
@@ -68,7 +68,7 @@ describe("lifecycle", () => {
 	});
 });
 
-describe("createLifecycleManager", () => {
+describe("SidecarLifecycle instance", () => {
 	let mockServer: SidecarServer;
 	let originalConsoleLog: typeof console.log;
 
@@ -88,64 +88,64 @@ describe("createLifecycleManager", () => {
 	});
 
 	test("creates lifecycle manager with initial state", () => {
-		const manager = createLifecycleManager(mockServer, 1000);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000);
 
-		expect(manager.state).toBeDefined();
-		expect(manager.state.shuttingDown).toBe(false);
-		expect(manager.state.idleTimer).not.toBeNull();
-		expect(manager.state.startTime).toBeGreaterThan(0);
-		expect(manager.state.lastActivity).toBeGreaterThan(0);
+		expect(lifecycle.state).toBeDefined();
+		expect(lifecycle.state.shuttingDown).toBe(false);
+		expect(lifecycle.state.idleTimer).not.toBeNull();
+		expect(lifecycle.state.startTime).toBeGreaterThan(0);
+		expect(lifecycle.state.lastActivity).toBeGreaterThan(0);
 
 		// Clean up timer
-		manager.shutdown();
+		lifecycle.shutdown();
 	});
 
 	test("recordActivity updates lastActivity and resets timer", () => {
-		const manager = createLifecycleManager(mockServer, 1000);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000);
 
-		const initialActivity = manager.state.lastActivity;
-		const initialTimer = manager.state.idleTimer;
+		const initialActivity = lifecycle.state.lastActivity;
+		const initialTimer = lifecycle.state.idleTimer;
 
 		// Wait a small amount and record activity
 		Bun.sleepSync(10);
-		manager.recordActivity();
+		lifecycle.recordActivity();
 
-		expect(manager.state.lastActivity).toBeGreaterThan(initialActivity);
-		expect(manager.state.idleTimer).not.toBe(initialTimer);
+		expect(lifecycle.state.lastActivity).toBeGreaterThan(initialActivity);
+		expect(lifecycle.state.idleTimer).not.toBe(initialTimer);
 
 		// Clean up timer
-		manager.shutdown();
+		lifecycle.shutdown();
 	});
 
 	test("uptime returns elapsed time since start", () => {
-		const manager = createLifecycleManager(mockServer, 1000);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000);
 
 		// Wait a small amount
 		Bun.sleepSync(10);
 
-		const uptime = manager.uptime();
+		const uptime = lifecycle.uptime();
 		expect(uptime).toBeGreaterThanOrEqual(10);
 
 		// Clean up timer
-		manager.shutdown();
+		lifecycle.shutdown();
 	});
 
 	test("shutdown stops the server", () => {
-		const manager = createLifecycleManager(mockServer, 1000);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000);
 
-		manager.shutdown();
+		lifecycle.shutdown();
 
 		expect(mockServer.stop).toHaveBeenCalled();
-		expect(manager.state.shuttingDown).toBe(true);
-		expect(manager.state.idleTimer).toBeNull();
+		expect(lifecycle.state.shuttingDown).toBe(true);
+		expect(lifecycle.state.idleTimer).toBeNull();
 	});
 
 	test("shutdown is idempotent", () => {
-		const manager = createLifecycleManager(mockServer, 1000);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000);
 
-		manager.shutdown();
-		manager.shutdown();
-		manager.shutdown();
+		lifecycle.shutdown();
+		lifecycle.shutdown();
+		lifecycle.shutdown();
 
 		// stop should only be called once
 		expect(mockServer.stop).toHaveBeenCalledTimes(1);
@@ -153,16 +153,16 @@ describe("createLifecycleManager", () => {
 
 	test("shutdown calls onShutdown callback", () => {
 		const onShutdown = mock(() => {});
-		const manager = createLifecycleManager(mockServer, 1000, onShutdown);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000, onShutdown);
 
-		manager.shutdown();
+		lifecycle.shutdown();
 
 		expect(onShutdown).toHaveBeenCalled();
 	});
 
 	test("idle timeout triggers shutdown", async () => {
 		const onShutdown = mock(() => {});
-		createLifecycleManager(mockServer, 50, onShutdown); // Very short timeout
+		new SidecarLifecycle(mockServer, 50, onShutdown); // Very short timeout
 
 		// Wait for idle timeout
 		await Bun.sleep(100);
@@ -172,15 +172,15 @@ describe("createLifecycleManager", () => {
 	});
 
 	test("recordActivity does nothing after shutdown", () => {
-		const manager = createLifecycleManager(mockServer, 1000);
+		const lifecycle = new SidecarLifecycle(mockServer, 1000);
 
-		manager.shutdown();
-		const afterShutdownActivity = manager.state.lastActivity;
+		lifecycle.shutdown();
+		const afterShutdownActivity = lifecycle.state.lastActivity;
 
 		// This should not throw or update state
-		manager.recordActivity();
+		lifecycle.recordActivity();
 
-		expect(manager.state.lastActivity).toBe(afterShutdownActivity);
-		expect(manager.state.idleTimer).toBeNull();
+		expect(lifecycle.state.lastActivity).toBe(afterShutdownActivity);
+		expect(lifecycle.state.idleTimer).toBeNull();
 	});
 });

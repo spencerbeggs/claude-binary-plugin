@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { PluginInfo } from "./classes/PluginInfo.js";
-import { getPluginBinaryPath, socketExists, spawnSidecar } from "./spawn.js";
+import { PluginInfo } from "./PluginInfo.js";
+import { SidecarLauncher } from "./SidecarLauncher.js";
 
-describe("spawn", () => {
+describe("SidecarLauncher", () => {
 	// Store original env vars
 	let originalEnv: Record<string, string | undefined>;
 
@@ -24,33 +24,33 @@ describe("spawn", () => {
 		}
 	});
 
-	describe("getPluginBinaryPath", () => {
+	describe("getBinaryPath", () => {
 		test("returns null when CLAUDE_PLUGIN_ROOT not set", () => {
 			delete process.env.CLAUDE_PLUGIN_ROOT;
 			PluginInfo.set({ name: "workflow", version: "1.0.0" });
 
-			expect(getPluginBinaryPath()).toBeNull();
+			expect(SidecarLauncher.getBinaryPath()).toBeNull();
 		});
 
 		test("returns null when plugin name is unknown", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/path/to/plugin";
 			PluginInfo.set({ name: "unknown", version: "0.0.0" });
 
-			expect(getPluginBinaryPath()).toBeNull();
+			expect(SidecarLauncher.getBinaryPath()).toBeNull();
 		});
 
 		test("returns null when neither CLAUDE_PLUGIN_ROOT nor valid plugin name is set", () => {
 			delete process.env.CLAUDE_PLUGIN_ROOT;
 			PluginInfo.set({ name: "unknown", version: "0.0.0" });
 
-			expect(getPluginBinaryPath()).toBeNull();
+			expect(SidecarLauncher.getBinaryPath()).toBeNull();
 		});
 
 		test("returns null when plugin binary does not exist", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
 			PluginInfo.set({ name: "workflow", version: "1.0.0" });
 
-			expect(getPluginBinaryPath()).toBeNull();
+			expect(SidecarLauncher.getBinaryPath()).toBeNull();
 		});
 
 		test("returns path when plugin binary exists", async () => {
@@ -62,7 +62,7 @@ describe("spawn", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = tempDir;
 			PluginInfo.set({ name: "test", version: "1.0.0" });
 
-			const result = getPluginBinaryPath();
+			const result = SidecarLauncher.getBinaryPath();
 
 			expect(result).toBe(`${tempDir}/test.plugin`);
 
@@ -71,27 +71,12 @@ describe("spawn", () => {
 		});
 	});
 
-	describe("socketExists", () => {
-		test("returns false for non-existent path", async () => {
-			const exists = await socketExists("/nonexistent/path/to/socket.sock");
-
-			expect(exists).toBe(false);
-		});
-
-		test("returns true for existing file", async () => {
-			// Use a file we know exists
-			const exists = await socketExists(import.meta.path);
-
-			expect(exists).toBe(true);
-		});
-	});
-
-	describe("spawnSidecar", () => {
+	describe("spawn", () => {
 		test("returns error when plugin binary not found", async () => {
 			delete process.env.CLAUDE_PLUGIN_ROOT;
 			PluginInfo.set({ name: "unknown", version: "0.0.0" });
 
-			const result = await spawnSidecar("test-session", {});
+			const result = await SidecarLauncher.spawn("test-session", {});
 
 			expect(result.success).toBe(false);
 			expect(result.error).toBe("Plugin binary not found");
@@ -101,7 +86,7 @@ describe("spawn", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
 			PluginInfo.set({ name: "test-plugin", version: "1.0.0" });
 
-			const result = await spawnSidecar("test-session", {});
+			const result = await SidecarLauncher.spawn("test-session", {});
 
 			expect(result.success).toBe(false);
 			expect(result.error).toBe("Plugin binary not found");
@@ -113,7 +98,7 @@ describe("spawn", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
 			PluginInfo.set({ name: "test-plugin", version: "1.0.0" });
 
-			const result = await spawnSidecar("test-session", {});
+			const result = await SidecarLauncher.spawn("test-session", {});
 
 			// Will fail because plugin doesn't exist, but we're testing the code path
 			expect(result.success).toBe(false);
@@ -130,7 +115,7 @@ describe("spawn", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = "/nonexistent/path";
 			PluginInfo.set({ name: "test-plugin", version: "1.0.0" });
 
-			const result = await spawnSidecar("test-session", {});
+			const result = await SidecarLauncher.spawn("test-session", {});
 
 			// Will fail because plugin doesn't exist
 			expect(result.success).toBe(false);
@@ -157,7 +142,7 @@ describe("spawn", () => {
 			process.env.CLAUDE_PLUGIN_ROOT = tempDir;
 			PluginInfo.set({ name: "test", version: "1.0.0" });
 
-			const result = await spawnSidecar("test-session", {
+			const result = await SidecarLauncher.spawn("test-session", {
 				endpoint: "http://localhost:4318",
 				protocol: "http",
 				serviceName: "test-service",
@@ -191,7 +176,7 @@ describe("spawn", () => {
 			process.env.TEST_PLUGIN_SESSION_ENV_FILE = `${sessionEnvDir}/hook-0.sh`;
 			PluginInfo.set({ name: "test", version: "1.0.0" });
 
-			const result = await spawnSidecar("test-session", {});
+			const result = await SidecarLauncher.spawn("test-session", {});
 
 			expect(result.success).toBe(true);
 			expect(result.socketPath).toBeDefined();

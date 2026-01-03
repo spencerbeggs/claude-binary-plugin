@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { EventData, MetricData, PingMessage, ShutdownMessage, SpanData } from "../../protocol.js";
-import { resetProviders } from "../providers.js";
-import { clearSessions, getSessionCount, handleMessage } from "./index.js";
-import { clearMetricCaches } from "./metric.js";
+import { MetricHandler } from "./MetricHandler.js";
+import { SidecarProviders } from "./SidecarProviders.js";
+import { SidecarRouter } from "./SidecarRouter.js";
 
-describe("handlers", () => {
+describe("SidecarRouter", () => {
 	afterEach(async () => {
 		// Clean up after tests - reset providers to avoid polluting real sidecar
-		clearSessions();
-		clearMetricCaches();
-		await resetProviders();
+		SidecarRouter.clearSessions();
+		MetricHandler.clearCaches();
+		await SidecarProviders.reset();
 	});
 
 	describe("handleMessage - ping", () => {
@@ -22,10 +22,10 @@ describe("handlers", () => {
 				},
 			};
 
-			const response = await handleMessage(message);
+			const response = await SidecarRouter.handleMessage(message);
 
 			expect(response).toEqual({ ok: true, version: "0.0.0" });
-			expect(getSessionCount()).toBe(1);
+			expect(SidecarRouter.getSessionCount()).toBe(1);
 		});
 
 		test("handles multiple sessions", async () => {
@@ -40,24 +40,24 @@ describe("handlers", () => {
 				config: {},
 			};
 
-			await handleMessage(message1);
-			await handleMessage(message2);
+			await SidecarRouter.handleMessage(message1);
+			await SidecarRouter.handleMessage(message2);
 
-			expect(getSessionCount()).toBe(2);
+			expect(SidecarRouter.getSessionCount()).toBe(2);
 		});
 
 		test("does not reinitialize providers when config unchanged", async () => {
 			const config = { endpoint: "http://localhost:4318", serviceName: "test" };
 
 			// First ping initializes
-			await handleMessage({
+			await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "session-1",
 				config,
 			});
 
 			// Second ping with same config should not reinitialize
-			const response = await handleMessage({
+			const response = await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "session-2",
 				config,
@@ -68,14 +68,14 @@ describe("handlers", () => {
 
 		test("reinitializes providers when config changes", async () => {
 			// First ping with initial config
-			await handleMessage({
+			await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "session-1",
 				config: { endpoint: "http://localhost:4318" },
 			});
 
 			// Second ping with different endpoint should reinitialize
-			const response = await handleMessage({
+			const response = await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "session-1",
 				config: { endpoint: "http://different-host:4318" },
@@ -88,12 +88,12 @@ describe("handlers", () => {
 	describe("handleMessage - shutdown", () => {
 		test("removes session on session-specific shutdown", async () => {
 			// First add a session
-			await handleMessage({
+			await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "test-session",
 				config: {},
 			});
-			expect(getSessionCount()).toBe(1);
+			expect(SidecarRouter.getSessionCount()).toBe(1);
 
 			// Then shut down that session
 			const message: ShutdownMessage = {
@@ -101,17 +101,17 @@ describe("handlers", () => {
 				sessionId: "test-session",
 			};
 
-			const response = await handleMessage(message);
+			const response = await SidecarRouter.handleMessage(message);
 
 			expect(response).toEqual({ ok: true });
-			expect(getSessionCount()).toBe(0);
+			expect(SidecarRouter.getSessionCount()).toBe(0);
 		});
 	});
 
 	describe("handleMessage - span", () => {
 		test("returns undefined for fire-and-forget", async () => {
 			// Initialize providers first
-			await handleMessage({
+			await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "test-session",
 				config: {},
@@ -126,7 +126,7 @@ describe("handlers", () => {
 				endTimeNs: BigInt(Date.now() * 1_000_000 + 100_000_000),
 			};
 
-			const response = await handleMessage({
+			const response = await SidecarRouter.handleMessage({
 				type: "span",
 				sessionId: "test-session",
 				data: spanData,
@@ -139,7 +139,7 @@ describe("handlers", () => {
 	describe("handleMessage - event", () => {
 		test("returns undefined for fire-and-forget", async () => {
 			// Initialize providers first
-			await handleMessage({
+			await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "test-session",
 				config: {},
@@ -152,7 +152,7 @@ describe("handlers", () => {
 				body: "Test event body",
 			};
 
-			const response = await handleMessage({
+			const response = await SidecarRouter.handleMessage({
 				type: "event",
 				sessionId: "test-session",
 				data: eventData,
@@ -165,7 +165,7 @@ describe("handlers", () => {
 	describe("handleMessage - metric", () => {
 		test("returns undefined for fire-and-forget", async () => {
 			// Initialize providers first
-			await handleMessage({
+			await SidecarRouter.handleMessage({
 				type: "ping",
 				sessionId: "test-session",
 				config: {},
@@ -177,7 +177,7 @@ describe("handlers", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			const response = await handleMessage({
+			const response = await SidecarRouter.handleMessage({
 				type: "metric",
 				sessionId: "test-session",
 				data: metricData,

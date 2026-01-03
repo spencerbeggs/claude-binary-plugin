@@ -5,11 +5,10 @@
  * - Configuration: OTELConfig, ClaudeAccountInfo, GitInfo
  * - Platform utilities: Platform, SessionEnv
  * - Plugin metadata: PluginInfo
- * - Sidecar management: SidecarClient, SidecarClientPool, SidecarLauncher
+ * - Sidecar client: SidecarClient, SidecarClientPool, SidecarLauncher, SidecarMessage
  * - Telemetry emission: TelemetryEmitter, TelemetryMetrics, TelemetrySpan
- * - Message protocol: SidecarMessage
- *
- * The sidecar entry point is exported as `sidecarMain` from the main entry point.
+ * - Sidecar internals: SidecarServer, SidecarRouter, SidecarProviders, SidecarLifecycle,
+ *   SidecarResource, SidecarExporters, SidecarLog, EventHandler, SpanHandler, MetricHandler
  *
  * @module
  */
@@ -104,3 +103,21 @@ export type {
 	SpanEvent,
 	SpanMessage,
 } from "./protocol.js";
+
+// ============================================================================
+// Sidecar classes (for sidecar process internals)
+// ============================================================================
+
+export type { LifecycleState, MessageHandler, ResourceConfig, SidecarServerOptions } from "./sidecar/classes/index.js";
+export {
+	EventHandler,
+	MetricHandler,
+	SidecarExporters,
+	SidecarLifecycle,
+	SidecarLog,
+	SidecarProviders,
+	SidecarResource,
+	SidecarRouter,
+	SidecarServer,
+	SpanHandler,
+} from "./sidecar/classes/index.js";

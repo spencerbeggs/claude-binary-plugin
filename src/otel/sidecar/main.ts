@@ -16,13 +16,10 @@
  * @module
  */
 
+import { Platform } from "../classes/Platform.js";
 import { DEFAULTS, ENV_VARS } from "../constants.js";
-import { assertPlatformSupported, getPlatform } from "../platform.js";
 import type { SidecarMessage, SidecarResponse } from "../protocol.js";
-import { getSessionCount, handleMessage as routeMessage } from "./handlers/index.js";
-import { createLifecycleManager, parseIdleTimeout } from "./lifecycle.js";
-import { enableSidecarLogging, sidecarLog } from "./log.js";
-import { createServer } from "./server.js";
+import { SidecarLifecycle, SidecarLog, SidecarRouter, SidecarServer } from "./classes/index.js";
 
 /**
  * Sidecar version - should match package version.
@@ -39,13 +36,13 @@ const VERSION = "0.0.0";
  */
 function handleMessage(message: SidecarMessage): SidecarResponse | undefined {
 	// Log all incoming messages
-	sidecarLog(`[recv] type=${message.type} session=${message.sessionId || "none"}`);
+	SidecarLog.write(`[recv] type=${message.type} session=${message.sessionId || "none"}`);
 	if (message.type === "event") {
-		sidecarLog(`[recv:event] name=${message.data.name} attrs=${JSON.stringify(message.data.attributes)}`);
+		SidecarLog.write(`[recv:event] name=${message.data.name} attrs=${JSON.stringify(message.data.attributes)}`);
 	} else if (message.type === "span") {
-		sidecarLog(`[recv:span] name=${message.data.name}`);
+		SidecarLog.write(`[recv:span] name=${message.data.name}`);
 	} else if (message.type === "metric") {
-		sidecarLog(
+		SidecarLog.write(
 			`[recv:metric] name=${message.data.name} kind=${message.data.type.kind} value=${message.data.type.value}`,
 		);
 	}
@@ -53,7 +50,7 @@ function handleMessage(message: SidecarMessage): SidecarResponse | undefined {
 	// Route message through async handler
 	// For fire-and-forget messages (span, event, metric), the promise is ignored
 	// For sync messages (ping, shutdown), we handle synchronously where possible
-	const result = routeMessage(message);
+	const result = SidecarRouter.handleMessage(message);
 
 	// Handle async responses for shutdown (which needs to flush)
 	if (message.type === "shutdown" && !message.sessionId) {
@@ -84,11 +81,11 @@ function handleMessage(message: SidecarMessage): SidecarResponse | undefined {
  */
 export function main(): void {
 	// Enable file logging for sidecar process (not tests)
-	enableSidecarLogging();
+	SidecarLog.enable();
 
 	// Validate platform support
 	try {
-		assertPlatformSupported();
+		Platform.assertSupported();
 	} catch (error) {
 		console.error(`[sidecar] ${error instanceof Error ? error.message : "Platform not supported"}`);
 		process.exit(1);
@@ -97,7 +94,10 @@ export function main(): void {
 	// Read configuration from environment
 	const socketPath = Bun.env[ENV_VARS.OTEL_SIDECAR_SOCKET];
 	const sessionId = Bun.env[ENV_VARS.OTEL_SIDECAR_SESSION_ID] ?? "unknown";
-	const idleTimeoutMs = parseIdleTimeout(Bun.env[ENV_VARS.OTEL_SIDECAR_IDLE_TIMEOUT_MS], DEFAULTS.IDLE_TIMEOUT_MS);
+	const idleTimeoutMs = SidecarLifecycle.parseIdleTimeout(
+		Bun.env[ENV_VARS.OTEL_SIDECAR_IDLE_TIMEOUT_MS],
+		DEFAULTS.IDLE_TIMEOUT_MS,
+	);
 
 	if (!socketPath) {
 		console.error(`[sidecar] Missing required environment variable: ${ENV_VARS.OTEL_SIDECAR_SOCKET}`);
@@ -105,9 +105,9 @@ export function main(): void {
 	}
 
 	// Create the server
-	let lifecycle: ReturnType<typeof createLifecycleManager>;
+	let lifecycle: SidecarLifecycle;
 
-	const server = createServer(socketPath, handleMessage, {
+	const server = new SidecarServer(socketPath, handleMessage, {
 		version: VERSION,
 		onActivity: () => lifecycle?.recordActivity(),
 		onClose: () => {
@@ -116,13 +116,13 @@ export function main(): void {
 	});
 
 	// Set up lifecycle management
-	lifecycle = createLifecycleManager(server, idleTimeoutMs, () => {
-		console.log(`[sidecar] Uptime: ${lifecycle.uptime()}ms, sessions: ${getSessionCount()}`);
+	lifecycle = new SidecarLifecycle(server, idleTimeoutMs, () => {
+		console.log(`[sidecar] Uptime: ${lifecycle.uptime()}ms, sessions: ${SidecarRouter.getSessionCount()}`);
 		process.exit(0);
 	});
 
 	// Log startup
-	console.log(`[sidecar] Started on ${getPlatform()}`);
+	console.log(`[sidecar] Started on ${Platform.get()}`);
 	console.log(`[sidecar] Socket: ${socketPath}`);
 	console.log(`[sidecar] Session: ${sessionId}`);
 	console.log(`[sidecar] Idle timeout: ${idleTimeoutMs}ms`);

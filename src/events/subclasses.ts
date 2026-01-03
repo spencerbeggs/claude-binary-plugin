@@ -39,7 +39,7 @@
 import { HookEventSchemas } from "../core/schemas.js";
 import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
 import { getSidecarClient } from "../otel/client.js";
-import { isOTELEnabled, parseOTELConfig } from "../otel/config.js";
+import { OTELConfig } from "../otel/classes/OTELConfig.js";
 import { HookEvent } from "./base.js";
 import { HookEventName } from "./enums.js";
 import {
@@ -797,9 +797,9 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		})) as { env: TEnv; persisted: unknown };
 
 		// Initialize OTEL sidecar if telemetry is enabled
-		if (isOTELEnabled()) {
+		if (OTELConfig.isEnabled()) {
 			const client = getSidecarClient(parsed.session_id);
-			const config = parseOTELConfig();
+			const config = OTELConfig.fromEnv();
 			await client.ensureRunning(config);
 		}
 

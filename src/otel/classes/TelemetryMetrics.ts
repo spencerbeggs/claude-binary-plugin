@@ -22,9 +22,9 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { isOTELEnabled } from "../config.js";
 import { CLAUDE_ATTRS, METRIC_NAMES, PLUGIN_ATTRS } from "../constants.js";
-import { getPluginInfo } from "../plugin-info.js";
+import { OTELConfig } from "./OTELConfig.js";
+import { PluginInfo } from "./PluginInfo.js";
 
 /**
  * Build metric attributes with cardinality controls.
@@ -35,7 +35,7 @@ function getMetricAttributes(
 	hookName: string,
 	extra?: Record<string, string | number | boolean>,
 ): Record<string, string | number | boolean> {
-	const pluginInfo = getPluginInfo();
+	const pluginInfo = PluginInfo.get();
 	const attrs: Record<string, string | number | boolean> = {
 		[CLAUDE_ATTRS.HOOK_NAME]: hookName,
 		[CLAUDE_ATTRS.HOOK_TYPE]: event.hook_event_name,
@@ -107,7 +107,7 @@ export class TelemetryMetrics {
 	 * @public
 	 */
 	static recordHookExecution(event: HookEventBase, hookName: string, durationMs: number, success: boolean): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const baseAttrs = getMetricAttributes(event, hookName, { success });
@@ -177,7 +177,7 @@ export class TelemetryMetrics {
 		decision: "allow" | "block" | "modify",
 		toolName?: string,
 	): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const attrs = getMetricAttributes(event, hookName, {
@@ -225,7 +225,7 @@ export class TelemetryMetrics {
 		value = 1,
 		attributes?: Record<string, string | number | boolean>,
 	): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 
@@ -238,7 +238,7 @@ export class TelemetryMetrics {
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				attributes: {
 					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
+					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 			},
@@ -275,7 +275,7 @@ export class TelemetryMetrics {
 		unit?: string,
 		attributes?: Record<string, string | number | boolean>,
 	): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 
@@ -289,7 +289,7 @@ export class TelemetryMetrics {
 				unit,
 				attributes: {
 					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
+					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 			},
@@ -324,7 +324,7 @@ export class TelemetryMetrics {
 		value: number,
 		attributes?: Record<string, string | number | boolean>,
 	): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 
@@ -337,7 +337,7 @@ export class TelemetryMetrics {
 				timeNs: BigInt(Date.now()) * BigInt(1_000_000),
 				attributes: {
 					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
-					[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
+					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 			},

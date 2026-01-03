@@ -54207,7 +54207,7 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "SidecarMessage",
+                  "text": "SidecarMessageType",
                   "canonicalReference": "claude-binary-plugin!SidecarMessageProtocol:type"
                 },
                 {
@@ -54256,7 +54256,7 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "OTELConfig",
+                  "text": "OTELConfigType",
                   "canonicalReference": "claude-binary-plugin!OTELConfigProtocol:interface"
                 },
                 {

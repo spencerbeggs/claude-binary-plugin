@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
-import { DEFAULTS, PLUGIN_ATTRS, RESOURCE_ATTRS } from "../constants.js";
-import type { ResourceConfig } from "./resource.js";
-import { createResource } from "./resource.js";
+import { DEFAULTS, PLUGIN_ATTRS, RESOURCE_ATTRS } from "../../constants.js";
+import type { ResourceConfig } from "./SidecarResource.js";
+import { SidecarResource } from "./SidecarResource.js";
 
-describe("resource", () => {
+describe("SidecarResource", () => {
 	let originalEnv: Record<string, string | undefined>;
 
 	beforeEach(() => {
@@ -25,9 +25,9 @@ describe("resource", () => {
 		}
 	});
 
-	describe("createResource", () => {
+	describe("create", () => {
 		test("creates resource with default service name", () => {
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 
 			const attrs = resource.attributes;
 			expect(attrs[ATTR_SERVICE_NAME]).toBe(DEFAULTS.SERVICE_NAME);
@@ -38,13 +38,13 @@ describe("resource", () => {
 				serviceName: "my-plugin",
 			};
 
-			const resource = createResource(config);
+			const resource = SidecarResource.create(config);
 
 			expect(resource.attributes[ATTR_SERVICE_NAME]).toBe("my-plugin");
 		});
 
 		test("includes OS and host attributes", () => {
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 			const attrs = resource.attributes;
 
 			expect(attrs["os.type"]).toBe(process.platform);
@@ -52,7 +52,7 @@ describe("resource", () => {
 		});
 
 		test("includes service namespace", () => {
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 
 			expect(resource.attributes["service.namespace"]).toBe(DEFAULTS.SERVICE_NAMESPACE);
 		});
@@ -72,7 +72,7 @@ describe("resource", () => {
 				marketplaceVersion: "0.5.0",
 			};
 
-			const resource = createResource(config);
+			const resource = SidecarResource.create(config);
 			const attrs = resource.attributes;
 
 			// These should NOT be in the resource - they go in event attributes
@@ -92,7 +92,7 @@ describe("resource", () => {
 				},
 			};
 
-			const resource = createResource(config);
+			const resource = SidecarResource.create(config);
 			const attrs = resource.attributes;
 
 			expect(attrs["custom.attr"]).toBe("value");
@@ -103,7 +103,7 @@ describe("resource", () => {
 		test("parses OTEL_RESOURCE_ATTRIBUTES env var", () => {
 			process.env.OTEL_RESOURCE_ATTRIBUTES = "env.attr=envvalue,another.attr=another";
 
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 			const attrs = resource.attributes;
 
 			expect(attrs["env.attr"]).toBe("envvalue");
@@ -113,7 +113,7 @@ describe("resource", () => {
 		test("handles OTEL_RESOURCE_ATTRIBUTES with equals in value", () => {
 			process.env.OTEL_RESOURCE_ATTRIBUTES = "key=value=with=equals";
 
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 
 			expect(resource.attributes.key).toBe("value=with=equals");
 		});
@@ -121,7 +121,7 @@ describe("resource", () => {
 		test("includes deployment environment from DEPLOYMENT_ENV", () => {
 			process.env.DEPLOYMENT_ENV = "production";
 
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 
 			expect(resource.attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV]).toBe("production");
 		});
@@ -130,7 +130,7 @@ describe("resource", () => {
 			delete process.env.DEPLOYMENT_ENV;
 			process.env.NODE_ENV = "development";
 
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 
 			expect(resource.attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV]).toBe("development");
 		});
@@ -139,7 +139,7 @@ describe("resource", () => {
 			process.env.DEPLOYMENT_ENV = "staging";
 			process.env.NODE_ENV = "production";
 
-			const resource = createResource({});
+			const resource = SidecarResource.create({});
 
 			expect(resource.attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV]).toBe("staging");
 		});

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { gitInfoToAttributes, parseGitRemoteUrl } from "./git-info.js";
+import { GitInfo } from "./GitInfo.js";
 
-describe("parseGitRemoteUrl", () => {
+describe("GitInfo.parseRemoteUrl", () => {
 	describe("GitHub URLs", () => {
 		test("parses SSH format", () => {
-			const result = parseGitRemoteUrl("git@github.com:anthropics/claude-code.git");
+			const result = GitInfo.parseRemoteUrl("git@github.com:anthropics/claude-code.git");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "anthropics",
@@ -13,7 +13,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses SSH format without .git suffix", () => {
-			const result = parseGitRemoteUrl("git@github.com:anthropics/claude-code");
+			const result = GitInfo.parseRemoteUrl("git@github.com:anthropics/claude-code");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "anthropics",
@@ -22,7 +22,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses HTTPS format", () => {
-			const result = parseGitRemoteUrl("https://github.com/anthropics/claude-code.git");
+			const result = GitInfo.parseRemoteUrl("https://github.com/anthropics/claude-code.git");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "anthropics",
@@ -31,7 +31,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses HTTPS format without .git suffix", () => {
-			const result = parseGitRemoteUrl("https://github.com/anthropics/claude-code");
+			const result = GitInfo.parseRemoteUrl("https://github.com/anthropics/claude-code");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "anthropics",
@@ -40,7 +40,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses HTTPS with user auth", () => {
-			const result = parseGitRemoteUrl("https://user@github.com/anthropics/claude-code.git");
+			const result = GitInfo.parseRemoteUrl("https://user@github.com/anthropics/claude-code.git");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "anthropics",
@@ -51,7 +51,7 @@ describe("parseGitRemoteUrl", () => {
 
 	describe("GitLab URLs", () => {
 		test("parses SSH format", () => {
-			const result = parseGitRemoteUrl("git@gitlab.com:myorg/myrepo.git");
+			const result = GitInfo.parseRemoteUrl("git@gitlab.com:myorg/myrepo.git");
 			expect(result).toEqual({
 				provider: "gitlab",
 				owner: "myorg",
@@ -60,7 +60,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses HTTPS format", () => {
-			const result = parseGitRemoteUrl("https://gitlab.com/myorg/myrepo.git");
+			const result = GitInfo.parseRemoteUrl("https://gitlab.com/myorg/myrepo.git");
 			expect(result).toEqual({
 				provider: "gitlab",
 				owner: "myorg",
@@ -69,7 +69,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses nested groups (takes first as owner, last as repo)", () => {
-			const result = parseGitRemoteUrl("git@gitlab.com:myorg/subgroup/myrepo.git");
+			const result = GitInfo.parseRemoteUrl("git@gitlab.com:myorg/subgroup/myrepo.git");
 			expect(result).toEqual({
 				provider: "gitlab",
 				owner: "myorg",
@@ -80,7 +80,7 @@ describe("parseGitRemoteUrl", () => {
 
 	describe("Bitbucket URLs", () => {
 		test("parses SSH format", () => {
-			const result = parseGitRemoteUrl("git@bitbucket.org:myteam/myrepo.git");
+			const result = GitInfo.parseRemoteUrl("git@bitbucket.org:myteam/myrepo.git");
 			expect(result).toEqual({
 				provider: "bitbucket",
 				owner: "myteam",
@@ -89,7 +89,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses HTTPS format", () => {
-			const result = parseGitRemoteUrl("https://bitbucket.org/myteam/myrepo.git");
+			const result = GitInfo.parseRemoteUrl("https://bitbucket.org/myteam/myrepo.git");
 			expect(result).toEqual({
 				provider: "bitbucket",
 				owner: "myteam",
@@ -100,7 +100,7 @@ describe("parseGitRemoteUrl", () => {
 
 	describe("Unknown providers", () => {
 		test("parses self-hosted git with unknown provider", () => {
-			const result = parseGitRemoteUrl("git@git.mycompany.com:team/project.git");
+			const result = GitInfo.parseRemoteUrl("git@git.mycompany.com:team/project.git");
 			expect(result).toEqual({
 				provider: "unknown",
 				owner: "team",
@@ -109,7 +109,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("parses HTTPS self-hosted with unknown provider", () => {
-			const result = parseGitRemoteUrl("https://git.mycompany.com/team/project.git");
+			const result = GitInfo.parseRemoteUrl("https://git.mycompany.com/team/project.git");
 			expect(result).toEqual({
 				provider: "unknown",
 				owner: "team",
@@ -120,15 +120,15 @@ describe("parseGitRemoteUrl", () => {
 
 	describe("Edge cases", () => {
 		test("returns empty object for empty string", () => {
-			expect(parseGitRemoteUrl("")).toEqual({});
+			expect(GitInfo.parseRemoteUrl("")).toEqual({});
 		});
 
 		test("returns empty object for invalid URL", () => {
-			expect(parseGitRemoteUrl("not-a-url")).toEqual({});
+			expect(GitInfo.parseRemoteUrl("not-a-url")).toEqual({});
 		});
 
 		test("handles git:// protocol", () => {
-			const result = parseGitRemoteUrl("git://github.com/owner/repo.git");
+			const result = GitInfo.parseRemoteUrl("git://github.com/owner/repo.git");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "owner",
@@ -137,7 +137,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("handles URLs with trailing whitespace", () => {
-			const result = parseGitRemoteUrl("  git@github.com:owner/repo.git  ");
+			const result = GitInfo.parseRemoteUrl("  git@github.com:owner/repo.git  ");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "owner",
@@ -146,7 +146,7 @@ describe("parseGitRemoteUrl", () => {
 		});
 
 		test("handles case-insensitive hostnames", () => {
-			const result = parseGitRemoteUrl("git@GITHUB.COM:owner/repo.git");
+			const result = GitInfo.parseRemoteUrl("git@GITHUB.COM:owner/repo.git");
 			expect(result).toEqual({
 				provider: "github",
 				owner: "owner",
@@ -156,15 +156,15 @@ describe("parseGitRemoteUrl", () => {
 	});
 });
 
-describe("gitInfoToAttributes", () => {
+describe("GitInfo.toAttributes", () => {
 	test("converts full git info to attributes", () => {
-		const result = gitInfoToAttributes({
+		const info = new GitInfo({
 			branch: "main",
 			provider: "github",
 			owner: "anthropics",
 			repo: "claude-code",
 		});
-		expect(result).toEqual({
+		expect(info.toAttributes()).toEqual({
 			"git.branch": "main",
 			"git.provider": "github",
 			"git.owner": "anthropics",
@@ -173,24 +173,24 @@ describe("gitInfoToAttributes", () => {
 	});
 
 	test("omits undefined fields", () => {
-		const result = gitInfoToAttributes({
+		const info = new GitInfo({
 			branch: "main",
 		});
-		expect(result).toEqual({
+		expect(info.toAttributes()).toEqual({
 			"git.branch": "main",
 		});
 	});
 
 	test("returns empty object for empty git info", () => {
-		const result = gitInfoToAttributes({});
-		expect(result).toEqual({});
+		const info = new GitInfo({});
+		expect(info.toAttributes()).toEqual({});
 	});
 
 	test("handles git info with only provider", () => {
-		const result = gitInfoToAttributes({
+		const info = new GitInfo({
 			provider: "unknown",
 		});
-		expect(result).toEqual({
+		expect(info.toAttributes()).toEqual({
 			"git.provider": "unknown",
 		});
 	});

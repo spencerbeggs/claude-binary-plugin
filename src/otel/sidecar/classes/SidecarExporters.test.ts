@@ -3,9 +3,9 @@ import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-base";
-import { createLogsExporter, createMetricsExporter, createTraceExporter } from "./exporters.js";
+import { SidecarExporters } from "./SidecarExporters.js";
 
-describe("exporters", () => {
+describe("SidecarExporters", () => {
 	let originalEnv: Record<string, string | undefined>;
 
 	beforeEach(() => {
@@ -28,7 +28,7 @@ describe("exporters", () => {
 
 	describe("createTraceExporter", () => {
 		test("returns OTLPTraceExporter by default", () => {
-			const exporter = createTraceExporter({});
+			const exporter = SidecarExporters.createTraceExporter({});
 
 			expect(exporter).toBeInstanceOf(OTLPTraceExporter);
 		});
@@ -36,7 +36,7 @@ describe("exporters", () => {
 		test("returns ConsoleSpanExporter when OTEL_TRACES_EXPORTER=console", () => {
 			process.env.OTEL_TRACES_EXPORTER = "console";
 
-			const exporter = createTraceExporter({});
+			const exporter = SidecarExporters.createTraceExporter({});
 
 			expect(exporter).toBeInstanceOf(ConsoleSpanExporter);
 		});
@@ -44,13 +44,13 @@ describe("exporters", () => {
 		test("returns null when OTEL_TRACES_EXPORTER=none", () => {
 			process.env.OTEL_TRACES_EXPORTER = "none";
 
-			const exporter = createTraceExporter({});
+			const exporter = SidecarExporters.createTraceExporter({});
 
 			expect(exporter).toBeNull();
 		});
 
 		test("uses custom endpoint from config", () => {
-			const exporter = createTraceExporter({
+			const exporter = SidecarExporters.createTraceExporter({
 				endpoint: "http://custom:4318",
 			});
 
@@ -59,7 +59,7 @@ describe("exporters", () => {
 		});
 
 		test("uses default endpoint when not specified", () => {
-			const exporter = createTraceExporter({});
+			const exporter = SidecarExporters.createTraceExporter({});
 
 			expect(exporter).toBeInstanceOf(OTLPTraceExporter);
 		});
@@ -67,7 +67,7 @@ describe("exporters", () => {
 
 	describe("createMetricsExporter", () => {
 		test("returns OTLPMetricExporter by default", () => {
-			const exporter = createMetricsExporter({});
+			const exporter = SidecarExporters.createMetricsExporter({});
 
 			expect(exporter).toBeInstanceOf(OTLPMetricExporter);
 		});
@@ -75,13 +75,13 @@ describe("exporters", () => {
 		test("returns null when OTEL_METRICS_EXPORTER=none", () => {
 			process.env.OTEL_METRICS_EXPORTER = "none";
 
-			const exporter = createMetricsExporter({});
+			const exporter = SidecarExporters.createMetricsExporter({});
 
 			expect(exporter).toBeNull();
 		});
 
 		test("uses custom endpoint from config", () => {
-			const exporter = createMetricsExporter({
+			const exporter = SidecarExporters.createMetricsExporter({
 				endpoint: "http://custom:4318",
 			});
 
@@ -91,7 +91,7 @@ describe("exporters", () => {
 
 	describe("createLogsExporter", () => {
 		test("returns OTLPLogExporter by default", () => {
-			const exporter = createLogsExporter({});
+			const exporter = SidecarExporters.createLogsExporter({});
 
 			expect(exporter).toBeInstanceOf(OTLPLogExporter);
 		});
@@ -99,13 +99,13 @@ describe("exporters", () => {
 		test("returns null when OTEL_LOGS_EXPORTER=none", () => {
 			process.env.OTEL_LOGS_EXPORTER = "none";
 
-			const exporter = createLogsExporter({});
+			const exporter = SidecarExporters.createLogsExporter({});
 
 			expect(exporter).toBeNull();
 		});
 
 		test("uses custom endpoint from config", () => {
-			const exporter = createLogsExporter({
+			const exporter = SidecarExporters.createLogsExporter({
 				endpoint: "http://custom:4318",
 			});
 

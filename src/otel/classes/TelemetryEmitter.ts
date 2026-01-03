@@ -28,11 +28,11 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { getClaudeVersion, getTerminalType, isOTELEnabled } from "../config.js";
 import { CLAUDE_ATTRS, EVENT_NAMES, PLUGIN_ATTRS, SCOPE } from "../constants.js";
-import { getPluginInfo } from "../plugin-info.js";
 import type { EventData } from "../protocol.js";
 import { getSdkVersion } from "../version.macro.js";
+import { OTELConfig } from "./OTELConfig.js";
+import { PluginInfo } from "./PluginInfo.js";
 
 // SDK version - works both at runtime and when bundled
 const SDK_VERSION = getSdkVersion();
@@ -259,7 +259,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static async preconnect(sessionId: string): Promise<void> {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 		const client = getSidecarClient(sessionId);
 		await client.preconnect();
 	}
@@ -291,7 +291,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitHookExecution(event: HookEventBase, hookName: string, result: HookExecutionResult): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const now = new Date();
@@ -300,8 +300,8 @@ export class TelemetryEmitter {
 		const attributes: Record<string, string | number | boolean> = {
 			[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
 			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
-			[CLAUDE_ATTRS.APP_VERSION]: getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[CLAUDE_ATTRS.HOOK_NAME]: hookName,
 			[CLAUDE_ATTRS.HOOK_TYPE]: result.hookType,
 			[CLAUDE_ATTRS.SOURCE]: "hook",
@@ -417,7 +417,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitHookExecutionDirect(result: HookExecutionDirectResult): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(result.sessionId);
 		const now = new Date();
@@ -426,15 +426,15 @@ export class TelemetryEmitter {
 		const attributes: Record<string, string | number | boolean> = {
 			[CLAUDE_ATTRS.SESSION_ID]: result.sessionId,
 			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
-			[CLAUDE_ATTRS.APP_VERSION]: getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[CLAUDE_ATTRS.HOOK_NAME]: result.hookName,
 			[CLAUDE_ATTRS.HOOK_TYPE]: result.hookType,
 			[CLAUDE_ATTRS.SOURCE]: "hook",
 			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
 			[CLAUDE_ATTRS.DURATION_MS]: result.durationMs,
-			[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
-			[PLUGIN_ATTRS.VERSION]: getPluginInfo().version,
+			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
 		};
 
 		// Add semantic outcome for easy filtering
@@ -496,7 +496,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitSchemaValidationError(sessionId: string, hookName: string, result: SchemaValidationErrorResult): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
@@ -504,16 +504,16 @@ export class TelemetryEmitter {
 		const attributes: Record<string, string | number | boolean> = {
 			[CLAUDE_ATTRS.SESSION_ID]: sessionId,
 			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
-			[CLAUDE_ATTRS.APP_VERSION]: getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[CLAUDE_ATTRS.HOOK_NAME]: hookName,
 			[CLAUDE_ATTRS.SOURCE]: "hook",
 			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
 			[CLAUDE_ATTRS.ERROR]: result.errorMessage,
 			[CLAUDE_ATTRS.VALIDATION_PATH]: result.validationPath,
 			[CLAUDE_ATTRS.VALIDATION_ISSUE_COUNT]: result.issueCount,
-			[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
-			[PLUGIN_ATTRS.VERSION]: getPluginInfo().version,
+			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
 		};
 
 		// Body contains the formatted error for searchability
@@ -563,7 +563,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitEnvValidationError(sessionId: string, hookName: string, result: EnvValidationErrorResult): void {
-		if (!isOTELEnabled()) return;
+		if (!OTELConfig.isEnabled()) return;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
@@ -571,16 +571,16 @@ export class TelemetryEmitter {
 		const attributes: Record<string, string | number | boolean> = {
 			[CLAUDE_ATTRS.SESSION_ID]: sessionId,
 			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.ENV_VALIDATION_ERROR,
-			[CLAUDE_ATTRS.APP_VERSION]: getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[CLAUDE_ATTRS.HOOK_NAME]: hookName,
 			[CLAUDE_ATTRS.SOURCE]: "hook",
 			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
 			[CLAUDE_ATTRS.ERROR]: result.errorMessage,
 			[CLAUDE_ATTRS.VALIDATION_PATH]: result.validationPath,
 			[CLAUDE_ATTRS.VALIDATION_ISSUE_COUNT]: result.issueCount,
-			[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
-			[PLUGIN_ATTRS.VERSION]: getPluginInfo().version,
+			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
 		};
 
 		if (result.envClassName) {
@@ -638,7 +638,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static async emitFatalError(sessionId: string, result: FatalErrorResult, flushTimeoutMs = 500): Promise<boolean> {
-		if (!isOTELEnabled()) return false;
+		if (!OTELConfig.isEnabled()) return false;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
@@ -646,14 +646,14 @@ export class TelemetryEmitter {
 		const attributes: Record<string, string | number | boolean> = {
 			[CLAUDE_ATTRS.SESSION_ID]: sessionId,
 			[CLAUDE_ATTRS.EVENT_NAME]: EVENT_NAMES.FATAL_ERROR,
-			[CLAUDE_ATTRS.APP_VERSION]: getClaudeVersion(),
-			[CLAUDE_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+			[CLAUDE_ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
+			[CLAUDE_ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[CLAUDE_ATTRS.HOOK_NAME]: result.hookName,
 			[CLAUDE_ATTRS.SOURCE]: "hook",
 			[CLAUDE_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
 			[CLAUDE_ATTRS.ERROR]: result.errorMessage,
-			[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
-			[PLUGIN_ATTRS.VERSION]: getPluginInfo().version,
+			[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
+			[PLUGIN_ATTRS.VERSION]: PluginInfo.get().version,
 			[CLAUDE_ATTRS.ERROR_TYPE]: result.errorType,
 		};
 
@@ -702,4 +702,108 @@ export class TelemetryEmitter {
 
 	// Private constructor prevents instantiation
 	private constructor() {}
+
+	/**
+	 * Cached Claude Code version to avoid repeated subprocess calls.
+	 * @internal
+	 */
+	private static _cachedClaudeVersion: string | null = null;
+
+	/**
+	 * Known terminal type mappings from TERM_PROGRAM values.
+	 * @internal
+	 */
+	private static readonly TERMINAL_TYPE_MAP: Record<string, string> = {
+		iTerm: "iTerm",
+		"iTerm.app": "iTerm",
+		Apple_Terminal: "Terminal",
+		vscode: "VSCode",
+		cursor: "Cursor",
+		Hyper: "Hyper",
+		Alacritty: "Alacritty",
+		WezTerm: "WezTerm",
+		kitty: "kitty",
+	};
+
+	/**
+	 * Detect the Claude Code binary version.
+	 *
+	 * @remarks
+	 * Parses output from `claude --version` to extract the version number.
+	 * Results are cached for the lifetime of the process.
+	 *
+	 * @returns Claude Code version (e.g., "1.0.30"), or "unknown" if detection fails
+	 *
+	 * @internal
+	 */
+	private static getClaudeVersion(): string {
+		if (TelemetryEmitter._cachedClaudeVersion !== null) {
+			return TelemetryEmitter._cachedClaudeVersion;
+		}
+
+		try {
+			// Synchronous subprocess call - we cache this so it only happens once
+			const result = Bun.spawnSync(["claude", "--version"]);
+			if (result.exitCode === 0) {
+				const output = result.stdout.toString().trim();
+				// Extract version number (e.g., "1.0.30" from "claude 1.0.30")
+				const match = output.match(/\d+\.\d+\.\d+/);
+				if (match) {
+					TelemetryEmitter._cachedClaudeVersion = match[0];
+					return TelemetryEmitter._cachedClaudeVersion;
+				}
+			}
+		} catch {
+			// Command failed or not found
+		}
+
+		TelemetryEmitter._cachedClaudeVersion = "unknown";
+		return TelemetryEmitter._cachedClaudeVersion;
+	}
+
+	/**
+	 * Detect the terminal type from environment variables.
+	 *
+	 * @remarks
+	 * Checks TERM_PROGRAM and other indicators to determine the terminal.
+	 * Aligns with Anthropic's terminal.type attribute values.
+	 *
+	 * @returns Terminal type (e.g., "iTerm", "vscode", "cursor", "tmux"), or "unknown"
+	 *
+	 * @internal
+	 */
+	private static getTerminalType(): string {
+		// Check for tmux first (can be nested in any terminal)
+		if (Bun.env.TMUX) {
+			return "tmux";
+		}
+
+		// Check for screen
+		if (Bun.env.STY) {
+			return "screen";
+		}
+
+		// Check TERM_PROGRAM for common terminals
+		const termProgram = Bun.env.TERM_PROGRAM;
+		if (termProgram) {
+			const mapped = TelemetryEmitter.TERMINAL_TYPE_MAP[termProgram];
+			if (mapped) {
+				return mapped;
+			}
+			// Return the value as-is if not in map (preserve original casing)
+			return termProgram;
+		}
+
+		// Check for VS Code specific indicators
+		if (Bun.env.VSCODE_GIT_IPC_HANDLE || Bun.env.VSCODE_INJECTION) {
+			return "VSCode";
+		}
+
+		// Check for Cursor specific indicators
+		if (Bun.env.CURSOR_TRACE_ID) {
+			return "Cursor";
+		}
+
+		return "unknown";
+	}
 }

@@ -263,48 +263,6 @@ export interface SidecarResponse {
 	version?: string;
 }
 
-/**
- * Serialize a message to JSON Line format.
- * Uses a custom replacer to handle BigInt values.
- * @public
- */
-export function serializeMessage(message: SidecarMessage): string {
-	return `${JSON.stringify(message, bigIntReplacer)}\n`;
-}
-
-/**
- * Parse a JSON Line message.
- * Returns null if parsing fails.
- * @public
- */
-export function parseMessage(line: string): SidecarMessage | null {
-	try {
-		const trimmed = line.trim();
-		if (!trimmed) return null;
-		return JSON.parse(trimmed, bigIntReviver) as SidecarMessage;
-	} catch {
-		return null;
-	}
-}
-
-/**
- * JSON replacer for BigInt values.
- * Converts BigInt to string with "n" suffix.
- */
-function bigIntReplacer(_key: string, value: unknown): unknown {
-	if (typeof value === "bigint") {
-		return `${value.toString()}n`;
-	}
-	return value;
-}
-
-/**
- * JSON reviver for BigInt values.
- * Converts strings ending in "n" back to BigInt.
- */
-function bigIntReviver(_key: string, value: unknown): unknown {
-	if (typeof value === "string" && /^\d+n$/.test(value)) {
-		return BigInt(value.slice(0, -1));
-	}
-	return value;
-}
+// Note: serializeMessage and parseMessage functions have been moved to the
+// SidecarMessage class in ./classes/SidecarMessage.ts
+// Use SidecarMessage.serialize() and SidecarMessage.parse() instead.

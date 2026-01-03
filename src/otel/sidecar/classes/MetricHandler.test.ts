@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { MetricData } from "../../protocol.js";
-import * as providers from "../providers.js";
-import { clearMetricCaches, handleMetric } from "./metric.js";
+import { MetricHandler } from "./MetricHandler.js";
+import * as SidecarProvidersModule from "./SidecarProviders.js";
 
-describe("handleMetric", () => {
+describe("MetricHandler", () => {
 	let mockCounter: { add: ReturnType<typeof mock> };
 	let mockUpDownCounter: { add: ReturnType<typeof mock> };
 	let mockHistogram: { record: ReturnType<typeof mock> };
@@ -27,14 +27,16 @@ describe("handleMetric", () => {
 		};
 
 		// Mock getMeter
-		spyOn(providers, "getMeter").mockReturnValue(mockMeter as unknown as ReturnType<typeof providers.getMeter>);
+		spyOn(SidecarProvidersModule.SidecarProviders, "getMeter").mockReturnValue(
+			mockMeter as unknown as ReturnType<typeof SidecarProvidersModule.SidecarProviders.getMeter>,
+		);
 
 		// Clear caches before each test
-		clearMetricCaches();
+		MetricHandler.clearCaches();
 	});
 
 	afterEach(() => {
-		clearMetricCaches();
+		MetricHandler.clearCaches();
 	});
 
 	describe("counter metrics", () => {
@@ -48,7 +50,7 @@ describe("handleMetric", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			handleMetric(data);
+			MetricHandler.handle(data);
 
 			expect(mockMeter.createCounter).toHaveBeenCalledWith("test.counter", {
 				description: "Test counter",
@@ -64,7 +66,7 @@ describe("handleMetric", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			handleMetric(data);
+			MetricHandler.handle(data);
 
 			expect(mockMeter.createCounter).toHaveBeenCalled();
 			expect(mockCounter.add).toHaveBeenCalledWith(10, undefined);
@@ -78,9 +80,9 @@ describe("handleMetric", () => {
 			};
 
 			// First call
-			handleMetric(data);
+			MetricHandler.handle(data);
 			// Second call with same name
-			handleMetric({ ...data, type: { kind: "counter", value: 2 } });
+			MetricHandler.handle({ ...data, type: { kind: "counter", value: 2 } });
 
 			// Counter should only be created once
 			expect(mockMeter.createCounter).toHaveBeenCalledTimes(1);
@@ -98,7 +100,7 @@ describe("handleMetric", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			handleMetric(data);
+			MetricHandler.handle(data);
 
 			expect(mockMeter.createUpDownCounter).toHaveBeenCalledWith("test.updown", {
 				description: "Test up-down counter",
@@ -115,9 +117,9 @@ describe("handleMetric", () => {
 			};
 
 			// First call
-			handleMetric(data);
+			MetricHandler.handle(data);
 			// Second call with same name
-			handleMetric({ ...data, type: { kind: "counter", value: -1, monotonic: false } });
+			MetricHandler.handle({ ...data, type: { kind: "counter", value: -1, monotonic: false } });
 
 			// UpDownCounter should only be created once
 			expect(mockMeter.createUpDownCounter).toHaveBeenCalledTimes(1);
@@ -137,7 +139,7 @@ describe("handleMetric", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			handleMetric(data);
+			MetricHandler.handle(data);
 
 			expect(mockMeter.createUpDownCounter).toHaveBeenCalledWith("test.gauge", {
 				description: "Test gauge",
@@ -154,9 +156,9 @@ describe("handleMetric", () => {
 			};
 
 			// First call
-			handleMetric(data);
+			MetricHandler.handle(data);
 			// Second call with same name
-			handleMetric({ ...data, type: { kind: "gauge", value: 60 } });
+			MetricHandler.handle({ ...data, type: { kind: "gauge", value: 60 } });
 
 			// UpDownCounter should only be created once
 			expect(mockMeter.createUpDownCounter).toHaveBeenCalledTimes(1);
@@ -176,7 +178,7 @@ describe("handleMetric", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			handleMetric(data);
+			MetricHandler.handle(data);
 
 			expect(mockMeter.createHistogram).toHaveBeenCalledWith("test.histogram", {
 				description: "Test histogram",
@@ -193,9 +195,9 @@ describe("handleMetric", () => {
 			};
 
 			// First call
-			handleMetric(data);
+			MetricHandler.handle(data);
 			// Second call with same name
-			handleMetric({ ...data, type: { kind: "histogram", value: 200 } });
+			MetricHandler.handle({ ...data, type: { kind: "histogram", value: 200 } });
 
 			// Histogram should only be created once
 			expect(mockMeter.createHistogram).toHaveBeenCalledTimes(1);
@@ -210,7 +212,7 @@ describe("handleMetric", () => {
 				timeNs: BigInt(Date.now() * 1_000_000),
 			};
 
-			handleMetric(data);
+			MetricHandler.handle(data);
 
 			expect(mockMeter.createHistogram).toHaveBeenCalledWith("test.histogram.minimal", {
 				description: undefined,
@@ -221,7 +223,7 @@ describe("handleMetric", () => {
 	});
 });
 
-describe("clearMetricCaches", () => {
+describe("MetricHandler.clearCaches", () => {
 	test("clears all caches", () => {
 		const mockCounter = { add: mock(() => {}) };
 		const mockMeter = {
@@ -230,20 +232,22 @@ describe("clearMetricCaches", () => {
 			createHistogram: mock(() => ({ record: mock(() => {}) })),
 		};
 
-		spyOn(providers, "getMeter").mockReturnValue(mockMeter as unknown as ReturnType<typeof providers.getMeter>);
+		spyOn(SidecarProvidersModule.SidecarProviders, "getMeter").mockReturnValue(
+			mockMeter as unknown as ReturnType<typeof SidecarProvidersModule.SidecarProviders.getMeter>,
+		);
 
 		// Create some cached instruments
-		handleMetric({
+		MetricHandler.handle({
 			name: "cached.counter",
 			type: { kind: "counter", value: 1 },
 			timeNs: BigInt(Date.now() * 1_000_000),
 		});
 
 		// Clear caches
-		clearMetricCaches();
+		MetricHandler.clearCaches();
 
 		// Create same metric again - should create new instrument
-		handleMetric({
+		MetricHandler.handle({
 			name: "cached.counter",
 			type: { kind: "counter", value: 1 },
 			timeNs: BigInt(Date.now() * 1_000_000),

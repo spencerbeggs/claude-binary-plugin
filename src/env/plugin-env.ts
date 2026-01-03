@@ -50,7 +50,7 @@
  * @module
  */
 
-import { isOTELEnabled } from "../otel/config.js";
+import { OTELConfig } from "../otel/classes/OTELConfig.js";
 import type { EnvValidationErrorResult } from "../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
 import { DebugLogger } from "../utils/debug-logger.js";
@@ -1585,7 +1585,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 
 		if (!validation.success) {
 			// Emit to OTEL if enabled
-			if (isOTELEnabled()) {
+			if (OTELConfig.isEnabled()) {
 				const issues = validation.error.issues ?? [];
 				const firstIssue = issues[0];
 				// Convert PropertyKey[] to string for OTEL attribution

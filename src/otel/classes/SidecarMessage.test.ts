@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { EventMessage, MetricMessage, PingMessage, ShutdownMessage, SpanMessage } from "./protocol.js";
-import { parseMessage, serializeMessage } from "./protocol.js";
+import type { EventMessage, MetricMessage, PingMessage, ShutdownMessage, SpanMessage } from "../protocol.js";
+import { SidecarMessage } from "./SidecarMessage.js";
 
-describe("protocol", () => {
-	describe("serializeMessage", () => {
+describe("SidecarMessage", () => {
+	describe("serialize", () => {
 		test("serializes ping message", () => {
 			const message: PingMessage = {
 				type: "ping",
@@ -14,7 +14,7 @@ describe("protocol", () => {
 				},
 			};
 
-			const serialized = serializeMessage(message);
+			const serialized = SidecarMessage.serialize(message);
 
 			expect(serialized).toEndWith("\n");
 			expect(JSON.parse(serialized.trim())).toEqual(message);
@@ -26,7 +26,7 @@ describe("protocol", () => {
 				sessionId: "test-session-123",
 			};
 
-			const serialized = serializeMessage(message);
+			const serialized = SidecarMessage.serialize(message);
 
 			expect(serialized).toEndWith("\n");
 			expect(JSON.parse(serialized.trim())).toEqual(message);
@@ -47,7 +47,7 @@ describe("protocol", () => {
 				},
 			};
 
-			const serialized = serializeMessage(message);
+			const serialized = SidecarMessage.serialize(message);
 
 			// BigInt should be serialized as string with "n" suffix
 			expect(serialized).toContain('"1700000000000000000n"');
@@ -66,7 +66,7 @@ describe("protocol", () => {
 				},
 			};
 
-			const serialized = serializeMessage(message);
+			const serialized = SidecarMessage.serialize(message);
 
 			expect(serialized).toEndWith("\n");
 			expect(serialized).toContain('"type":"event"');
@@ -84,18 +84,18 @@ describe("protocol", () => {
 				},
 			};
 
-			const serialized = serializeMessage(message);
+			const serialized = SidecarMessage.serialize(message);
 
 			expect(serialized).toEndWith("\n");
 			expect(serialized).toContain('"type":"metric"');
 		});
 	});
 
-	describe("parseMessage", () => {
+	describe("parse", () => {
 		test("parses ping message", () => {
 			const line = '{"type":"ping","sessionId":"test-123","config":{"endpoint":"http://localhost:4318"}}';
 
-			const message = parseMessage(line);
+			const message = SidecarMessage.parse(line);
 
 			expect(message).not.toBeNull();
 			expect(message?.type).toBe("ping");
@@ -108,7 +108,7 @@ describe("protocol", () => {
 		test("parses shutdown message", () => {
 			const line = '{"type":"shutdown"}';
 
-			const message = parseMessage(line);
+			const message = SidecarMessage.parse(line);
 
 			expect(message).not.toBeNull();
 			expect(message?.type).toBe("shutdown");
@@ -118,7 +118,7 @@ describe("protocol", () => {
 			const line =
 				'{"type":"span","sessionId":"test-123","data":{"spanId":"abc","traceId":"def","name":"test","kind":"internal","startTimeNs":"1700000000000000000n"}}';
 
-			const message = parseMessage(line);
+			const message = SidecarMessage.parse(line);
 
 			expect(message).not.toBeNull();
 			expect(message?.type).toBe("span");
@@ -128,19 +128,19 @@ describe("protocol", () => {
 		});
 
 		test("returns null for invalid JSON", () => {
-			const message = parseMessage("not valid json");
+			const message = SidecarMessage.parse("not valid json");
 
 			expect(message).toBeNull();
 		});
 
 		test("returns null for empty line", () => {
-			const message = parseMessage("");
+			const message = SidecarMessage.parse("");
 
 			expect(message).toBeNull();
 		});
 
 		test("returns null for whitespace-only line", () => {
-			const message = parseMessage("   \t   ");
+			const message = SidecarMessage.parse("   \t   ");
 
 			expect(message).toBeNull();
 		});
@@ -148,7 +148,7 @@ describe("protocol", () => {
 		test("trims whitespace before parsing", () => {
 			const line = '  {"type":"shutdown"}  \n';
 
-			const message = parseMessage(line);
+			const message = SidecarMessage.parse(line);
 
 			expect(message).not.toBeNull();
 			expect(message?.type).toBe("shutdown");
@@ -168,8 +168,8 @@ describe("protocol", () => {
 				},
 			};
 
-			const serialized = serializeMessage(original);
-			const parsed = parseMessage(serialized);
+			const serialized = SidecarMessage.serialize(original);
+			const parsed = SidecarMessage.parse(serialized);
 
 			expect(parsed).toEqual(original);
 		});
@@ -196,8 +196,8 @@ describe("protocol", () => {
 				},
 			};
 
-			const serialized = serializeMessage(original);
-			const parsed = parseMessage(serialized);
+			const serialized = SidecarMessage.serialize(original);
+			const parsed = SidecarMessage.parse(serialized);
 
 			expect(parsed).toEqual(original);
 		});

@@ -29,11 +29,11 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { isOTELEnabled } from "../config.js";
 import { CLAUDE_ATTRS, PLUGIN_ATTRS, SPAN_NAMES } from "../constants.js";
-import { TelemetryEmitter } from "./TelemetryEmitter.js";
-import { getPluginInfo } from "../plugin-info.js";
 import type { SpanData } from "../protocol.js";
+import { OTELConfig } from "./OTELConfig.js";
+import { PluginInfo } from "./PluginInfo.js";
+import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
 /**
  * Generate a random hex string for span/trace IDs.
@@ -117,7 +117,7 @@ export class TelemetrySpan {
 		handler: () => Promise<T>,
 		attributes?: Record<string, string | number | boolean>,
 	): Promise<T> {
-		if (!isOTELEnabled()) {
+		if (!OTELConfig.isEnabled()) {
 			return handler();
 		}
 
@@ -149,7 +149,7 @@ export class TelemetrySpan {
 				attributes: {
 					[CLAUDE_ATTRS.SESSION_ID]: event.session_id,
 					[CLAUDE_ATTRS.HOOK_TYPE]: event.hook_event_name,
-					[PLUGIN_ATTRS.NAME]: getPluginInfo().name,
+					[PLUGIN_ATTRS.NAME]: PluginInfo.get().name,
 					...attributes,
 				},
 				status: {
@@ -168,8 +168,8 @@ export class TelemetrySpan {
 			const hookName = (attributes?.[CLAUDE_ATTRS.HOOK_NAME] as string) || spanName.replace("hook.", "");
 			TelemetryEmitter.emitHookExecution(event, hookName, {
 				hookType: event.hook_event_name,
-				pluginName: getPluginInfo().name,
-				pluginVersion: getPluginInfo().version,
+				pluginName: PluginInfo.get().name,
+				pluginVersion: PluginInfo.get().version,
 				durationMs,
 				success: statusCode === "ok",
 				error: errorMessage,
