@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { ClaudeBinaryPlugin, getOutputSchema, isPipelineHook, isRawHook } from "./config.js";
-import type { PreToolUseOutput, SessionStartOutput } from "./types.js";
+import type { PreToolUsePipelineOutput, SessionStartPipelineOutput } from "./types.js";
 import {
 	OutputSchemas,
 	PostToolUseOutputSchema,
@@ -200,7 +200,7 @@ describe("ClaudeBinaryPlugin", () => {
 				SessionStart: [
 					{
 						name: "test-context",
-						pipeline: async (): Promise<SessionStartOutput> => {
+						pipeline: async (): Promise<SessionStartPipelineOutput> => {
 							return {
 								status: "executed",
 								action: "context",
@@ -227,7 +227,7 @@ describe("ClaudeBinaryPlugin", () => {
 					{
 						name: "allowlist",
 						tools: ["Bash"],
-						pipeline: (): PreToolUseOutput => ({
+						pipeline: (): PreToolUsePipelineOutput => ({
 							status: "executed",
 							action: "allow",
 							summary: "allowed: allowlist",
@@ -236,7 +236,7 @@ describe("ClaudeBinaryPlugin", () => {
 					{
 						name: "security",
 						tools: ["Write", "Edit"],
-						pipeline: (): PreToolUseOutput => ({
+						pipeline: (): PreToolUsePipelineOutput => ({
 							status: "executed",
 							action: "ask",
 							summary: "ask: security check",
@@ -284,8 +284,8 @@ describe("ClaudeBinaryPlugin", () => {
 				SessionStart: [
 					{
 						name: "typed-hook",
-						pipeline: (): SessionStartOutput => {
-							// Must return SessionStartOutput shape
+						pipeline: (): SessionStartPipelineOutput => {
+							// Must return SessionStartPipelineOutput shape
 							return {
 								status: "executed",
 								action: "context",
@@ -298,8 +298,8 @@ describe("ClaudeBinaryPlugin", () => {
 				PreToolUse: [
 					{
 						name: "typed-pretool",
-						pipeline: (): PreToolUseOutput => {
-							// Must return PreToolUseOutput shape
+						pipeline: (): PreToolUsePipelineOutput => {
+							// Must return PreToolUsePipelineOutput shape
 							return {
 								status: "executed",
 								action: "allow",

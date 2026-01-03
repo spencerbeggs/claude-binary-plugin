@@ -421,7 +421,7 @@ export const PreToolUseOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type PreToolUseOutput = z.infer<typeof PreToolUseOutputSchema>;
+export type PreToolUsePipelineOutput = z.infer<typeof PreToolUseOutputSchema>;
 
 // =============================================================================
 // POSTTOOLUSE OUTPUT
@@ -499,7 +499,7 @@ export const PostToolUseOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type PostToolUseOutput = z.infer<typeof PostToolUseOutputSchema>;
+export type PostToolUsePipelineOutput = z.infer<typeof PostToolUseOutputSchema>;
 
 // =============================================================================
 // SESSIONSTART OUTPUT
@@ -557,7 +557,7 @@ export const SessionStartOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type SessionStartOutput = z.infer<typeof SessionStartOutputSchema>;
+export type SessionStartPipelineOutput = z.infer<typeof SessionStartOutputSchema>;
 
 // =============================================================================
 // STOP / SUBAGENTSTOP OUTPUT
@@ -618,7 +618,7 @@ export const StopOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type StopOutput = z.infer<typeof StopOutputSchema>;
+export type StopPipelineOutput = z.infer<typeof StopOutputSchema>;
 
 // Alias for SubagentStop
 /**
@@ -628,7 +628,7 @@ export type StopOutput = z.infer<typeof StopOutputSchema>;
  */
 export const SubagentStopOutputSchema = StopOutputSchema;
 /** @public */
-export type SubagentStopOutput = StopOutput;
+export type SubagentStopPipelineOutput = StopPipelineOutput;
 
 // =============================================================================
 // USERPROMPTSUBMIT OUTPUT
@@ -686,7 +686,7 @@ export const UserPromptSubmitOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type UserPromptSubmitOutput = z.infer<typeof UserPromptSubmitOutputSchema>;
+export type UserPromptSubmitPipelineOutput = z.infer<typeof UserPromptSubmitOutputSchema>;
 
 // =============================================================================
 // PERMISSIONREQUEST OUTPUT
@@ -746,7 +746,7 @@ export const PermissionRequestOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type PermissionRequestOutput = z.infer<typeof PermissionRequestOutputSchema>;
+export type PermissionRequestPipelineOutput = z.infer<typeof PermissionRequestOutputSchema>;
 
 // =============================================================================
 // PASSTHROUGH OUTPUTS (SessionEnd, PreCompact, Notification)
@@ -798,7 +798,7 @@ export const PassthroughOutputSchema = z.discriminatedUnion("status", [
 ]);
 
 /** @public */
-export type PassthroughOutput = z.infer<typeof PassthroughOutputSchema>;
+export type PassthroughPipelineOutput = z.infer<typeof PassthroughOutputSchema>;
 
 // Aliases for specific passthrough hooks
 /**
@@ -808,7 +808,7 @@ export type PassthroughOutput = z.infer<typeof PassthroughOutputSchema>;
  */
 export const SessionEndOutputSchema = PassthroughOutputSchema;
 /** @public */
-export type SessionEndOutput = PassthroughOutput;
+export type SessionEndPipelineOutput = PassthroughPipelineOutput;
 
 /**
  * PreCompact pipeline output (alias for PassthroughOutputSchema).
@@ -817,7 +817,7 @@ export type SessionEndOutput = PassthroughOutput;
  */
 export const PreCompactOutputSchema = PassthroughOutputSchema;
 /** @public */
-export type PreCompactOutput = PassthroughOutput;
+export type PreCompactPipelineOutput = PassthroughPipelineOutput;
 
 /**
  * Notification pipeline output (alias for PassthroughOutputSchema).
@@ -826,7 +826,7 @@ export type PreCompactOutput = PassthroughOutput;
  */
 export const NotificationOutputSchema = PassthroughOutputSchema;
 /** @public */
-export type NotificationOutput = PassthroughOutput;
+export type NotificationPipelineOutput = PassthroughPipelineOutput;
 
 // =============================================================================
 // OUTPUT SCHEMA MAP
@@ -870,16 +870,16 @@ export const OutputSchemas = {
  * @public
  */
 export type AnyPipelineOutput =
-	| PreToolUseOutput
-	| PostToolUseOutput
-	| SessionStartOutput
-	| SessionEndOutput
-	| StopOutput
-	| SubagentStopOutput
-	| UserPromptSubmitOutput
-	| PreCompactOutput
-	| NotificationOutput
-	| PermissionRequestOutput;
+	| PreToolUsePipelineOutput
+	| PostToolUsePipelineOutput
+	| SessionStartPipelineOutput
+	| SessionEndPipelineOutput
+	| StopPipelineOutput
+	| SubagentStopPipelineOutput
+	| UserPromptSubmitPipelineOutput
+	| PreCompactPipelineOutput
+	| NotificationPipelineOutput
+	| PermissionRequestPipelineOutput;
 
 /**
  * Type guard to check if an output uses the pipeline format.

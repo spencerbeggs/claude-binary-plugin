@@ -6,7 +6,7 @@
  * @module
  */
 
-import type { OTELConfig, SidecarMessage, SidecarResponse } from "../../protocol.js";
+import type { OTELProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";
 import { EventHandler } from "./EventHandler.js";
 import { MetricHandler } from "./MetricHandler.js";
 import { SidecarLog } from "./SidecarLog.js";
@@ -35,7 +35,7 @@ export class SidecarRouter {
 	/**
 	 * Per-session configuration storage.
 	 */
-	private static sessionConfigs = new Map<string, OTELConfig>();
+	private static sessionConfigs = new Map<string, OTELProtocolConfig>();
 
 	/**
 	 * Handle an incoming sidecar message.
@@ -45,7 +45,7 @@ export class SidecarRouter {
 	 * @param message - The parsed message from a hook
 	 * @returns Response to send back, or undefined for fire-and-forget
 	 */
-	static async handleMessage(message: SidecarMessage): Promise<SidecarResponse | undefined> {
+	static async handleMessage(message: SidecarProtocolMessage): Promise<SidecarResponse | undefined> {
 		switch (message.type) {
 			case "ping": {
 				// Store session configuration
@@ -105,7 +105,7 @@ export class SidecarRouter {
 				const _exhaustive: never = message;
 				return {
 					ok: false,
-					error: `Unknown message type: ${(_exhaustive as SidecarMessage).type}`,
+					error: `Unknown message type: ${(_exhaustive as SidecarProtocolMessage).type}`,
 				};
 			}
 		}

@@ -169,7 +169,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PreToolUseOutput",
+              "text": "PreToolUsePipelineOutput",
               "canonicalReference": "claude-binary-plugin!PreToolUsePipelineOutput:type"
             },
             {
@@ -178,7 +178,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PostToolUseOutput",
+              "text": "PostToolUsePipelineOutput",
               "canonicalReference": "claude-binary-plugin!PostToolUsePipelineOutput:type"
             },
             {
@@ -187,7 +187,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SessionStartOutput",
+              "text": "SessionStartPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SessionStartPipelineOutput:type"
             },
             {
@@ -196,7 +196,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SessionEndOutput",
+              "text": "SessionEndPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SessionEndPipelineOutput:type"
             },
             {
@@ -205,7 +205,7 @@
             },
             {
               "kind": "Reference",
-              "text": "StopOutput",
+              "text": "StopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!StopPipelineOutput:type"
             },
             {
@@ -214,7 +214,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SubagentStopOutput",
+              "text": "SubagentStopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SubagentStopPipelineOutput:type"
             },
             {
@@ -223,7 +223,7 @@
             },
             {
               "kind": "Reference",
-              "text": "UserPromptSubmitOutput",
+              "text": "UserPromptSubmitPipelineOutput",
               "canonicalReference": "claude-binary-plugin!UserPromptSubmitPipelineOutput:type"
             },
             {
@@ -232,7 +232,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PreCompactOutput",
+              "text": "PreCompactPipelineOutput",
               "canonicalReference": "claude-binary-plugin!PreCompactPipelineOutput:type"
             },
             {
@@ -241,7 +241,7 @@
             },
             {
               "kind": "Reference",
-              "text": "NotificationOutput",
+              "text": "NotificationPipelineOutput",
               "canonicalReference": "claude-binary-plugin!NotificationPipelineOutput:type"
             },
             {
@@ -250,7 +250,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PermissionRequestOutput",
+              "text": "PermissionRequestPipelineOutput",
               "canonicalReference": "claude-binary-plugin!PermissionRequestPipelineOutput:type"
             },
             {
@@ -22392,7 +22392,7 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "CommandOutput",
+                  "text": "MockCommandOutput",
                   "canonicalReference": "claude-binary-plugin!MockCommandOutput:interface"
                 },
                 {
@@ -22442,11 +22442,11 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!MockCommandOutput:interface",
-          "docComment": "/**\n * Result of capturing command output\n *\n * @public\n */\n",
+          "docComment": "/**\n * Result of capturing command output for testing.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export interface CommandOutput "
+              "text": "export interface MockCommandOutput "
             }
           ],
           "fileUrlPath": "src/testing/mocks.ts",
@@ -22831,7 +22831,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export interface FatalErrorResult "
+              "text": "export interface MockFatalErrorResult "
             }
           ],
           "fileUrlPath": "src/testing/mocks.ts",
@@ -23650,7 +23650,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!Mocks.runCommand:member(1)",
-              "docComment": "/**\n * Run a command with mocked context.\n *\n * @param args - CLI arguments\n *\n * @param mainFn - The main function to run\n *\n * @returns CommandOutput with captured logs, errors, and exit code\n *\n * @public\n */\n",
+              "docComment": "/**\n * Run a command with mocked context.\n *\n * @param args - CLI arguments\n *\n * @param mainFn - The main function to run\n *\n * @returns MockCommandOutput with captured logs, errors, and exit code\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -23692,7 +23692,7 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "CommandOutput",
+                  "text": "MockCommandOutput",
                   "canonicalReference": "claude-binary-plugin!MockCommandOutput:interface"
                 },
                 {
@@ -23960,7 +23960,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!Mocks.testFatalError:member(1)",
-              "docComment": "/**\n * Test a fatal error handler.\n *\n * @param handler - The fatal error handler function to test\n *\n * @param error - The error to pass to the handler\n *\n * @returns FatalErrorResult with captured exit code and error messages\n *\n * @public\n */\n",
+              "docComment": "/**\n * Test a fatal error handler.\n *\n * @param handler - The fatal error handler function to test\n *\n * @param error - The error to pass to the handler\n *\n * @returns MockFatalErrorResult with captured exit code and error messages\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -23984,7 +23984,7 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "FatalErrorResult",
+                  "text": "MockFatalErrorResult",
                   "canonicalReference": "claude-binary-plugin!MockFatalErrorResult:interface"
                 },
                 {
@@ -24489,7 +24489,7 @@
             },
             {
               "kind": "Reference",
-              "text": "NotificationOutput",
+              "text": "NotificationPipelineOutput",
               "canonicalReference": "claude-binary-plugin!NotificationPipelineOutput:type"
             },
             {
@@ -25458,7 +25458,7 @@
             },
             {
               "kind": "Reference",
-              "text": "NotificationOutput",
+              "text": "NotificationPipelineOutput",
               "canonicalReference": "claude-binary-plugin!NotificationPipelineOutput:type"
             },
             {
@@ -25509,12 +25509,12 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type NotificationOutput = "
+              "text": "export type NotificationPipelineOutput = "
             },
             {
               "kind": "Reference",
-              "text": "PassthroughOutput",
-              "canonicalReference": "claude-binary-plugin!PassthroughOutput:type"
+              "text": "PassthroughPipelineOutput",
+              "canonicalReference": "claude-binary-plugin!PassthroughPipelineOutput:type"
             },
             {
               "kind": "Content",
@@ -26396,22 +26396,22 @@
         },
         {
           "kind": "Interface",
-          "canonicalReference": "claude-binary-plugin!OTELConfigProtocol:interface",
+          "canonicalReference": "claude-binary-plugin!OTELProtocolConfig:interface",
           "docComment": "/**\n * OTEL exporter configuration sent from hooks to sidecar. The sidecar uses this to configure its OTEL providers.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export interface OTELConfig "
+              "text": "export interface OTELProtocolConfig "
             }
           ],
           "fileUrlPath": "src/otel/protocol.ts",
           "releaseTag": "Public",
-          "name": "OTELConfigProtocol",
+          "name": "OTELProtocolConfig",
           "preserveMemberOrder": false,
           "members": [
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#endpoint:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#endpoint:member",
               "docComment": "/**\n * OTLP endpoint URL (e.g., \"http://localhost:4318\")\n *\n * @defaultValue \"http://localhost:4318\"\n */\n",
               "excerptTokens": [
                 {
@@ -26438,7 +26438,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#exportTimeoutMs:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#exportTimeoutMs:member",
               "docComment": "/**\n * Export timeout in milliseconds.\n *\n * @defaultValue 30000\n */\n",
               "excerptTokens": [
                 {
@@ -26465,7 +26465,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#headers:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#headers:member",
               "docComment": "/**\n * Headers to include with OTLP requests (e.g., auth tokens).\n */\n",
               "excerptTokens": [
                 {
@@ -26497,7 +26497,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#marketplaceName:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#marketplaceName:member",
               "docComment": "/**\n * Marketplace name the plugin belongs to.\n */\n",
               "excerptTokens": [
                 {
@@ -26524,7 +26524,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#pluginName:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#pluginName:member",
               "docComment": "/**\n * Plugin name for resource attributes. Set via setPluginInfo() at startup.\n */\n",
               "excerptTokens": [
                 {
@@ -26551,7 +26551,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#protocol:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#protocol:member",
               "docComment": "/**\n * Protocol to use for export. HTTP is preferred for Bun compatibility (gRPC has issues).\n *\n * @defaultValue \"http\"\n */\n",
               "excerptTokens": [
                 {
@@ -26578,7 +26578,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#resourceAttributes:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#resourceAttributes:member",
               "docComment": "/**\n * Additional resource attributes to include with all telemetry.\n */\n",
               "excerptTokens": [
                 {
@@ -26610,7 +26610,7 @@
             },
             {
               "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!OTELConfigProtocol#serviceName:member",
+              "canonicalReference": "claude-binary-plugin!OTELProtocolConfig#serviceName:member",
               "docComment": "/**\n * Service name for OTEL resource.\n *\n * @defaultValue \"claude-code-plugin\"\n */\n",
               "excerptTokens": [
                 {
@@ -32553,46 +32553,6 @@
           "extendsTokenRanges": []
         },
         {
-          "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!PassthroughOutput:type",
-          "docComment": "/**\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export type PassthroughOutput = "
-            },
-            {
-              "kind": "Reference",
-              "text": "z.infer",
-              "canonicalReference": "zod!output:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "PassthroughOutputSchema",
-              "canonicalReference": "claude-binary-plugin!PassthroughOutputSchema:var"
-            },
-            {
-              "kind": "Content",
-              "text": ">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/pipeline/types.ts",
-          "releaseTag": "Public",
-          "name": "PassthroughOutput",
-          "typeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 5
-          }
-        },
-        {
           "kind": "Variable",
           "canonicalReference": "claude-binary-plugin!PassthroughOutputSchema:var",
           "docComment": "/**\n * Passthrough hooks that only support executed/skipped/disabled/error states.\n *\n * @schema @public\n */\n",
@@ -33072,6 +33032,46 @@
         },
         {
           "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!PassthroughPipelineOutput:type",
+          "docComment": "/**\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type PassthroughPipelineOutput = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "PassthroughOutputSchema",
+              "canonicalReference": "claude-binary-plugin!PassthroughOutputSchema:var"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/types.ts",
+          "releaseTag": "Public",
+          "name": "PassthroughPipelineOutput",
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!PermissionRequestBehavior:type",
           "docComment": "/**\n * Decision behavior for PermissionRequest hooks.\n *\n * @public\n */\n",
           "excerptTokens": [
@@ -33534,7 +33534,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PermissionRequestOutput",
+              "text": "PermissionRequestPipelineOutput",
               "canonicalReference": "claude-binary-plugin!PermissionRequestPipelineOutput:type"
             },
             {
@@ -34769,7 +34769,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PermissionRequestOutput",
+              "text": "PermissionRequestPipelineOutput",
               "canonicalReference": "claude-binary-plugin!PermissionRequestPipelineOutput:type"
             },
             {
@@ -34820,7 +34820,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type PermissionRequestOutput = "
+              "text": "export type PermissionRequestPipelineOutput = "
             },
             {
               "kind": "Reference",
@@ -35494,8 +35494,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "OTELConfig",
-                  "canonicalReference": "claude-binary-plugin!OTELConfigProtocol:interface"
+                  "text": "OTELProtocolConfig",
+                  "canonicalReference": "claude-binary-plugin!OTELProtocolConfig:interface"
                 },
                 {
                   "kind": "Content",
@@ -42297,7 +42297,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PostToolUseOutput",
+              "text": "PostToolUsePipelineOutput",
               "canonicalReference": "claude-binary-plugin!PostToolUsePipelineOutput:type"
             },
             {
@@ -43735,7 +43735,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PostToolUseOutput",
+              "text": "PostToolUsePipelineOutput",
               "canonicalReference": "claude-binary-plugin!PostToolUsePipelineOutput:type"
             },
             {
@@ -43786,7 +43786,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type PostToolUseOutput = "
+              "text": "export type PostToolUsePipelineOutput = "
             },
             {
               "kind": "Reference",
@@ -44386,7 +44386,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PreCompactOutput",
+              "text": "PreCompactPipelineOutput",
               "canonicalReference": "claude-binary-plugin!PreCompactPipelineOutput:type"
             },
             {
@@ -45355,8 +45355,8 @@
             },
             {
               "kind": "Reference",
-              "text": "PassthroughOutput",
-              "canonicalReference": "claude-binary-plugin!PassthroughOutput:type"
+              "text": "PassthroughPipelineOutput",
+              "canonicalReference": "claude-binary-plugin!PassthroughPipelineOutput:type"
             },
             {
               "kind": "Content",
@@ -45406,12 +45406,12 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type PreCompactOutput = "
+              "text": "export type PreCompactPipelineOutput = "
             },
             {
               "kind": "Reference",
-              "text": "PassthroughOutput",
-              "canonicalReference": "claude-binary-plugin!PassthroughOutput:type"
+              "text": "PassthroughPipelineOutput",
+              "canonicalReference": "claude-binary-plugin!PassthroughPipelineOutput:type"
             },
             {
               "kind": "Content",
@@ -45921,7 +45921,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PreToolUseOutput",
+              "text": "PreToolUsePipelineOutput",
               "canonicalReference": "claude-binary-plugin!PreToolUsePipelineOutput:type"
             },
             {
@@ -47442,7 +47442,7 @@
             },
             {
               "kind": "Reference",
-              "text": "PreToolUseOutput",
+              "text": "PreToolUsePipelineOutput",
               "canonicalReference": "claude-binary-plugin!PreToolUsePipelineOutput:type"
             },
             {
@@ -47493,7 +47493,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type PreToolUseOutput = "
+              "text": "export type PreToolUsePipelineOutput = "
             },
             {
               "kind": "Reference",
@@ -49792,7 +49792,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SessionEndOutput",
+              "text": "SessionEndPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SessionEndPipelineOutput:type"
             },
             {
@@ -50704,7 +50704,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SessionEndOutput",
+              "text": "SessionEndPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SessionEndPipelineOutput:type"
             },
             {
@@ -50755,12 +50755,12 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type SessionEndOutput = "
+              "text": "export type SessionEndPipelineOutput = "
             },
             {
               "kind": "Reference",
-              "text": "PassthroughOutput",
-              "canonicalReference": "claude-binary-plugin!PassthroughOutput:type"
+              "text": "PassthroughPipelineOutput",
+              "canonicalReference": "claude-binary-plugin!PassthroughPipelineOutput:type"
             },
             {
               "kind": "Content",
@@ -51783,7 +51783,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SessionStartOutput",
+              "text": "SessionStartPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SessionStartPipelineOutput:type"
             },
             {
@@ -52898,7 +52898,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SessionStartOutput",
+              "text": "SessionStartPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SessionStartPipelineOutput:type"
             },
             {
@@ -52949,7 +52949,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type SessionStartOutput = "
+              "text": "export type SessionStartPipelineOutput = "
             },
             {
               "kind": "Reference",
@@ -53888,8 +53888,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "SidecarMessageType",
-                  "canonicalReference": "claude-binary-plugin!SidecarMessageProtocol:type"
+                  "text": "SidecarProtocolMessage",
+                  "canonicalReference": "claude-binary-plugin!SidecarProtocolMessage:type"
                 },
                 {
                   "kind": "Content",
@@ -53937,8 +53937,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "OTELConfigType",
-                  "canonicalReference": "claude-binary-plugin!OTELConfigProtocol:interface"
+                  "text": "OTELProtocolConfig",
+                  "canonicalReference": "claude-binary-plugin!OTELProtocolConfig:interface"
                 },
                 {
                   "kind": "Content",
@@ -54600,8 +54600,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "SidecarMessageType",
-                  "canonicalReference": "claude-binary-plugin!SidecarMessageProtocol:type"
+                  "text": "SidecarProtocolMessage",
+                  "canonicalReference": "claude-binary-plugin!SidecarProtocolMessage:type"
                 },
                 {
                   "kind": "Content",
@@ -54645,8 +54645,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "SidecarMessageType",
-                  "canonicalReference": "claude-binary-plugin!SidecarMessageProtocol:type"
+                  "text": "SidecarProtocolMessage",
+                  "canonicalReference": "claude-binary-plugin!SidecarProtocolMessage:type"
                 },
                 {
                   "kind": "Content",
@@ -54688,12 +54688,12 @@
         },
         {
           "kind": "TypeAlias",
-          "canonicalReference": "claude-binary-plugin!SidecarMessageProtocol:type",
+          "canonicalReference": "claude-binary-plugin!SidecarProtocolMessage:type",
           "docComment": "/**\n * Union of all sidecar message types.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type SidecarMessage = "
+              "text": "export type SidecarProtocolMessage = "
             },
             {
               "kind": "Reference",
@@ -54743,7 +54743,7 @@
           ],
           "fileUrlPath": "src/otel/protocol.ts",
           "releaseTag": "Public",
-          "name": "SidecarMessageProtocol",
+          "name": "SidecarProtocolMessage",
           "typeTokenRange": {
             "startIndex": 1,
             "endIndex": 10
@@ -55647,7 +55647,7 @@
             },
             {
               "kind": "Reference",
-              "text": "StopOutput",
+              "text": "StopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!StopPipelineOutput:type"
             },
             {
@@ -56698,7 +56698,7 @@
             },
             {
               "kind": "Reference",
-              "text": "StopOutput",
+              "text": "StopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!StopPipelineOutput:type"
             },
             {
@@ -56749,7 +56749,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type StopOutput = "
+              "text": "export type StopPipelineOutput = "
             },
             {
               "kind": "Reference",
@@ -57285,7 +57285,7 @@
             },
             {
               "kind": "Reference",
-              "text": "SubagentStopOutput",
+              "text": "SubagentStopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!SubagentStopPipelineOutput:type"
             },
             {
@@ -58336,7 +58336,7 @@
             },
             {
               "kind": "Reference",
-              "text": "StopOutput",
+              "text": "StopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!StopPipelineOutput:type"
             },
             {
@@ -58387,11 +58387,11 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type SubagentStopOutput = "
+              "text": "export type SubagentStopPipelineOutput = "
             },
             {
               "kind": "Reference",
-              "text": "StopOutput",
+              "text": "StopPipelineOutput",
               "canonicalReference": "claude-binary-plugin!StopPipelineOutput:type"
             },
             {
@@ -62932,7 +62932,7 @@
             },
             {
               "kind": "Reference",
-              "text": "UserPromptSubmitOutput",
+              "text": "UserPromptSubmitPipelineOutput",
               "canonicalReference": "claude-binary-plugin!UserPromptSubmitPipelineOutput:type"
             },
             {
@@ -64055,7 +64055,7 @@
             },
             {
               "kind": "Reference",
-              "text": "UserPromptSubmitOutput",
+              "text": "UserPromptSubmitPipelineOutput",
               "canonicalReference": "claude-binary-plugin!UserPromptSubmitPipelineOutput:type"
             },
             {
@@ -64106,7 +64106,7 @@
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export type UserPromptSubmitOutput = "
+              "text": "export type UserPromptSubmitPipelineOutput = "
             },
             {
               "kind": "Reference",

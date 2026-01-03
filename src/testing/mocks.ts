@@ -190,11 +190,11 @@ export function resetMockIO(): void {
 // =============================================================================
 
 /**
- * Result of capturing command output
+ * Result of capturing command output for testing.
  *
  * @public
  */
-export interface CommandOutput {
+export interface MockCommandOutput {
 	logs: string[];
 	errors: string[];
 	exitCode: number | null;
@@ -206,7 +206,7 @@ export interface CommandOutput {
  * @public
  */
 export interface MockCommandContext {
-	output: CommandOutput;
+	output: MockCommandOutput;
 	restore: () => void;
 }
 
@@ -233,7 +233,7 @@ export function mockCommand(args: string[]): MockCommandContext {
 	const originalError = console.error;
 	const originalExit = process.exit;
 
-	const output: CommandOutput = {
+	const output: MockCommandOutput = {
 		logs: [],
 		errors: [],
 		exitCode: null,
@@ -289,7 +289,7 @@ export class MockExitError extends Error {
  *
  * @param args - CLI arguments
  * @param mainFn - The main function to run
- * @returns CommandOutput with captured logs, errors, and exit code
+ * @returns MockCommandOutput with captured logs, errors, and exit code
  *
  * @example
  * ```ts
@@ -300,7 +300,7 @@ export class MockExitError extends Error {
  *
  * @public
  */
-export async function runMockedCommand(args: string[], mainFn: () => Promise<void>): Promise<CommandOutput> {
+export async function runMockedCommand(args: string[], mainFn: () => Promise<void>): Promise<MockCommandOutput> {
 	const ctx = mockCommand(args);
 	try {
 		await mainFn();
@@ -734,7 +734,7 @@ export const envPresets = {
  *
  * @public
  */
-export interface FatalErrorResult {
+export interface MockFatalErrorResult {
 	/** The exit code passed to process.exit */
 	exitCode: number;
 	/** The error message(s) logged to console.error */
@@ -747,7 +747,7 @@ export interface FatalErrorResult {
  *
  * @param handler - The fatal error handler function to test
  * @param error - The error to pass to the handler (defaults to Error("Test error"))
- * @returns FatalErrorResult with captured exit code and error messages
+ * @returns MockFatalErrorResult with captured exit code and error messages
  *
  * @example
  * ```ts
@@ -776,7 +776,7 @@ export interface FatalErrorResult {
 export function testFatalErrorHandler(
 	handler: (error: unknown) => never,
 	error: unknown = new Error("Test error"),
-): FatalErrorResult {
+): MockFatalErrorResult {
 	const originalExit = process.exit;
 	const originalError = console.error;
 	let exitCode = 0;
@@ -945,11 +945,11 @@ export class Mocks {
 	 *
 	 * @param args - CLI arguments
 	 * @param mainFn - The main function to run
-	 * @returns CommandOutput with captured logs, errors, and exit code
+	 * @returns MockCommandOutput with captured logs, errors, and exit code
 	 *
 	 * @public
 	 */
-	static async runCommand(args: string[], mainFn: () => Promise<void>): Promise<CommandOutput> {
+	static async runCommand(args: string[], mainFn: () => Promise<void>): Promise<MockCommandOutput> {
 		return runMockedCommand(args, mainFn);
 	}
 
@@ -958,14 +958,14 @@ export class Mocks {
 	 *
 	 * @param handler - The fatal error handler function to test
 	 * @param error - The error to pass to the handler
-	 * @returns FatalErrorResult with captured exit code and error messages
+	 * @returns MockFatalErrorResult with captured exit code and error messages
 	 *
 	 * @public
 	 */
 	static testFatalError(
 		handler: (error: unknown) => never,
 		error: unknown = new Error("Test error"),
-	): FatalErrorResult {
+	): MockFatalErrorResult {
 		return testFatalErrorHandler(handler, error);
 	}
 

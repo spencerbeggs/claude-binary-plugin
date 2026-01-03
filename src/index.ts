@@ -266,11 +266,11 @@ export type {
 	MetricData,
 	MetricMessage,
 	MetricType,
-	OTELConfig as OTELConfigProtocol,
+	OTELProtocolConfig,
 	PingMessage,
 	ScopeData,
 	ShutdownMessage,
-	SidecarMessage as SidecarMessageProtocol,
+	SidecarProtocolMessage,
 	SpanData,
 	SpanEvent,
 	SpanMessage,
@@ -346,27 +346,27 @@ export { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./pipeline/metrics.js";
 // Unified Pipeline class (preferred)
 export { Pipeline } from "./pipeline/namespace.js";
 
-// Pipeline types - explicit exports to avoid conflicts with events/types.ts output interfaces
+// Pipeline types - distinct from events/types.ts output interfaces
 export type {
 	AnyPipelineOutput,
 	ContentType,
 	ExecutionQuality,
 	ExecutionStatus,
 	HookAction,
-	NotificationOutput as NotificationPipelineOutput,
-	PassthroughOutput,
-	PermissionRequestOutput as PermissionRequestPipelineOutput,
+	NotificationPipelineOutput,
+	PassthroughPipelineOutput,
+	PermissionRequestPipelineOutput,
 	PipelineMetrics,
 	PipelineOutputBase,
-	PostToolUseOutput as PostToolUsePipelineOutput,
-	PreCompactOutput as PreCompactPipelineOutput,
-	PreToolUseOutput as PreToolUsePipelineOutput,
-	SessionEndOutput as SessionEndPipelineOutput,
-	SessionStartOutput as SessionStartPipelineOutput,
-	StopOutput as StopPipelineOutput,
-	SubagentStopOutput as SubagentStopPipelineOutput,
+	PostToolUsePipelineOutput,
+	PreCompactPipelineOutput,
+	PreToolUsePipelineOutput,
+	SessionEndPipelineOutput,
+	SessionStartPipelineOutput,
+	StopPipelineOutput,
+	SubagentStopPipelineOutput,
 	TokenMetricsData,
-	UserPromptSubmitOutput as UserPromptSubmitPipelineOutput,
+	UserPromptSubmitPipelineOutput,
 	ValidationResult as PipelineValidationResult,
 } from "./pipeline/types.js";
 export {
@@ -459,10 +459,10 @@ export type {
 	BufferShellExecutor,
 	BufferShellExecutorOptions,
 	BufferShellResult,
-	CommandOutput as MockCommandOutput,
-	FatalErrorResult as MockFatalErrorResult,
 	MockCommandContext,
+	MockCommandOutput,
 	MockEnvContext,
+	MockFatalErrorResult,
 	MockIOResult,
 } from "./testing/mocks.js";
 export { MockEnv, MockExitError, Mocks } from "./testing/mocks.js";

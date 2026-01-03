@@ -9,14 +9,14 @@
 
 import type { Socket, SocketHandler } from "bun";
 import { SidecarMessage } from "../../classes/SidecarMessage.js";
-import type { SidecarMessage as SidecarMessageType, SidecarResponse } from "../../protocol.js";
+import type { SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";
 
 /**
  * Message handler function type.
  * Returns a response or undefined (for fire-and-forget messages).
  * @public
  */
-export type MessageHandler = (message: SidecarMessageType) => SidecarResponse | undefined;
+export type MessageHandler = (message: SidecarProtocolMessage) => SidecarResponse | undefined;
 
 /**
  * Per-client socket data.

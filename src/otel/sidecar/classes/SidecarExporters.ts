@@ -12,7 +12,7 @@ import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-base";
 import { DEFAULTS } from "../../constants.js";
-import type { OTELConfig } from "../../protocol.js";
+import type { OTELProtocolConfig } from "../../protocol.js";
 
 /**
  * Static factory class for creating OTEL exporters.
@@ -36,7 +36,7 @@ export class SidecarExporters {
 	 * @param config - OTEL configuration
 	 * @returns Trace exporter or null if disabled
 	 */
-	static createTraceExporter(config: OTELConfig): OTLPTraceExporter | ConsoleSpanExporter | null {
+	static createTraceExporter(config: OTELProtocolConfig): OTLPTraceExporter | ConsoleSpanExporter | null {
 		const endpoint = config.endpoint ?? DEFAULTS.ENDPOINT;
 
 		// Check for console exporter (for debugging)
@@ -63,7 +63,7 @@ export class SidecarExporters {
 	 * @param config - OTEL configuration
 	 * @returns Metrics exporter or null if disabled
 	 */
-	static createMetricsExporter(config: OTELConfig): OTLPMetricExporter | null {
+	static createMetricsExporter(config: OTELProtocolConfig): OTLPMetricExporter | null {
 		const endpoint = config.endpoint ?? DEFAULTS.ENDPOINT;
 
 		// Check if metrics are disabled
@@ -85,7 +85,7 @@ export class SidecarExporters {
 	 * @param config - OTEL configuration
 	 * @returns Logs exporter or null if disabled
 	 */
-	static createLogsExporter(config: OTELConfig): OTLPLogExporter | null {
+	static createLogsExporter(config: OTELProtocolConfig): OTLPLogExporter | null {
 		const endpoint = config.endpoint ?? DEFAULTS.ENDPOINT;
 
 		// Check if logs are disabled

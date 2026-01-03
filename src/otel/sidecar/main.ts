@@ -18,7 +18,7 @@
 
 import { Platform } from "../classes/Platform.js";
 import { DEFAULTS, ENV_VARS } from "../constants.js";
-import type { SidecarMessage, SidecarResponse } from "../protocol.js";
+import type { SidecarProtocolMessage, SidecarResponse } from "../protocol.js";
 import { SidecarLifecycle } from "./classes/SidecarLifecycle.js";
 import { SidecarLog } from "./classes/SidecarLog.js";
 import { SidecarRouter } from "./classes/SidecarRouter.js";
@@ -37,7 +37,7 @@ const VERSION = "0.0.0";
  * @param message - The parsed message
  * @returns Response to send back, or undefined for fire-and-forget
  */
-function handleMessage(message: SidecarMessage): SidecarResponse | undefined {
+function handleMessage(message: SidecarProtocolMessage): SidecarResponse | undefined {
 	// Log all incoming messages
 	SidecarLog.write(`[recv] type=${message.type} session=${message.sessionId || "none"}`);
 	if (message.type === "event") {

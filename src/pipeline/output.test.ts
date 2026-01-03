@@ -11,12 +11,12 @@
 import { describe, expect, test } from "bun:test";
 import { TokenMetrics } from "./metrics.js";
 import type {
-	PermissionRequestOutput,
-	PostToolUseOutput,
-	PreToolUseOutput,
-	SessionStartOutput,
-	StopOutput,
-	UserPromptSubmitOutput,
+	PermissionRequestPipelineOutput,
+	PostToolUsePipelineOutput,
+	PreToolUsePipelineOutput,
+	SessionStartPipelineOutput,
+	StopPipelineOutput,
+	UserPromptSubmitPipelineOutput,
 } from "./types.js";
 import {
 	PassthroughOutputSchema,
@@ -81,7 +81,7 @@ describe("isPipelineOutput", () => {
 
 describe("PreToolUseOutputSchema", () => {
 	test("validates executed/allow output", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed: git status",
@@ -90,7 +90,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/deny output with reason", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied: dangerous command",
@@ -100,7 +100,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/modify output with updatedInput", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "modify",
 			summary: "modified: added timeout",
@@ -110,7 +110,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates skipped output", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "skipped",
 			summary: "skipped: tool not in filter",
 		};
@@ -118,7 +118,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates disabled output", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "disabled",
 			summary: "disabled: shellcheck not available",
 			reason: "shellcheck binary not found",
@@ -127,7 +127,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates error output", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "error",
 			summary: "error: unexpected failure",
 			reason: "Connection timeout",
@@ -136,7 +136,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates output with quality indicators", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed with degraded quality",
@@ -149,7 +149,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates output with metrics", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "passed linting",
@@ -173,7 +173,7 @@ describe("PreToolUseOutputSchema", () => {
 
 describe("PostToolUseOutputSchema", () => {
 	test("validates executed/block output", () => {
-		const output: PostToolUseOutput = {
+		const output: PostToolUsePipelineOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked: lint errors",
@@ -183,7 +183,7 @@ describe("PostToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/context output with claudeContext", () => {
-		const output: PostToolUseOutput = {
+		const output: PostToolUsePipelineOutput = {
 			status: "executed",
 			action: "context",
 			summary: "added context",
@@ -193,7 +193,7 @@ describe("PostToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/none output (passthrough)", () => {
-		const output: PostToolUseOutput = {
+		const output: PostToolUsePipelineOutput = {
 			status: "executed",
 			action: "none",
 			summary: "analyzed but no action needed",
@@ -204,7 +204,7 @@ describe("PostToolUseOutputSchema", () => {
 
 describe("SessionStartOutputSchema", () => {
 	test("validates executed/context output", () => {
-		const output: SessionStartOutput = {
+		const output: SessionStartPipelineOutput = {
 			status: "executed",
 			action: "context",
 			summary: "provided project context",
@@ -214,7 +214,7 @@ describe("SessionStartOutputSchema", () => {
 	});
 
 	test("validates executed/none output", () => {
-		const output: SessionStartOutput = {
+		const output: SessionStartPipelineOutput = {
 			status: "executed",
 			action: "none",
 			summary: "no context to add",
@@ -223,7 +223,7 @@ describe("SessionStartOutputSchema", () => {
 	});
 
 	test("validates disabled output", () => {
-		const output: SessionStartOutput = {
+		const output: SessionStartPipelineOutput = {
 			status: "disabled",
 			summary: "detection failed",
 			reason: "Could not detect package manager",
@@ -234,7 +234,7 @@ describe("SessionStartOutputSchema", () => {
 
 describe("StopOutputSchema", () => {
 	test("validates executed/block output", () => {
-		const output: StopOutput = {
+		const output: StopPipelineOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocking stop: tests not run",
@@ -244,7 +244,7 @@ describe("StopOutputSchema", () => {
 	});
 
 	test("validates executed/continue output", () => {
-		const output: StopOutput = {
+		const output: StopPipelineOutput = {
 			status: "executed",
 			action: "continue",
 			summary: "allowing stop: all checks passed",
@@ -255,7 +255,7 @@ describe("StopOutputSchema", () => {
 
 describe("UserPromptSubmitOutputSchema", () => {
 	test("validates executed/context output", () => {
-		const output: UserPromptSubmitOutput = {
+		const output: UserPromptSubmitPipelineOutput = {
 			status: "executed",
 			action: "context",
 			summary: "added context to prompt",
@@ -265,7 +265,7 @@ describe("UserPromptSubmitOutputSchema", () => {
 	});
 
 	test("validates executed/block output", () => {
-		const output: UserPromptSubmitOutput = {
+		const output: UserPromptSubmitPipelineOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked prompt",
@@ -277,7 +277,7 @@ describe("UserPromptSubmitOutputSchema", () => {
 
 describe("PermissionRequestOutputSchema", () => {
 	test("validates executed/allow output", () => {
-		const output: PermissionRequestOutput = {
+		const output: PermissionRequestPipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed: safe command",
@@ -286,7 +286,7 @@ describe("PermissionRequestOutputSchema", () => {
 	});
 
 	test("validates executed/deny output with interrupt", () => {
-		const output: PermissionRequestOutput = {
+		const output: PermissionRequestPipelineOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied: dangerous command",
@@ -399,7 +399,7 @@ describe("TokenMetrics.detectContentType", () => {
 
 describe("TokenMetrics.extractFromOutput", () => {
 	test("extracts tokens from claudeContext", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "test",
@@ -411,7 +411,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("extracts tokens from userMessage", () => {
-		const output: SessionStartOutput = {
+		const output: SessionStartPipelineOutput = {
 			status: "executed",
 			action: "context",
 			summary: "test",
@@ -422,7 +422,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("extracts tokens from reason", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied",
@@ -434,7 +434,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("sums all token fields for hookTotal", () => {
-		const output: PostToolUseOutput = {
+		const output: PostToolUsePipelineOutput = {
 			status: "executed",
 			action: "context",
 			summary: "test",
@@ -450,7 +450,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("returns zeros for output with no text fields", () => {
-		const output: PreToolUseOutput = {
+		const output: PreToolUsePipelineOutput = {
 			status: "skipped",
 			summary: "skipped",
 		};

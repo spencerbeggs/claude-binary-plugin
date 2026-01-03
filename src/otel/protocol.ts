@@ -12,7 +12,7 @@
  * The sidecar uses this to configure its OTEL providers.
  * @public
  */
-export interface OTELConfig {
+export interface OTELProtocolConfig {
 	/**
 	 * OTLP endpoint URL (e.g., "http://localhost:4318")
 	 * @defaultValue "http://localhost:4318"
@@ -195,7 +195,7 @@ export interface PingMessage {
 	/** Session ID for correlation */
 	sessionId: string;
 	/** OTEL configuration for this session */
-	config: OTELConfig;
+	config: OTELProtocolConfig;
 }
 
 /**
@@ -248,7 +248,7 @@ export interface ShutdownMessage {
  * Union of all sidecar message types.
  * @public
  */
-export type SidecarMessage = PingMessage | SpanMessage | EventMessage | MetricMessage | ShutdownMessage;
+export type SidecarProtocolMessage = PingMessage | SpanMessage | EventMessage | MetricMessage | ShutdownMessage;
 
 /**
  * Response from sidecar to client.

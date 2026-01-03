@@ -11,16 +11,16 @@ import type { Resource } from "@opentelemetry/resources";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import { DEFAULTS, RESOURCE_ATTRS } from "../../constants.js";
-import type { OTELConfig } from "../../protocol.js";
+import type { OTELProtocolConfig } from "../../protocol.js";
 
 /**
  * Extended configuration for resource creation.
  *
- * Extends OTELConfig (which includes pluginName and marketplaceName)
+ * Extends OTELProtocolConfig (which includes pluginName and marketplaceName)
  * with version fields for more detailed telemetry.
  * @public
  */
-export interface ResourceConfig extends OTELConfig {
+export interface ResourceConfig extends OTELProtocolConfig {
 	/** Plugin version for resource attributes */
 	pluginVersion?: string;
 	/** Marketplace version */

@@ -23,7 +23,7 @@
  * @public
  */
 
-import type { SidecarMessage as SidecarMessageType } from "../protocol.js";
+import type { SidecarProtocolMessage } from "../protocol.js";
 
 /**
  * IPC message serialization and parsing.
@@ -71,7 +71,7 @@ export class SidecarMessage {
 	 *
 	 * @public
 	 */
-	static serialize(message: SidecarMessageType): string {
+	static serialize(message: SidecarProtocolMessage): string {
 		return `${JSON.stringify(message, SidecarMessage.bigIntReplacer)}\n`;
 	}
 
@@ -98,11 +98,11 @@ export class SidecarMessage {
 	 *
 	 * @public
 	 */
-	static parse(line: string): SidecarMessageType | null {
+	static parse(line: string): SidecarProtocolMessage | null {
 		try {
 			const trimmed = line.trim();
 			if (!trimmed) return null;
-			return JSON.parse(trimmed, SidecarMessage.bigIntReviver) as SidecarMessageType;
+			return JSON.parse(trimmed, SidecarMessage.bigIntReviver) as SidecarProtocolMessage;
 		} catch {
 			return null;
 		}

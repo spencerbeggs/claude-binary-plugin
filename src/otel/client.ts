@@ -38,7 +38,7 @@ import { Platform } from "./classes/Platform.js";
 import { SessionEnv } from "./classes/SessionEnv.js";
 import { SidecarLauncher } from "./classes/SidecarLauncher.js";
 import { SidecarMessage } from "./classes/SidecarMessage.js";
-import type { OTELConfig as OTELConfigType, SidecarMessage as SidecarMessageType } from "./protocol.js";
+import type { OTELProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
 
 /**
  * Client state for tracking connection status.
@@ -72,7 +72,7 @@ export class SidecarClient {
 	private socket: Socket<SocketData> | null = null;
 	private state: ClientState = "disconnected";
 	private connectPromise: Promise<boolean> | null = null;
-	private messageQueue: SidecarMessageType[] = [];
+	private messageQueue: SidecarProtocolMessage[] = [];
 	private hasPinged = false;
 
 	constructor(sessionId: string, socketPath?: string) {
@@ -123,7 +123,7 @@ export class SidecarClient {
 	 * @param config - OTEL configuration
 	 * @returns true if sidecar is available
 	 */
-	async ensureRunning(config: OTELConfigType): Promise<boolean> {
+	async ensureRunning(config: OTELProtocolConfig): Promise<boolean> {
 		// Try connecting to existing sidecar
 		const connected = await this.tryConnect();
 		if (connected) {
@@ -173,7 +173,7 @@ export class SidecarClient {
 	 *
 	 * @param message - Message to send
 	 */
-	emit(message: SidecarMessageType): void {
+	emit(message: SidecarProtocolMessage): void {
 		if (this.state !== "connected" || !this.socket) {
 			// Queue message and try to connect (spawn if needed)
 			this.messageQueue.push(message);

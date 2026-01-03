@@ -57,17 +57,17 @@ import type {
 } from "../events/types.js";
 import type { PluginTestBuilder } from "../testing/builder.js";
 import type {
-	NotificationOutput,
-	PassthroughOutput,
-	PermissionRequestOutput,
-	PostToolUseOutput,
-	PreCompactOutput,
-	PreToolUseOutput,
-	SessionEndOutput,
-	SessionStartOutput,
-	StopOutput,
-	SubagentStopOutput,
-	UserPromptSubmitOutput,
+	NotificationPipelineOutput,
+	PassthroughPipelineOutput,
+	PermissionRequestPipelineOutput,
+	PostToolUsePipelineOutput,
+	PreCompactPipelineOutput,
+	PreToolUsePipelineOutput,
+	SessionEndPipelineOutput,
+	SessionStartPipelineOutput,
+	StopPipelineOutput,
+	SubagentStopPipelineOutput,
+	UserPromptSubmitPipelineOutput,
 } from "./types.js";
 import { OutputSchemas } from "./types.js";
 
@@ -155,7 +155,7 @@ export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ct
  */
 export type SessionStartPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SessionStartEvent,
-	SessionStartOutput,
+	SessionStartPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -166,7 +166,7 @@ export type SessionStartPipeline<TOptions, TState = Record<string, string>> = Pi
  */
 export type SessionEndPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SessionEndEvent,
-	SessionEndOutput,
+	SessionEndPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -195,7 +195,7 @@ export type SessionEndPipeline<TOptions, TState = Record<string, string>> = Pipe
  */
 export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PreToolUseEvent,
-	PreToolUseOutput,
+	PreToolUsePipelineOutput,
 	TOptions,
 	TState
 >;
@@ -206,7 +206,7 @@ export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = Pipe
  */
 export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PostToolUseEvent,
-	PostToolUseOutput,
+	PostToolUsePipelineOutput,
 	TOptions,
 	TState
 >;
@@ -217,7 +217,7 @@ export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = Pip
  */
 export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	StopEvent,
-	StopOutput,
+	StopPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -228,7 +228,7 @@ export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHa
  */
 export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SubagentStopEvent,
-	StopOutput,
+	StopPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -239,7 +239,7 @@ export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = Pi
  */
 export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	UserPromptSubmitEvent,
-	UserPromptSubmitOutput,
+	UserPromptSubmitPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -250,7 +250,7 @@ export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> 
  */
 export type PreCompactPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PreCompactEvent,
-	PassthroughOutput,
+	PassthroughPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -261,7 +261,7 @@ export type PreCompactPipeline<TOptions, TState = Record<string, string>> = Pipe
  */
 export type NotificationPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	NotificationEvent,
-	NotificationOutput,
+	NotificationPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -272,7 +272,7 @@ export type NotificationPipeline<TOptions, TState = Record<string, string>> = Pi
  */
 export type PermissionRequestPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PermissionRequestEvent,
-	PermissionRequestOutput,
+	PermissionRequestPipelineOutput,
 	TOptions,
 	TState
 >;
@@ -519,7 +519,7 @@ export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<st
  */
 export type SessionStartHookDefinition<TOptions> = HookDefinition<
 	SessionStartEvent,
-	SessionStartOutput,
+	SessionStartPipelineOutput,
 	SessionStartHookEvent<TOptions>,
 	TOptions
 >;
@@ -530,7 +530,7 @@ export type SessionStartHookDefinition<TOptions> = HookDefinition<
  */
 export type SessionEndHookDefinition<TOptions> = HookDefinition<
 	SessionEndEvent,
-	SessionEndOutput,
+	SessionEndPipelineOutput,
 	SessionEndHookEvent<TOptions>,
 	TOptions
 >;
@@ -541,7 +541,7 @@ export type SessionEndHookDefinition<TOptions> = HookDefinition<
  */
 export type PreToolUseHookDefinition<TOptions> = HookDefinition<
 	PreToolUseEvent,
-	PreToolUseOutput,
+	PreToolUsePipelineOutput,
 	PreToolUseHookEvent<TOptions>,
 	TOptions
 > &
@@ -553,7 +553,7 @@ export type PreToolUseHookDefinition<TOptions> = HookDefinition<
  */
 export type PostToolUseHookDefinition<TOptions> = HookDefinition<
 	PostToolUseEvent,
-	PostToolUseOutput,
+	PostToolUsePipelineOutput,
 	PostToolUseHookEvent<TOptions>,
 	TOptions
 > &
@@ -565,7 +565,7 @@ export type PostToolUseHookDefinition<TOptions> = HookDefinition<
  */
 export type StopHookDefinition<TOptions> = HookDefinition<
 	StopEvent,
-	StopOutput,
+	StopPipelineOutput,
 	StopHookEvent<TOptions>,
 	TOptions
 >;
@@ -576,7 +576,7 @@ export type StopHookDefinition<TOptions> = HookDefinition<
  */
 export type SubagentStopHookDefinition<TOptions> = HookDefinition<
 	SubagentStopEvent,
-	SubagentStopOutput,
+	SubagentStopPipelineOutput,
 	SubagentStopHookEvent<TOptions>,
 	TOptions
 >;
@@ -587,7 +587,7 @@ export type SubagentStopHookDefinition<TOptions> = HookDefinition<
  */
 export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
 	UserPromptSubmitEvent,
-	UserPromptSubmitOutput,
+	UserPromptSubmitPipelineOutput,
 	UserPromptSubmitHookEvent<TOptions>,
 	TOptions
 >;
@@ -598,7 +598,7 @@ export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
  */
 export type PreCompactHookDefinition<TOptions> = HookDefinition<
 	PreCompactEvent,
-	PreCompactOutput,
+	PreCompactPipelineOutput,
 	PreCompactHookEvent<TOptions>,
 	TOptions
 >;
@@ -609,7 +609,7 @@ export type PreCompactHookDefinition<TOptions> = HookDefinition<
  */
 export type NotificationHookDefinition<TOptions> = HookDefinition<
 	NotificationEvent,
-	NotificationOutput,
+	NotificationPipelineOutput,
 	NotificationHookEvent<TOptions>,
 	TOptions
 >;
@@ -620,7 +620,7 @@ export type NotificationHookDefinition<TOptions> = HookDefinition<
  */
 export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
 	PermissionRequestEvent,
-	PermissionRequestOutput,
+	PermissionRequestPipelineOutput,
 	PermissionRequestHookEvent<TOptions>,
 	TOptions
 >;
