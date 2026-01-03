@@ -892,15 +892,16 @@ export function testFatalErrorHandler(
 }
 
 // =============================================================================
-// MOCKS NAMESPACE
+// MOCKS CLASS
 // =============================================================================
 
 /**
- * Organized namespace for testing utilities.
+ * Testing utilities for Claude Code plugins.
  *
  * @remarks
- * The `Mocks` namespace groups related testing utilities for easier discovery
- * and usage. Each sub-namespace provides utilities for a specific testing domain.
+ * The `Mocks` class provides static properties grouping related testing
+ * utilities for easier discovery and usage. Each sub-object provides
+ * utilities for a specific testing domain.
  *
  * **Sub-namespaces:**
  * - `Mocks.IO` - I/O mocking (stdin, stdout, stderr)
@@ -929,7 +930,10 @@ export function testFatalErrorHandler(
  *
  * @public
  */
-export namespace Mocks {
+export class Mocks {
+	// Private constructor prevents instantiation
+	private constructor() {}
+
 	/**
 	 * I/O mocking utilities for hook testing.
 	 *
@@ -939,7 +943,7 @@ export namespace Mocks {
 	 *
 	 * @public
 	 */
-	export const IO = {
+	static readonly IO = {
 		/**
 		 * Create a mock I/O context for hook testing.
 		 * @see {@link mockIO}
@@ -951,7 +955,7 @@ export namespace Mocks {
 		 * @see {@link resetMockIO}
 		 */
 		reset: resetMockIO,
-	};
+	} as const;
 
 	/**
 	 * Environment variable mocking utilities.
@@ -962,7 +966,7 @@ export namespace Mocks {
 	 *
 	 * @public
 	 */
-	export const Env = {
+	static readonly Env = {
 		/**
 		 * Create an isolated mock environment.
 		 * @see {@link mockEnv}
@@ -980,7 +984,7 @@ export namespace Mocks {
 		 * @see {@link MockEnv}
 		 */
 		Class: MockEnv,
-	};
+	} as const;
 
 	/**
 	 * CLI command testing utilities.
@@ -991,7 +995,7 @@ export namespace Mocks {
 	 *
 	 * @public
 	 */
-	export const Command = {
+	static readonly Command = {
 		/**
 		 * Create a mock command context.
 		 * @see {@link mockCommand}
@@ -1009,7 +1013,7 @@ export namespace Mocks {
 		 * @see {@link testFatalErrorHandler}
 		 */
 		testFatalError: testFatalErrorHandler,
-	};
+	} as const;
 
 	/**
 	 * Hook handler testing utilities.
@@ -1020,13 +1024,13 @@ export namespace Mocks {
 	 *
 	 * @public
 	 */
-	export const Hook = {
+	static readonly Hook = {
 		/**
 		 * Run a hook main function with mocked process.exit.
 		 * @see {@link runMockedHook}
 		 */
 		run: runMockedHook,
-	};
+	} as const;
 
 	/**
 	 * Shell executor mocking utilities.
@@ -1037,7 +1041,7 @@ export namespace Mocks {
 	 *
 	 * @public
 	 */
-	export const Shell = {
+	static readonly Shell = {
 		/**
 		 * Create a ShellResult for mocking.
 		 * @see {@link createMockShellResult}
@@ -1052,7 +1056,7 @@ export namespace Mocks {
 
 		/**
 		 * Default shell executor using Bun.$.
-		 * @see {@link PluginBuilder.defaultShellExecutor}
+		 * @see {@link defaultShellExecutor}
 		 */
 		default: defaultShellExecutor,
 
@@ -1078,14 +1082,14 @@ export namespace Mocks {
 			 */
 			default: defaultBufferShellExecutor,
 		},
-	};
+	} as const;
 
 	/**
 	 * Utility classes and types.
 	 *
 	 * @public
 	 */
-	export const Utils = {
+	static readonly Utils = {
 		/**
 		 * Error thrown when mocked process.exit is called.
 		 * @see {@link MockExitError}
@@ -1097,5 +1101,5 @@ export namespace Mocks {
 		 * @see {@link mockLogger}
 		 */
 		logger: mockLogger,
-	};
+	} as const;
 }

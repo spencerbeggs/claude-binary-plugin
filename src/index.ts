@@ -412,9 +412,13 @@ export type {
 	MockIOResult,
 } from "./testing/mocks.js";
 export {
+	// Core classes
 	MockEnv,
 	MockExitError,
+	// Main class (preferred) - use Mocks.IO, Mocks.Env, Mocks.Shell, etc.
 	Mocks,
+	// Legacy standalone exports for backward compatibility
+	// Prefer using Mocks.Env.create, Mocks.IO.create, etc.
 	createMockBufferShellExecutor,
 	createMockBufferShellResult,
 	createMockShellExecutor,
