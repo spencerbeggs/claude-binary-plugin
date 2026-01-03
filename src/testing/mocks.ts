@@ -1052,7 +1052,7 @@ export namespace Mocks {
 
 		/**
 		 * Default shell executor using Bun.$.
-		 * @see {@link defaultShellExecutor}
+		 * @see {@link PluginBuilder.defaultShellExecutor}
 		 */
 		default: defaultShellExecutor,
 

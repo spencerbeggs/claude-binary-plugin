@@ -1084,8 +1084,8 @@ export class ClaudeBinaryPlugin<
 		options: PluginBuildOptions = {},
 	): Promise<PluginBuildResult> {
 		// Dynamic import to avoid circular dependency and enable tree-shaking
-		const { buildPluginFromConfig } = await import("../build/builder.js");
-		return buildPluginFromConfig(plugin, options);
+		const { PluginBuilder } = await import("../build/builder.js");
+		return PluginBuilder.fromConfig(plugin, options);
 	}
 
 	/**

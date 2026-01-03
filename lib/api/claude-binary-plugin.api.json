@@ -957,195 +957,6 @@
           "extendsTokenRanges": []
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!buildPlugin:function(1)",
-          "docComment": "/**\n * Compiles a plugin into a single unified executable.\n *\n * This creates a single binary that bundles all hooks and commands, reducing the total size compared to multiple separate binaries (since the Bun runtime is only included once).\n *\n * When `hooks` and/or `commands` are provided, the entrypoint is auto-generated. Otherwise, a manual entrypoint file is expected.\n *\n * @param options - Build configuration options\n *\n * @returns Result of the build operation\n *\n * @example\n * ```ts\n * // plugins/workflow/build.ts - Declarative configuration (recommended)\n * import { buildPlugin } from \"claude-binary-plugin\";\n *\n * await buildPlugin({\n *   rootDir: import.meta.dir,\n *   outputName: \"workflow.plugin\",\n *   hooks: [\n *     { name: \"pre-edit-code\", path: \"./hooks/pre-edit-code.hook.js\", description: \"Lint before edit\" },\n *   ],\n *   commands: [\n *     { name: \"lint\", path: \"./commands/scripts/lint.js\", description: \"Run linters\" },\n *   ],\n * });\n * ```\n *\n * The unified binary can then be invoked as: workflow.plugin --hook=pre-edit-code workflow.plugin --cmd=lint\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function buildPlugin(options?: "
-            },
-            {
-              "kind": "Reference",
-              "text": "BuildPluginOptions",
-              "canonicalReference": "claude-binary-plugin!BuildPluginOptions:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "PluginBuildResult",
-              "canonicalReference": "claude-binary-plugin!PluginBuildResult:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 7
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "options",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": true
-            }
-          ],
-          "name": "buildPlugin"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!buildPluginFromConfig:function(1)",
-          "docComment": "/**\n * Build a plugin from a ClaudeBinaryPlugin instance.\n *\n * @remarks\n *\n * This function is the bridge between `ClaudeBinaryPlugin.build()` and the underlying build system. It extracts hooks and commands from the plugin configuration and invokes the standard build process.\n *\n * **Build Steps:** 1. Read plugin.json/marketplace.json manifests for name/version 2. Extract hooks, commands, and passthrough entries from plugin.config 3. Resolve file paths for file-based handlers 4. Generate TypeScript entrypoint using generatePipelinePluginEntrypoint() 5. Compile to single-file executable with Bun.build() 6. Generate hooks.json manifest for Claude Code 7. Optionally sync to Claude Code plugins cache\n *\n * @param plugin - The plugin instance (ClaudeBinaryPlugin)\n *\n * @param options - Build configuration options\n *\n * @returns Result of the build operation\n *\n * @example\n * ```ts\n * import plugin from \"./plugin.ts\";\n * import { buildPluginFromConfig } from \"claude-binary-plugin\";\n *\n * const result = await buildPluginFromConfig(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function buildPluginFromConfig(plugin: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    config: {\n        hooks: "
-            },
-            {
-              "kind": "Reference",
-              "text": "Partial",
-              "canonicalReference": "!Partial:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "PipelineHookEventType",
-              "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
-            },
-            {
-              "kind": "Content",
-              "text": ", "
-            },
-            {
-              "kind": "Reference",
-              "text": "ExtractableHook",
-              "canonicalReference": "claude-binary-plugin!ExtractableHook:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]>>;\n        commands?: "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, "
-            },
-            {
-              "kind": "Reference",
-              "text": "ExtractableCommand",
-              "canonicalReference": "claude-binary-plugin!ExtractableCommand:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ">;\n        hooksOutputPath?: string;\n    };\n}"
-            },
-            {
-              "kind": "Content",
-              "text": ", options?: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    rootDir?: string;\n    plugin?: string;\n    marketplace?: string;\n    outputName?: string;\n    compile?: boolean;\n    minify?: boolean;\n    sourcemap?: boolean;\n    bytecode?: boolean;\n    target?: string;\n    clean?: boolean;\n    persistLocal?: boolean;\n    external?: string[];\n}"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "PluginBuildResult",
-              "canonicalReference": "claude-binary-plugin!PluginBuildResult:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ">"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 17,
-            "endIndex": 21
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "plugin",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 14
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "options",
-              "parameterTypeTokenRange": {
-                "startIndex": 15,
-                "endIndex": 16
-              },
-              "isOptional": true
-            }
-          ],
-          "name": "buildPluginFromConfig"
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!BuildPluginOptions:interface",
           "docComment": "/**\n * Options for compiling a unified plugin binary.\n *\n * @public\n */\n",
@@ -9450,30 +9261,6 @@
           }
         },
         {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!defaultShellExecutor:var",
-          "docComment": "/**\n * Default shell executor using Bun.$.\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "defaultShellExecutor: "
-            },
-            {
-              "kind": "Reference",
-              "text": "ShellExecutor",
-              "canonicalReference": "claude-binary-plugin!ShellExecutor:type"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "defaultShellExecutor",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          }
-        },
-        {
           "kind": "Function",
           "canonicalReference": "claude-binary-plugin!detectContentType:function(1)",
           "docComment": "/**\n * Detect content type from file path or content.\n *\n * @param input - Object containing file_path and/or content\n *\n * @returns Detected content type\n *\n * @public\n */\n",
@@ -11771,233 +11558,6 @@
           "extendsTokenRanges": []
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!extractPassthroughHookEntries:function(1)",
-          "docComment": "/**\n * Extracts passthrough hook entries from a plugin configuration. Passthrough entries are raw hooks.json entries that get included directly without compilation into the binary.\n *\n * @param config - The plugin configuration from ClaudeBinaryPlugin.create()\n *\n * @returns Object mapping hook types to their passthrough entries\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function extractPassthroughHookEntries(config: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    hooks: "
-            },
-            {
-              "kind": "Reference",
-              "text": "Partial",
-              "canonicalReference": "!Partial:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "PipelineHookEventType",
-              "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
-            },
-            {
-              "kind": "Content",
-              "text": ", unknown[]>>;\n}"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "ExtractedPassthroughHooks",
-              "canonicalReference": "claude-binary-plugin!ExtractedPassthroughHooks:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 9,
-            "endIndex": 10
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "config",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 8
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "extractPassthroughHookEntries"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!extractPipelineCommandEntries:function(1)",
-          "docComment": "/**\n * Extracts pipeline command entries from a plugin configuration.\n *\n * @param config - The plugin configuration from ClaudeBinaryPlugin.create()\n *\n * @returns Array of pipeline command entries\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function extractPipelineCommandEntries(config: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    commands?: "
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<string, "
-            },
-            {
-              "kind": "Reference",
-              "text": "ExtractableCommand",
-              "canonicalReference": "claude-binary-plugin!ExtractableCommand:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ">;\n}"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "PipelineCommandEntry",
-              "canonicalReference": "claude-binary-plugin!PipelineCommandEntry:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 7,
-            "endIndex": 9
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "config",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 6
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "extractPipelineCommandEntries"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!extractPipelineHookEntries:function(1)",
-          "docComment": "/**\n * Extract hook entries from a ClaudeBinaryPlugin config for use with generatePipelinePluginEntrypoint.\n *\n * @param config - The plugin configuration from ClaudeBinaryPlugin.create()\n *\n * @returns Array of hook entries ready for code generation\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function extractPipelineHookEntries(config: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    hooks: "
-            },
-            {
-              "kind": "Reference",
-              "text": "Partial",
-              "canonicalReference": "!Partial:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "Record",
-              "canonicalReference": "!Record:type"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "PipelineHookEventType",
-              "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
-            },
-            {
-              "kind": "Content",
-              "text": ", "
-            },
-            {
-              "kind": "Reference",
-              "text": "ExtractableHook",
-              "canonicalReference": "claude-binary-plugin!ExtractableHook:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]>>;\n}"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "PipelineHookEntry",
-              "canonicalReference": "claude-binary-plugin!PipelineHookEntry:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 11,
-            "endIndex": 13
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "config",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 10
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "extractPipelineHookEntries"
-        },
-        {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!ExtractSetupReturn:type",
           "docComment": "/**\n * Helper type to extract the return type of a setup function. Handles both sync and async return types.\n *\n * Uses `infer _TOptions` to match SetupContext with any options type, allowing the pattern to match setup functions regardless of their options type.\n *\n * @public\n */\n",
@@ -12731,53 +12291,6 @@
           "name": "formatZodErrorAsMarkdown"
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!generateHooksJson:function(1)",
-          "docComment": "/**\n * Generates the hooks.json content from hook entries.\n *\n * This function creates the Claude Code hooks.json format that maps hook event types to their command handlers. All hooks use `${CLAUDE_PLUGIN_ROOT}` which Claude Code provides for every hook invocation.\n *\n * @param options - Generation options\n *\n * @returns The hooks.json object structure\n *\n * @example\n * ```ts\n * const hooksJson = generateHooksJson({\n *   pluginBinaryName: \"my-plugin.plugin\",\n *   hooks: [\n *     { hookType: \"SessionStart\", name: \"context\", isPipeline: true },\n *     { hookType: \"PreToolUse\", name: \"filter\", isPipeline: true, tools: [\"Bash\", \"Write\"] },\n *   ],\n * });\n * // Result:\n * // {\n * //   hooks: {\n * //     SessionStart: [{ hooks: [{ type: \"command\", command: \"${CLAUDE_PLUGIN_ROOT}/my-plugin.plugin --hook=SessionStart/context\" }] }],\n * //     PreToolUse: [{ matcher: \"Bash|Write\", hooks: [{ type: \"command\", command: \"${CLAUDE_PLUGIN_ROOT}/my-plugin.plugin --hook=PreToolUse/filter\" }] }],\n * //   }\n * // }\n * ```\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function generateHooksJson(options: "
-            },
-            {
-              "kind": "Reference",
-              "text": "GenerateHooksJsonOptions",
-              "canonicalReference": "claude-binary-plugin!GenerateHooksJsonOptions:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "HooksJsonFile",
-              "canonicalReference": "claude-binary-plugin!HooksJsonFile:interface"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "options",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "generateHooksJson"
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!GenerateHooksJsonOptions:interface",
           "docComment": "/**\n * Options for generating hooks.json\n *\n * @public\n */\n",
@@ -12881,52 +12394,6 @@
             }
           ],
           "extendsTokenRanges": []
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!generatePipelinePluginEntrypoint:function(1)",
-          "docComment": "/**\n * Generates the TypeScript source code for a pipeline-based plugin entrypoint.\n *\n * The generated code imports the plugin definition and uses the pipeline-runtime module to execute hooks with proper Zod validation.\n *\n * @param options - Generation options\n *\n * @returns Generated TypeScript source code\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function generatePipelinePluginEntrypoint(options: "
-            },
-            {
-              "kind": "Reference",
-              "text": "GeneratePipelinePluginOptions",
-              "canonicalReference": "claude-binary-plugin!GeneratePipelinePluginOptions:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 4
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "options",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "generatePipelinePluginEntrypoint"
         },
         {
           "kind": "Interface",
@@ -13141,57 +12608,6 @@
             }
           ],
           "name": "getOutputSchema"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!getPluginCachePath:function(1)",
-          "docComment": "/**\n * Reads plugin.json and returns the cache path for a plugin.\n *\n * @param config - Configuration for determining cache path\n *\n * @returns Cache path or null if plugin.json not found or invalid\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function getPluginCachePath(config: "
-            },
-            {
-              "kind": "Reference",
-              "text": "PersistLocalConfig",
-              "canonicalReference": "claude-binary-plugin!PersistLocalConfig:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<string[]>"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 5
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "config",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "getPluginCachePath"
         },
         {
           "kind": "Function",
@@ -38825,135 +38241,816 @@
           }
         },
         {
-          "kind": "Variable",
-          "canonicalReference": "claude-binary-plugin!PluginBuilder:var",
-          "docComment": "/**\n * Unified namespace for plugin build system operations.\n *\n * @remarks\n *\n * The `PluginBuilder` namespace consolidates all build-related functions into a single, discoverable API. This includes compiling plugins, generating manifests, extracting hook/command definitions, and managing the plugin cache.\n *\n * **Namespace Organization:**\n *\n * | Category | Methods | |----------|---------| | Build | `build`, `fromConfig` | | Code Generation | `generateEntrypoint`, `generateHooksJson` | | Extraction | `extractHookEntries`, `extractCommandEntries`, `extractPassthroughEntries` | | Cache | `getCachePath`, `syncToCache` | | Manifests | `readPluginManifest`, `readMarketplaceManifest` |\n *\n * @example\n * ```typescript\n * import { PluginBuilder } from \"claude-binary-plugin\";\n *\n * // Build from a ClaudeBinaryPlugin instance\n * const result = await PluginBuilder.fromConfig(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n *   persistLocal: true,\n * });\n *\n * // Or build with manual entrypoint\n * const result = await PluginBuilder.build({\n *   rootDir: \".\",\n *   entrypoint: \"./plugin-entry.ts\",\n *   outputName: \"my-plugin.plugin\",\n * });\n *\n * // Generate hooks.json\n * const hooksJson = PluginBuilder.generateHooksJson({\n *   pluginBinaryName: \"my-plugin.plugin\",\n *   hooks: PluginBuilder.extractHookEntries(plugin.config),\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
+          "kind": "Class",
+          "canonicalReference": "claude-binary-plugin!PluginBuilder:class",
+          "docComment": "/**\n * Static class for plugin build system operations.\n *\n * @remarks\n *\n * The `PluginBuilder` class consolidates all build-related functions into a single, discoverable API. This includes compiling plugins, generating manifests, extracting hook/command definitions, and managing the plugin cache.\n *\n * **Class Organization:**\n *\n * | Category | Methods | |----------|---------| | Build | `build`, `fromConfig` | | Code Generation | `generateEntrypoint`, `generateHooksJson` | | Extraction | `extractHookEntries`, `extractCommandEntries`, `extractPassthroughEntries` | | Cache | `getCachePath`, `syncToCache` | | Manifests | `readPluginManifest`, `readMarketplaceManifest` |\n *\n * @example\n * ```typescript\n * import { PluginBuilder } from \"claude-binary-plugin\";\n *\n * // Build from a ClaudeBinaryPlugin instance\n * const result = await PluginBuilder.fromConfig(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n *   persistLocal: true,\n * });\n *\n * // Or build with manual entrypoint\n * const result = await PluginBuilder.build({\n *   rootDir: \".\",\n *   entrypoint: \"./plugin-entry.ts\",\n *   outputName: \"my-plugin.plugin\",\n * });\n *\n * // Generate hooks.json\n * const hooksJson = PluginBuilder.generateHooksJson({\n *   pluginBinaryName: \"my-plugin.plugin\",\n *   hooks: PluginBuilder.extractHookEntries(plugin.config),\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "PluginBuilder: "
-            },
-            {
-              "kind": "Content",
-              "text": "{\n    readonly build: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "buildPlugin",
-              "canonicalReference": "claude-binary-plugin!buildPlugin:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly fromConfig: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "buildPluginFromConfig",
-              "canonicalReference": "claude-binary-plugin!buildPluginFromConfig:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly generateEntrypoint: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "generatePipelinePluginEntrypoint",
-              "canonicalReference": "claude-binary-plugin!generatePipelinePluginEntrypoint:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly generateHooksJson: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "generateHooksJson",
-              "canonicalReference": "claude-binary-plugin!generateHooksJson:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly extractHookEntries: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "extractPipelineHookEntries",
-              "canonicalReference": "claude-binary-plugin!extractPipelineHookEntries:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly extractCommandEntries: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "extractPipelineCommandEntries",
-              "canonicalReference": "claude-binary-plugin!extractPipelineCommandEntries:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly extractPassthroughEntries: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "extractPassthroughHookEntries",
-              "canonicalReference": "claude-binary-plugin!extractPassthroughHookEntries:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly getCachePath: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "getPluginCachePath",
-              "canonicalReference": "claude-binary-plugin!getPluginCachePath:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly syncToCache: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "syncPluginToCache",
-              "canonicalReference": "claude-binary-plugin!syncPluginToCache:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly readPluginManifest: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "readPluginManifest",
-              "canonicalReference": "claude-binary-plugin!readPluginManifest:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly readMarketplaceManifest: typeof "
-            },
-            {
-              "kind": "Reference",
-              "text": "readMarketplaceManifest",
-              "canonicalReference": "claude-binary-plugin!readMarketplaceManifest:function"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n    readonly defaultShellExecutor: "
-            },
-            {
-              "kind": "Reference",
-              "text": "ShellExecutor",
-              "canonicalReference": "claude-binary-plugin!ShellExecutor:type"
-            },
-            {
-              "kind": "Content",
-              "text": ";\n}"
+              "text": "export declare class PluginBuilder "
             }
           ],
           "fileUrlPath": "src/build/builder.ts",
-          "isReadonly": true,
           "releaseTag": "Public",
+          "isAbstract": false,
           "name": "PluginBuilder",
-          "variableTypeTokenRange": {
-            "startIndex": 1,
-            "endIndex": 26
-          }
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.build:member(1)",
+              "docComment": "/**\n * Compile a plugin into a single executable.\n *\n * @remarks\n *\n * Creates a single Bun executable that bundles all hooks and commands. Requires a manual entrypoint file - for auto-generated entrypoints, use {@link PluginBuilder.fromConfig} instead.\n *\n * @param options - Build configuration options\n *\n * @returns Result of the build operation\n *\n * @example\n * ```typescript\n * const result = await PluginBuilder.build({\n *   rootDir: import.meta.dir,\n *   entrypoint: \"./plugin-entry.ts\",\n *   outputName: \"my-plugin.plugin\",\n *   compile: true,\n *   minify: true,\n * });\n *\n * if (result.success) {\n *   console.log(`Built: ${result.output}`);\n * }\n * ```\n *\n * @see\n *\n * {@link BuildPluginOptions}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static build(options?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "BuildPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!BuildPluginOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginBuildResult",
+                  "canonicalReference": "claude-binary-plugin!PluginBuildResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "build"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.defaultShellExecutor:member",
+              "docComment": "/**\n * Default shell executor using Bun.$.\n *\n * @remarks\n *\n * Executes shell commands quietly with nothrow to capture all output. Inject a mock executor for testing.\n *\n * @example\n * ```typescript\n * const result = await PluginBuilder.defaultShellExecutor(\"ls -la\");\n * console.log(result.stdout);\n * ```\n *\n * @see\n *\n * {@link ShellExecutor}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static defaultShellExecutor: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellExecutor",
+                  "canonicalReference": "claude-binary-plugin!ShellExecutor:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "defaultShellExecutor",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.extractCommandEntries:member(1)",
+              "docComment": "/**\n * Extract pipeline command entries from a plugin configuration.\n *\n * @remarks\n *\n * Extracts command definitions that will be compiled into the plugin binary.\n *\n * @param config - The plugin configuration from ClaudeBinaryPlugin.create()\n *\n * @returns Array of command entries ready for code generation\n *\n * @example\n * ```typescript\n * const commandEntries = PluginBuilder.extractCommandEntries(plugin.config);\n * console.log(`Found ${commandEntries.length} commands to compile`);\n * ```\n *\n * @see\n *\n * {@link PipelineCommandEntry}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static extractCommandEntries(config: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        commands?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractableCommand",
+                  "canonicalReference": "claude-binary-plugin!ExtractableCommand:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineCommandEntry",
+                  "canonicalReference": "claude-binary-plugin!PipelineCommandEntry:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 9
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "config",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "extractCommandEntries"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.extractHookEntries:member(1)",
+              "docComment": "/**\n * Extract pipeline hook entries from a plugin configuration.\n *\n * @remarks\n *\n * Extracts hook definitions that will be compiled into the plugin binary. Skips passthrough hooks which are handled separately.\n *\n * @param config - The plugin configuration from ClaudeBinaryPlugin.create()\n *\n * @returns Array of hook entries ready for code generation\n *\n * @example\n * ```typescript\n * const hookEntries = PluginBuilder.extractHookEntries(plugin.config);\n * console.log(`Found ${hookEntries.length} hooks to compile`);\n * ```\n *\n * @see\n *\n * {@link PipelineHookEntry}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static extractHookEntries(config: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        hooks: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Partial",
+                  "canonicalReference": "!Partial:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineHookEventType",
+                  "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractableHook",
+                  "canonicalReference": "claude-binary-plugin!ExtractableHook:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "[]>>;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineHookEntry",
+                  "canonicalReference": "claude-binary-plugin!PipelineHookEntry:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 11,
+                "endIndex": 13
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "config",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 10
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "extractHookEntries"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.extractPassthroughEntries:member(1)",
+              "docComment": "/**\n * Extract passthrough hook entries from a plugin configuration.\n *\n * @remarks\n *\n * Passthrough entries are raw hooks.json entries that get included directly without compilation into the binary. Useful for mixing compiled hooks with external scripts.\n *\n * @param config - The plugin configuration from ClaudeBinaryPlugin.create()\n *\n * @returns Object mapping hook types to their passthrough entries\n *\n * @example\n * ```typescript\n * const passthrough = PluginBuilder.extractPassthroughEntries(plugin.config);\n * // passthrough.PreToolUse might contain external script hooks\n * ```\n *\n * @see\n *\n * {@link ExtractedPassthroughHooks}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static extractPassthroughEntries(config: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        hooks: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Partial",
+                  "canonicalReference": "!Partial:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineHookEventType",
+                  "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", unknown[]>>;\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractedPassthroughHooks",
+                  "canonicalReference": "claude-binary-plugin!ExtractedPassthroughHooks:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 10
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "config",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 8
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "extractPassthroughEntries"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.fromConfig:member(1)",
+              "docComment": "/**\n * Build a plugin from a ClaudeBinaryPlugin configuration.\n *\n * @remarks\n *\n * This is the recommended build method. It automatically: - Reads plugin.json/marketplace.json manifests - Extracts hooks, commands, and passthrough entries - Generates the TypeScript entrypoint - Compiles to a single-file executable - Generates hooks.json for Claude Code - Optionally syncs to Claude Code plugins cache\n *\n * @param plugin - The plugin instance from ClaudeBinaryPlugin.create()\n *\n * @param options - Build configuration options\n *\n * @returns Result of the build operation\n *\n * @example\n * ```typescript\n * import plugin from \"./plugin.ts\";\n *\n * const result = await PluginBuilder.fromConfig(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n *   persistLocal: true,\n * });\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static fromConfig(plugin: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        config: {\n            hooks: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Partial",
+                  "canonicalReference": "!Partial:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineHookEventType",
+                  "canonicalReference": "claude-binary-plugin!PipelineHookEventType:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractableHook",
+                  "canonicalReference": "claude-binary-plugin!ExtractableHook:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "[]>>;\n            commands?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ExtractableCommand",
+                  "canonicalReference": "claude-binary-plugin!ExtractableCommand:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">;\n            hooksOutputPath?: string;\n        };\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", options?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "{\n        rootDir?: string;\n        plugin?: string;\n        marketplace?: string;\n        outputName?: string;\n        compile?: boolean;\n        minify?: boolean;\n        sourcemap?: boolean;\n        bytecode?: boolean;\n        target?: string;\n        clean?: boolean;\n        persistLocal?: boolean;\n        external?: string[];\n    }"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginBuildResult",
+                  "canonicalReference": "claude-binary-plugin!PluginBuildResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 17,
+                "endIndex": 21
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "plugin",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 14
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 15,
+                    "endIndex": 16
+                  },
+                  "isOptional": true
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "fromConfig"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.generateEntrypoint:member(1)",
+              "docComment": "/**\n * Generate TypeScript source code for a pipeline plugin entrypoint.\n *\n * @remarks\n *\n * Creates the entrypoint code that imports the plugin definition and routes CLI arguments to the correct hook handlers. This is called automatically by {@link PluginBuilder.fromConfig}.\n *\n * @param options - Generation options including plugin path, hooks, commands\n *\n * @returns Generated TypeScript source code\n *\n * @example\n * ```typescript\n * const source = PluginBuilder.generateEntrypoint({\n *   pluginPath: \"./plugin.ts\",\n *   pluginName: \"my-plugin\",\n *   pluginVersion: \"1.0.0\",\n *   hooks: PluginBuilder.extractHookEntries(plugin.config),\n *   pipelineCommands: PluginBuilder.extractCommandEntries(plugin.config),\n * });\n *\n * await Bun.write(\".plugin-entrypoint.ts\", source);\n * ```\n *\n * @see\n *\n * {@link GeneratePipelinePluginOptions}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static generateEntrypoint(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "GeneratePipelinePluginOptions",
+                  "canonicalReference": "claude-binary-plugin!GeneratePipelinePluginOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "generateEntrypoint"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.generateHooksJson:member(1)",
+              "docComment": "/**\n * Generate hooks.json content from hook entries.\n *\n * @remarks\n *\n * Creates the Claude Code hooks.json format that maps hook event types to their command handlers. All hooks use `${CLAUDE_PLUGIN_ROOT}` which Claude Code provides for every hook invocation.\n *\n * @param options - Generation options\n *\n * @returns The hooks.json object structure\n *\n * @example\n * ```typescript\n * const hooksJson = PluginBuilder.generateHooksJson({\n *   pluginBinaryName: \"my-plugin.plugin\",\n *   hooks: [\n *     { hookType: \"SessionStart\", name: \"context\", isPipeline: true },\n *     { hookType: \"PreToolUse\", name: \"filter\", isPipeline: true, tools: [\"Bash\"] },\n *   ],\n * });\n *\n * await Bun.write(\"hooks.json\", JSON.stringify(hooksJson, null, 2));\n * ```\n *\n * @see\n *\n * {@link GenerateHooksJsonOptions}\n *\n * @see\n *\n * {@link HooksJsonFile}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static generateHooksJson(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "GenerateHooksJsonOptions",
+                  "canonicalReference": "claude-binary-plugin!GenerateHooksJsonOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "HooksJsonFile",
+                  "canonicalReference": "claude-binary-plugin!HooksJsonFile:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "generateHooksJson"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.getCachePath:member(1)",
+              "docComment": "/**\n * Get the cache path(s) for a plugin.\n *\n * @remarks\n *\n * Reads plugin.json and returns the cache path where the plugin would be persisted. The path is constructed as: `${CLAUDE_CONFIG_DIR}/plugins/cache/${marketplaceName}/${pluginName}/${version}`\n *\n * @param config - Configuration for determining cache path\n *\n * @returns Array of cache paths\n *\n * @example\n * ```typescript\n * const paths = await PluginBuilder.getCachePath({\n *   rootDir: import.meta.dir,\n *   marketplaceName: \"my-marketplace\",\n *   shell: PluginBuilder.defaultShellExecutor,\n * });\n * console.log(`Cache path: ${paths[0]}`);\n * ```\n *\n * @see\n *\n * {@link PersistLocalConfig}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static getCachePath(config: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PersistLocalConfig",
+                  "canonicalReference": "claude-binary-plugin!PersistLocalConfig:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string[]>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "config",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "getCachePath"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.readMarketplaceManifest:member(1)",
+              "docComment": "/**\n * Read a marketplace.json manifest.\n *\n * @remarks\n *\n * Reads the marketplace manifest from the given path or from the default `.claude-plugin/marketplace.json` location within a directory.\n *\n * @param marketplacePath - Path to marketplace.json or directory containing it\n *\n * @returns Marketplace manifest or null if not found\n *\n * @example\n * ```typescript\n * const manifest = await PluginBuilder.readMarketplaceManifest(\"../../\");\n * if (manifest) {\n *   console.log(`Marketplace: ${manifest.name}`);\n * }\n * ```\n *\n * @see\n *\n * {@link MarketplaceManifest}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readMarketplaceManifest(marketplacePath: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "MarketplaceManifest",
+                  "canonicalReference": "claude-binary-plugin!MarketplaceManifest:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | null>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "marketplacePath",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "readMarketplaceManifest"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.readPluginManifest:member(1)",
+              "docComment": "/**\n * Read a plugin.json manifest.\n *\n * @remarks\n *\n * Reads the plugin manifest from the given path or from the default `.claude-plugin/plugin.json` location within a directory.\n *\n * @param pluginPath - Path to plugin.json or directory containing it\n *\n * @returns Plugin manifest or null if not found\n *\n * @example\n * ```typescript\n * const manifest = await PluginBuilder.readPluginManifest(import.meta.dir);\n * if (manifest) {\n *   console.log(`Plugin: ${manifest.name} v${manifest.version}`);\n * }\n * ```\n *\n * @see\n *\n * {@link PluginManifest}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static readPluginManifest(pluginPath: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PluginManifest",
+                  "canonicalReference": "claude-binary-plugin!PluginManifest:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | null>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "pluginPath",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "readPluginManifest"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginBuilder.syncToCache:member(1)",
+              "docComment": "/**\n * Sync a plugin directory to Claude's local cache.\n *\n * @remarks\n *\n * Clears the existing cache and copies all plugin files to the cache directory. This enables immediate testing of plugin changes without reinstalling from the marketplace.\n *\n * @param config - Configuration for syncing\n *\n * @returns true if successful, false otherwise\n *\n * @example\n * ```typescript\n * await PluginBuilder.syncToCache({\n *   rootDir: import.meta.dir,\n *   marketplaceName: \"my-marketplace\",\n *   shell: PluginBuilder.defaultShellExecutor,\n * });\n * ```\n *\n * @see\n *\n * {@link PersistLocalConfig}\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static syncToCache(config: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PersistLocalConfig",
+                  "canonicalReference": "claude-binary-plugin!PersistLocalConfig:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<boolean>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "config",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "syncToCache"
+            }
+          ],
+          "implementsTokenRanges": []
         },
         {
           "kind": "Interface",
@@ -48084,124 +48181,6 @@
               "endIndex": 5
             }
           ]
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!readMarketplaceManifest:function(1)",
-          "docComment": "/**\n * Read the marketplace.json manifest.\n *\n * @param marketplacePath - Path to marketplace.json, or directory containing .claude-plugin/marketplace.json\n *\n * @returns Marketplace manifest or null if not found\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function readMarketplaceManifest(marketplacePath: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "MarketplaceManifest",
-              "canonicalReference": "claude-binary-plugin!MarketplaceManifest:interface"
-            },
-            {
-              "kind": "Content",
-              "text": " | null>"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 7
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "marketplacePath",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "readMarketplaceManifest"
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!readPluginManifest:function(1)",
-          "docComment": "/**\n * Read the plugin.json manifest.\n *\n * @param pluginPath - Path to plugin.json, or directory containing .claude-plugin/plugin.json\n *\n * @returns Plugin manifest or null if not found\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function readPluginManifest(pluginPath: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<"
-            },
-            {
-              "kind": "Reference",
-              "text": "PluginManifest",
-              "canonicalReference": "claude-binary-plugin!PluginManifest:interface"
-            },
-            {
-              "kind": "Content",
-              "text": " | null>"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 7
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "pluginPath",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "readPluginManifest"
         },
         {
           "kind": "Interface",
@@ -58828,57 +58807,6 @@
             "startIndex": 1,
             "endIndex": 2
           }
-        },
-        {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!syncPluginToCache:function(1)",
-          "docComment": "/**\n * Syncs a plugin directory to Claude's local cache.\n *\n * This clears the existing cache and copies all plugin files to the cache directory.\n *\n * @param config - Configuration for syncing\n *\n * @returns true if successful, false otherwise\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function syncPluginToCache(config: "
-            },
-            {
-              "kind": "Reference",
-              "text": "PersistLocalConfig",
-              "canonicalReference": "claude-binary-plugin!PersistLocalConfig:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<boolean>"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/build/builder.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 3,
-            "endIndex": 5
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "config",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "syncPluginToCache"
         },
         {
           "kind": "Interface",

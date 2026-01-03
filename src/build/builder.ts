@@ -62,9 +62,9 @@ export type ShellExecutor = (cmd: string) => Promise<ShellResult>;
 
 /**
  * Default shell executor using Bun.$.
- * @public
+ * @internal
  */
-export const defaultShellExecutor: ShellExecutor = async (cmd: string): Promise<ShellResult> => {
+const defaultShellExecutor: ShellExecutor = async (cmd: string): Promise<ShellResult> => {
 	const result = await Bun.$`sh -c ${cmd}`.quiet().nothrow();
 	return {
 		exitCode: result.exitCode,
@@ -166,9 +166,9 @@ export interface GeneratePipelinePluginOptions {
  *
  * @param options - Generation options
  * @returns Generated TypeScript source code
- * @public
+ * @internal
  */
-export function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions): string {
+function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions): string {
 	const { pluginPath, pluginName, pluginVersion, hooks, pipelineCommands = [] } = options;
 
 	// Group hooks by type for the switch statement
@@ -490,9 +490,9 @@ export interface ExtractedPassthroughHooks {
  *
  * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
  * @returns Array of hook entries ready for code generation
- * @public
+ * @internal
  */
-export function extractPipelineHookEntries(config: {
+function extractPipelineHookEntries(config: {
 	hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
 }): PipelineHookEntry[] {
 	const entries: PipelineHookEntry[] = [];
@@ -544,9 +544,9 @@ export interface ExtractableCommand {
  *
  * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
  * @returns Array of pipeline command entries
- * @public
+ * @internal
  */
-export function extractPipelineCommandEntries(config: {
+function extractPipelineCommandEntries(config: {
 	commands?: Record<string, ExtractableCommand>;
 }): PipelineCommandEntry[] {
 	if (!config.commands) return [];
@@ -572,9 +572,9 @@ export function extractPipelineCommandEntries(config: {
  *
  * @param config - The plugin configuration from ClaudeBinaryPlugin.create()
  * @returns Object mapping hook types to their passthrough entries
- * @public
+ * @internal
  */
-export function extractPassthroughHookEntries(config: {
+function extractPassthroughHookEntries(config: {
 	hooks: Partial<Record<PipelineHookEventType, unknown[]>>;
 }): ExtractedPassthroughHooks {
 	const result: ExtractedPassthroughHooks = {};
@@ -661,9 +661,9 @@ async function readManifestFile<T>(manifestPath: string): Promise<T | null> {
  *
  * @param pluginPath - Path to plugin.json, or directory containing .claude-plugin/plugin.json
  * @returns Plugin manifest or null if not found
- * @public
+ * @internal
  */
-export async function readPluginManifest(pluginPath: string): Promise<PluginManifest | null> {
+async function readPluginManifest(pluginPath: string): Promise<PluginManifest | null> {
 	// If path ends with .json, read directly; otherwise treat as directory
 	const manifestPath = pluginPath.endsWith(".json") ? pluginPath : resolve(pluginPath, ".claude-plugin/plugin.json");
 
@@ -675,9 +675,9 @@ export async function readPluginManifest(pluginPath: string): Promise<PluginMani
  *
  * @param marketplacePath - Path to marketplace.json, or directory containing .claude-plugin/marketplace.json
  * @returns Marketplace manifest or null if not found
- * @public
+ * @internal
  */
-export async function readMarketplaceManifest(marketplacePath: string): Promise<MarketplaceManifest | null> {
+async function readMarketplaceManifest(marketplacePath: string): Promise<MarketplaceManifest | null> {
 	// If path ends with .json, read directly; otherwise treat as directory
 	const manifestPath = marketplacePath.endsWith(".json")
 		? marketplacePath
@@ -818,9 +818,9 @@ export interface PersistLocalConfig {
  *
  * @param config - Configuration for determining cache path
  * @returns Cache path or null if plugin.json not found or invalid
- * @public
+ * @internal
  */
-export async function getPluginCachePath(config: PersistLocalConfig): Promise<string[]> {
+async function getPluginCachePath(config: PersistLocalConfig): Promise<string[]> {
 	const { rootDir, marketplaceName } = config;
 
 	// Read plugin.json from .claude-plugin directory
@@ -856,9 +856,9 @@ export async function getPluginCachePath(config: PersistLocalConfig): Promise<st
  *
  * @param config - Configuration for syncing
  * @returns true if successful, false otherwise
- * @public
+ * @internal
  */
-export async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
+async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
 	const { rootDir, shell } = config;
 
 	const cachePaths = await getPluginCachePath(config);
@@ -951,9 +951,9 @@ export async function syncPluginToCache(config: PersistLocalConfig): Promise<boo
  *
  * @param options - Build configuration options
  * @returns Result of the build operation
- * @public
+ * @internal
  */
-export async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuildResult> {
+async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuildResult> {
 	const startTime = performance.now();
 
 	const rootDir = options.rootDir ?? process.cwd();
@@ -1199,9 +1199,9 @@ export interface HooksJsonFile {
  * //   }
  * // }
  * ```
- * @public
+ * @internal
  */
-export function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
+function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
 	const { pluginBinaryName, hooks, passthroughHooks = {} } = options;
 
 	// Group hooks by type
@@ -1292,9 +1292,9 @@ export function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonF
  * });
  * ```
  *
- * @public
+ * @internal
  */
-export async function buildPluginFromConfig(
+async function buildPluginFromConfig(
 	plugin: {
 		config: {
 			hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
@@ -1556,18 +1556,18 @@ export async function buildPluginFromConfig(
 }
 
 // =============================================================================
-// PLUGIN BUILDER NAMESPACE
+// PLUGIN BUILDER CLASS
 // =============================================================================
 
 /**
- * Unified namespace for plugin build system operations.
+ * Static class for plugin build system operations.
  *
  * @remarks
- * The `PluginBuilder` namespace consolidates all build-related functions into a
+ * The `PluginBuilder` class consolidates all build-related functions into a
  * single, discoverable API. This includes compiling plugins, generating manifests,
  * extracting hook/command definitions, and managing the plugin cache.
  *
- * **Namespace Organization:**
+ * **Class Organization:**
  *
  * | Category | Methods |
  * |----------|---------|
@@ -1605,7 +1605,7 @@ export async function buildPluginFromConfig(
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
-export const PluginBuilder = {
+export class PluginBuilder {
 	// =========================================================================
 	// BUILD OPERATIONS
 	// =========================================================================
@@ -1637,9 +1637,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link BuildPluginOptions}
-	 * @public
 	 */
-	build: buildPlugin,
+	static build(options: BuildPluginOptions = {}): Promise<PluginBuildResult> {
+		return buildPlugin(options);
+	}
 
 	/**
 	 * Build a plugin from a ClaudeBinaryPlugin configuration.
@@ -1667,10 +1668,32 @@ export const PluginBuilder = {
 	 *   persistLocal: true,
 	 * });
 	 * ```
-	 *
-	 * @public
 	 */
-	fromConfig: buildPluginFromConfig,
+	static fromConfig(
+		plugin: {
+			config: {
+				hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+				commands?: Record<string, ExtractableCommand>;
+				hooksOutputPath?: string;
+			};
+		},
+		options: {
+			rootDir?: string;
+			plugin?: string;
+			marketplace?: string;
+			outputName?: string;
+			compile?: boolean;
+			minify?: boolean;
+			sourcemap?: boolean;
+			bytecode?: boolean;
+			target?: string;
+			clean?: boolean;
+			persistLocal?: boolean;
+			external?: string[];
+		} = {},
+	): Promise<PluginBuildResult> {
+		return buildPluginFromConfig(plugin, options);
+	}
 
 	// =========================================================================
 	// CODE GENERATION
@@ -1701,9 +1724,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link GeneratePipelinePluginOptions}
-	 * @public
 	 */
-	generateEntrypoint: generatePipelinePluginEntrypoint,
+	static generateEntrypoint(options: GeneratePipelinePluginOptions): string {
+		return generatePipelinePluginEntrypoint(options);
+	}
 
 	/**
 	 * Generate hooks.json content from hook entries.
@@ -1731,9 +1755,10 @@ export const PluginBuilder = {
 	 *
 	 * @see {@link GenerateHooksJsonOptions}
 	 * @see {@link HooksJsonFile}
-	 * @public
 	 */
-	generateHooksJson,
+	static generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
+		return generateHooksJson(options);
+	}
 
 	// =========================================================================
 	// EXTRACTION UTILITIES
@@ -1756,9 +1781,12 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link PipelineHookEntry}
-	 * @public
 	 */
-	extractHookEntries: extractPipelineHookEntries,
+	static extractHookEntries(config: {
+		hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+	}): PipelineHookEntry[] {
+		return extractPipelineHookEntries(config);
+	}
 
 	/**
 	 * Extract pipeline command entries from a plugin configuration.
@@ -1776,9 +1804,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link PipelineCommandEntry}
-	 * @public
 	 */
-	extractCommandEntries: extractPipelineCommandEntries,
+	static extractCommandEntries(config: { commands?: Record<string, ExtractableCommand> }): PipelineCommandEntry[] {
+		return extractPipelineCommandEntries(config);
+	}
 
 	/**
 	 * Extract passthrough hook entries from a plugin configuration.
@@ -1798,9 +1827,12 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link ExtractedPassthroughHooks}
-	 * @public
 	 */
-	extractPassthroughEntries: extractPassthroughHookEntries,
+	static extractPassthroughEntries(config: {
+		hooks: Partial<Record<PipelineHookEventType, unknown[]>>;
+	}): ExtractedPassthroughHooks {
+		return extractPassthroughHookEntries(config);
+	}
 
 	// =========================================================================
 	// CACHE OPERATIONS
@@ -1828,9 +1860,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link PersistLocalConfig}
-	 * @public
 	 */
-	getCachePath: getPluginCachePath,
+	static getCachePath(config: PersistLocalConfig): Promise<string[]> {
+		return getPluginCachePath(config);
+	}
 
 	/**
 	 * Sync a plugin directory to Claude's local cache.
@@ -1853,9 +1886,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link PersistLocalConfig}
-	 * @public
 	 */
-	syncToCache: syncPluginToCache,
+	static syncToCache(config: PersistLocalConfig): Promise<boolean> {
+		return syncPluginToCache(config);
+	}
 
 	// =========================================================================
 	// MANIFEST READING
@@ -1880,9 +1914,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link PluginManifest}
-	 * @public
 	 */
-	readPluginManifest,
+	static readPluginManifest(pluginPath: string): Promise<PluginManifest | null> {
+		return readPluginManifest(pluginPath);
+	}
 
 	/**
 	 * Read a marketplace.json manifest.
@@ -1903,9 +1938,10 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link MarketplaceManifest}
-	 * @public
 	 */
-	readMarketplaceManifest,
+	static readMarketplaceManifest(marketplacePath: string): Promise<MarketplaceManifest | null> {
+		return readMarketplaceManifest(marketplacePath);
+	}
 
 	// =========================================================================
 	// UTILITIES
@@ -1925,7 +1961,6 @@ export const PluginBuilder = {
 	 * ```
 	 *
 	 * @see {@link ShellExecutor}
-	 * @public
 	 */
-	defaultShellExecutor,
-} as const;
+	static defaultShellExecutor: ShellExecutor = defaultShellExecutor;
+}

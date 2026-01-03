@@ -12,16 +12,7 @@ import type {
 	ShellExecutor,
 	ShellResult,
 } from "./builder.js";
-import {
-	buildPlugin,
-	extractPassthroughHookEntries,
-	generateHooksJson,
-	generatePipelinePluginEntrypoint,
-	getPluginCachePath,
-	readMarketplaceManifest,
-	readPluginManifest,
-	syncPluginToCache,
-} from "./builder.js";
+import { PluginBuilder } from "./builder.js";
 
 // Test directory for build tests
 const TEST_DIR = join(Bun.env.TMPDIR || "/tmp", `builder-test-${Date.now()}`);
@@ -84,7 +75,7 @@ describe("readPluginManifest", () => {
 		};
 		await Bun.write(join(MANIFEST_DIR, ".claude-plugin/plugin.json"), JSON.stringify(manifest));
 
-		const result = await readPluginManifest(MANIFEST_DIR);
+		const result = await PluginBuilder.readPluginManifest(MANIFEST_DIR);
 
 		expect(result).not.toBeNull();
 		expect(result?.name).toBe("my-plugin");
@@ -93,7 +84,7 @@ describe("readPluginManifest", () => {
 	});
 
 	test("returns null when plugin.json does not exist", async () => {
-		const result = await readPluginManifest(MANIFEST_DIR);
+		const result = await PluginBuilder.readPluginManifest(MANIFEST_DIR);
 
 		expect(result).toBeNull();
 	});
@@ -101,7 +92,7 @@ describe("readPluginManifest", () => {
 	test("returns null when plugin.json is invalid JSON", async () => {
 		await Bun.write(join(MANIFEST_DIR, ".claude-plugin/plugin.json"), "not valid json");
 
-		const result = await readPluginManifest(MANIFEST_DIR);
+		const result = await PluginBuilder.readPluginManifest(MANIFEST_DIR);
 
 		expect(result).toBeNull();
 	});
@@ -110,7 +101,7 @@ describe("readPluginManifest", () => {
 		const manifest: PluginManifest = { name: "direct-path", version: "2.0.0" };
 		await Bun.write(join(MANIFEST_DIR, ".claude-plugin/plugin.json"), JSON.stringify(manifest));
 
-		const result = await readPluginManifest(join(MANIFEST_DIR, ".claude-plugin/plugin.json"));
+		const result = await PluginBuilder.readPluginManifest(join(MANIFEST_DIR, ".claude-plugin/plugin.json"));
 
 		expect(result?.name).toBe("direct-path");
 	});
@@ -139,7 +130,7 @@ describe("readMarketplaceManifest", () => {
 		};
 		await Bun.write(join(MANIFEST_DIR, ".claude-plugin/marketplace.json"), JSON.stringify(manifest));
 
-		const result = await readMarketplaceManifest(MANIFEST_DIR);
+		const result = await PluginBuilder.readMarketplaceManifest(MANIFEST_DIR);
 
 		expect(result).not.toBeNull();
 		expect(result?.name).toBe("my-marketplace");
@@ -147,7 +138,7 @@ describe("readMarketplaceManifest", () => {
 	});
 
 	test("returns null when marketplace.json does not exist", async () => {
-		const result = await readMarketplaceManifest(MANIFEST_DIR);
+		const result = await PluginBuilder.readMarketplaceManifest(MANIFEST_DIR);
 
 		expect(result).toBeNull();
 	});
@@ -156,7 +147,7 @@ describe("readMarketplaceManifest", () => {
 		const manifest: MarketplaceManifest = { name: "direct-marketplace" };
 		await Bun.write(join(MANIFEST_DIR, ".claude-plugin/marketplace.json"), JSON.stringify(manifest));
 
-		const result = await readMarketplaceManifest(join(MANIFEST_DIR, ".claude-plugin/marketplace.json"));
+		const result = await PluginBuilder.readMarketplaceManifest(join(MANIFEST_DIR, ".claude-plugin/marketplace.json"));
 
 		expect(result?.name).toBe("direct-marketplace");
 	});
@@ -182,7 +173,7 @@ describe("buildPlugin", () => {
 		console.log = mock(() => {});
 
 		const { shell } = createMockShell();
-		const result = await buildPlugin({
+		const result = await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "nonexistent.ts",
 			shell,
@@ -204,7 +195,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), entrypointContent);
 
 		const { shell, commands } = createMockShell();
-		const result = await buildPlugin({
+		const result = await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			outputName: "test.plugin",
@@ -232,7 +223,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		await buildPlugin({
+		await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			minify: true,
@@ -254,7 +245,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		await buildPlugin({
+		await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			target: "bun-linux-arm64",
@@ -279,7 +270,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const shell = createFailingBuildShell("Plugin compilation failed");
-		const result = await buildPlugin({
+		const result = await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			shell,
@@ -299,7 +290,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		await buildPlugin({
+		await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			outputName: "clean-test.plugin",
@@ -323,7 +314,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		await buildPlugin({
+		await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			cleanupTempFiles: true,
@@ -355,7 +346,7 @@ describe("buildPlugin", () => {
 			return { exitCode: 0, stdout: "", stderr: "" };
 		};
 
-		const result = await buildPlugin({
+		const result = await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			shell: throwingShell,
@@ -375,7 +366,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		await buildPlugin({
+		await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			bytecode: true,
@@ -397,7 +388,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		await buildPlugin({
+		await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			external: ["@commitlint/load", "some-other-pkg"],
@@ -423,7 +414,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell } = createMockShell();
-		const result = await buildPlugin({
+		const result = await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			persistLocal: true,
@@ -446,7 +437,7 @@ describe("buildPlugin", () => {
 		await Bun.write(join(PLUGIN_DIR, "plugin.ts"), 'console.log("test");');
 
 		const { shell, commands } = createMockShell();
-		const result = await buildPlugin({
+		const result = await PluginBuilder.build({
 			rootDir: PLUGIN_DIR,
 			entrypoint: "plugin.ts",
 			compile: false,
@@ -492,7 +483,7 @@ describe("getPluginCachePath", () => {
 		const { shell } = createMockShell();
 
 		await expect(
-			getPluginCachePath({
+			PluginBuilder.getCachePath({
 				rootDir: PLUGIN_DIR,
 				marketplaceName: "test-marketplace",
 				shell,
@@ -506,7 +497,7 @@ describe("getPluginCachePath", () => {
 		const { shell } = createMockShell();
 
 		await expect(
-			getPluginCachePath({
+			PluginBuilder.getCachePath({
 				rootDir: PLUGIN_DIR,
 				marketplaceName: "test-marketplace",
 				shell,
@@ -522,7 +513,7 @@ describe("getPluginCachePath", () => {
 
 		const { shell } = createMockShell();
 
-		const paths = await getPluginCachePath({
+		const paths = await PluginBuilder.getCachePath({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
 			shell,
@@ -541,7 +532,7 @@ describe("getPluginCachePath", () => {
 
 		const { shell } = createMockShell();
 
-		const paths = await getPluginCachePath({
+		const paths = await PluginBuilder.getCachePath({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "my-marketplace",
 			shell,
@@ -557,7 +548,7 @@ describe("getPluginCachePath", () => {
 		const { shell } = createMockShell();
 
 		await expect(
-			getPluginCachePath({
+			PluginBuilder.getCachePath({
 				rootDir: PLUGIN_DIR,
 				marketplaceName: "test-marketplace",
 				shell,
@@ -595,7 +586,7 @@ describe("syncPluginToCache", () => {
 
 		const { shell, commands } = createMockShell();
 
-		const result = await syncPluginToCache({
+		const result = await PluginBuilder.syncToCache({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
 			shell,
@@ -629,7 +620,7 @@ describe("syncPluginToCache", () => {
 			return { exitCode: 0, stdout: "", stderr: "" };
 		};
 
-		const result = await syncPluginToCache({
+		const result = await PluginBuilder.syncToCache({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
 			shell: fallbackShell,
@@ -659,7 +650,7 @@ describe("syncPluginToCache", () => {
 			return { exitCode: 0, stdout: "", stderr: "" };
 		};
 
-		const result = await syncPluginToCache({
+		const result = await PluginBuilder.syncToCache({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
 			shell: failShell,
@@ -692,7 +683,7 @@ describe("syncPluginToCache", () => {
 			throw new Error("Sync exception");
 		};
 
-		const result = await syncPluginToCache({
+		const result = await PluginBuilder.syncToCache({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
 			shell: throwingShell,
@@ -730,7 +721,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			hooks,
 		};
 
-		const entrypoint = generatePipelinePluginEntrypoint(options);
+		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		// Check that it imports the plugin definition
 		expect(entrypoint).toContain('import pluginDefinition from "./my-plugin.ts"');
@@ -766,7 +757,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			hooks,
 		};
 
-		const entrypoint = generatePipelinePluginEntrypoint(options);
+		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		// Check for runRawHandler call
 		expect(entrypoint).toContain("runRawHandler(");
@@ -795,7 +786,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			pipelineCommands,
 		};
 
-		const entrypoint = generatePipelinePluginEntrypoint(options);
+		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		// Check for command cases
 		expect(entrypoint).toContain('case "lint"');
@@ -821,7 +812,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			hooks,
 		};
 
-		const entrypoint = generatePipelinePluginEntrypoint(options);
+		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		// Check help text
 		expect(entrypoint).toContain("test-plugin v1.0.0");
@@ -839,7 +830,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			hooks,
 		};
 
-		const entrypoint = generatePipelinePluginEntrypoint(options);
+		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		expect(entrypoint).toContain("--sidecar");
 		expect(entrypoint).toContain("runSidecar");
@@ -856,7 +847,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			hooks,
 		};
 
-		const entrypoint = generatePipelinePluginEntrypoint(options);
+		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		expect(entrypoint).toContain('const PLUGIN_NAME = "my-plugin"');
 		expect(entrypoint).toContain('const PLUGIN_VERSION = "2.5.0"');
@@ -876,7 +867,7 @@ describe("extractPassthroughHookEntries", () => {
 			},
 		};
 
-		const result = extractPassthroughHookEntries(config);
+		const result = PluginBuilder.extractPassthroughEntries(config);
 
 		expect(result).toHaveProperty("SessionStart");
 		expect(result.SessionStart).toHaveLength(1);
@@ -895,7 +886,7 @@ describe("extractPassthroughHookEntries", () => {
 			},
 		};
 
-		const result = extractPassthroughHookEntries(config);
+		const result = PluginBuilder.extractPassthroughEntries(config);
 
 		expect(Object.keys(result)).toHaveLength(0);
 	});
@@ -910,7 +901,7 @@ describe("extractPassthroughHookEntries", () => {
 			},
 		};
 
-		const result = extractPassthroughHookEntries(config);
+		const result = PluginBuilder.extractPassthroughEntries(config);
 
 		expect(Object.keys(result)).toHaveLength(0);
 	});
@@ -923,7 +914,7 @@ describe("generateHooksJson", () => {
 			{ hookType: "PreToolUse", name: "filter", isPipeline: true, tools: ["Bash", "Write"] },
 		];
 
-		const result = generateHooksJson({ pluginBinaryName: "my.plugin", hooks });
+		const result = PluginBuilder.generateHooksJson({ pluginBinaryName: "my.plugin", hooks });
 
 		// All hooks use CLAUDE_PLUGIN_ROOT (provided by Claude Code)
 		expect(result.hooks.SessionStart).toHaveLength(1);
@@ -946,7 +937,7 @@ describe("generateHooksJson", () => {
 			Stop: [{ hooks: [{ type: "command" as const, command: "bash cleanup.sh" }] }],
 		};
 
-		const result = generateHooksJson({ pluginBinaryName: "my.plugin", hooks, passthroughHooks });
+		const result = PluginBuilder.generateHooksJson({ pluginBinaryName: "my.plugin", hooks, passthroughHooks });
 
 		// SessionStart should have both compiled and passthrough
 		expect(result.hooks.SessionStart).toHaveLength(2);
@@ -963,7 +954,7 @@ describe("generateHooksJson", () => {
 	});
 
 	test("handles empty hooks gracefully", () => {
-		const result = generateHooksJson({ pluginBinaryName: "my.plugin", hooks: [] });
+		const result = PluginBuilder.generateHooksJson({ pluginBinaryName: "my.plugin", hooks: [] });
 
 		expect(Object.keys(result.hooks)).toHaveLength(0);
 	});

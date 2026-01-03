@@ -395,22 +395,7 @@ export type {
 	ShellExecutor,
 	ShellResult,
 } from "./build/builder.js";
-export {
-	// Unified namespace (preferred)
-	PluginBuilder,
-	buildPlugin,
-	buildPluginFromConfig,
-	defaultShellExecutor,
-	extractPassthroughHookEntries,
-	extractPipelineCommandEntries,
-	extractPipelineHookEntries,
-	generateHooksJson,
-	generatePipelinePluginEntrypoint,
-	getPluginCachePath,
-	readMarketplaceManifest,
-	readPluginManifest,
-	syncPluginToCache,
-} from "./build/builder.js";
+export { PluginBuilder } from "./build/builder.js";
 
 // =============================================================================
 // TESTING UTILITIES
