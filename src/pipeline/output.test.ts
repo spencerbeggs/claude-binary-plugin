@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { detectContentType, estimateTokenCount, extractTokenMetrics } from "./metrics.js";
+import { TokenMetrics } from "./metrics.js";
 import type {
 	PermissionRequestOutput,
 	PostToolUseOutput,
@@ -312,84 +312,84 @@ describe("PassthroughOutputSchema", () => {
 // TOKEN ESTIMATION
 // =============================================================================
 
-describe("estimateTokenCount", () => {
+describe("TokenMetrics.estimate", () => {
 	test("returns 0 for empty string", () => {
-		expect(estimateTokenCount("")).toBe(0);
+		expect(TokenMetrics.estimate("")).toBe(0);
 	});
 
 	test("returns 0 for null", () => {
-		expect(estimateTokenCount(null)).toBe(0);
+		expect(TokenMetrics.estimate(null)).toBe(0);
 	});
 
 	test("returns 0 for undefined", () => {
-		expect(estimateTokenCount(undefined)).toBe(0);
+		expect(TokenMetrics.estimate(undefined)).toBe(0);
 	});
 
 	test("estimates prose at ~4 chars/token", () => {
 		const text = "Hello world, this is a test."; // 28 chars
-		expect(estimateTokenCount(text)).toBe(7); // ceil(28/4) = 7
+		expect(TokenMetrics.estimate(text)).toBe(7); // ceil(28/4) = 7
 	});
 
 	test("estimates code at ~3.5 chars/token", () => {
 		const code = "const x = 1;"; // 12 chars
-		expect(estimateTokenCount(code, "code")).toBe(4); // ceil(12/3.5) = 4
+		expect(TokenMetrics.estimate(code, "code")).toBe(4); // ceil(12/3.5) = 4
 	});
 
 	test("estimates JSON at ~3 chars/token", () => {
 		const json = '{"key":"value"}'; // 15 chars
-		expect(estimateTokenCount(json, "json")).toBe(5); // ceil(15/3) = 5
+		expect(TokenMetrics.estimate(json, "json")).toBe(5); // ceil(15/3) = 5
 	});
 
 	test("estimates markdown same as prose", () => {
 		const md = "# Hello World"; // 13 chars
-		expect(estimateTokenCount(md, "markdown")).toBe(4); // ceil(13/4) = 4
+		expect(TokenMetrics.estimate(md, "markdown")).toBe(4); // ceil(13/4) = 4
 	});
 });
 
-describe("detectContentType", () => {
+describe("TokenMetrics.detectContentType", () => {
 	test("detects TypeScript files as code", () => {
-		expect(detectContentType({ file_path: "src/index.ts" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "src/index.ts" })).toBe("code");
 	});
 
 	test("detects JavaScript files as code", () => {
-		expect(detectContentType({ file_path: "lib/utils.js" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "lib/utils.js" })).toBe("code");
 	});
 
 	test("detects Python files as code", () => {
-		expect(detectContentType({ file_path: "main.py" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "main.py" })).toBe("code");
 	});
 
 	test("detects JSON files as json", () => {
-		expect(detectContentType({ file_path: "package.json" })).toBe("json");
+		expect(TokenMetrics.detectContentType({ file_path: "package.json" })).toBe("json");
 	});
 
 	test("detects Markdown files as markdown", () => {
-		expect(detectContentType({ file_path: "README.md" })).toBe("markdown");
+		expect(TokenMetrics.detectContentType({ file_path: "README.md" })).toBe("markdown");
 	});
 
 	test("detects shell scripts as code", () => {
-		expect(detectContentType({ file_path: "build.sh" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "build.sh" })).toBe("code");
 	});
 
 	test("detects YAML as code", () => {
-		expect(detectContentType({ file_path: "config.yaml" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "config.yaml" })).toBe("code");
 	});
 
 	test("falls back to prose for unknown extensions", () => {
-		expect(detectContentType({ file_path: "notes.txt" })).toBe("prose");
+		expect(TokenMetrics.detectContentType({ file_path: "notes.txt" })).toBe("prose");
 	});
 
 	test("detects JSON content by leading brace", () => {
-		expect(detectContentType({ content: '{"key": "value"}' })).toBe("json");
+		expect(TokenMetrics.detectContentType({ content: '{"key": "value"}' })).toBe("json");
 	});
 
 	test("detects JSON array content", () => {
-		expect(detectContentType({ content: "[1, 2, 3]" })).toBe("json");
+		expect(TokenMetrics.detectContentType({ content: "[1, 2, 3]" })).toBe("json");
 	});
 
 	test("file extension takes precedence over content detection", () => {
 		// Even though content starts with {, file extension wins
-		expect(detectContentType({ file_path: "data.py", content: '{"key": "value"}' })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "data.py", content: '{"key": "value"}' })).toBe("code");
 	});
 });
 
@@ -397,7 +397,7 @@ describe("detectContentType", () => {
 // TOKEN METRICS EXTRACTION
 // =============================================================================
 
-describe("extractTokenMetrics", () => {
+describe("TokenMetrics.extractFromOutput", () => {
 	test("extracts tokens from claudeContext", () => {
 		const output: PreToolUseOutput = {
 			status: "executed",
@@ -405,7 +405,7 @@ describe("extractTokenMetrics", () => {
 			summary: "test",
 			claudeContext: "This is context for Claude.", // 28 chars
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.claudeContext).toBe(7); // ceil(28/4)
 		expect(metrics.hookTotal).toBe(7);
 	});
@@ -417,7 +417,7 @@ describe("extractTokenMetrics", () => {
 			summary: "test",
 			userMessage: "Hello user!", // 11 chars
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.userMessage).toBe(3); // ceil(11/4)
 	});
 
@@ -428,7 +428,7 @@ describe("extractTokenMetrics", () => {
 			summary: "denied",
 			reason: "Command is dangerous", // 20 chars
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.reason).toBe(5); // ceil(20/4)
 		expect(metrics.hookTotal).toBe(5);
 	});
@@ -442,7 +442,7 @@ describe("extractTokenMetrics", () => {
 			userMessage: "For user.", // 9 chars = 3 tokens
 			reason: "Reason.", // 7 chars = 2 tokens
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.claudeContext).toBe(5);
 		expect(metrics.userMessage).toBe(3);
 		expect(metrics.reason).toBe(2);
@@ -454,7 +454,7 @@ describe("extractTokenMetrics", () => {
 			status: "skipped",
 			summary: "skipped",
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.claudeContext).toBe(0);
 		expect(metrics.userMessage).toBe(0);
 		expect(metrics.reason).toBe(0);

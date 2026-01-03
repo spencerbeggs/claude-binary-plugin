@@ -116,7 +116,7 @@ export interface PermissionRequestResponse {
 	updatedInput?: Record<string, unknown>;
 }
 
-import { extractTokenMetrics } from "./metrics.js";
+import { TokenMetrics } from "./metrics.js";
 import type { AnyPipelineOutput, ExecutionStatus, HookAction } from "./types.js";
 import { isPipelineOutput } from "./types.js";
 
@@ -705,7 +705,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			const outcome = mapToOutcome(output.status, action);
 
 			// Extract token metrics for auto-instrumentation
-			const tokenMetrics = extractTokenMetrics(output);
+			const tokenMetrics = TokenMetrics.extractFromOutput(output);
 
 			// Build telemetry metrics
 			const metrics: Record<string, number | undefined> = {};

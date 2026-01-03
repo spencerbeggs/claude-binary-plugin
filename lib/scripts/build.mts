@@ -8,7 +8,7 @@ await BunPackage.create({
 	// Install dependencies in dist directories for local linking
 	installDeps: false,
 	apiModel: {
-		path: "../../../website/docs/lib/packages/claude-binary-plugin.api.json",
+		path: "../website/docs/lib/packages/claude-binary-plugin.api.json",
 	},
 	packageJson({ pkg, target }) {
 		// Scope the package name for GitHub Packages

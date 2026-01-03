@@ -10,18 +10,7 @@
  */
 
 import { getOutputSchema, isPipelineHook, isRawHook } from "./config.js";
-import {
-	DEFAULT_TOKEN_BUDGET,
-	checkTokenBudget,
-	createSessionTokenState,
-	detectContentType,
-	estimateTokenCount,
-	extractAutoMetrics,
-	extractTokenMetrics,
-	extractToolTokenMetrics,
-	getSessionTokenAttributes,
-	updateSessionTokens,
-} from "./metrics.js";
+import { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./metrics.js";
 import { handleUnknownHook, runPipeline, runRawHandler } from "./runtime.js";
 import { isPipelineOutput } from "./types.js";
 
@@ -274,7 +263,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		estimateTokens: estimateTokenCount,
+		estimateTokens: TokenMetrics.estimate,
 
 		/**
 		 * Detect content type from file path or content.
@@ -284,7 +273,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		detectContentType,
+		detectContentType: TokenMetrics.detectContentType,
 
 		/**
 		 * Extract token metrics from a pipeline output.
@@ -297,7 +286,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		extractTokens: extractTokenMetrics,
+		extractTokens: TokenMetrics.extractFromOutput,
 
 		/**
 		 * Extract token metrics from tool use events.
@@ -312,7 +301,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		extractToolTokens: extractToolTokenMetrics,
+		extractToolTokens: TokenMetrics.extractFromTool,
 
 		/**
 		 * Extract all auto-metrics from an output and event.
@@ -327,7 +316,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		extractAuto: extractAutoMetrics,
+		extractAuto: TokenMetrics.extractAuto,
 
 		/**
 		 * Create a new session token tracking state.
@@ -336,7 +325,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		createSessionState: createSessionTokenState,
+		createSessionState: TokenMetrics.createSessionState,
 
 		/**
 		 * Update session token state with new tokens.
@@ -347,7 +336,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		updateSession: updateSessionTokens,
+		updateSession: TokenMetrics.updateSession,
 
 		/**
 		 * Get OTEL attributes for session token state.
@@ -357,7 +346,7 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		getSessionAttributes: getSessionTokenAttributes,
+		getSessionAttributes: TokenMetrics.getSessionAttributes,
 
 		/**
 		 * Default token budget thresholds.
@@ -375,6 +364,6 @@ export const Pipeline = {
 		 *
 		 * @public
 		 */
-		checkBudget: checkTokenBudget,
+		checkBudget: TokenMetrics.checkBudget,
 	},
 } as const;

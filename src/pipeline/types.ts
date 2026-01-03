@@ -218,10 +218,10 @@ export type PipelineMetrics = z.infer<typeof PipelineMetricsSchema>;
  *
  * The runtime calculates these automatically - hooks don't need to provide them.
  *
- * @see {@link extractTokenMetrics} - Extracts these from pipeline output
+ * @see {@link TokenMetrics.extractFromOutput} - Extracts these from pipeline output
  * @public
  */
-export interface TokenMetrics {
+export interface TokenMetricsData {
 	/** Estimated tokens in `claudeContext` field */
 	claudeContext: number;
 	/** Estimated tokens in `userMessage` field */

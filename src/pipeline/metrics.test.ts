@@ -1,124 +1,113 @@
 import { describe, expect, test } from "bun:test";
-import {
-	DEFAULT_TOKEN_BUDGET,
-	checkTokenBudget,
-	createSessionTokenState,
-	detectContentType,
-	estimateTokenCount,
-	extractAutoMetrics,
-	extractTokenMetrics,
-	extractToolTokenMetrics,
-	getSessionTokenAttributes,
-	updateSessionTokens,
-} from "./metrics.js";
+import { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./metrics.js";
 import type { AnyPipelineOutput } from "./types.js";
 
-describe("estimateTokenCount", () => {
+describe("TokenMetrics.estimate", () => {
 	test("returns 0 for null/undefined/empty", () => {
-		expect(estimateTokenCount(null)).toBe(0);
-		expect(estimateTokenCount(undefined)).toBe(0);
-		expect(estimateTokenCount("")).toBe(0);
+		expect(TokenMetrics.estimate(null)).toBe(0);
+		expect(TokenMetrics.estimate(undefined)).toBe(0);
+		expect(TokenMetrics.estimate("")).toBe(0);
 	});
 
 	test("estimates prose with ~4 chars/token", () => {
 		const text = "This is a sample text for testing token estimation.";
-		const tokens = estimateTokenCount(text, "prose");
+		const tokens = TokenMetrics.estimate(text, "prose");
 		expect(tokens).toBe(Math.ceil(text.length / 4));
 	});
 
 	test("estimates markdown with ~4 chars/token", () => {
 		const text = "# Heading\n\nSome **bold** text.";
-		const tokens = estimateTokenCount(text, "markdown");
+		const tokens = TokenMetrics.estimate(text, "markdown");
 		expect(tokens).toBe(Math.ceil(text.length / 4));
 	});
 
 	test("estimates code with ~3.5 chars/token", () => {
 		const text = "const x = () => { return 42; };";
-		const tokens = estimateTokenCount(text, "code");
+		const tokens = TokenMetrics.estimate(text, "code");
 		expect(tokens).toBe(Math.ceil(text.length / 3.5));
 	});
 
 	test("estimates json with ~3 chars/token", () => {
 		const text = '{"key": "value", "num": 42}';
-		const tokens = estimateTokenCount(text, "json");
+		const tokens = TokenMetrics.estimate(text, "json");
 		expect(tokens).toBe(Math.ceil(text.length / 3));
 	});
 
 	test("defaults to prose estimation for unknown content type", () => {
 		const text = "Some random text here.";
-		const tokens = estimateTokenCount(text);
+		const tokens = TokenMetrics.estimate(text);
 		expect(tokens).toBe(Math.ceil(text.length / 4));
 	});
 });
 
-describe("detectContentType", () => {
+describe("TokenMetrics.detectContentType", () => {
 	test("detects TypeScript files as code", () => {
-		expect(detectContentType({ file_path: "src/index.ts" })).toBe("code");
-		expect(detectContentType({ file_path: "component.tsx" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "src/index.ts" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "component.tsx" })).toBe("code");
 	});
 
 	test("detects JavaScript files as code", () => {
-		expect(detectContentType({ file_path: "app.js" })).toBe("code");
-		expect(detectContentType({ file_path: "component.jsx" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "app.js" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "component.jsx" })).toBe("code");
 	});
 
 	test("detects other programming languages as code", () => {
-		expect(detectContentType({ file_path: "main.py" })).toBe("code");
-		expect(detectContentType({ file_path: "main.go" })).toBe("code");
-		expect(detectContentType({ file_path: "lib.rs" })).toBe("code");
-		expect(detectContentType({ file_path: "App.java" })).toBe("code");
-		expect(detectContentType({ file_path: "main.c" })).toBe("code");
-		expect(detectContentType({ file_path: "main.cpp" })).toBe("code");
-		expect(detectContentType({ file_path: "header.h" })).toBe("code");
-		expect(detectContentType({ file_path: "app.rb" })).toBe("code");
-		expect(detectContentType({ file_path: "index.php" })).toBe("code");
-		expect(detectContentType({ file_path: "app.swift" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "main.py" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "main.go" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "lib.rs" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "App.java" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "main.c" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "main.cpp" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "header.h" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "app.rb" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "index.php" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "app.swift" })).toBe("code");
 	});
 
 	test("detects JSON files", () => {
-		expect(detectContentType({ file_path: "package.json" })).toBe("json");
-		expect(detectContentType({ file_path: "tsconfig.jsonc" })).toBe("json");
-		expect(detectContentType({ file_path: "config.json5" })).toBe("json");
+		expect(TokenMetrics.detectContentType({ file_path: "package.json" })).toBe("json");
+		expect(TokenMetrics.detectContentType({ file_path: "tsconfig.jsonc" })).toBe("json");
+		expect(TokenMetrics.detectContentType({ file_path: "config.json5" })).toBe("json");
 	});
 
 	test("detects markdown files", () => {
-		expect(detectContentType({ file_path: "README.md" })).toBe("markdown");
-		expect(detectContentType({ file_path: "docs.mdx" })).toBe("markdown");
-		expect(detectContentType({ file_path: "CHANGELOG.markdown" })).toBe("markdown");
+		expect(TokenMetrics.detectContentType({ file_path: "README.md" })).toBe("markdown");
+		expect(TokenMetrics.detectContentType({ file_path: "docs.mdx" })).toBe("markdown");
+		expect(TokenMetrics.detectContentType({ file_path: "CHANGELOG.markdown" })).toBe("markdown");
 	});
 
 	test("detects shell scripts as code", () => {
-		expect(detectContentType({ file_path: "build.sh" })).toBe("code");
-		expect(detectContentType({ file_path: "setup.bash" })).toBe("code");
-		expect(detectContentType({ file_path: "install.zsh" })).toBe("code");
-		expect(detectContentType({ file_path: "config.fish" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "build.sh" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "setup.bash" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "install.zsh" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "config.fish" })).toBe("code");
 	});
 
 	test("detects config files as code", () => {
-		expect(detectContentType({ file_path: "config.yaml" })).toBe("code");
-		expect(detectContentType({ file_path: "config.yml" })).toBe("code");
-		expect(detectContentType({ file_path: "Cargo.toml" })).toBe("code");
-		expect(detectContentType({ file_path: "app.ini" })).toBe("code");
-		expect(detectContentType({ file_path: "nginx.conf" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "config.yaml" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "config.yml" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "Cargo.toml" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "app.ini" })).toBe("code");
+		expect(TokenMetrics.detectContentType({ file_path: "nginx.conf" })).toBe("code");
 	});
 
 	test("detects JSON content by heuristic", () => {
-		expect(detectContentType({ content: '{"key": "value"}' })).toBe("json");
-		expect(detectContentType({ content: '  {"key": "value"}' })).toBe("json");
-		expect(detectContentType({ content: '["item1", "item2"]' })).toBe("json");
-		expect(detectContentType({ content: "  [1, 2, 3]" })).toBe("json");
+		expect(TokenMetrics.detectContentType({ content: '{"key": "value"}' })).toBe("json");
+		expect(TokenMetrics.detectContentType({ content: '  {"key": "value"}' })).toBe("json");
+		expect(TokenMetrics.detectContentType({ content: '["item1", "item2"]' })).toBe("json");
+		expect(TokenMetrics.detectContentType({ content: "  [1, 2, 3]" })).toBe("json");
 	});
 
 	test("defaults to prose for unknown files", () => {
-		expect(detectContentType({ file_path: "document.txt" })).toBe("prose");
-		expect(detectContentType({ file_path: "notes" })).toBe("prose");
-		expect(detectContentType({})).toBe("prose");
+		expect(TokenMetrics.detectContentType({ file_path: "document.txt" })).toBe("prose");
+		expect(TokenMetrics.detectContentType({ file_path: "notes" })).toBe("prose");
+		expect(TokenMetrics.detectContentType({})).toBe("prose");
 	});
 
 	test("falls back to content heuristic for unknown extensions", () => {
 		// .txt is not a known extension, so content heuristic applies
 		expect(
-			detectContentType({
+			TokenMetrics.detectContentType({
 				file_path: "data.txt",
 				content: '{"key": "value"}',
 			}),
@@ -128,7 +117,7 @@ describe("detectContentType", () => {
 	test("known extension takes precedence over content", () => {
 		// .ts is a known code extension
 		expect(
-			detectContentType({
+			TokenMetrics.detectContentType({
 				file_path: "config.ts",
 				content: '{"key": "value"}',
 			}),
@@ -136,7 +125,7 @@ describe("detectContentType", () => {
 	});
 });
 
-describe("extractTokenMetrics", () => {
+describe("TokenMetrics.extractFromOutput", () => {
 	test("extracts tokens from claudeContext", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
@@ -144,7 +133,7 @@ describe("extractTokenMetrics", () => {
 			summary: "test",
 			claudeContext: "Some context for Claude to use.",
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.claudeContext).toBeGreaterThan(0);
 		expect(metrics.hookTotal).toBe(metrics.claudeContext);
 	});
@@ -156,7 +145,7 @@ describe("extractTokenMetrics", () => {
 			summary: "test",
 			userMessage: "A message for the user.",
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.userMessage).toBeGreaterThan(0);
 		expect(metrics.hookTotal).toBe(metrics.userMessage);
 	});
@@ -168,7 +157,7 @@ describe("extractTokenMetrics", () => {
 			action: "deny",
 			reason: "This action is not allowed because of policy.",
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.reason).toBeGreaterThan(0);
 		expect(metrics.hookTotal).toBe(metrics.reason);
 	});
@@ -182,7 +171,7 @@ describe("extractTokenMetrics", () => {
 			userMessage: "User message here.",
 			reason: "Reason here.",
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.hookTotal).toBe(metrics.claudeContext + metrics.userMessage + metrics.reason);
 	});
 
@@ -192,7 +181,7 @@ describe("extractTokenMetrics", () => {
 			action: "allow",
 			summary: "test",
 		};
-		const metrics = extractTokenMetrics(output);
+		const metrics = TokenMetrics.extractFromOutput(output);
 		expect(metrics.claudeContext).toBe(0);
 		expect(metrics.userMessage).toBe(0);
 		expect(metrics.reason).toBe(0);
@@ -200,7 +189,7 @@ describe("extractTokenMetrics", () => {
 	});
 });
 
-describe("extractToolTokenMetrics", () => {
+describe("TokenMetrics.extractFromTool", () => {
 	test("extracts file content tokens", () => {
 		const event = {
 			tool_input: {
@@ -208,7 +197,7 @@ describe("extractToolTokenMetrics", () => {
 				content: "const x = 42;\nexport { x };",
 			},
 		};
-		const metrics = extractToolTokenMetrics(event);
+		const metrics = TokenMetrics.extractFromTool(event);
 		expect(metrics.fileContent).toBeGreaterThan(0);
 		expect(metrics.toolInput).toBeGreaterThan(0);
 	});
@@ -217,7 +206,7 @@ describe("extractToolTokenMetrics", () => {
 		const event = {
 			tool_response: "Command completed successfully with output.",
 		};
-		const metrics = extractToolTokenMetrics(event);
+		const metrics = TokenMetrics.extractFromTool(event);
 		expect(metrics.toolResponse).toBeGreaterThan(0);
 	});
 
@@ -225,27 +214,27 @@ describe("extractToolTokenMetrics", () => {
 		const event = {
 			tool_response: { success: true, data: { count: 42 } },
 		};
-		const metrics = extractToolTokenMetrics(event);
+		const metrics = TokenMetrics.extractFromTool(event);
 		expect(metrics.toolResponse).toBeGreaterThan(0);
 	});
 
 	test("returns empty object for event without tool data", () => {
 		const event = {};
-		const metrics = extractToolTokenMetrics(event);
+		const metrics = TokenMetrics.extractFromTool(event);
 		expect(metrics.fileContent).toBeUndefined();
 		expect(metrics.toolInput).toBeUndefined();
 		expect(metrics.toolResponse).toBeUndefined();
 	});
 });
 
-describe("extractAutoMetrics", () => {
+describe("TokenMetrics.extractAuto", () => {
 	test("includes base metrics", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "Test completed",
 		};
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", {}, output, 42);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", {}, output, 42);
 
 		expect(attrs["hook.duration_ms"]).toBe(42);
 		expect(attrs["hook.name"]).toBe("test-hook");
@@ -261,7 +250,7 @@ describe("extractAutoMetrics", () => {
 			summary: "Allowed",
 			action: "allow",
 		};
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
 
 		expect(attrs["hook.action"]).toBe("allow");
 	});
@@ -269,7 +258,7 @@ describe("extractAutoMetrics", () => {
 	test("includes session ID from event", () => {
 		const event = { session_id: "session-123" };
 		const output: AnyPipelineOutput = { status: "executed", action: "allow", summary: "test" };
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", event, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", event, output, 10);
 
 		expect(attrs["session.id"]).toBe("session-123");
 	});
@@ -284,7 +273,7 @@ describe("extractAutoMetrics", () => {
 			},
 		};
 		const output: AnyPipelineOutput = { status: "executed", action: "allow", summary: "test" };
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", event, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", event, output, 10);
 
 		expect(attrs["tool.name"]).toBe("Write");
 		expect(attrs["tool.use_id"]).toBe("tool-456");
@@ -305,7 +294,7 @@ describe("extractAutoMetrics", () => {
 			},
 		};
 		const output: AnyPipelineOutput = { status: "executed", action: "allow", summary: "test" };
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", event, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", event, output, 10);
 
 		expect(attrs["bash.command_prefix"]).toBe("npm");
 		expect(attrs["bash.is_background"]).toBe(true);
@@ -319,7 +308,7 @@ describe("extractAutoMetrics", () => {
 			summary: "test",
 			claudeContext: "Context for Claude here.",
 		};
-		const attrs = extractAutoMetrics("SessionStart", "test-hook", "test-plugin", {}, output, 10);
+		const attrs = TokenMetrics.extractAuto("SessionStart", "test-hook", "test-plugin", {}, output, 10);
 
 		expect(attrs["tokens.claude_context"]).toBeGreaterThan(0);
 		expect(attrs["tokens.hook_total"]).toBeGreaterThan(0);
@@ -334,7 +323,7 @@ describe("extractAutoMetrics", () => {
 			userMessage: "message",
 			updatedInput: { modified: true },
 		};
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
 
 		expect(attrs["response.has_claude_context"]).toBe(true);
 		expect(attrs["response.has_user_message"]).toBe(true);
@@ -355,7 +344,7 @@ describe("extractAutoMetrics", () => {
 				cacheHit: true,
 			},
 		};
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
 
 		expect(attrs["validation.result"]).toBe("passed");
 		expect(attrs["validation.issues_found"]).toBe(5);
@@ -377,7 +366,7 @@ describe("extractAutoMetrics", () => {
 				fallback: true,
 			},
 		};
-		const attrs = extractAutoMetrics("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
+		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", {}, output, 10);
 
 		expect(attrs["quality.degraded"]).toBe(true);
 		expect(attrs["quality.degraded_reason"]).toBe("Timeout exceeded");
@@ -386,9 +375,9 @@ describe("extractAutoMetrics", () => {
 	});
 });
 
-describe("SessionTokenState", () => {
-	test("createSessionTokenState returns initial state", () => {
-		const state = createSessionTokenState();
+describe("TokenMetrics session state", () => {
+	test("createSessionState returns initial state", () => {
+		const state = TokenMetrics.createSessionState();
 
 		expect(state.totalContextAdded).toBe(0);
 		expect(state.byHook).toEqual({});
@@ -396,10 +385,10 @@ describe("SessionTokenState", () => {
 		expect(state.largestSingleContext).toEqual({ hook: "", tokens: 0 });
 	});
 
-	test("updateSessionTokens accumulates tokens", () => {
-		const state = createSessionTokenState();
+	test("updateSession accumulates tokens", () => {
+		const state = TokenMetrics.createSessionState();
 
-		updateSessionTokens(state, "hook-a", "SessionStart", {
+		TokenMetrics.updateSession(state, "hook-a", "SessionStart", {
 			claudeContext: 100,
 			userMessage: 0,
 			reason: 0,
@@ -412,22 +401,22 @@ describe("SessionTokenState", () => {
 		expect(state.largestSingleContext).toEqual({ hook: "hook-a", tokens: 100 });
 	});
 
-	test("updateSessionTokens tracks largest context", () => {
-		const state = createSessionTokenState();
+	test("updateSession tracks largest context", () => {
+		const state = TokenMetrics.createSessionState();
 
-		updateSessionTokens(state, "hook-a", "SessionStart", {
+		TokenMetrics.updateSession(state, "hook-a", "SessionStart", {
 			claudeContext: 100,
 			userMessage: 0,
 			reason: 0,
 			hookTotal: 100,
 		});
-		updateSessionTokens(state, "hook-b", "PreToolUse", {
+		TokenMetrics.updateSession(state, "hook-b", "PreToolUse", {
 			claudeContext: 50,
 			userMessage: 0,
 			reason: 0,
 			hookTotal: 50,
 		});
-		updateSessionTokens(state, "hook-c", "PostToolUse", {
+		TokenMetrics.updateSession(state, "hook-c", "PostToolUse", {
 			claudeContext: 200,
 			userMessage: 0,
 			reason: 0,
@@ -437,16 +426,16 @@ describe("SessionTokenState", () => {
 		expect(state.largestSingleContext).toEqual({ hook: "hook-c", tokens: 200 });
 	});
 
-	test("updateSessionTokens aggregates by hook and type", () => {
-		const state = createSessionTokenState();
+	test("updateSession aggregates by hook and type", () => {
+		const state = TokenMetrics.createSessionState();
 
-		updateSessionTokens(state, "hook-a", "PreToolUse", {
+		TokenMetrics.updateSession(state, "hook-a", "PreToolUse", {
 			claudeContext: 0,
 			userMessage: 0,
 			reason: 0,
 			hookTotal: 50,
 		});
-		updateSessionTokens(state, "hook-a", "PreToolUse", {
+		TokenMetrics.updateSession(state, "hook-a", "PreToolUse", {
 			claudeContext: 0,
 			userMessage: 0,
 			reason: 0,
@@ -458,22 +447,22 @@ describe("SessionTokenState", () => {
 		expect(state.totalContextAdded).toBe(80);
 	});
 
-	test("getSessionTokenAttributes returns OTEL attributes", () => {
-		const state = createSessionTokenState();
-		updateSessionTokens(state, "context-hook", "SessionStart", {
+	test("getSessionAttributes returns OTEL attributes", () => {
+		const state = TokenMetrics.createSessionState();
+		TokenMetrics.updateSession(state, "context-hook", "SessionStart", {
 			claudeContext: 500,
 			userMessage: 0,
 			reason: 0,
 			hookTotal: 500,
 		});
-		updateSessionTokens(state, "tool-hook", "PreToolUse", {
+		TokenMetrics.updateSession(state, "tool-hook", "PreToolUse", {
 			claudeContext: 100,
 			userMessage: 0,
 			reason: 0,
 			hookTotal: 100,
 		});
 
-		const attrs = getSessionTokenAttributes(state);
+		const attrs = TokenMetrics.getSessionAttributes(state);
 
 		expect(attrs["session.tokens.total_context_added"]).toBe(600);
 		expect(attrs["session.tokens.largest_single_context"]).toBe(500);
@@ -482,9 +471,9 @@ describe("SessionTokenState", () => {
 		expect(attrs["session.tokens.by_type.PreToolUse"]).toBe(100);
 	});
 
-	test("getSessionTokenAttributes omits largest when zero", () => {
-		const state = createSessionTokenState();
-		const attrs = getSessionTokenAttributes(state);
+	test("getSessionAttributes omits largest when zero", () => {
+		const state = TokenMetrics.createSessionState();
+		const attrs = TokenMetrics.getSessionAttributes(state);
 
 		expect(attrs["session.tokens.total_context_added"]).toBe(0);
 		expect(attrs["session.tokens.largest_single_context"]).toBeUndefined();
@@ -492,23 +481,23 @@ describe("SessionTokenState", () => {
 	});
 });
 
-describe("checkTokenBudget", () => {
+describe("TokenMetrics.checkBudget", () => {
 	test("returns ok for low usage", () => {
-		const result = checkTokenBudget(50_000); // 25% of 200k
+		const result = TokenMetrics.checkBudget(50_000); // 25% of 200k
 		expect(result.level).toBe("ok");
 		expect(result.usagePercent).toBe(25);
 	});
 
 	test("returns warning at warning threshold", () => {
 		const contextAdded = DEFAULT_TOKEN_BUDGET.contextWindow * DEFAULT_TOKEN_BUDGET.warningThreshold;
-		const result = checkTokenBudget(contextAdded);
+		const result = TokenMetrics.checkBudget(contextAdded);
 		expect(result.level).toBe("warning");
 		expect(result.usagePercent).toBe(80);
 	});
 
 	test("returns critical at critical threshold", () => {
 		const contextAdded = DEFAULT_TOKEN_BUDGET.contextWindow * DEFAULT_TOKEN_BUDGET.criticalThreshold;
-		const result = checkTokenBudget(contextAdded);
+		const result = TokenMetrics.checkBudget(contextAdded);
 		expect(result.level).toBe("critical");
 		expect(result.usagePercent).toBe(95);
 	});
@@ -520,8 +509,8 @@ describe("checkTokenBudget", () => {
 			criticalThreshold: 0.75,
 		};
 
-		expect(checkTokenBudget(40_000, customBudget).level).toBe("ok");
-		expect(checkTokenBudget(50_000, customBudget).level).toBe("warning");
-		expect(checkTokenBudget(75_000, customBudget).level).toBe("critical");
+		expect(TokenMetrics.checkBudget(40_000, customBudget).level).toBe("ok");
+		expect(TokenMetrics.checkBudget(50_000, customBudget).level).toBe("warning");
+		expect(TokenMetrics.checkBudget(75_000, customBudget).level).toBe("critical");
 	});
 });

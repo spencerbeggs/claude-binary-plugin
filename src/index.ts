@@ -286,20 +286,9 @@ export {
 	isPipelineHook,
 	isRawHook,
 } from "./pipeline/config.js";
-// Pipeline metrics - explicit exports to avoid conflict with events/response-types.ts::estimateTokenCount
-export type { OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
-export {
-	DEFAULT_TOKEN_BUDGET,
-	checkTokenBudget,
-	createSessionTokenState,
-	detectContentType,
-	estimateTokenCount as estimatePipelineTokenCount,
-	extractAutoMetrics,
-	extractTokenMetrics,
-	extractToolTokenMetrics,
-	getSessionTokenAttributes,
-	updateSessionTokens,
-} from "./pipeline/metrics.js";
+// Pipeline metrics
+export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
+export { DEFAULT_TOKEN_BUDGET, TokenMetrics } from "./pipeline/metrics.js";
 // Unified Pipeline namespace (preferred)
 export { Pipeline } from "./pipeline/namespace.js";
 
@@ -322,7 +311,7 @@ export type {
 	SessionStartOutput as SessionStartPipelineOutput,
 	StopOutput as StopPipelineOutput,
 	SubagentStopOutput as SubagentStopPipelineOutput,
-	TokenMetrics,
+	TokenMetricsData,
 	UserPromptSubmitOutput as UserPromptSubmitPipelineOutput,
 	ValidationResult as PipelineValidationResult,
 } from "./pipeline/types.js";
