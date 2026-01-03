@@ -17,4 +17,5 @@ export * from "./subclasses.js";
 // Event interfaces and type definitions
 export * from "./types.js";
 // Schema validation with OTEL
-export { parseWithOTEL } from "./validation.js";
+export type { FormattedValidationError } from "./validation.js";
+export { SchemaValidator } from "./validation.js";

@@ -12229,6 +12229,105 @@
           "name": "formatFatalError"
         },
         {
+          "kind": "Interface",
+          "canonicalReference": "claude-binary-plugin!FormattedValidationError:interface",
+          "docComment": "/**\n * Formatted validation error for OTEL telemetry.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface FormattedValidationError "
+            }
+          ],
+          "fileUrlPath": "src/events/validation.ts",
+          "releaseTag": "Public",
+          "name": "FormattedValidationError",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!FormattedValidationError#issueCount:member",
+              "docComment": "/**\n * Number of validation issues\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "issueCount: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "issueCount",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!FormattedValidationError#message:member",
+              "docComment": "/**\n * Human-readable error message with all issues\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "message: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "message",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!FormattedValidationError#path:member",
+              "docComment": "/**\n * Path to the first error (e.g., \"tool_input.command\")\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "path: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "path",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
           "kind": "Function",
           "canonicalReference": "claude-binary-plugin!formatZodErrorAsMarkdown:function(1)",
           "docComment": "/**\n * Format a Zod validation error for LLM consumption.\n *\n * @param error - The Zod error to format\n *\n * @param maxErrors - Maximum number of errors to show (default 10)\n *\n * @returns Formatted markdown string\n *\n * @example\n *\n * Output:\n * ```markdown\n * ## Validation Errors\n *\n * - **MY_VAR**: Invalid enum value. Expected 'true' | 'false', received: undefined\n * ```\n *\n * @public\n */\n",
@@ -32878,106 +32977,6 @@
           "name": "parseRawArgs"
         },
         {
-          "kind": "Function",
-          "canonicalReference": "claude-binary-plugin!parseWithOTEL:function(1)",
-          "docComment": "/**\n * Two-stage schema validation that enables OTEL error capture.\n *\n * Stage 1: Extract session_id from raw JSON (minimal parsing) Stage 2: Full schema validation with OTEL error emission on failure\n *\n * @param rawJson - The raw JSON string from stdin\n *\n * @param schema - The Zod schema to validate against\n *\n * @param hookName - The hook name for OTEL attribution\n *\n * @returns The validated and typed event data\n *\n * @throws\n *\n * ZodError if validation fails (after emitting to OTEL)\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function parseWithOTEL<T>(rawJson: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": ", schema: "
-            },
-            {
-              "kind": "Reference",
-              "text": "z.ZodType",
-              "canonicalReference": "zod!ZodType:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<T>"
-            },
-            {
-              "kind": "Content",
-              "text": ", hookName: "
-            },
-            {
-              "kind": "Content",
-              "text": "string"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "Promise",
-              "canonicalReference": "!Promise:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "<T>"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "fileUrlPath": "src/events/validation.ts",
-          "returnTypeTokenRange": {
-            "startIndex": 8,
-            "endIndex": 10
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "rawJson",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "schema",
-              "parameterTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 5
-              },
-              "isOptional": false
-            },
-            {
-              "parameterName": "hookName",
-              "parameterTypeTokenRange": {
-                "startIndex": 6,
-                "endIndex": 7
-              },
-              "isOptional": false
-            }
-          ],
-          "typeParameters": [
-            {
-              "typeParameterName": "T",
-              "constraintTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            }
-          ],
-          "name": "parseWithOTEL"
-        },
-        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!PassthroughHookEntry:interface",
           "docComment": "/**\n * Passthrough hook entry - included directly in hooks.json without compilation. Use this for hooks that don't need to be part of the binary plugin, like bash scripts or external tools.\n *\n * @example\n * ```ts\n * {\n *   matcher: \"startup\",\n *   hooks: [{ type: \"command\", command: \"bash ./scripts/init.sh\" }]\n * }\n * ```\n *\n * @public\n */\n",
@@ -49742,6 +49741,128 @@
             }
           ],
           "extendsTokenRanges": []
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "claude-binary-plugin!SchemaValidator:class",
+          "docComment": "/**\n * Schema validator with OTEL error capture.\n *\n * Provides two-stage validation that extracts session_id early for OTEL initialization, then performs full schema validation with telemetry on failure.\n *\n * @example\n * ```typescript\n * const event = await SchemaValidator.parse(\n *   rawJson,\n *   HookEventSchemas.PreToolUse,\n *   \"pre-bash\"\n * );\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class SchemaValidator "
+            }
+          ],
+          "fileUrlPath": "src/events/validation.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "SchemaValidator",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!SchemaValidator.parse:member(1)",
+              "docComment": "/**\n * Parse and validate JSON with OTEL error capture.\n *\n * Two-stage validation process: 1. Extract session_id from raw JSON for early OTEL initialization 2. Full schema validation with OTEL error emission on failure\n *\n * @param rawJson - The raw JSON string from stdin\n *\n * @param schema - The Zod schema to validate against\n *\n * @param hookName - The hook name for OTEL attribution\n *\n * @returns The validated and typed event data\n *\n * @throws\n *\n * ZodError if validation fails (after emitting to OTEL)\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static parse<T>(rawJson: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", schema: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodType",
+                  "canonicalReference": "zod!ZodType:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", hookName: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "T",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 8,
+                "endIndex": 10
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "rawJson",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "schema",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "hookName",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 7
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "parse"
+            }
+          ],
+          "implementsTokenRanges": []
         },
         {
           "kind": "Interface",

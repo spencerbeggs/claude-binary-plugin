@@ -55,7 +55,7 @@ import type { HookEventName } from "./enums.js";
 import { HookResponseBuilder } from "./response-builders.js";
 import type { HookMetrics, HookOutcome } from "./response-types.js";
 import type { HookEventBase, HookEventOptions, HookPermissionsMode, IO } from "./types.js";
-import { parseWithOTEL } from "./validation.js";
+import { SchemaValidator } from "./validation.js";
 
 /**
  * Base class for all hook events in the Claude Code plugin system.
@@ -546,7 +546,7 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 
 		const params = await HookEvent.readInputText(options);
 		if (params) {
-			const parsed = (await parseWithOTEL(params, HookEventSchemas.Any, hookName)) as HookEventBase;
+			const parsed = (await SchemaValidator.parse(params, HookEventSchemas.Any, hookName)) as HookEventBase;
 			const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 			// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 			const env = (await (options.envClass as any).forContext("hook", {

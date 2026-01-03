@@ -38,8 +38,8 @@
 
 import { HookEventSchemas } from "../core/schemas.js";
 import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
-import { getSidecarClient } from "../otel/client.js";
 import { OTELConfig } from "../otel/classes/OTELConfig.js";
+import { getSidecarClient } from "../otel/client.js";
 import { HookEvent } from "./base.js";
 import { HookEventName } from "./enums.js";
 import {
@@ -70,7 +70,7 @@ import type {
 	ToolResponse,
 	UserPromptSubmitEvent,
 } from "./types.js";
-import { parseWithOTEL } from "./validation.js";
+import { SchemaValidator } from "./validation.js";
 
 /**
  * Hook event fired before a tool executes.
@@ -151,7 +151,7 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		if (!eventText) {
 			throw new Error("Failed to read PreToolUseEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.PreToolUse, hookName)) as PreToolUseEvent;
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreToolUse, hookName)) as PreToolUseEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -241,7 +241,7 @@ export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implem
 		if (!eventText) {
 			throw new Error("Failed to read PostToolUseEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.PostToolUse, hookName)) as PostToolUseEvent;
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PostToolUse, hookName)) as PostToolUseEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -324,7 +324,7 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
 		if (!eventText) {
 			throw new Error("Failed to read PermissionRequestEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(
+		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.PermissionRequest,
 			hookName,
@@ -396,7 +396,11 @@ export class NotificationHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		if (!eventText) {
 			throw new Error("Failed to read NotificationEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.Notification, hookName)) as NotificationEvent;
+		const parsed = (await SchemaValidator.parse(
+			eventText,
+			HookEventSchemas.Notification,
+			hookName,
+		)) as NotificationEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -476,7 +480,7 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
 		if (!eventText) {
 			throw new Error("Failed to read UserPromptSubmitEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(
+		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.UserPromptSubmit,
 			hookName,
@@ -562,7 +566,7 @@ export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements St
 		if (!eventText) {
 			throw new Error("Failed to read StopEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.Stop, hookName)) as StopEvent;
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.Stop, hookName)) as StopEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -632,7 +636,11 @@ export class SubagentStopHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		if (!eventText) {
 			throw new Error("Failed to read SubagentStopEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.SubagentStop, hookName)) as SubagentStopEvent;
+		const parsed = (await SchemaValidator.parse(
+			eventText,
+			HookEventSchemas.SubagentStop,
+			hookName,
+		)) as SubagentStopEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -701,7 +709,7 @@ export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		if (!eventText) {
 			throw new Error("Failed to read PreCompactEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.PreCompact, hookName)) as PreCompactEvent;
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreCompact, hookName)) as PreCompactEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
@@ -787,7 +795,11 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		if (!eventText) {
 			throw new Error("Failed to read SessionStartEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.SessionStart, hookName)) as SessionStartEvent;
+		const parsed = (await SchemaValidator.parse(
+			eventText,
+			HookEventSchemas.SessionStart,
+			hookName,
+		)) as SessionStartEvent;
 		const name = options.name ?? parsed.hook_event_name;
 
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
@@ -861,7 +873,7 @@ export class SessionEndHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		if (!eventText) {
 			throw new Error("Failed to read SessionEndEvent from stdin");
 		}
-		const parsed = (await parseWithOTEL(eventText, HookEventSchemas.SessionEnd, hookName)) as SessionEndEvent;
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.SessionEnd, hookName)) as SessionEndEvent;
 		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
 		const env = (await (options.envClass as any).forContext("hook", {
