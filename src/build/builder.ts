@@ -17,16 +17,16 @@
  * - `hooks.json` - Hook manifest for Claude Code
  * - `sidecar.js` - OTEL sidecar script (if telemetry enabled)
  *
- * **Key Functions:**
- * - {@link buildPluginFromConfig} - Build from ClaudeBinaryPlugin instance
- * - {@link buildPlugin} - Low-level build with manual entrypoint
- * - {@link generatePipelinePluginEntrypoint} - Generate TypeScript entrypoint
- * - {@link generateHooksJson} - Generate hooks.json manifest
- * - {@link syncPluginToCache} - Sync to Claude Code plugins cache
+ * **Public API:**
+ * - {@link PluginBuilder.fromConfig} - Build from ClaudeBinaryPlugin instance (recommended)
+ * - {@link PluginBuilder.build} - Low-level build with manual entrypoint
+ * - {@link PluginBuilder.generateEntrypoint} - Generate TypeScript entrypoint
+ * - {@link PluginBuilder.generateHooksJson} - Generate hooks.json manifest
+ * - {@link PluginBuilder.syncToCache} - Sync to Claude Code plugins cache
  *
  * @example
  * ```typescript
- * import { ClaudeBinaryPlugin, buildPluginFromConfig } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin, PluginBuilder } from "claude-binary-plugin";
  *
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
@@ -34,7 +34,7 @@
  *   hooks: { SessionStart: [{ name: "init", pipeline: "./hooks/init.ts" }] },
  * });
  *
- * const result = await buildPluginFromConfig(plugin, { rootDir: "." });
+ * const result = await PluginBuilder.fromConfig(plugin, { rootDir: "." });
  * ```
  *
  * @see {@link PluginManifest} - Plugin manifest configuration

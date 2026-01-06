@@ -15,7 +15,7 @@
  * **Core Exports:**
  * - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations
  * - {@link PluginEnv} - Base class for environment management
- * - {@link buildPlugin} - Compile plugins to executables
+ * - {@link PluginBuilder} - Compile plugins to executables
  * - Hook event classes (`PreToolUseEvent`, `SessionStartEvent`, etc.)
  *
  * @example
