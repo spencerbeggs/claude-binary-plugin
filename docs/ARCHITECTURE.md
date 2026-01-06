@@ -1157,8 +1157,8 @@ src/
 │   ├── metrics.ts        # Token estimation, metrics
 │   └── namespace.ts      # ClaudeBinaryPlugin namespace
 ├── testing/
-│   ├── mocks.ts          # Test utilities, mockEnv()
-│   └── builder.ts        # PluginTestBuilder
+│   ├── mocks.ts          # Low-level test utilities
+│   └── builder.ts        # PluginTestBuilder (see TESTING.md)
 ├── utils/
 │   └── debug-logger.ts   # File-based debug logging
 └── otel/
@@ -1192,3 +1192,8 @@ src/
     ├── plugin-info.ts    # Low-level plugin info
     └── spawn.ts          # Low-level sidecar spawn
 ```
+
+## Related Documentation
+
+- `TESTING.md` - Testing utilities and fluent API
+- `SCHEMA.md` - OTEL telemetry schema specification

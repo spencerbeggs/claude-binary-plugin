@@ -24,7 +24,7 @@ For deeper context, reference these files:
 - `src/core/schemas.ts` - Zod schemas for Claude Code hook event inputs
 - `src/otel/client.ts` - SidecarClient for fire-and-forget telemetry
 - `src/otel/constants.ts` - OTEL attribute and metric name constants
-- `src/otel/classes/` - Class-based OTEL API (TelemetryEmitter, TelemetryMetrics, etc.)
+- `src/otel/classes/` - Class-based OTEL API (emitters, metrics, spans)
 
 ## Overview
 
@@ -105,15 +105,25 @@ bun run build
 
 ### Key Modules
 
-| Export Path | Purpose |
-| ----------- | ------- |
-| `claude-binary-plugin` | Core types, events, builders |
-| `claude-binary-plugin/pipeline` | Plugin factory, handler types |
-| `claude-binary-plugin/pipeline-runtime` | Runtime execution |
-| `claude-binary-plugin/builder` | Build system |
-| `claude-binary-plugin/otel` | OpenTelemetry client |
-| `claude-binary-plugin/otel/sidecar` | OTEL sidecar entry |
-| `claude-binary-plugin/mocks` | Test utilities |
+All exports are from the main entry point:
+
+```typescript
+import {
+  // Plugin definition
+  ClaudeBinaryPlugin,
+
+  // Testing
+  PluginTestBuilder,
+  Mocks,
+
+  // OTEL
+  TelemetryEmitter,
+  TelemetryMetrics,
+  // ...
+} from "claude-binary-plugin";
+```
+
+See `docs/TESTING.md` for testing utilities and `docs/SCHEMA.md` for OTEL.
 
 ### Source File Organization
 
@@ -187,26 +197,21 @@ All handlers must return a pipeline output object:
 
 ### Testing Patterns
 
+See `docs/TESTING.md` for comprehensive testing documentation.
+
+The SDK provides a fluent testing API via `plugin.test()`:
+
 ```typescript
-// Environment mocking
-import { mockEnv } from "claude-binary-plugin/mocks";
+const ctx = plugin.test()
+  .withOptions({ DEBUG: false })
+  .withState({ packageManager: "bun" });
 
-let env: MockEnvContext;
-beforeEach(() => {
-  env = mockEnv(
-    { CLAUDE_PROJECT_DIR: "/tmp/test" },
-    { clearPrefix: "MY_PLUGIN_" }
-  );
-});
-afterEach(() => env.restore());
+const result = await ctx
+  .withPreToolUseInput({ tool_name: "Bash", tool_input: { command: "ls" } })
+  .runHook("PreToolUse", "security");
 
-// Shell executor injection for subprocess mocking
-const mockShell = async () => ({
-  exitCode: 0,
-  stdout: "v22.0.0",
-  stderr: ""
-});
-const result = await detectVersion(mockShell);
+expect(result.action).toBe("allow");
+ctx.dispose();
 ```
 
 ## OTEL Telemetry
