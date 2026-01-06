@@ -96,7 +96,7 @@ Every hook handler receives context from three distinct layers:
 │  Source: setup() function runs at SessionStart                     │
 │  Content: Detection results, cached data, derived values          │
 │  Persistence: Written to CLAUDE_ENV_FILE for subsequent hooks     │
-│  Access: handler({ env, ... }) - merged with base env paths       │
+│  Access: handler({ state, ... }) - typed from setup() return      │
 └───────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
@@ -545,9 +545,9 @@ Claude Code's expected response:
 
 ## State Management
 
-### ClaudeBinaryPluginState Class
+### PluginEnv Class
 
-The `ClaudeBinaryPluginState` class in `src/state/plugin-state.ts` provides:
+The `PluginEnv` class in `src/state/plugin-state.ts` provides:
 
 1. **Schema validation** - Validates env vars against Zod schema
 2. **Context-aware loading** - Different loading strategies per context
@@ -568,7 +568,7 @@ const env = await MyEnv.forContext("sessionStart", {
 const env = await MyEnv.forContext("hook", {
   hookName: "my-hook",
   sessionId: event.session_id,
-  sessionEnvDir: ClaudeBinaryPluginState.getSessionEnvDir(event.session_id),
+  sessionEnvDir: PluginEnv.getSessionEnvDir(event.session_id),
 });
 
 // Commands: Parse --vars argument
@@ -672,7 +672,7 @@ SessionStart Hook
 3. Decode {PREFIX}_PLUGIN_STATE from base64
        │
        ▼
-4. State available in handler({ env })
+4. State available in handler({ state })
 ```
 
 #### Magic Variables
@@ -1152,7 +1152,7 @@ State persisted to hook-0.sh as base64 JSON
        ▼
 Commands load state via:
   1. SessionRegistry.getByProjectDir(cwd) → session-env dir
-  2. ClaudeBinaryPluginState.loadAllHookFiles(dir) → parse hook-*.sh
+  2. PluginEnv.loadAllHookFiles(dir) → parse hook-*.sh
   3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ state })
 ```
 
@@ -1184,7 +1184,7 @@ src/
 │   ├── schemas.ts        # Input Zod schemas
 │   └── tool-inputs.ts    # Tool input types
 ├── state/
-│   ├── plugin-state.ts   # ClaudeBinaryPluginState base class
+│   ├── plugin-state.ts   # PluginEnv base class
 │   ├── session-registry.ts # SQLite session lookup
 │   └── codecs.ts         # Zod codecs for env vars
 ├── events/
@@ -1203,7 +1203,7 @@ src/
 │   └── pipeline.ts       # Pipeline class (unified API)
 ├── testing/
 │   ├── mocks.ts          # Low-level test utilities
-│   └── builder.ts        # PluginTestBuilder (see TESTING.md)
+│   └── builder.ts        # PluginTester (see TESTING.md)
 ├── types/
 │   ├── json.ts           # JSON types from type-fest, Zod schemas
 │   └── branded.ts        # Branded types (SessionId, ToolUseId, etc.)
