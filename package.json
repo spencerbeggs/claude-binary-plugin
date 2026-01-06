@@ -11,7 +11,7 @@
 		"claude-binary-plugin": "bin/cli.js"
 	},
 	"keywords": ["claude", "claude-code", "plugin", "cli", "effect", "typescript", "bun", "anthropic"],
-	"homepage": "https://spencerbeg.gs/packages/claude-binary-plugin",
+	"homepage": "https://spencerbeg.gs/claude-binary-plugin",
 	"bugs": {
 		"url": "https://github.com/spencerbeggs/claude-binary-plugin/issues"
 	},
