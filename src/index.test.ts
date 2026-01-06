@@ -1,38 +1,38 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type {
 	HookEventBase,
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
+	NotificationInput,
+	PermissionRequestInput,
+	PostToolUseInput,
+	PreCompactInput,
+	PreToolUseInput,
+	SessionEndInput,
+	SessionStartInput,
+	StopInput,
+	SubagentStopInput,
+	UserPromptSubmitInput,
 } from "./index.js";
 import {
-	ClaudeBinaryPluginState,
 	HookEvent,
-	HookEventName,
-	HookResponseBuilder,
-	NotificationHookEvent,
-	PermissionRequestHookEvent,
-	PermissionRequestResponseBuilder,
-	PostToolUseHookEvent,
-	PostToolUseResponseBuilder,
-	PreCompactHookEvent,
-	PreToolUseHookEvent,
-	PreToolUseResponseBuilder,
-	SessionEndHookEvent,
-	SessionStartHookEvent,
-	SessionStartResponseBuilder,
-	StopHookEvent,
-	StopResponseBuilder,
-	SubagentStopHookEvent,
-	UserPromptSubmitHookEvent,
-	UserPromptSubmitResponseBuilder,
+	HookResponse,
+	HookType,
+	NotificationEvent,
+	PermissionRequestEvent,
+	PermissionRequestResponse,
+	PluginEnv,
+	PostToolUseEvent,
+	PostToolUseResponse,
+	PreCompactEvent,
+	PreToolUseEvent,
+	PreToolUseResponse,
+	SessionEndEvent,
+	SessionStartEvent,
+	SessionStartResponse,
+	StopEvent,
+	StopResponse,
+	SubagentStopEvent,
+	UserPromptSubmitEvent,
+	UserPromptSubmitResponse,
 } from "./index.js";
 import type { MockEnvContext } from "./testing/mocks.js";
 import { envPresets, mockEnv } from "./testing/mocks.js";
@@ -42,7 +42,7 @@ import { envPresets, mockEnv } from "./testing/mocks.js";
 // =============================================================================
 
 // Mock state class for testing
-class MockState extends ClaudeBinaryPluginState {
+class MockState extends PluginEnv {
 	protected readonly prefix = "MOCK";
 }
 
@@ -75,10 +75,10 @@ function baseEventData(): Omit<HookEventBase, "hook_event_name"> {
 }
 
 /** Complete PreToolUse event data for schema validation */
-function preToolUseEventData(overrides: Partial<PreToolUseEvent> = {}): PreToolUseEvent {
+function preToolUseEventData(overrides: Partial<PreToolUseInput> = {}): PreToolUseInput {
 	return {
 		...baseEventData(),
-		hook_event_name: HookEventName.PreToolUse,
+		hook_event_name: HookType.PreToolUse,
 		tool_name: "Bash",
 		tool_input: { command: "ls -la" },
 		tool_use_id: "tool-123",
@@ -87,10 +87,10 @@ function preToolUseEventData(overrides: Partial<PreToolUseEvent> = {}): PreToolU
 }
 
 /** Complete SessionStart event data for schema validation */
-function sessionStartEventData(): SessionStartEvent {
+function sessionStartEventData(): SessionStartInput {
 	return {
 		...baseEventData(),
-		hook_event_name: HookEventName.SessionStart,
+		hook_event_name: HookType.SessionStart,
 		source: "startup",
 	};
 }
@@ -122,24 +122,24 @@ afterEach(() => {
 // HOOK RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("HookResponseBuilder", () => {
+describe("HookResponse", () => {
 	test("builds empty response", () => {
-		const builder = new HookResponseBuilder();
+		const builder = new HookResponse();
 		expect(builder.build()).toEqual({});
 	});
 
 	test("continue() sets continue to true", () => {
-		const builder = new HookResponseBuilder().continue();
+		const builder = new HookResponse().continue();
 		expect(builder.build()).toEqual({ continue: true });
 	});
 
 	test("continue(false) sets continue to false", () => {
-		const builder = new HookResponseBuilder().continue(false);
+		const builder = new HookResponse().continue(false);
 		expect(builder.build()).toEqual({ continue: false });
 	});
 
 	test("stop() sets continue false and stopReason", () => {
-		const builder = new HookResponseBuilder().stop("Task completed");
+		const builder = new HookResponse().stop("Task completed");
 		expect(builder.build()).toEqual({
 			continue: false,
 			stopReason: "Task completed",
@@ -147,27 +147,27 @@ describe("HookResponseBuilder", () => {
 	});
 
 	test("suppressOutput() sets suppressOutput to true", () => {
-		const builder = new HookResponseBuilder().suppressOutput();
+		const builder = new HookResponse().suppressOutput();
 		expect(builder.build()).toEqual({ suppressOutput: true });
 	});
 
 	test("suppressOutput(false) sets suppressOutput to false", () => {
-		const builder = new HookResponseBuilder().suppressOutput(false);
+		const builder = new HookResponse().suppressOutput(false);
 		expect(builder.build()).toEqual({ suppressOutput: false });
 	});
 
 	test("systemMessage() sets systemMessage", () => {
-		const builder = new HookResponseBuilder().systemMessage("Warning!");
+		const builder = new HookResponse().systemMessage("Warning!");
 		expect(builder.build()).toEqual({ systemMessage: "Warning!" });
 	});
 
 	test("hookSpecificOutput() sets raw output", () => {
-		const builder = new HookResponseBuilder().hookSpecificOutput({ custom: "data" });
+		const builder = new HookResponse().hookSpecificOutput({ custom: "data" });
 		expect(builder.build()).toEqual({ hookSpecificOutput: { custom: "data" } });
 	});
 
 	test("block() sets decision and reason", () => {
-		const builder = new HookResponseBuilder().block("Operation blocked");
+		const builder = new HookResponse().block("Operation blocked");
 		expect(builder.build()).toEqual({
 			decision: "block",
 			reason: "Operation blocked",
@@ -175,7 +175,7 @@ describe("HookResponseBuilder", () => {
 	});
 
 	test("chains multiple options", () => {
-		const builder = new HookResponseBuilder().continue(true).systemMessage("Hello").suppressOutput(true);
+		const builder = new HookResponse().continue(true).systemMessage("Hello").suppressOutput(true);
 		expect(builder.build()).toEqual({
 			continue: true,
 			systemMessage: "Hello",
@@ -184,39 +184,39 @@ describe("HookResponseBuilder", () => {
 	});
 
 	test("toJSON() returns valid JSON string", () => {
-		const builder = new HookResponseBuilder().continue(true).systemMessage("Test");
+		const builder = new HookResponse().continue(true).systemMessage("Test");
 		const json = builder.toJSON();
 		expect(json).toBe('{"continue":true,"systemMessage":"Test"}');
 		expect(JSON.parse(json)).toEqual({ continue: true, systemMessage: "Test" });
 	});
 
 	test("summary() sets custom summary message", () => {
-		const builder = new HookResponseBuilder().summary("custom summary");
+		const builder = new HookResponse().summary("custom summary");
 		expect(builder.getSummary()).toBe("custom summary");
 	});
 
 	test("getSummary() returns 'completed' for empty response", () => {
-		const builder = new HookResponseBuilder();
+		const builder = new HookResponse();
 		expect(builder.getSummary()).toBe("completed");
 	});
 
 	test("getSummary() returns 'stopped' for continue=false", () => {
-		const builder = new HookResponseBuilder().continue(false);
+		const builder = new HookResponse().continue(false);
 		expect(builder.getSummary()).toBe("stopped");
 	});
 
 	test("getSummary() includes stopReason when set", () => {
-		const builder = new HookResponseBuilder().stop("Task completed");
+		const builder = new HookResponse().stop("Task completed");
 		expect(builder.getSummary()).toBe("stopped: Task completed");
 	});
 
 	test("getSummary() returns 'blocked' with reason", () => {
-		const builder = new HookResponseBuilder().block("Not allowed");
+		const builder = new HookResponse().block("Not allowed");
 		expect(builder.getSummary()).toBe("blocked: Not allowed");
 	});
 
 	test("custom summary overrides auto-generated summary", () => {
-		const builder = new HookResponseBuilder().block("Not allowed").summary("custom override");
+		const builder = new HookResponse().block("Not allowed").summary("custom override");
 		expect(builder.getSummary()).toBe("custom override");
 	});
 });
@@ -225,9 +225,9 @@ describe("HookResponseBuilder", () => {
 // PRETOOLUSE RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("PreToolUseResponseBuilder", () => {
+describe("PreToolUseResponse", () => {
 	test("allow() sets permission decision", () => {
-		const builder = new PreToolUseResponseBuilder().allow();
+		const builder = new PreToolUseResponse().allow();
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
@@ -237,7 +237,7 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("deny() sets permission decision without reason", () => {
-		const builder = new PreToolUseResponseBuilder().deny();
+		const builder = new PreToolUseResponse().deny();
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
@@ -247,7 +247,7 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("deny() with reason sets permissionDecisionReason", () => {
-		const builder = new PreToolUseResponseBuilder().deny("Not allowed");
+		const builder = new PreToolUseResponse().deny("Not allowed");
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
@@ -258,7 +258,7 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("ask() sets permission decision to ask", () => {
-		const builder = new PreToolUseResponseBuilder().ask();
+		const builder = new PreToolUseResponse().ask();
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
@@ -268,7 +268,7 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("updateInput() sets updated input", () => {
-		const builder = new PreToolUseResponseBuilder().updateInput({ timeout: 5000 });
+		const builder = new PreToolUseResponse().updateInput({ timeout: 5000 });
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
@@ -278,7 +278,7 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("allow() with updateInput() chains correctly", () => {
-		const builder = new PreToolUseResponseBuilder().allow().updateInput({ modified: true });
+		const builder = new PreToolUseResponse().allow().updateInput({ modified: true });
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
@@ -289,7 +289,7 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("chains with base builder methods", () => {
-		const builder = new PreToolUseResponseBuilder().systemMessage("Notice").allow();
+		const builder = new PreToolUseResponse().systemMessage("Notice").allow();
 		expect(builder.build()).toEqual({
 			systemMessage: "Notice",
 			hookSpecificOutput: {
@@ -300,22 +300,22 @@ describe("PreToolUseResponseBuilder", () => {
 	});
 
 	test("getSummary() returns 'allowed' for allow()", () => {
-		const builder = new PreToolUseResponseBuilder().allow();
+		const builder = new PreToolUseResponse().allow();
 		expect(builder.getSummary()).toBe("allowed");
 	});
 
 	test("getSummary() returns 'denied' for deny()", () => {
-		const builder = new PreToolUseResponseBuilder().deny();
+		const builder = new PreToolUseResponse().deny();
 		expect(builder.getSummary()).toBe("denied");
 	});
 
 	test("getSummary() includes reason for deny(reason)", () => {
-		const builder = new PreToolUseResponseBuilder().deny("Not allowed");
+		const builder = new PreToolUseResponse().deny("Not allowed");
 		expect(builder.getSummary()).toBe("denied: Not allowed");
 	});
 
 	test("getSummary() returns 'ask user' for ask()", () => {
-		const builder = new PreToolUseResponseBuilder().ask();
+		const builder = new PreToolUseResponse().ask();
 		expect(builder.getSummary()).toBe("ask user");
 	});
 });
@@ -324,9 +324,9 @@ describe("PreToolUseResponseBuilder", () => {
 // POSTTOOLUSE RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("PostToolUseResponseBuilder", () => {
+describe("PostToolUseResponse", () => {
 	test("additionalContext() sets context", () => {
-		const builder = new PostToolUseResponseBuilder().additionalContext("File contains sensitive data");
+		const builder = new PostToolUseResponse().additionalContext("File contains sensitive data");
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PostToolUse",
@@ -336,7 +336,7 @@ describe("PostToolUseResponseBuilder", () => {
 	});
 
 	test("chains with base builder methods", () => {
-		const builder = new PostToolUseResponseBuilder().continue(true).additionalContext("Context here");
+		const builder = new PostToolUseResponse().continue(true).additionalContext("Context here");
 		expect(builder.build()).toEqual({
 			continue: true,
 			hookSpecificOutput: {
@@ -351,9 +351,9 @@ describe("PostToolUseResponseBuilder", () => {
 // PERMISSIONREQUEST RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("PermissionRequestResponseBuilder", () => {
+describe("PermissionRequestResponse", () => {
 	test("allow() sets behavior to allow", () => {
-		const builder = new PermissionRequestResponseBuilder().allow();
+		const builder = new PermissionRequestResponse().allow();
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PermissionRequest",
@@ -363,7 +363,7 @@ describe("PermissionRequestResponseBuilder", () => {
 	});
 
 	test("deny() sets behavior to deny", () => {
-		const builder = new PermissionRequestResponseBuilder().deny();
+		const builder = new PermissionRequestResponse().deny();
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PermissionRequest",
@@ -373,7 +373,7 @@ describe("PermissionRequestResponseBuilder", () => {
 	});
 
 	test("deny() with message sets message", () => {
-		const builder = new PermissionRequestResponseBuilder().deny("Access denied");
+		const builder = new PermissionRequestResponse().deny("Access denied");
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PermissionRequest",
@@ -383,7 +383,7 @@ describe("PermissionRequestResponseBuilder", () => {
 	});
 
 	test("interrupt() sets interrupt flag", () => {
-		const builder = new PermissionRequestResponseBuilder().deny("Blocked").interrupt();
+		const builder = new PermissionRequestResponse().deny("Blocked").interrupt();
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PermissionRequest",
@@ -393,7 +393,7 @@ describe("PermissionRequestResponseBuilder", () => {
 	});
 
 	test("interrupt(false) sets interrupt to false", () => {
-		const builder = new PermissionRequestResponseBuilder().deny().interrupt(false);
+		const builder = new PermissionRequestResponse().deny().interrupt(false);
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PermissionRequest",
@@ -403,7 +403,7 @@ describe("PermissionRequestResponseBuilder", () => {
 	});
 
 	test("updateInput() sets updatedInput for allow", () => {
-		const builder = new PermissionRequestResponseBuilder().allow().updateInput({ modified: true });
+		const builder = new PermissionRequestResponse().allow().updateInput({ modified: true });
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "PermissionRequest",
@@ -417,9 +417,9 @@ describe("PermissionRequestResponseBuilder", () => {
 // USERPROMPTSUBMIT RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("UserPromptSubmitResponseBuilder", () => {
+describe("UserPromptSubmitResponse", () => {
 	test("additionalContext() sets context", () => {
-		const builder = new UserPromptSubmitResponseBuilder().additionalContext("User is working on auth");
+		const builder = new UserPromptSubmitResponse().additionalContext("User is working on auth");
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "UserPromptSubmit",
@@ -429,7 +429,7 @@ describe("UserPromptSubmitResponseBuilder", () => {
 	});
 
 	test("block() from base class works", () => {
-		const builder = new UserPromptSubmitResponseBuilder().block("Please rephrase");
+		const builder = new UserPromptSubmitResponse().block("Please rephrase");
 		expect(builder.build()).toEqual({
 			decision: "block",
 			reason: "Please rephrase",
@@ -441,9 +441,9 @@ describe("UserPromptSubmitResponseBuilder", () => {
 // STOP RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("StopResponseBuilder", () => {
+describe("StopResponse", () => {
 	test("block() keeps Claude working", () => {
-		const builder = new StopResponseBuilder().block("Please run the tests");
+		const builder = new StopResponse().block("Please run the tests");
 		expect(builder.build()).toEqual({
 			decision: "block",
 			reason: "Please run the tests",
@@ -451,7 +451,7 @@ describe("StopResponseBuilder", () => {
 	});
 
 	test("continue() allows stopping", () => {
-		const builder = new StopResponseBuilder().continue(true);
+		const builder = new StopResponse().continue(true);
 		expect(builder.build()).toEqual({ continue: true });
 	});
 });
@@ -460,9 +460,9 @@ describe("StopResponseBuilder", () => {
 // SESSIONSTART RESPONSE BUILDER TESTS
 // =============================================================================
 
-describe("SessionStartResponseBuilder", () => {
+describe("SessionStartResponse", () => {
 	test("additionalContext() sets session context", () => {
-		const builder = new SessionStartResponseBuilder().additionalContext("Project uses TypeScript 5.0");
+		const builder = new SessionStartResponse().additionalContext("Project uses TypeScript 5.0");
 		expect(builder.build()).toEqual({
 			hookSpecificOutput: {
 				hookEventName: "SessionStart",
@@ -472,9 +472,7 @@ describe("SessionStartResponseBuilder", () => {
 	});
 
 	test("chains with systemMessage", () => {
-		const builder = new SessionStartResponseBuilder()
-			.systemMessage("Session initialized")
-			.additionalContext("Custom context");
+		const builder = new SessionStartResponse().systemMessage("Session initialized").additionalContext("Custom context");
 		expect(builder.build()).toEqual({
 			systemMessage: "Session initialized",
 			hookSpecificOutput: {
@@ -499,16 +497,16 @@ describe("HookEvent", () => {
 		expect(event.transcript_path).toBe("/tmp/transcript.json");
 		expect(event.cwd).toBe("/home/user/project");
 		expect(event.permission_mode).toBe("default");
-		expect(event.hook_event_name).toBe(HookEventName.PreToolUse);
+		expect(event.hook_event_name).toBe(HookType.PreToolUse);
 	});
 
-	test("response() returns HookResponseBuilder", async () => {
+	test("response() returns HookResponse", async () => {
 		const io = mockBunStdin(preToolUseEventData());
 
 		const { event } = await HookEvent.create(io);
 		const builder = event.response();
 
-		expect(builder).toBeInstanceOf(HookResponseBuilder);
+		expect(builder).toBeInstanceOf(HookResponse);
 	});
 
 	test("throws when stdin is empty", async () => {
@@ -529,37 +527,37 @@ describe("HookEvent", () => {
 // PRETOOLUSE HOOK EVENT TESTS
 // =============================================================================
 
-describe("PreToolUseHookEvent", () => {
+describe("PreToolUseEvent", () => {
 	test("creates with tool properties", async () => {
-		const io = mockBunStdin<PreToolUseEvent>({
+		const io = mockBunStdin<PreToolUseInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PreToolUse,
+			hook_event_name: HookType.PreToolUse,
 			tool_name: "Bash",
 			tool_input: { command: "ls -la" },
 			tool_use_id: "tool-123",
 		});
 
-		const { event } = await PreToolUseHookEvent.create(io);
+		const { event } = await PreToolUseEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.PreToolUse);
+		expect(event.hook_event_name).toBe(HookType.PreToolUse);
 		expect(event.tool_name).toBe("Bash");
 		expect(event.tool_input).toEqual({ command: "ls -la" });
 		expect(event.tool_use_id).toBe("tool-123");
 	});
 
-	test("response() returns PreToolUseResponseBuilder", async () => {
-		const io = mockBunStdin<PreToolUseEvent>({
+	test("response() returns PreToolUseResponse", async () => {
+		const io = mockBunStdin<PreToolUseInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PreToolUse,
+			hook_event_name: HookType.PreToolUse,
 			tool_name: "Read",
 			tool_input: { file_path: "/test.txt" },
 			tool_use_id: "tool-456",
 		});
 
-		const { event } = await PreToolUseHookEvent.create(io);
+		const { event } = await PreToolUseEvent.create(io);
 		const builder = event.response();
 
-		expect(builder).toBeInstanceOf(PreToolUseResponseBuilder);
+		expect(builder).toBeInstanceOf(PreToolUseResponse);
 	});
 
 	test("throws when stdin is empty", async () => {
@@ -572,7 +570,7 @@ describe("PreToolUseHookEvent", () => {
 			stateClass: MockState,
 		};
 
-		await expect(PreToolUseHookEvent.create(io)).rejects.toThrow("Failed to read PreToolUseEvent from stdin");
+		await expect(PreToolUseEvent.create(io)).rejects.toThrow("Failed to read PreToolUseInput from stdin");
 	});
 });
 
@@ -580,38 +578,38 @@ describe("PreToolUseHookEvent", () => {
 // POSTTOOLUSE HOOK EVENT TESTS
 // =============================================================================
 
-describe("PostToolUseHookEvent", () => {
+describe("PostToolUseEvent", () => {
 	test("creates with tool properties and response", async () => {
-		const io = mockBunStdin<PostToolUseEvent>({
+		const io = mockBunStdin<PostToolUseInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PostToolUse,
+			hook_event_name: HookType.PostToolUse,
 			tool_name: "Read",
 			tool_input: { file_path: "/test.txt" },
 			tool_response: { content: "file contents" },
 			tool_use_id: "tool-789",
 		});
 
-		const { event } = await PostToolUseHookEvent.create(io);
+		const { event } = await PostToolUseEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.PostToolUse);
+		expect(event.hook_event_name).toBe(HookType.PostToolUse);
 		expect(event.tool_name).toBe("Read");
 		expect(event.tool_input).toEqual({ file_path: "/test.txt" });
 		expect(event.tool_response).toEqual({ content: "file contents" });
 		expect(event.tool_use_id).toBe("tool-789");
 	});
 
-	test("response() returns PostToolUseResponseBuilder", async () => {
-		const io = mockBunStdin<PostToolUseEvent>({
+	test("response() returns PostToolUseResponse", async () => {
+		const io = mockBunStdin<PostToolUseInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PostToolUse,
+			hook_event_name: HookType.PostToolUse,
 			tool_name: "Bash",
 			tool_input: { command: "echo test" },
 			tool_response: { output: "test" },
 			tool_use_id: "tool-abc",
 		});
 
-		const { event } = await PostToolUseHookEvent.create(io);
-		expect(event.response()).toBeInstanceOf(PostToolUseResponseBuilder);
+		const { event } = await PostToolUseEvent.create(io);
+		expect(event.response()).toBeInstanceOf(PostToolUseResponse);
 	});
 });
 
@@ -619,32 +617,32 @@ describe("PostToolUseHookEvent", () => {
 // PERMISSIONREQUEST HOOK EVENT TESTS
 // =============================================================================
 
-describe("PermissionRequestHookEvent", () => {
+describe("PermissionRequestEvent", () => {
 	test("creates with message and notification_type", async () => {
-		const io = mockBunStdin<PermissionRequestEvent>({
+		const io = mockBunStdin<PermissionRequestInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PermissionRequest,
+			hook_event_name: HookType.PermissionRequest,
 			message: "Allow file access?",
 			notification_type: "permission_prompt",
 		});
 
-		const { event } = await PermissionRequestHookEvent.create(io);
+		const { event } = await PermissionRequestEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.PermissionRequest);
+		expect(event.hook_event_name).toBe(HookType.PermissionRequest);
 		expect(event.message).toBe("Allow file access?");
 		expect(event.notification_type).toBe("permission_prompt");
 	});
 
-	test("response() returns PermissionRequestResponseBuilder", async () => {
-		const io = mockBunStdin<PermissionRequestEvent>({
+	test("response() returns PermissionRequestResponse", async () => {
+		const io = mockBunStdin<PermissionRequestInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PermissionRequest,
+			hook_event_name: HookType.PermissionRequest,
 			message: "Allow?",
 			notification_type: "permission_prompt",
 		});
 
-		const { event } = await PermissionRequestHookEvent.create(io);
-		expect(event.response()).toBeInstanceOf(PermissionRequestResponseBuilder);
+		const { event } = await PermissionRequestEvent.create(io);
+		expect(event.response()).toBeInstanceOf(PermissionRequestResponse);
 	});
 });
 
@@ -652,18 +650,18 @@ describe("PermissionRequestHookEvent", () => {
 // NOTIFICATION HOOK EVENT TESTS
 // =============================================================================
 
-describe("NotificationHookEvent", () => {
+describe("NotificationEvent", () => {
 	test("creates with message and notification_type", async () => {
-		const io = mockBunStdin<NotificationEvent>({
+		const io = mockBunStdin<NotificationInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.Notification,
+			hook_event_name: HookType.Notification,
 			message: "Authentication successful",
 			notification_type: "auth_success",
 		});
 
-		const { event } = await NotificationHookEvent.create(io);
+		const { event } = await NotificationEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.Notification);
+		expect(event.hook_event_name).toBe(HookType.Notification);
 		expect(event.message).toBe("Authentication successful");
 		expect(event.notification_type).toBe("auth_success");
 	});
@@ -673,29 +671,29 @@ describe("NotificationHookEvent", () => {
 // USERPROMPTSUBMIT HOOK EVENT TESTS
 // =============================================================================
 
-describe("UserPromptSubmitHookEvent", () => {
+describe("UserPromptSubmitEvent", () => {
 	test("creates with prompt", async () => {
-		const io = mockBunStdin<UserPromptSubmitEvent>({
+		const io = mockBunStdin<UserPromptSubmitInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.UserPromptSubmit,
+			hook_event_name: HookType.UserPromptSubmit,
 			prompt: "Help me fix this bug",
 		});
 
-		const { event } = await UserPromptSubmitHookEvent.create(io);
+		const { event } = await UserPromptSubmitEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.UserPromptSubmit);
+		expect(event.hook_event_name).toBe(HookType.UserPromptSubmit);
 		expect(event.prompt).toBe("Help me fix this bug");
 	});
 
-	test("response() returns UserPromptSubmitResponseBuilder", async () => {
-		const io = mockBunStdin<UserPromptSubmitEvent>({
+	test("response() returns UserPromptSubmitResponse", async () => {
+		const io = mockBunStdin<UserPromptSubmitInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.UserPromptSubmit,
+			hook_event_name: HookType.UserPromptSubmit,
 			prompt: "Test prompt",
 		});
 
-		const { event } = await UserPromptSubmitHookEvent.create(io);
-		expect(event.response()).toBeInstanceOf(UserPromptSubmitResponseBuilder);
+		const { event } = await UserPromptSubmitEvent.create(io);
+		expect(event.response()).toBeInstanceOf(UserPromptSubmitResponse);
 	});
 });
 
@@ -703,29 +701,29 @@ describe("UserPromptSubmitHookEvent", () => {
 // STOP HOOK EVENT TESTS
 // =============================================================================
 
-describe("StopHookEvent", () => {
+describe("StopEvent", () => {
 	test("creates with stop_hook_active", async () => {
-		const io = mockBunStdin<StopEvent>({
+		const io = mockBunStdin<StopInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.Stop,
+			hook_event_name: HookType.Stop,
 			stop_hook_active: false,
 		});
 
-		const { event } = await StopHookEvent.create(io);
+		const { event } = await StopEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.Stop);
+		expect(event.hook_event_name).toBe(HookType.Stop);
 		expect(event.stop_hook_active).toBe(false);
 	});
 
-	test("response() returns StopResponseBuilder", async () => {
-		const io = mockBunStdin<StopEvent>({
+	test("response() returns StopResponse", async () => {
+		const io = mockBunStdin<StopInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.Stop,
+			hook_event_name: HookType.Stop,
 			stop_hook_active: true,
 		});
 
-		const { event } = await StopHookEvent.create(io);
-		expect(event.response()).toBeInstanceOf(StopResponseBuilder);
+		const { event } = await StopEvent.create(io);
+		expect(event.response()).toBeInstanceOf(StopResponse);
 	});
 });
 
@@ -733,29 +731,29 @@ describe("StopHookEvent", () => {
 // SUBAGENTSTOP HOOK EVENT TESTS
 // =============================================================================
 
-describe("SubagentStopHookEvent", () => {
+describe("SubagentStopEvent", () => {
 	test("creates with stop_hook_active", async () => {
-		const io = mockBunStdin<SubagentStopEvent>({
+		const io = mockBunStdin<SubagentStopInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SubagentStop,
+			hook_event_name: HookType.SubagentStop,
 			stop_hook_active: true,
 		});
 
-		const { event } = await SubagentStopHookEvent.create(io);
+		const { event } = await SubagentStopEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.SubagentStop);
+		expect(event.hook_event_name).toBe(HookType.SubagentStop);
 		expect(event.stop_hook_active).toBe(true);
 	});
 
-	test("response() returns StopResponseBuilder", async () => {
-		const io = mockBunStdin<SubagentStopEvent>({
+	test("response() returns StopResponse", async () => {
+		const io = mockBunStdin<SubagentStopInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SubagentStop,
+			hook_event_name: HookType.SubagentStop,
 			stop_hook_active: false,
 		});
 
-		const { event } = await SubagentStopHookEvent.create(io);
-		expect(event.response()).toBeInstanceOf(StopResponseBuilder);
+		const { event } = await SubagentStopEvent.create(io);
+		expect(event.response()).toBeInstanceOf(StopResponse);
 	});
 });
 
@@ -763,31 +761,31 @@ describe("SubagentStopHookEvent", () => {
 // PRECOMPACT HOOK EVENT TESTS
 // =============================================================================
 
-describe("PreCompactHookEvent", () => {
+describe("PreCompactEvent", () => {
 	test("creates with trigger and custom_instructions", async () => {
-		const io = mockBunStdin<PreCompactEvent>({
+		const io = mockBunStdin<PreCompactInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PreCompact,
+			hook_event_name: HookType.PreCompact,
 			trigger: "auto",
 			custom_instructions: "Preserve important context",
 		});
 
-		const { event } = await PreCompactHookEvent.create(io);
+		const { event } = await PreCompactEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.PreCompact);
+		expect(event.hook_event_name).toBe(HookType.PreCompact);
 		expect(event.trigger).toBe("auto");
 		expect(event.custom_instructions).toBe("Preserve important context");
 	});
 
 	test("handles manual trigger", async () => {
-		const io = mockBunStdin<PreCompactEvent>({
+		const io = mockBunStdin<PreCompactInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PreCompact,
+			hook_event_name: HookType.PreCompact,
 			trigger: "manual",
 			custom_instructions: "",
 		});
 
-		const { event } = await PreCompactHookEvent.create(io);
+		const { event } = await PreCompactEvent.create(io);
 		expect(event.trigger).toBe("manual");
 	});
 });
@@ -796,7 +794,7 @@ describe("PreCompactHookEvent", () => {
 // SESSIONSTART HOOK EVENT TESTS
 // =============================================================================
 
-describe("SessionStartHookEvent", () => {
+describe("SessionStartEvent", () => {
 	let env: MockEnvContext;
 
 	afterEach(() => {
@@ -806,68 +804,68 @@ describe("SessionStartHookEvent", () => {
 	test("creates with startup source", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const io = mockBunStdin<SessionStartEvent>({
+		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		});
 
-		const { event } = await SessionStartHookEvent.create(io);
+		const { event } = await SessionStartEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.SessionStart);
+		expect(event.hook_event_name).toBe(HookType.SessionStart);
 		expect(event.source).toBe("startup");
 	});
 
 	test("handles resume source", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const io = mockBunStdin<SessionStartEvent>({
+		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "resume",
 		});
 
-		const { event } = await SessionStartHookEvent.create(io);
+		const { event } = await SessionStartEvent.create(io);
 		expect(event.source).toBe("resume");
 	});
 
 	test("handles clear source", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const io = mockBunStdin<SessionStartEvent>({
+		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "clear",
 		});
 
-		const { event } = await SessionStartHookEvent.create(io);
+		const { event } = await SessionStartEvent.create(io);
 		expect(event.source).toBe("clear");
 	});
 
 	test("handles compact source", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const io = mockBunStdin<SessionStartEvent>({
+		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "compact",
 		});
 
-		const { event } = await SessionStartHookEvent.create(io);
+		const { event } = await SessionStartEvent.create(io);
 		expect(event.source).toBe("compact");
 	});
 
-	test("response() returns SessionStartResponseBuilder", async () => {
+	test("response() returns SessionStartResponse", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const io = mockBunStdin<SessionStartEvent>({
+		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		});
 
-		const { event } = await SessionStartHookEvent.create(io);
-		expect(event.response()).toBeInstanceOf(SessionStartResponseBuilder);
+		const { event } = await SessionStartEvent.create(io);
+		expect(event.response()).toBeInstanceOf(SessionStartResponse);
 	});
 });
 
@@ -875,50 +873,50 @@ describe("SessionStartHookEvent", () => {
 // SESSIONEND HOOK EVENT TESTS
 // =============================================================================
 
-describe("SessionEndHookEvent", () => {
+describe("SessionEndEvent", () => {
 	test("creates with clear reason", async () => {
-		const io = mockBunStdin<SessionEndEvent>({
+		const io = mockBunStdin<SessionEndInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionEnd,
+			hook_event_name: HookType.SessionEnd,
 			reason: "clear",
 		});
 
-		const { event } = await SessionEndHookEvent.create(io);
+		const { event } = await SessionEndEvent.create(io);
 
-		expect(event.hook_event_name).toBe(HookEventName.SessionEnd);
+		expect(event.hook_event_name).toBe(HookType.SessionEnd);
 		expect(event.reason).toBe("clear");
 	});
 
 	test("handles logout reason", async () => {
-		const io = mockBunStdin<SessionEndEvent>({
+		const io = mockBunStdin<SessionEndInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionEnd,
+			hook_event_name: HookType.SessionEnd,
 			reason: "logout",
 		});
 
-		const { event } = await SessionEndHookEvent.create(io);
+		const { event } = await SessionEndEvent.create(io);
 		expect(event.reason).toBe("logout");
 	});
 
 	test("handles prompt_input_exit reason", async () => {
-		const io = mockBunStdin<SessionEndEvent>({
+		const io = mockBunStdin<SessionEndInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionEnd,
+			hook_event_name: HookType.SessionEnd,
 			reason: "prompt_input_exit",
 		});
 
-		const { event } = await SessionEndHookEvent.create(io);
+		const { event } = await SessionEndEvent.create(io);
 		expect(event.reason).toBe("prompt_input_exit");
 	});
 
 	test("handles other reason", async () => {
-		const io = mockBunStdin<SessionEndEvent>({
+		const io = mockBunStdin<SessionEndInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.SessionEnd,
+			hook_event_name: HookType.SessionEnd,
 			reason: "other",
 		});
 
-		const { event } = await SessionEndHookEvent.create(io);
+		const { event } = await SessionEndEvent.create(io);
 		expect(event.reason).toBe("other");
 	});
 });
@@ -981,9 +979,9 @@ describe("Logger integration", () => {
 	test("end() with response builder writes to stdout", async () => {
 		const stdoutMock = mock(() => true);
 
-		const io = mockBunStdin<PreToolUseEvent>({
+		const io = mockBunStdin<PreToolUseInput>({
 			...baseEventData(),
-			hook_event_name: HookEventName.PreToolUse,
+			hook_event_name: HookType.PreToolUse,
 			tool_name: "Bash",
 			tool_input: { command: "ls" },
 			tool_use_id: "test-123",
@@ -991,7 +989,7 @@ describe("Logger integration", () => {
 
 		io.stdout.write = stdoutMock;
 
-		const { event } = await PreToolUseHookEvent.create(io);
+		const { event } = await PreToolUseEvent.create(io);
 		const exitSpy = spyOn(process, "exit").mockImplementation((() => {}) as never);
 
 		try {

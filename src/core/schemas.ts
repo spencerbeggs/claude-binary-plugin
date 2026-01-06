@@ -81,7 +81,7 @@ export const hookEventSchemaRegistry = z.registry<HookEventSchemaMetadata>();
  * Hook event names as Zod enum.
  * @internal
  */
-const _HookEventNameSchema = z.enum([
+const _HookTypeSchema = z.enum([
 	"PreToolUse",
 	"PostToolUse",
 	"PermissionRequest",
@@ -148,7 +148,7 @@ const _HookEventBaseSchema = z.object({
 	/** Current permission mode (optional - not present in SessionStart) */
 	permission_mode: _HookPermissionsModeSchema.optional(),
 	/** The type of hook event */
-	hook_event_name: _HookEventNameSchema,
+	hook_event_name: _HookTypeSchema,
 });
 
 // =============================================================================

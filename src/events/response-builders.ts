@@ -39,7 +39,7 @@
  */
 
 import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
-import type { HookResponse } from "./response-types.js";
+import type { HookResponseData } from "./response-types.js";
 import { estimateTokenCount } from "./response-types.js";
 import type { PermissionRequestDecision, ToolInput } from "./types.js";
 
@@ -47,7 +47,7 @@ import type { PermissionRequestDecision, ToolInput } from "./types.js";
  * Base builder for constructing hook responses with a fluent API.
  *
  * @remarks
- * HookResponseBuilder provides the core response construction functionality
+ * HookResponse provides the core response construction functionality
  * that all specialized builders inherit. It includes:
  *
  * - **Response data**: The actual response sent to Claude Code
@@ -62,7 +62,7 @@ import type { PermissionRequestDecision, ToolInput } from "./types.js";
  * @example
  * ```typescript
  * // Chain multiple methods
- * const response = new HookResponseBuilder()
+ * const response = new HookResponse()
  *   .summary("processed tool call")
  *   .outcome("allowed")
  *   .metrics({ durationMs: 15 })
@@ -73,17 +73,17 @@ import type { PermissionRequestDecision, ToolInput } from "./types.js";
  * const json = response.toJSON();
  * ```
  *
- * @see {@link PreToolUseResponseBuilder} - Specialized for PreToolUse hooks
- * @see {@link PostToolUseResponseBuilder} - Specialized for PostToolUse hooks
- * @see {@link SessionStartResponseBuilder} - Specialized for SessionStart hooks
+ * @see {@link PreToolUseResponse} - Specialized for PreToolUse hooks
+ * @see {@link PostToolUseResponse} - Specialized for PostToolUse hooks
+ * @see {@link SessionStartResponse} - Specialized for SessionStart hooks
  * @public
  */
-export class HookResponseBuilder {
+export class HookResponse {
 	/**
 	 * The response object being built.
 	 * @internal
 	 */
-	protected response: HookResponse = {};
+	protected response: HookResponseData = {};
 	/**
 	 * Custom summary message for logging.
 	 * @internal
@@ -304,7 +304,7 @@ export class HookResponseBuilder {
 	/**
 	 * Build the final response object.
 	 */
-	build(): HookResponse {
+	build(): HookResponseData {
 		return this.response;
 	}
 
@@ -320,7 +320,7 @@ export class HookResponseBuilder {
  * Response builder for PreToolUse hooks with permission control methods.
  *
  * @remarks
- * PreToolUseResponseBuilder provides methods for the three permission decisions
+ * PreToolUseResponse provides methods for the three permission decisions
  * available in PreToolUse hooks:
  *
  * - `allow()` - Permit the tool call to proceed
@@ -345,11 +345,11 @@ export class HookResponseBuilder {
  * }).allow());
  * ```
  *
- * @see {@link PreToolUseHookEvent} - The event type this builder is used with
+ * @see {@link PreToolUseEvent} - The event type this builder is used with
  * @see {@link PreToolUsePipelineOutput} - Pipeline output equivalent
  * @public
  */
-export class PreToolUseResponseBuilder extends HookResponseBuilder {
+export class PreToolUseResponse extends HookResponse {
 	/**
 	 * Allows the tool call to proceed unchanged.
 	 *
@@ -443,7 +443,7 @@ export class PreToolUseResponseBuilder extends HookResponseBuilder {
  * Response builder for PostToolUse hooks with context injection methods.
  *
  * @remarks
- * PostToolUseResponseBuilder allows hooks to add context to Claude after
+ * PostToolUseResponse allows hooks to add context to Claude after
  * a tool has completed. This is useful for providing additional information
  * about the tool result, such as explanations, warnings, or related context.
  *
@@ -456,11 +456,11 @@ export class PreToolUseResponseBuilder extends HookResponseBuilder {
  * );
  * ```
  *
- * @see {@link PostToolUseHookEvent} - The event type this builder is used with
+ * @see {@link PostToolUseEvent} - The event type this builder is used with
  * @see {@link PostToolUsePipelineOutput} - Pipeline output equivalent
  * @public
  */
-export class PostToolUseResponseBuilder extends HookResponseBuilder {
+export class PostToolUseResponse extends HookResponse {
 	/**
 	 * Adds additional context about the tool result for Claude.
 	 *
@@ -486,7 +486,7 @@ export class PostToolUseResponseBuilder extends HookResponseBuilder {
  * Response builder for PermissionRequest hooks with permission automation.
  *
  * @remarks
- * PermissionRequestResponseBuilder handles responses to Claude Code's
+ * PermissionRequestResponse handles responses to Claude Code's
  * permission dialogs. It can automatically allow or deny permissions,
  * optionally with a custom message or modified input.
  *
@@ -499,11 +499,11 @@ export class PostToolUseResponseBuilder extends HookResponseBuilder {
  * event.end(event.response().deny("Operation not permitted").interrupt());
  * ```
  *
- * @see {@link PermissionRequestHookEvent} - The event type this builder is used with
+ * @see {@link PermissionRequestEvent} - The event type this builder is used with
  * @see {@link PermissionRequestPipelineOutput} - Pipeline output equivalent
  * @public
  */
-export class PermissionRequestResponseBuilder extends HookResponseBuilder {
+export class PermissionRequestResponse extends HookResponse {
 	private decision: PermissionRequestDecision = { behavior: "allow" };
 
 	/**
@@ -555,7 +555,7 @@ export class PermissionRequestResponseBuilder extends HookResponseBuilder {
  * Response builder for UserPromptSubmit hooks with context injection.
  *
  * @remarks
- * UserPromptSubmitResponseBuilder allows hooks to add context for Claude
+ * UserPromptSubmitResponse allows hooks to add context for Claude
  * when a user submits a prompt. This context is shown to Claude before
  * it begins processing the user's request.
  *
@@ -568,11 +568,11 @@ export class PermissionRequestResponseBuilder extends HookResponseBuilder {
  * );
  * ```
  *
- * @see {@link UserPromptSubmitHookEvent} - The event type this builder is used with
+ * @see {@link UserPromptSubmitEvent} - The event type this builder is used with
  * @see {@link UserPromptSubmitPipelineOutput} - Pipeline output equivalent
  * @public
  */
-export class UserPromptSubmitResponseBuilder extends HookResponseBuilder {
+export class UserPromptSubmitResponse extends HookResponse {
 	/**
 	 * Adds additional context for Claude about the user's prompt.
 	 *
@@ -594,8 +594,8 @@ export class UserPromptSubmitResponseBuilder extends HookResponseBuilder {
  * Response builder for Stop and SubagentStop hooks with blocking control.
  *
  * @remarks
- * StopResponseBuilder is used for both {@link StopHookEvent} (main agent)
- * and {@link SubagentStopHookEvent} (subagents). It allows hooks to block
+ * StopResponse is used for both {@link StopEvent} (main agent)
+ * and {@link SubagentStopEvent} (subagents). It allows hooks to block
  * Claude from stopping and provide context about why.
  *
  * Use the inherited `block()` method to prevent stopping.
@@ -613,12 +613,12 @@ export class UserPromptSubmitResponseBuilder extends HookResponseBuilder {
  * event.end(event.response().continue());
  * ```
  *
- * @see {@link StopHookEvent} - Main agent stop event
- * @see {@link SubagentStopHookEvent} - Subagent stop event
+ * @see {@link StopEvent} - Main agent stop event
+ * @see {@link SubagentStopEvent} - Subagent stop event
  * @see {@link StopPipelineOutput} - Pipeline output equivalent
  * @public
  */
-export class StopResponseBuilder extends HookResponseBuilder {
+export class StopResponse extends HookResponse {
 	/**
 	 * Adds additional context about why Claude is being blocked.
 	 *
@@ -640,7 +640,7 @@ export class StopResponseBuilder extends HookResponseBuilder {
  * Response builder for SessionStart hooks with context injection.
  *
  * @remarks
- * SessionStartResponseBuilder allows hooks to inject context at the start
+ * SessionStartResponse allows hooks to inject context at the start
  * of a Claude Code session. This context is shown to Claude before it
  * begins processing any user requests.
  *
@@ -661,11 +661,11 @@ export class StopResponseBuilder extends HookResponseBuilder {
  * );
  * ```
  *
- * @see {@link SessionStartHookEvent} - The event type this builder is used with
+ * @see {@link SessionStartEvent} - The event type this builder is used with
  * @see {@link SessionStartPipelineOutput} - Pipeline output equivalent
  * @public
  */
-export class SessionStartResponseBuilder extends HookResponseBuilder {
+export class SessionStartResponse extends HookResponse {
 	/**
 	 * Adds context to inject into the session for Claude.
 	 *

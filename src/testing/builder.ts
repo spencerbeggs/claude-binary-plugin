@@ -2,7 +2,7 @@
  * Fluent test builder for Claude Code plugins.
  *
  * @remarks
- * `PluginTestBuilder` provides a type-safe, fluent API for testing plugin hooks
+ * `PluginTester` provides a type-safe, fluent API for testing plugin hooks
  * and commands. It integrates with `ClaudeBinaryPlugin` to provide full type
  * inference for options, state, and hook inputs.
  *
@@ -61,20 +61,22 @@ export interface HookInputBase {
 }
 
 /**
- * Input fields specific to PreToolUse hooks.
+ * Test input fields for PreToolUse hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface PreToolUseInput extends HookInputBase {
+export interface PreToolUseTestInput extends HookInputBase {
 	tool_name: string;
 	tool_input: Record<string, unknown>;
 	tool_use_id?: string;
 }
 
 /**
- * Input fields specific to PostToolUse hooks.
+ * Test input fields for PostToolUse hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface PostToolUseInput extends HookInputBase {
+export interface PostToolUseTestInput extends HookInputBase {
 	tool_name: string;
 	tool_input: Record<string, unknown>;
 	tool_response: Record<string, unknown>;
@@ -82,68 +84,76 @@ export interface PostToolUseInput extends HookInputBase {
 }
 
 /**
- * Input fields specific to SessionStart hooks.
+ * Test input fields for SessionStart hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface SessionStartInput extends HookInputBase {
+export interface SessionStartTestInput extends HookInputBase {
 	source: "startup" | "resume" | "clear" | "compact";
 }
 
 /**
- * Input fields specific to SessionEnd hooks.
+ * Test input fields for SessionEnd hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface SessionEndInput extends HookInputBase {
+export interface SessionEndTestInput extends HookInputBase {
 	reason: "clear" | "logout" | "prompt_input_exit" | "other";
 }
 
 /**
- * Input fields specific to Stop hooks.
+ * Test input fields for Stop hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface StopInput extends HookInputBase {
+export interface StopTestInput extends HookInputBase {
 	stop_hook_active: boolean;
 }
 
 /**
- * Input fields specific to SubagentStop hooks.
+ * Test input fields for SubagentStop hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface SubagentStopInput extends HookInputBase {
+export interface SubagentStopTestInput extends HookInputBase {
 	stop_hook_active: boolean;
 }
 
 /**
- * Input fields specific to UserPromptSubmit hooks.
+ * Test input fields for UserPromptSubmit hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface UserPromptSubmitInput extends HookInputBase {
+export interface UserPromptSubmitTestInput extends HookInputBase {
 	prompt: string;
 }
 
 /**
- * Input fields specific to PreCompact hooks.
+ * Test input fields for PreCompact hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface PreCompactInput extends HookInputBase {
+export interface PreCompactTestInput extends HookInputBase {
 	trigger: "manual" | "auto";
 	custom_instructions?: string;
 }
 
 /**
- * Input fields specific to Notification hooks.
+ * Test input fields for Notification hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface NotificationInput extends HookInputBase {
+export interface NotificationTestInput extends HookInputBase {
 	message: string;
 	notification_type: string;
 }
 
 /**
- * Input fields specific to PermissionRequest hooks.
+ * Test input fields for PermissionRequest hooks.
+ * @remarks Simplified version with optional base fields for testing.
  * @public
  */
-export interface PermissionRequestInput extends HookInputBase {
+export interface PermissionRequestTestInput extends HookInputBase {
 	message: string;
 	notification_type: string;
 }
@@ -221,7 +231,7 @@ interface BuilderState<TOptions, TState> {
  *
  * @public
  */
-export class PluginTestBuilder<
+export class PluginTester<
 	TOptions,
 	TState,
 	// biome-ignore lint/suspicious/noExplicitAny: Hooks map has optional properties that don't satisfy Record constraint
@@ -300,7 +310,7 @@ export class PluginTestBuilder<
 	 * @param input - PreToolUse-specific input fields
 	 * @returns this for chaining
 	 */
-	withPreToolUseInput(input: PreToolUseInput): this {
+	withPreToolUseInput(input: PreToolUseTestInput): this {
 		this.state.hookEventName = "PreToolUse";
 		this.state.hookInput = {
 			hook_event_name: "PreToolUse",
@@ -316,7 +326,7 @@ export class PluginTestBuilder<
 	 * @param input - PostToolUse-specific input fields
 	 * @returns this for chaining
 	 */
-	withPostToolUseInput(input: PostToolUseInput): this {
+	withPostToolUseInput(input: PostToolUseTestInput): this {
 		this.state.hookEventName = "PostToolUse";
 		this.state.hookInput = {
 			hook_event_name: "PostToolUse",
@@ -332,7 +342,7 @@ export class PluginTestBuilder<
 	 * @param input - SessionStart-specific input fields
 	 * @returns this for chaining
 	 */
-	withSessionStartInput(input: SessionStartInput): this {
+	withSessionStartInput(input: SessionStartTestInput): this {
 		this.state.hookEventName = "SessionStart";
 		this.state.hookInput = {
 			hook_event_name: "SessionStart",
@@ -347,7 +357,7 @@ export class PluginTestBuilder<
 	 * @param input - SessionEnd-specific input fields
 	 * @returns this for chaining
 	 */
-	withSessionEndInput(input: SessionEndInput): this {
+	withSessionEndInput(input: SessionEndTestInput): this {
 		this.state.hookEventName = "SessionEnd";
 		this.state.hookInput = {
 			hook_event_name: "SessionEnd",
@@ -362,7 +372,7 @@ export class PluginTestBuilder<
 	 * @param input - Stop-specific input fields
 	 * @returns this for chaining
 	 */
-	withStopInput(input: StopInput): this {
+	withStopInput(input: StopTestInput): this {
 		this.state.hookEventName = "Stop";
 		this.state.hookInput = {
 			hook_event_name: "Stop",
@@ -377,7 +387,7 @@ export class PluginTestBuilder<
 	 * @param input - SubagentStop-specific input fields
 	 * @returns this for chaining
 	 */
-	withSubagentStopInput(input: SubagentStopInput): this {
+	withSubagentStopInput(input: SubagentStopTestInput): this {
 		this.state.hookEventName = "SubagentStop";
 		this.state.hookInput = {
 			hook_event_name: "SubagentStop",
@@ -392,7 +402,7 @@ export class PluginTestBuilder<
 	 * @param input - UserPromptSubmit-specific input fields
 	 * @returns this for chaining
 	 */
-	withUserPromptSubmitInput(input: UserPromptSubmitInput): this {
+	withUserPromptSubmitInput(input: UserPromptSubmitTestInput): this {
 		this.state.hookEventName = "UserPromptSubmit";
 		this.state.hookInput = {
 			hook_event_name: "UserPromptSubmit",
@@ -407,7 +417,7 @@ export class PluginTestBuilder<
 	 * @param input - PreCompact-specific input fields
 	 * @returns this for chaining
 	 */
-	withPreCompactInput(input: PreCompactInput): this {
+	withPreCompactInput(input: PreCompactTestInput): this {
 		this.state.hookEventName = "PreCompact";
 		this.state.hookInput = {
 			hook_event_name: "PreCompact",
@@ -423,7 +433,7 @@ export class PluginTestBuilder<
 	 * @param input - Notification-specific input fields
 	 * @returns this for chaining
 	 */
-	withNotificationInput(input: NotificationInput): this {
+	withNotificationInput(input: NotificationTestInput): this {
 		this.state.hookEventName = "Notification";
 		this.state.hookInput = {
 			hook_event_name: "Notification",
@@ -438,7 +448,7 @@ export class PluginTestBuilder<
 	 * @param input - PermissionRequest-specific input fields
 	 * @returns this for chaining
 	 */
-	withPermissionRequestInput(input: PermissionRequestInput): this {
+	withPermissionRequestInput(input: PermissionRequestTestInput): this {
 		this.state.hookEventName = "PermissionRequest";
 		this.state.hookInput = {
 			hook_event_name: "PermissionRequest",
@@ -656,10 +666,10 @@ export class PluginTestBuilder<
 	 */
 	private validateState(): void {
 		if (!this.state.options) {
-			throw new Error("PluginTestBuilder: withOptions() must be called before running tests");
+			throw new Error("PluginTester: withOptions() must be called before running tests");
 		}
 		if (!this.state.state) {
-			throw new Error("PluginTestBuilder: withState() must be called before running tests");
+			throw new Error("PluginTester: withState() must be called before running tests");
 		}
 	}
 
@@ -793,7 +803,7 @@ export class PluginTestBuilder<
  * This is typically called via `plugin.test()` rather than directly.
  *
  * @param config - Plugin configuration
- * @returns A new PluginTestBuilder instance
+ * @returns A new PluginTester instance
  *
  * @internal
  */
@@ -805,6 +815,6 @@ export function createTestBuilder<
 >(
 	// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin config
 	config: PluginConfig<any, any, any>,
-): PluginTestBuilder<TOptions, TState, THooks, TCommands> {
-	return new PluginTestBuilder(config);
+): PluginTester<TOptions, TState, THooks, TCommands> {
+	return new PluginTester(config);
 }

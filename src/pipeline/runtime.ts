@@ -13,7 +13,7 @@
  *
  * **Execution Flow:**
  * 1. Parse stdin JSON and create HookEvent instance
- * 2. Load environment via ClaudeBinaryPluginState
+ * 2. Load environment via PluginEnv
  * 3. Run setup() if SessionStart to compute state
  * 4. Apply tool filters for PreToolUse/PostToolUse
  * 5. Call pipeline handler with `{ input, options, env }` context
@@ -36,20 +36,20 @@
 
 import { z } from "zod";
 import {
-	NotificationHookEvent,
-	PermissionRequestHookEvent,
-	PostToolUseHookEvent,
-	PreCompactHookEvent,
-	PreToolUseHookEvent,
-	SessionEndHookEvent,
-	SessionStartHookEvent,
-	StopHookEvent,
-	SubagentStopHookEvent,
-	UserPromptSubmitHookEvent,
+	NotificationEvent,
+	PermissionRequestEvent,
+	PostToolUseEvent,
+	PreCompactEvent,
+	PreToolUseEvent,
+	SessionEndEvent,
+	SessionStartEvent,
+	StopEvent,
+	SubagentStopEvent,
+	UserPromptSubmitEvent,
 } from "../events/subclasses.js";
 import type { HookOutcome } from "../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
-import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/plugin-state.js";
 import type { BaseState, PipelineHandler, SetupFunction } from "./config.js";
 
 // =============================================================================
@@ -62,7 +62,7 @@ import type { BaseState, PipelineHandler, SetupFunction } from "./config.js";
  * converted from pipeline output format.
  * @public
  */
-export interface PreToolUseResponse {
+export interface PreToolUseResponseData {
 	permissionDecision: "allow" | "deny" | "ask";
 	reason?: string;
 	updatedInput?: Record<string, unknown>;
@@ -72,7 +72,7 @@ export interface PreToolUseResponse {
  * Internal type for PostToolUse response builder.
  * @public
  */
-export interface PostToolUseResponse {
+export interface PostToolUseResponseData {
 	additionalContext?: string;
 	decision?: "block";
 	reason?: string;
@@ -82,7 +82,7 @@ export interface PostToolUseResponse {
  * Internal type for SessionStart response builder.
  * @public
  */
-export interface SessionStartResponse {
+export interface SessionStartResponseData {
 	additionalContext?: string;
 }
 
@@ -90,7 +90,7 @@ export interface SessionStartResponse {
  * Internal type for Stop/SubagentStop response builder.
  * @public
  */
-export interface StopResponse {
+export interface StopResponseData {
 	decision?: "block";
 	reason?: string;
 }
@@ -99,7 +99,7 @@ export interface StopResponse {
  * Internal type for UserPromptSubmit response builder.
  * @public
  */
-export interface UserPromptSubmitResponse {
+export interface UserPromptSubmitResponseData {
 	additionalContext?: string;
 	decision?: "block";
 	reason?: string;
@@ -109,7 +109,7 @@ export interface UserPromptSubmitResponse {
  * Internal type for PermissionRequest response builder.
  * @public
  */
-export interface PermissionRequestResponse {
+export interface PermissionRequestResponseData {
 	behavior: "allow" | "deny";
 	message?: string;
 	interrupt?: boolean;
@@ -133,16 +133,16 @@ import { isPipelineOutput } from "./types.js";
  */
 function getHookEventClasses() {
 	return {
-		PreToolUse: PreToolUseHookEvent,
-		PostToolUse: PostToolUseHookEvent,
-		SessionStart: SessionStartHookEvent,
-		SessionEnd: SessionEndHookEvent,
-		Stop: StopHookEvent,
-		SubagentStop: SubagentStopHookEvent,
-		UserPromptSubmit: UserPromptSubmitHookEvent,
-		PreCompact: PreCompactHookEvent,
-		Notification: NotificationHookEvent,
-		PermissionRequest: PermissionRequestHookEvent,
+		PreToolUse: PreToolUseEvent,
+		PostToolUse: PostToolUseEvent,
+		SessionStart: SessionStartEvent,
+		SessionEnd: SessionEndEvent,
+		Stop: StopEvent,
+		SubagentStop: SubagentStopEvent,
+		UserPromptSubmit: UserPromptSubmitEvent,
+		PreCompact: PreCompactEvent,
+		Notification: NotificationEvent,
+		PermissionRequest: PermissionRequestEvent,
 	} as const;
 }
 
@@ -227,7 +227,7 @@ function mapToPermissionDecision(action?: HookAction): "allow" | "deny" | "ask" 
  * Convert pipeline output to PreToolUse response format.
  * @public
  */
-function convertToPreToolUseResponse(output: AnyPipelineOutput): PreToolUseResponse {
+function convertToPreToolUseResponseData(output: AnyPipelineOutput): PreToolUseResponseData {
 	const action = "action" in output ? output.action : undefined;
 
 	// Map action to permission decision
@@ -249,7 +249,7 @@ function convertToPreToolUseResponse(output: AnyPipelineOutput): PreToolUseRespo
  * Convert pipeline output to PostToolUse response format.
  * @public
  */
-function convertToPostToolUseResponse(output: AnyPipelineOutput): PostToolUseResponse {
+function convertToPostToolUseResponseData(output: AnyPipelineOutput): PostToolUseResponseData {
 	const action = "action" in output ? output.action : undefined;
 
 	if (action === "block" && "reason" in output && output.reason) {
@@ -265,7 +265,7 @@ function convertToPostToolUseResponse(output: AnyPipelineOutput): PostToolUseRes
  * Convert pipeline output to SessionStart response format.
  * @public
  */
-function convertToSessionStartResponse(output: AnyPipelineOutput): SessionStartResponse {
+function convertToSessionStartResponseData(output: AnyPipelineOutput): SessionStartResponseData {
 	if ("claudeContext" in output && output.claudeContext) {
 		return { additionalContext: output.claudeContext };
 	}
@@ -276,7 +276,7 @@ function convertToSessionStartResponse(output: AnyPipelineOutput): SessionStartR
  * Convert pipeline output to Stop response format.
  * @public
  */
-function convertToStopResponse(output: AnyPipelineOutput): StopResponse {
+function convertToStopResponseData(output: AnyPipelineOutput): StopResponseData {
 	const action = "action" in output ? output.action : undefined;
 
 	if (action === "block" && "reason" in output && output.reason) {
@@ -289,7 +289,7 @@ function convertToStopResponse(output: AnyPipelineOutput): StopResponse {
  * Convert pipeline output to UserPromptSubmit response format.
  * @public
  */
-function convertToUserPromptSubmitResponse(output: AnyPipelineOutput): UserPromptSubmitResponse {
+function convertToUserPromptSubmitResponseData(output: AnyPipelineOutput): UserPromptSubmitResponseData {
 	const action = "action" in output ? output.action : undefined;
 
 	if (action === "block" && "reason" in output && output.reason) {
@@ -305,7 +305,7 @@ function convertToUserPromptSubmitResponse(output: AnyPipelineOutput): UserPromp
  * Convert pipeline output to PermissionRequest response format.
  * @public
  */
-function convertToPermissionRequestResponse(output: AnyPipelineOutput): PermissionRequestResponse {
+function convertToPermissionRequestResponseData(output: AnyPipelineOutput): PermissionRequestResponseData {
 	const action = "action" in output ? output.action : undefined;
 
 	return {
@@ -323,22 +323,22 @@ function convertToPermissionRequestResponse(output: AnyPipelineOutput): Permissi
 function convertToResponse(hookType: HookEventType, output: AnyPipelineOutput): unknown {
 	switch (hookType) {
 		case "PreToolUse":
-			return convertToPreToolUseResponse(output);
+			return convertToPreToolUseResponseData(output);
 		case "PostToolUse":
-			return convertToPostToolUseResponse(output);
+			return convertToPostToolUseResponseData(output);
 		case "SessionStart":
-			return convertToSessionStartResponse(output);
+			return convertToSessionStartResponseData(output);
 		case "SessionEnd":
 		case "PreCompact":
 		case "Notification":
 			return {}; // Passthrough
 		case "Stop":
 		case "SubagentStop":
-			return convertToStopResponse(output);
+			return convertToStopResponseData(output);
 		case "UserPromptSubmit":
-			return convertToUserPromptSubmitResponse(output);
+			return convertToUserPromptSubmitResponseData(output);
 		case "PermissionRequest":
-			return convertToPermissionRequestResponse(output);
+			return convertToPermissionRequestResponseData(output);
 		default:
 			return output;
 	}
@@ -391,7 +391,7 @@ const defaultIO: ResolvedIODependencies = {
  * Options for running a pipeline hook.
  * @public
  */
-export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, string>> {
+export interface PipelineConfig<TOptions = unknown, TState = Record<string, string>> {
 	/** Hook event type */
 	hookType: HookEventType;
 	/** Hook name for logging/telemetry */
@@ -403,7 +403,7 @@ export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, 
 	/** The pipeline handler function */
 	pipeline: PipelineHandler<unknown, unknown, TOptions, TState>;
 	/** State class for loading env vars */
-	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
+	stateClass: new () => PluginEnv<TOptions>;
 	/** Tool filter (for PreToolUse/PostToolUse) */
 	tools?: string[];
 	/** Zod schema for validating plugin options (used for SessionStart persistence) */
@@ -417,7 +417,7 @@ export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, 
 /**
  * Apply PreToolUse pipeline output.
  */
-function applyPreToolUseOutput(event: PreToolUseHookEvent, output: PreToolUseResponse): never {
+function applyPreToolUseOutput(event: PreToolUseEvent, output: PreToolUseResponseData): never {
 	const response = event.response();
 	if (output.permissionDecision === "allow") {
 		response.allow();
@@ -435,7 +435,7 @@ function applyPreToolUseOutput(event: PreToolUseHookEvent, output: PreToolUseRes
 /**
  * Apply PostToolUse pipeline output.
  */
-function applyPostToolUseOutput(event: PostToolUseHookEvent, output: PostToolUseResponse): never {
+function applyPostToolUseOutput(event: PostToolUseEvent, output: PostToolUseResponseData): never {
 	const response = event.response();
 	if ("additionalContext" in output && output.additionalContext) {
 		response.additionalContext(output.additionalContext);
@@ -448,7 +448,7 @@ function applyPostToolUseOutput(event: PostToolUseHookEvent, output: PostToolUse
 /**
  * Apply SessionStart pipeline output.
  */
-function applySessionStartOutput(event: SessionStartHookEvent, output: SessionStartResponse): never {
+function applySessionStartOutput(event: SessionStartEvent, output: SessionStartResponseData): never {
 	const response = event.response();
 	if (output.additionalContext) {
 		response.additionalContext(output.additionalContext);
@@ -459,7 +459,7 @@ function applySessionStartOutput(event: SessionStartHookEvent, output: SessionSt
 /**
  * Apply Stop/SubagentStop pipeline output.
  */
-function applyStopOutput(event: StopHookEvent | SubagentStopHookEvent, output: StopResponse): never {
+function applyStopOutput(event: StopEvent | SubagentStopEvent, output: StopResponseData): never {
 	const response = event.response();
 	if ("decision" in output && output.decision === "block") {
 		response.block(output.reason ?? "Blocked by hook");
@@ -470,7 +470,7 @@ function applyStopOutput(event: StopHookEvent | SubagentStopHookEvent, output: S
 /**
  * Apply UserPromptSubmit pipeline output.
  */
-function applyUserPromptSubmitOutput(event: UserPromptSubmitHookEvent, output: UserPromptSubmitResponse): never {
+function applyUserPromptSubmitOutput(event: UserPromptSubmitEvent, output: UserPromptSubmitResponseData): never {
 	const response = event.response();
 	if ("additionalContext" in output && output.additionalContext) {
 		response.additionalContext(output.additionalContext);
@@ -483,7 +483,7 @@ function applyUserPromptSubmitOutput(event: UserPromptSubmitHookEvent, output: U
 /**
  * Apply PermissionRequest pipeline output.
  */
-function applyPermissionRequestOutput(event: PermissionRequestHookEvent, output: PermissionRequestResponse): never {
+function applyPermissionRequestOutput(event: PermissionRequestEvent, output: PermissionRequestResponseData): never {
 	const response = event.response();
 	if (output.behavior === "allow") {
 		response.allow();
@@ -502,7 +502,7 @@ function applyPermissionRequestOutput(event: PermissionRequestHookEvent, output:
 /**
  * Apply passthrough output (for hooks that only support passthrough).
  */
-function applyPassthroughOutput(event: SessionEndHookEvent | PreCompactHookEvent | NotificationHookEvent): never {
+function applyPassthroughOutput(event: SessionEndEvent | PreCompactEvent | NotificationEvent): never {
 	event.end(event.response());
 }
 
@@ -513,22 +513,22 @@ function applyPassthroughOutput(event: SessionEndHookEvent | PreCompactHookEvent
 function applyPipelineOutput(event: any, hookType: HookEventType, output: unknown): never {
 	switch (hookType) {
 		case "PreToolUse":
-			return applyPreToolUseOutput(event, output as PreToolUseResponse);
+			return applyPreToolUseOutput(event, output as PreToolUseResponseData);
 		case "PostToolUse":
-			return applyPostToolUseOutput(event, output as PostToolUseResponse);
+			return applyPostToolUseOutput(event, output as PostToolUseResponseData);
 		case "SessionStart":
-			return applySessionStartOutput(event, output as SessionStartResponse);
+			return applySessionStartOutput(event, output as SessionStartResponseData);
 		case "SessionEnd":
 		case "PreCompact":
 		case "Notification":
 			return applyPassthroughOutput(event);
 		case "Stop":
 		case "SubagentStop":
-			return applyStopOutput(event, output as StopResponse);
+			return applyStopOutput(event, output as StopResponseData);
 		case "UserPromptSubmit":
-			return applyUserPromptSubmitOutput(event, output as UserPromptSubmitResponse);
+			return applyUserPromptSubmitOutput(event, output as UserPromptSubmitResponseData);
 		case "PermissionRequest":
-			return applyPermissionRequestOutput(event, output as PermissionRequestResponse);
+			return applyPermissionRequestOutput(event, output as PermissionRequestResponseData);
 		default: {
 			// Exhaustive check
 			const _exhaustive: never = hookType;
@@ -574,7 +574,7 @@ function applyPipelineOutput(event: any, hookType: HookEventType, output: unknow
  * @public
  */
 export async function runPipeline<TOptions = unknown, TState = Record<string, string>>(
-	options: RunPipelineOptions<TOptions, TState>,
+	options: PipelineConfig<TOptions, TState>,
 ): Promise<never> {
 	const { hookType, hookName, pluginName, pluginVersion, pipeline, stateClass, tools, optionsSchema, setup } = options;
 	const startTime = performance.now();
@@ -672,7 +672,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 				options: validatedOptions,
 				cwd,
 				sessionId: event.session_id,
-				state: baseState,
+				baseState,
 			})) as TState;
 		} else {
 			state = extractPersistedState(stateInstance) as TState;
@@ -743,8 +743,8 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			// For SessionStart hooks, persist environment variables
 			if (hookType === "SessionStart") {
 				await persistSessionEnv({
-					event: event as SessionStartHookEvent,
-					stateInstance: stateInstance as ClaudeBinaryPluginState<unknown>,
+					event: event as SessionStartEvent,
+					stateInstance: stateInstance as PluginEnv<unknown>,
 					schema: optionsSchema,
 					state: state as Record<string, unknown>,
 					baseState,
@@ -824,7 +824,7 @@ function isDebugEnabled(): boolean {
  * @returns State object parsed from `prefix`_PLUGIN_STATE
  * @internal
  */
-function extractPersistedState(stateInstance: ClaudeBinaryPluginState<unknown>): Record<string, unknown> {
+function extractPersistedState(stateInstance: PluginEnv<unknown>): Record<string, unknown> {
 	const prefix = stateInstance.getPrefix();
 
 	// Always log to file for debugging (bypasses stderr issues)
@@ -876,8 +876,8 @@ function extractPersistedState(stateInstance: ClaudeBinaryPluginState<unknown>):
  * Options for persisting session environment variables.
  */
 interface PersistSessionEnvOptions {
-	event: SessionStartHookEvent;
-	stateInstance: ClaudeBinaryPluginState<unknown>;
+	event: SessionStartEvent;
+	stateInstance: PluginEnv<unknown>;
 	schema?: z.ZodType<unknown>;
 	/** State from setup() - will be JSON-stringified */
 	state?: Record<string, unknown>;
@@ -889,11 +889,7 @@ interface PersistSessionEnvOptions {
  * Create the base state object for the setup function.
  * @internal
  */
-function createBaseState(
-	cwd: string,
-	claudeEnvFile: string,
-	stateInstance: ClaudeBinaryPluginState<unknown>,
-): BaseState {
+function createBaseState(cwd: string, claudeEnvFile: string, stateInstance: PluginEnv<unknown>): BaseState {
 	return {
 		projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? cwd,
 		pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "",
@@ -978,12 +974,12 @@ async function persistSessionEnv(options: PersistSessionEnvOptions): Promise<voi
 	}
 
 	// Persist all variables
-	await ClaudeBinaryPluginState.persistVars(event.session_id, vars);
+	await PluginEnv.persistVars(event.session_id, vars);
 
 	// Register session in SQLite registry for subsequent lookups
 	const sessionEnvDir = claudeEnvFile.replace(/\/hook-\d+\.sh$/, "");
 	if (sessionEnvDir !== claudeEnvFile && event.session_id && baseState.projectDir) {
-		ClaudeBinaryPluginState.registerSession(event.session_id, baseState.projectDir, sessionEnvDir);
+		PluginEnv.registerSession(event.session_id, baseState.projectDir, sessionEnvDir);
 	}
 }
 
@@ -1003,7 +999,7 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
 	/** The raw handler function */
 	handler: (ctx: { event: unknown; options: TOptions; state: TState }) => void | Promise<void>;
 	/** State class */
-	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
+	stateClass: new () => PluginEnv<TOptions>;
 }
 
 /**
@@ -1157,11 +1153,11 @@ export {
 	isDebugEnabled,
 	mapToOutcome,
 	mapToPermissionDecision,
-	convertToPreToolUseResponse,
-	convertToPostToolUseResponse,
-	convertToSessionStartResponse,
-	convertToStopResponse,
-	convertToUserPromptSubmitResponse,
-	convertToPermissionRequestResponse,
+	convertToPreToolUseResponseData,
+	convertToPostToolUseResponseData,
+	convertToSessionStartResponseData,
+	convertToStopResponseData,
+	convertToUserPromptSubmitResponseData,
+	convertToPermissionRequestResponseData,
 	convertToResponse,
 };

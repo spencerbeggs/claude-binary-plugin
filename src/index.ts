@@ -14,9 +14,9 @@
  *
  * **Core Exports:**
  * - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations
- * - {@link ClaudeBinaryPluginState} - Base class for state management
+ * - {@link PluginEnv} - Base class for environment management
  * - {@link buildPlugin} - Compile plugins to executables
- * - Hook event classes (`PreToolUseHookEvent`, `SessionStartHookEvent`, etc.)
+ * - Hook event classes (`PreToolUseEvent`, `SessionStartEvent`, etc.)
  *
  * @example
  * ```typescript
@@ -46,6 +46,7 @@
 export type { EnvCodecMetadata } from "./state/codecs.js";
 export { EnvCodecs } from "./state/codecs.js";
 export type {
+	ClaudeBinaryPluginState,
 	CommandConfig,
 	CommandContextParams,
 	CommandContextResult,
@@ -59,7 +60,7 @@ export type {
 	ZodIssueMinimal,
 	ZodSchema,
 } from "./state/plugin-state.js";
-export { ClaudeBinaryPluginState, EnvFileLoadError } from "./state/plugin-state.js";
+export { EnvFileLoadError, PluginEnv } from "./state/plugin-state.js";
 export type { SessionRecord, SessionRegistration } from "./state/session-registry.js";
 // Session registry for persistent session lookups
 export { SessionRegistry, closeDb } from "./state/session-registry.js";
@@ -81,63 +82,63 @@ export { DebugLogger } from "./utils/debug-logger.js";
 export { HookEvent } from "./events/base.js";
 export type { HookPermissionsMode } from "./events/enums.js";
 // Enums
-export { HookEventName } from "./events/enums.js";
+export { HookType } from "./events/enums.js";
 // Response builders
 export {
-	HookResponseBuilder,
-	PermissionRequestResponseBuilder,
-	PostToolUseResponseBuilder,
-	PreToolUseResponseBuilder,
-	SessionStartResponseBuilder,
-	StopResponseBuilder,
-	UserPromptSubmitResponseBuilder,
+	HookResponse,
+	PermissionRequestResponse,
+	PostToolUseResponse,
+	PreToolUseResponse,
+	SessionStartResponse,
+	StopResponse,
+	UserPromptSubmitResponse,
 } from "./events/response-builders.js";
 
 // Response types
-export type { BlockDecision, HookResponse } from "./events/response-types.js";
+export type { BlockDecision, HookResponseData } from "./events/response-types.js";
 export { estimateTokenCount } from "./events/response-types.js";
 // HookEvent subclasses
 export {
-	NotificationHookEvent,
-	PermissionRequestHookEvent,
-	PostToolUseHookEvent,
-	PreCompactHookEvent,
-	PreToolUseHookEvent,
-	SessionEndHookEvent,
-	SessionStartHookEvent,
-	StopHookEvent,
-	SubagentStopHookEvent,
-	UserPromptSubmitHookEvent,
+	NotificationEvent,
+	PermissionRequestEvent,
+	PostToolUseEvent,
+	PreCompactEvent,
+	PreToolUseEvent,
+	SessionEndEvent,
+	SessionStartEvent,
+	StopEvent,
+	SubagentStopEvent,
+	UserPromptSubmitEvent,
 } from "./events/subclasses.js";
 // Event type definitions
 export type {
 	HookEventBase,
 	HookEventOptions,
 	IO,
-	NotificationEvent,
+	NotificationInput,
 	NotificationType,
 	PermissionRequestBehavior,
 	PermissionRequestDecision,
-	PermissionRequestEvent,
+	PermissionRequestInput,
 	PermissionRequestOutput,
-	PostToolUseEvent,
+	PostToolUseInput,
 	PostToolUseOutput,
-	PreCompactEvent,
+	PreCompactInput,
 	PreCompactTrigger,
 	PreToolUseDecision,
-	PreToolUseEvent,
+	PreToolUseInput,
 	PreToolUseOutput,
-	SessionEndEvent,
+	SessionEndInput,
 	SessionEndReason,
-	SessionStartEvent,
+	SessionStartInput,
 	SessionStartOutput,
 	SessionStartSource,
-	StopEvent,
-	SubagentStopEvent,
+	StopInput,
+	SubagentStopInput,
 	ToolInput,
 	ToolName,
 	ToolResponse,
-	UserPromptSubmitEvent,
+	UserPromptSubmitInput,
 	UserPromptSubmitOutput,
 } from "./events/types.js";
 
@@ -282,12 +283,13 @@ export { main as sidecarMain } from "./otel/sidecar/main.js";
 
 export type {
 	BaseState,
-	CommandContext,
+	CmdContext,
 	CommandDefinition,
 	CommandHandler,
 	CommandOutput,
 	CommandsMap,
 	ExtractSetupReturn,
+	HandlerContext,
 	HookDefinition,
 	HookDefinitionBase,
 	HooksMap,
@@ -298,7 +300,6 @@ export type {
 	PermissionRequestHookDefinition,
 	PermissionRequestPipeline,
 	PermissionRequestRawHandler,
-	PipelineContext,
 	PipelineFileHookDefinition,
 	PipelineHandler,
 	PipelineHookDefinition,
@@ -394,14 +395,14 @@ export {
 export type {
 	HookEventType,
 	IODependencies,
-	PermissionRequestResponse,
-	PostToolUseResponse,
-	PreToolUseResponse,
-	RunPipelineOptions,
+	PermissionRequestResponseData,
+	PipelineConfig,
+	PostToolUseResponseData,
+	PreToolUseResponseData,
 	RunRawHandlerOptions,
-	SessionStartResponse,
-	StopResponse,
-	UserPromptSubmitResponse,
+	SessionStartResponseData,
+	StopResponseData,
+	UserPromptSubmitResponseData,
 } from "./pipeline/runtime.js";
 
 // =============================================================================
@@ -440,26 +441,26 @@ export type {
 	CommandTestResult,
 	HookInputBase,
 	HookTestResult,
-	NotificationInput,
-	PermissionRequestInput,
-	PostToolUseInput,
-	PreCompactInput,
-	PreToolUseInput,
-	SessionEndInput,
-	SessionStartInput,
-	StopInput,
-	SubagentStopInput,
-	UserPromptSubmitInput,
+	NotificationTestInput,
+	PermissionRequestTestInput,
+	PostToolUseTestInput,
+	PreCompactTestInput,
+	PreToolUseTestInput,
+	SessionEndTestInput,
+	SessionStartTestInput,
+	StopTestInput,
+	SubagentStopTestInput,
+	UserPromptSubmitTestInput,
 } from "./testing/builder.js";
-export { PluginTestBuilder } from "./testing/builder.js";
+export { PluginTester } from "./testing/builder.js";
 export type {
-	BufferShellExecutor,
-	BufferShellExecutorOptions,
 	BufferShellResult,
+	InMemoryShellExecutor,
+	InMemoryShellExecutorOptions,
 	MockCommandContext,
 	MockCommandOutput,
 	MockEnvContext,
 	MockFatalErrorResult,
 	MockIOResult,
 } from "./testing/mocks.js";
-export { MockExitError, MockState, Mocks } from "./testing/mocks.js";
+export { MockExitError, MockState, TestFixtures } from "./testing/mocks.js";

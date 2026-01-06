@@ -36,18 +36,6 @@ import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";
 import type { PluginBuildResult } from "../build/builder.js";
 import type {
-	NotificationHookEvent,
-	PermissionRequestHookEvent,
-	PostToolUseHookEvent,
-	PreCompactHookEvent,
-	PreToolUseHookEvent,
-	SessionEndHookEvent,
-	SessionStartHookEvent,
-	StopHookEvent,
-	SubagentStopHookEvent,
-	UserPromptSubmitHookEvent,
-} from "../events/subclasses.js";
-import type {
 	NotificationEvent,
 	PermissionRequestEvent,
 	PostToolUseEvent,
@@ -57,10 +45,22 @@ import type {
 	SessionStartEvent,
 	StopEvent,
 	SubagentStopEvent,
-	ToolName,
 	UserPromptSubmitEvent,
+} from "../events/subclasses.js";
+import type {
+	NotificationInput,
+	PermissionRequestInput,
+	PostToolUseInput,
+	PreCompactInput,
+	PreToolUseInput,
+	SessionEndInput,
+	SessionStartInput,
+	StopInput,
+	SubagentStopInput,
+	ToolName,
+	UserPromptSubmitInput,
 } from "../events/types.js";
-import type { PluginTestBuilder } from "../testing/builder.js";
+import type { PluginTester } from "../testing/builder.js";
 import type {
 	NotificationPipelineOutput,
 	PassthroughPipelineOutput,
@@ -106,7 +106,7 @@ export type PluginState<TState> = BaseState & TState;
 /**
  * @public
  */
-export interface PipelineContext<TInput, TOptions, TState = Record<string, unknown>> {
+export interface HandlerContext<TInput, TOptions, TState = Record<string, unknown>> {
 	/** Hook event input from Claude Code */
 	input: TInput;
 	/** Validated options from plugin schema */
@@ -121,7 +121,7 @@ export interface PipelineContext<TInput, TOptions, TState = Record<string, unkno
  * @public
  */
 export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, unknown>> = (
-	ctx: PipelineContext<TInput, TOptions, TState>,
+	ctx: HandlerContext<TInput, TOptions, TState>,
 ) => TOutput | Promise<TOutput>;
 
 /**
@@ -159,7 +159,7 @@ export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ct
  * @public
  */
 export type SessionStartPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	SessionStartEvent,
+	SessionStartInput,
 	SessionStartPipelineOutput,
 	TOptions,
 	TState
@@ -170,7 +170,7 @@ export type SessionStartPipeline<TOptions, TState = Record<string, string>> = Pi
  * @public
  */
 export type SessionEndPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	SessionEndEvent,
+	SessionEndInput,
 	SessionEndPipelineOutput,
 	TOptions,
 	TState
@@ -199,7 +199,7 @@ export type SessionEndPipeline<TOptions, TState = Record<string, string>> = Pipe
  * @public
  */
 export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	PreToolUseEvent,
+	PreToolUseInput,
 	PreToolUsePipelineOutput,
 	TOptions,
 	TState
@@ -210,7 +210,7 @@ export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = Pipe
  * @public
  */
 export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	PostToolUseEvent,
+	PostToolUseInput,
 	PostToolUsePipelineOutput,
 	TOptions,
 	TState
@@ -221,7 +221,7 @@ export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = Pip
  * @public
  */
 export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	StopEvent,
+	StopInput,
 	StopPipelineOutput,
 	TOptions,
 	TState
@@ -232,7 +232,7 @@ export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHa
  * @public
  */
 export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	SubagentStopEvent,
+	SubagentStopInput,
 	StopPipelineOutput,
 	TOptions,
 	TState
@@ -243,7 +243,7 @@ export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = Pi
  * @public
  */
 export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	UserPromptSubmitEvent,
+	UserPromptSubmitInput,
 	UserPromptSubmitPipelineOutput,
 	TOptions,
 	TState
@@ -254,7 +254,7 @@ export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> 
  * @public
  */
 export type PreCompactPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	PreCompactEvent,
+	PreCompactInput,
 	PassthroughPipelineOutput,
 	TOptions,
 	TState
@@ -265,7 +265,7 @@ export type PreCompactPipeline<TOptions, TState = Record<string, string>> = Pipe
  * @public
  */
 export type NotificationPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	NotificationEvent,
+	NotificationInput,
 	NotificationPipelineOutput,
 	TOptions,
 	TState
@@ -276,7 +276,7 @@ export type NotificationPipeline<TOptions, TState = Record<string, string>> = Pi
  * @public
  */
 export type PermissionRequestPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
-	PermissionRequestEvent,
+	PermissionRequestInput,
 	PermissionRequestPipelineOutput,
 	TOptions,
 	TState
@@ -287,7 +287,7 @@ export type PermissionRequestPipeline<TOptions, TState = Record<string, string>>
  * @public
  */
 export type SessionStartRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	SessionStartHookEvent<TOptions>,
+	SessionStartEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -297,7 +297,7 @@ export type SessionStartRawHandler<TOptions, TState = Record<string, string>> = 
  * @public
  */
 export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	SessionEndHookEvent<TOptions>,
+	SessionEndEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -317,7 +317,7 @@ export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = Ra
  * @public
  */
 export type PreToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	PreToolUseHookEvent<TOptions>,
+	PreToolUseEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -327,7 +327,7 @@ export type PreToolUseRawHandler<TOptions, TState = Record<string, string>> = Ra
  * @public
  */
 export type PostToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	PostToolUseHookEvent<TOptions>,
+	PostToolUseEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -337,7 +337,7 @@ export type PostToolUseRawHandler<TOptions, TState = Record<string, string>> = R
  * @public
  */
 export type StopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	StopHookEvent<TOptions>,
+	StopEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -347,7 +347,7 @@ export type StopRawHandler<TOptions, TState = Record<string, string>> = RawHandl
  * @public
  */
 export type SubagentStopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	SubagentStopHookEvent<TOptions>,
+	SubagentStopEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -357,7 +357,7 @@ export type SubagentStopRawHandler<TOptions, TState = Record<string, string>> = 
  * @public
  */
 export type UserPromptSubmitRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	UserPromptSubmitHookEvent<TOptions>,
+	UserPromptSubmitEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -367,7 +367,7 @@ export type UserPromptSubmitRawHandler<TOptions, TState = Record<string, string>
  * @public
  */
 export type PreCompactRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	PreCompactHookEvent<TOptions>,
+	PreCompactEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -377,7 +377,7 @@ export type PreCompactRawHandler<TOptions, TState = Record<string, string>> = Ra
  * @public
  */
 export type NotificationRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	NotificationHookEvent<TOptions>,
+	NotificationEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -387,7 +387,7 @@ export type NotificationRawHandler<TOptions, TState = Record<string, string>> = 
  * @public
  */
 export type PermissionRequestRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	PermissionRequestHookEvent<TOptions>,
+	PermissionRequestEvent<TOptions>,
 	TOptions,
 	TState
 >;
@@ -523,9 +523,9 @@ export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<st
  * @public
  */
 export type SessionStartHookDefinition<TOptions> = HookDefinition<
-	SessionStartEvent,
+	SessionStartInput,
 	SessionStartPipelineOutput,
-	SessionStartHookEvent<TOptions>,
+	SessionStartEvent<TOptions>,
 	TOptions
 >;
 
@@ -534,9 +534,9 @@ export type SessionStartHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type SessionEndHookDefinition<TOptions> = HookDefinition<
-	SessionEndEvent,
+	SessionEndInput,
 	SessionEndPipelineOutput,
-	SessionEndHookEvent<TOptions>,
+	SessionEndEvent<TOptions>,
 	TOptions
 >;
 
@@ -545,9 +545,9 @@ export type SessionEndHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type PreToolUseHookDefinition<TOptions> = HookDefinition<
-	PreToolUseEvent,
+	PreToolUseInput,
 	PreToolUsePipelineOutput,
-	PreToolUseHookEvent<TOptions>,
+	PreToolUseEvent<TOptions>,
 	TOptions
 > &
 	ToolFilter;
@@ -557,9 +557,9 @@ export type PreToolUseHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type PostToolUseHookDefinition<TOptions> = HookDefinition<
-	PostToolUseEvent,
+	PostToolUseInput,
 	PostToolUsePipelineOutput,
-	PostToolUseHookEvent<TOptions>,
+	PostToolUseEvent<TOptions>,
 	TOptions
 > &
 	ToolFilter;
@@ -568,21 +568,16 @@ export type PostToolUseHookDefinition<TOptions> = HookDefinition<
  * Stop hook definition
  * @public
  */
-export type StopHookDefinition<TOptions> = HookDefinition<
-	StopEvent,
-	StopPipelineOutput,
-	StopHookEvent<TOptions>,
-	TOptions
->;
+export type StopHookDefinition<TOptions> = HookDefinition<StopInput, StopPipelineOutput, StopEvent<TOptions>, TOptions>;
 
 /**
  * SubagentStop hook definition
  * @public
  */
 export type SubagentStopHookDefinition<TOptions> = HookDefinition<
-	SubagentStopEvent,
+	SubagentStopInput,
 	SubagentStopPipelineOutput,
-	SubagentStopHookEvent<TOptions>,
+	SubagentStopEvent<TOptions>,
 	TOptions
 >;
 
@@ -591,9 +586,9 @@ export type SubagentStopHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
-	UserPromptSubmitEvent,
+	UserPromptSubmitInput,
 	UserPromptSubmitPipelineOutput,
-	UserPromptSubmitHookEvent<TOptions>,
+	UserPromptSubmitEvent<TOptions>,
 	TOptions
 >;
 
@@ -602,9 +597,9 @@ export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type PreCompactHookDefinition<TOptions> = HookDefinition<
-	PreCompactEvent,
+	PreCompactInput,
 	PreCompactPipelineOutput,
-	PreCompactHookEvent<TOptions>,
+	PreCompactEvent<TOptions>,
 	TOptions
 >;
 
@@ -613,9 +608,9 @@ export type PreCompactHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type NotificationHookDefinition<TOptions> = HookDefinition<
-	NotificationEvent,
+	NotificationInput,
 	NotificationPipelineOutput,
-	NotificationHookEvent<TOptions>,
+	NotificationEvent<TOptions>,
 	TOptions
 >;
 
@@ -624,9 +619,9 @@ export type NotificationHookDefinition<TOptions> = HookDefinition<
  * @public
  */
 export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
-	PermissionRequestEvent,
+	PermissionRequestInput,
 	PermissionRequestPipelineOutput,
-	PermissionRequestHookEvent<TOptions>,
+	PermissionRequestEvent<TOptions>,
 	TOptions
 >;
 
@@ -702,7 +697,7 @@ export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
  * ```
  * @public
  */
-export interface CommandContext<TArgs, TOptions, TState = Record<string, unknown>> {
+export interface CmdContext<TArgs, TOptions, TState = Record<string, unknown>> {
 	/** Validated command arguments from CLI */
 	args: TArgs;
 	/** Validated options from plugin schema */
@@ -720,7 +715,7 @@ export interface CommandContext<TArgs, TOptions, TState = Record<string, unknown
  * @public
  */
 export type CommandHandler<TArgs, TOptions, TState = Record<string, unknown>> = (
-	ctx: CommandContext<TArgs, TOptions, TState>,
+	ctx: CmdContext<TArgs, TOptions, TState>,
 ) => CommandOutput | Promise<CommandOutput>;
 
 /**
@@ -761,7 +756,7 @@ export interface BaseState {
 	/** Path to the session env file (from CLAUDE_ENV_FILE) */
 	readonly pluginEnvFile: string;
 
-	// Logger methods (bound from ClaudeBinaryPluginState instance)
+	// Logger methods (bound from PluginEnv instance)
 	/** Log at INFO level */
 	log(message: string, ...args: unknown[]): void;
 	/** Log at INFO level (alias for log) */
@@ -782,7 +777,7 @@ export interface SetupContext<TOptions> {
 	/** Session ID from Claude Code */
 	sessionId: string;
 	/** Base state paths (projectDir, pluginDir, pluginEnvFile) */
-	state: BaseState;
+	baseState: BaseState;
 }
 
 /**
@@ -1122,7 +1117,7 @@ export class ClaudeBinaryPlugin<
 	 * 4. Run test with `.runHook()` or `.runCommand()`
 	 * 5. Clean up with `.dispose()` in `afterEach()`
 	 *
-	 * @returns A new PluginTestBuilder instance with full type inference
+	 * @returns A new PluginTester instance with full type inference
 	 *
 	 * @example
 	 * ```ts
@@ -1154,7 +1149,7 @@ export class ClaudeBinaryPlugin<
 	 *
 	 * @public
 	 */
-	test(): PluginTestBuilder<
+	test(): PluginTester<
 		z.infer<TOptionsSchema>,
 		ExtractSetupReturn<NonNullable<TSetup>>,
 		HooksMap<z.infer<TOptionsSchema>>,
@@ -1162,8 +1157,8 @@ export class ClaudeBinaryPlugin<
 	> {
 		// Dynamic import to enable tree-shaking when test() is not used
 		// biome-ignore lint/suspicious/noExplicitAny: Runtime creation doesn't need strict types
-		const { PluginTestBuilder } = require("../testing/builder.js") as any;
-		return new PluginTestBuilder(this.config);
+		const { PluginTester } = require("../testing/builder.js") as any;
+		return new PluginTester(this.config);
 	}
 }
 

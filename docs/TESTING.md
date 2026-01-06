@@ -312,14 +312,14 @@ await plugin.test()
 ## Advanced: Low-Level Utilities
 
 For SDK development or edge cases where the fluent API is insufficient,
-the `Mocks` class provides lower-level utilities.
+the `TestFixtures` class provides lower-level utilities.
 
 ### Environment Isolation
 
 ```typescript
-import { Mocks } from "claude-binary-plugin";
+import { TestFixtures } from "claude-binary-plugin";
 
-const env = Mocks.createEnv({
+const env = TestFixtures.createEnv({
   CLAUDE_PROJECT_DIR: "/tmp/test",
   CLAUDE_SESSION_ID: "test-session",
 });
@@ -338,9 +338,9 @@ env.restore();
 ### I/O Mocking
 
 ```typescript
-import { Mocks } from "claude-binary-plugin";
+import { TestFixtures } from "claude-binary-plugin";
 
-const io = Mocks.createIO({
+const io = TestFixtures.createIO({
   session_id: "test",
   tool_name: "Bash",
   tool_input: { command: "ls" },
@@ -353,16 +353,16 @@ const io = Mocks.createIO({
 const stdout = io.getStdout();
 const stderr = io.getStderr();
 
-Mocks.resetIO();
+TestFixtures.resetIO();
 ```
 
 ### Shell Executor Mocking
 
 ```typescript
-import { Mocks } from "claude-binary-plugin";
+import { TestFixtures } from "claude-binary-plugin";
 
 // String-based executor with pattern matching
-const executor = Mocks.shellExecutor({
+const executor = TestFixtures.shellExecutor({
   "node --version": { exitCode: 0, stdout: "v22.0.0", stderr: "" },
   "bun --version": { exitCode: 0, stdout: "1.3.5", stderr: "" },
 });
@@ -374,33 +374,33 @@ const version = await detectNodeVersion(executor);
 ### Environment Presets
 
 ```typescript
-import { Mocks } from "claude-binary-plugin";
+import { TestFixtures } from "claude-binary-plugin";
 
 // Minimal Claude Code hook environment
-const env = Mocks.envPresets.claudeHook({
+const env = TestFixtures.envPresets.claudeHook({
   CLAUDE_PROJECT_DIR: "/custom/path",
 });
 
 // Hook environment with env file
-const env2 = Mocks.envPresets.withEnvFile("/path/to/env.sh", {
+const env2 = TestFixtures.envPresets.withEnvFile("/path/to/env.sh", {
   CLAUDE_PROJECT_DIR: "/project",
 });
 ```
 
-### Mocks Class Reference
+### TestFixtures Class Reference
 
 | Method | Description |
 | ------ | ----------- |
-| `Mocks.createEnv(vars, options)` | Create isolated mock environment |
-| `Mocks.createIO(input)` | Mock stdin/stdout/stderr |
-| `Mocks.resetIO()` | Reset I/O mocks |
-| `Mocks.createCommand(args)` | Mock CLI command context |
-| `Mocks.runCommand(args, mainFn)` | Run command with mocks |
-| `Mocks.runHook(mainFn)` | Run hook with mocked exit |
-| `Mocks.shellExecutor(responses)` | Create shell executor mock |
-| `Mocks.bufferShellExecutor(handler)` | Create buffer shell executor |
-| `Mocks.envPresets` | Pre-configured environment setups |
-| `Mocks.ExitError` | Error thrown by mocked process.exit |
+| `TestFixtures.createEnv(vars, options)` | Create isolated mock environment |
+| `TestFixtures.createIO(input)` | Mock stdin/stdout/stderr |
+| `TestFixtures.resetIO()` | Reset I/O mocks |
+| `TestFixtures.createCommand(args)` | Mock CLI command context |
+| `TestFixtures.runCommand(args, mainFn)` | Run command with mocks |
+| `TestFixtures.runHook(mainFn)` | Run hook with mocked exit |
+| `TestFixtures.shellExecutor(responses)` | Create shell executor mock |
+| `TestFixtures.inMemoryShellExecutor(handler)` | Create in-memory shell executor |
+| `TestFixtures.envPresets` | Pre-configured environment setups |
+| `TestFixtures.ExitError` | Error thrown by mocked process.exit |
 
 ## Best Practices
 

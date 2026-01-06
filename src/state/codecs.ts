@@ -54,7 +54,7 @@
  *
  * @see {@link https://zod.dev | Zod Documentation}
  * @see {@link https://zod.dev/metadata | Zod Registries}
- * @see {@link ClaudeBinaryPluginState} - Uses codecs for environment validation
+ * @see {@link PluginEnv} - Uses codecs for environment validation
  * @module
  */
 
@@ -340,7 +340,7 @@ export function createJsonArrayCodec<T extends z.ZodType>(itemSchema: T) {
  * ```
  *
  * @see {@link EnvCodecs.registry} - Access the underlying Zod registry
- * @see {@link ClaudeBinaryPluginState} - Uses codecs for environment validation
+ * @see {@link PluginEnv} - Uses codecs for environment validation
  * @public
  */
 export class EnvCodecs {

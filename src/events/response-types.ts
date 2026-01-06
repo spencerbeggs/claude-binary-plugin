@@ -14,7 +14,7 @@ export type BlockDecision = "block" | undefined;
  * All hook responses can include these optional fields.
  * @public
  */
-export interface HookResponse {
+export interface HookResponseData {
 	/** Whether Claude should continue after the hook. Defaults to true. */
 	continue?: boolean;
 	/** Message shown when continue is false */

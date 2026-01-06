@@ -12,7 +12,7 @@
 import type { $ZodType } from "zod/v4/core";
 import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "./config.js";
 import { TokenMetrics } from "./metrics.js";
-import type { RunPipelineOptions, RunRawHandlerOptions } from "./runtime.js";
+import type { PipelineConfig, RunRawHandlerOptions } from "./runtime.js";
 import type { AnyPipelineOutput } from "./types.js";
 import { OutputSchemas } from "./types.js";
 
@@ -90,11 +90,11 @@ export class Pipeline {
 	 * });
 	 * ```
 	 *
-	 * @see {@link RunPipelineOptions}
+	 * @see {@link PipelineConfig}
 	 * @public
 	 */
 	static async run<TOptions = unknown, TState = Record<string, string>>(
-		options: RunPipelineOptions<TOptions, TState>,
+		options: PipelineConfig<TOptions, TState>,
 	): Promise<never> {
 		// Dynamic import to avoid circular dependency
 		const { runPipeline } = await import("./runtime.js");

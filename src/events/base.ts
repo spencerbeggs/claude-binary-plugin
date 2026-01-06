@@ -22,10 +22,10 @@
  * @example
  * ```typescript
  * // Raw handler using HookEvent directly
- * import { PreToolUseHookEvent } from "claude-binary-plugin";
+ * import { PreToolUseEvent } from "claude-binary-plugin";
  *
  * export default async function handler() {
- *   const { event, env } = await PreToolUseHookEvent.create({
+ *   const { event, env } = await PreToolUseEvent.create({
  *     stdin: process.stdin,
  *     stdout: process.stdout,
  *     stderr: process.stderr,
@@ -50,10 +50,10 @@
 import { z } from "zod";
 import { HookEventSchemas } from "../core/schemas.js";
 import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
-import { ClaudeBinaryPluginState, formatZodError as formatZodErrorAsMarkdown } from "../state/plugin-state.js";
+import { PluginEnv, formatZodError as formatZodErrorAsMarkdown } from "../state/plugin-state.js";
 import { DebugLogger } from "../utils/debug-logger.js";
-import type { HookEventName, HookPermissionsMode } from "./enums.js";
-import { HookResponseBuilder } from "./response-builders.js";
+import type { HookPermissionsMode, HookType } from "./enums.js";
+import { HookResponse } from "./response-builders.js";
 import type { HookEventBase, HookEventOptions, IO } from "./types.js";
 import { SchemaValidator } from "./validation.js";
 
@@ -65,19 +65,19 @@ import { SchemaValidator } from "./validation.js";
  * subclasses inherit:
  *
  * - **I/O Management**: Reading JSON from stdin, writing responses to stdout
- * - **Environment Loading**: Session-aware environment context via {@link ClaudeBinaryPluginState}
+ * - **Environment Loading**: Session-aware environment context via {@link PluginEnv}
  * - **Response Building**: Fluent API for constructing hook responses
  * - **Telemetry**: Automatic OTEL event emission for observability
  * - **Error Handling**: Global error handlers for graceful failure
  * - **Debug Logging**: Structured logging with timing information
  *
- * Subclasses (e.g., {@link PreToolUseHookEvent}, {@link SessionStartHookEvent})
+ * Subclasses (e.g., {@link PreToolUseEvent}, {@link SessionStartEvent})
  * add event-specific properties and specialized response builders.
  *
  * @example
  * ```typescript
  * // The create() factory pattern
- * const { event, env } = await PreToolUseHookEvent.create({
+ * const { event, env } = await PreToolUseEvent.create({
  *   stdin: process.stdin,
  *   stdout: process.stdout,
  *   stderr: process.stderr,
@@ -93,9 +93,9 @@ import { SchemaValidator } from "./validation.js";
  *
  * @typeParam TState - The plugin state type, typically inferred from plugin schema
  *
- * @see {@link PreToolUseHookEvent} - Most commonly used subclass
+ * @see {@link PreToolUseEvent} - Most commonly used subclass
  * @see {@link HookEventOptions} - Options for event creation
- * @see {@link HookResponseBuilder} - Base response builder class
+ * @see {@link HookResponse} - Base response builder class
  * @public
  */
 export class HookEvent<TState = unknown> implements HookEventBase {
@@ -110,7 +110,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	/** Current permission mode setting for the session */
 	permission_mode?: HookPermissionsMode;
 	/** The type of hook event (e.g., "PreToolUse", "SessionStart") */
-	hook_event_name: HookEventName;
+	hook_event_name: HookType;
 	/** Debug logger instance for structured logging with timing */
 	readonly log: DebugLogger;
 	/** The loaded plugin state containing options and computed state */
@@ -177,7 +177,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 *
 	 * @remarks
 	 * Subclasses override this to return specialized builders (e.g.,
-	 * {@link PreToolUseResponseBuilder}) that provide type-safe methods
+	 * {@link PreToolUseResponse}) that provide type-safe methods
 	 * for the specific hook type.
 	 *
 	 * @returns A new response builder instance
@@ -196,8 +196,8 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 * ```
 	 * @public
 	 */
-	response(): HookResponseBuilder {
-		return new HookResponseBuilder();
+	response(): HookResponse {
+		return new HookResponse();
 	}
 
 	/**
@@ -295,8 +295,8 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 * @public
 	 */
 	end(code?: number): never;
-	end(builder: HookResponseBuilder, code?: number): never;
-	end(builderOrCode?: HookResponseBuilder | number, code: number = 0): never {
+	end(builder: HookResponse, code?: number): never;
+	end(builderOrCode?: HookResponse | number, code: number = 0): never {
 		const elapsedMs = performance.now() - this.startTime;
 		const timing = `(${elapsedMs.toFixed(2)}ms)`;
 
@@ -328,7 +328,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	/**
 	 * Emit OTEL telemetry for hook execution.
 	 */
-	private emitTelemetry(durationMs: number, success: boolean, builder?: HookResponseBuilder): void {
+	private emitTelemetry(durationMs: number, success: boolean, builder?: HookResponse): void {
 		if (this.telemetryEmitted) return;
 
 		try {
@@ -549,7 +549,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		const params = await HookEvent.readInputText(options);
 		if (params) {
 			const parsed = (await SchemaValidator.parse(params, HookEventSchemas.Any, hookName)) as HookEventBase;
-			const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+			const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 			// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 			const state = (await (options.stateClass as any).forContext("hook", {
 				sessionId: parsed.session_id,

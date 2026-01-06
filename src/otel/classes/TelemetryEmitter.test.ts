@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { HookEventName } from "../../events/enums.js";
+import { HookType } from "../../events/enums.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
 import { mockEnv } from "../../testing/mocks.js";
 import { clearSidecarClients, getSidecarClient } from "../client.js";
@@ -56,7 +56,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PreToolUse,
+				hook_event_name: HookType.PreToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "pre-bash", {
@@ -87,7 +87,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PreToolUse,
+				hook_event_name: HookType.PreToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "security-check", {
@@ -146,7 +146,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PreToolUse,
+				hook_event_name: HookType.PreToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "test-hook", {
@@ -168,7 +168,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PreToolUse,
+				hook_event_name: HookType.PreToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "test-hook", {
@@ -192,7 +192,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PostToolUse,
+				hook_event_name: HookType.PostToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "test-hook", {
@@ -216,7 +216,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PreToolUse,
+				hook_event_name: HookType.PreToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "test-hook", {
@@ -241,7 +241,7 @@ describe("TelemetryEmitter", () => {
 			const event = {
 				session_id: "test-session",
 				timestamp: new Date().toISOString(),
-				hook_event_name: HookEventName.PreToolUse,
+				hook_event_name: HookType.PreToolUse,
 			};
 
 			TelemetryEmitter.emitHookExecution(event, "test-hook", {

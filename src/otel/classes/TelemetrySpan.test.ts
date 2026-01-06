@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { HookEventName } from "../../events/enums.js";
+import { HookType } from "../../events/enums.js";
 import type { HookEventBase } from "../../events/types.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
 import { mockEnv } from "../../testing/mocks.js";
@@ -10,7 +10,7 @@ import { TelemetrySpan } from "./TelemetrySpan.js";
 function createMockEvent(overrides: Partial<HookEventBase> = {}): HookEventBase {
 	return {
 		session_id: "test-session-123",
-		hook_event_name: HookEventName.PreToolUse,
+		hook_event_name: HookType.PreToolUse,
 		transcript_path: "/tmp/transcript.json",
 		cwd: "/test/cwd",
 		permission_mode: "default",

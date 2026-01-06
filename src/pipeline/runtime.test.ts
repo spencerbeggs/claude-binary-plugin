@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Writable } from "node:stream";
 import { z } from "zod";
-import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/plugin-state.js";
 import type { MockEnvContext } from "../testing/mocks.js";
 import { mockEnv } from "../testing/mocks.js";
 import type { IODependencies } from "./runtime.js";
 import {
-	convertToPermissionRequestResponse,
-	convertToPostToolUseResponse,
-	convertToPreToolUseResponse,
+	convertToPermissionRequestResponseData,
+	convertToPostToolUseResponseData,
+	convertToPreToolUseResponseData,
 	convertToResponse,
-	convertToSessionStartResponse,
-	convertToStopResponse,
-	convertToUserPromptSubmitResponse,
+	convertToSessionStartResponseData,
+	convertToStopResponseData,
+	convertToUserPromptSubmitResponseData,
 	createBaseState,
 	extractPersistedState,
 	isDebugEnabled,
@@ -69,13 +69,13 @@ function createMockExit(): (code: number) => never {
 	};
 }
 
-describe("ClaudeBinaryPluginState.create", () => {
+describe("PluginEnv.create", () => {
 	test("creates a class with the correct prefix", () => {
 		const schema = z.object({
 			VERBOSE: z.boolean().default(false),
 		});
 
-		const EnvClass = ClaudeBinaryPluginState.create("MY_PLUGIN", schema);
+		const EnvClass = PluginEnv.create("MY_PLUGIN", schema);
 		const instance = new EnvClass();
 
 		// The class should be instantiable
@@ -88,7 +88,7 @@ describe("ClaudeBinaryPluginState.create", () => {
 			LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		});
 
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		// The validated getter should exist (actual validation happens during hook creation)
@@ -98,8 +98,8 @@ describe("ClaudeBinaryPluginState.create", () => {
 	test("creates unique classes for different prefixes", () => {
 		const schema = z.object({});
 
-		const ClassA = ClaudeBinaryPluginState.create("PREFIX_A", schema);
-		const ClassB = ClaudeBinaryPluginState.create("PREFIX_B", schema);
+		const ClassA = PluginEnv.create("PREFIX_A", schema);
+		const ClassB = PluginEnv.create("PREFIX_B", schema);
 
 		// They should be different classes
 		expect(ClassA).not.toBe(ClassB);
@@ -115,7 +115,7 @@ describe("ClaudeBinaryPluginState.create", () => {
 			ENABLED: z.coerce.boolean().default(true),
 		});
 
-		const EnvClass = ClaudeBinaryPluginState.create("COMPLEX", schema);
+		const EnvClass = PluginEnv.create("COMPLEX", schema);
 		const instance = new EnvClass();
 
 		expect(instance).toBeDefined();
@@ -205,7 +205,7 @@ describe("PLUGIN_STATE base64 encoding", () => {
 
 		// Create env class and instance
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		// The instance should have the prefix
@@ -326,17 +326,17 @@ describe("mapToPermissionDecision", () => {
 });
 
 // =============================================================================
-// convertToPreToolUseResponse tests
+// convertToPreToolUseResponseData tests
 // =============================================================================
 
-describe("convertToPreToolUseResponse", () => {
+describe("convertToPreToolUseResponseData", () => {
 	test("returns allow for allow action", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed",
 		};
-		expect(convertToPreToolUseResponse(output)).toEqual({
+		expect(convertToPreToolUseResponseData(output)).toEqual({
 			permissionDecision: "allow",
 			reason: undefined,
 			updatedInput: undefined,
@@ -350,7 +350,7 @@ describe("convertToPreToolUseResponse", () => {
 			summary: "denied",
 			reason: "dangerous command",
 		};
-		expect(convertToPreToolUseResponse(output)).toEqual({
+		expect(convertToPreToolUseResponseData(output)).toEqual({
 			permissionDecision: "deny",
 			reason: "dangerous command",
 			updatedInput: undefined,
@@ -363,7 +363,7 @@ describe("convertToPreToolUseResponse", () => {
 			action: "ask",
 			summary: "asking user",
 		};
-		expect(convertToPreToolUseResponse(output)).toEqual({
+		expect(convertToPreToolUseResponseData(output)).toEqual({
 			permissionDecision: "ask",
 			reason: undefined,
 			updatedInput: undefined,
@@ -377,7 +377,7 @@ describe("convertToPreToolUseResponse", () => {
 			summary: "modified",
 			updatedInput: { command: "safe-command" },
 		};
-		expect(convertToPreToolUseResponse(output)).toEqual({
+		expect(convertToPreToolUseResponseData(output)).toEqual({
 			permissionDecision: "allow",
 			reason: undefined,
 			updatedInput: { command: "safe-command" },
@@ -389,7 +389,7 @@ describe("convertToPreToolUseResponse", () => {
 			status: "skipped",
 			summary: "skipped",
 		};
-		expect(convertToPreToolUseResponse(output)).toEqual({
+		expect(convertToPreToolUseResponseData(output)).toEqual({
 			permissionDecision: "allow",
 			reason: undefined,
 			updatedInput: undefined,
@@ -398,10 +398,10 @@ describe("convertToPreToolUseResponse", () => {
 });
 
 // =============================================================================
-// convertToPostToolUseResponse tests
+// convertToPostToolUseResponseData tests
 // =============================================================================
 
-describe("convertToPostToolUseResponse", () => {
+describe("convertToPostToolUseResponseData", () => {
 	test("returns block with reason for block action", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
@@ -409,7 +409,7 @@ describe("convertToPostToolUseResponse", () => {
 			summary: "blocked",
 			reason: "lint errors found",
 		};
-		expect(convertToPostToolUseResponse(output)).toEqual({
+		expect(convertToPostToolUseResponseData(output)).toEqual({
 			decision: "block",
 			reason: "lint errors found",
 		});
@@ -422,7 +422,7 @@ describe("convertToPostToolUseResponse", () => {
 			summary: "added context",
 			claudeContext: "File contains 100 lines",
 		};
-		expect(convertToPostToolUseResponse(output)).toEqual({
+		expect(convertToPostToolUseResponseData(output)).toEqual({
 			additionalContext: "File contains 100 lines",
 		});
 	});
@@ -433,7 +433,7 @@ describe("convertToPostToolUseResponse", () => {
 			action: "none",
 			summary: "no action",
 		};
-		expect(convertToPostToolUseResponse(output)).toEqual({});
+		expect(convertToPostToolUseResponseData(output)).toEqual({});
 	});
 
 	test("returns empty object for continue action", () => {
@@ -442,7 +442,7 @@ describe("convertToPostToolUseResponse", () => {
 			action: "continue",
 			summary: "continuing",
 		};
-		expect(convertToPostToolUseResponse(output)).toEqual({});
+		expect(convertToPostToolUseResponseData(output)).toEqual({});
 	});
 
 	test("returns empty object for block without reason", () => {
@@ -451,15 +451,15 @@ describe("convertToPostToolUseResponse", () => {
 			action: "block",
 			summary: "blocked",
 		};
-		expect(convertToPostToolUseResponse(output)).toEqual({});
+		expect(convertToPostToolUseResponseData(output)).toEqual({});
 	});
 });
 
 // =============================================================================
-// convertToSessionStartResponse tests
+// convertToSessionStartResponseData tests
 // =============================================================================
 
-describe("convertToSessionStartResponse", () => {
+describe("convertToSessionStartResponseData", () => {
 	test("returns additionalContext when claudeContext is present", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
@@ -467,7 +467,7 @@ describe("convertToSessionStartResponse", () => {
 			summary: "provided context",
 			claudeContext: "This is a TypeScript project",
 		};
-		expect(convertToSessionStartResponse(output)).toEqual({
+		expect(convertToSessionStartResponseData(output)).toEqual({
 			additionalContext: "This is a TypeScript project",
 		});
 	});
@@ -478,15 +478,15 @@ describe("convertToSessionStartResponse", () => {
 			action: "none",
 			summary: "no context",
 		};
-		expect(convertToSessionStartResponse(output)).toEqual({});
+		expect(convertToSessionStartResponseData(output)).toEqual({});
 	});
 });
 
 // =============================================================================
-// convertToStopResponse tests
+// convertToStopResponseData tests
 // =============================================================================
 
-describe("convertToStopResponse", () => {
+describe("convertToStopResponseData", () => {
 	test("returns block with reason for block action", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
@@ -494,7 +494,7 @@ describe("convertToStopResponse", () => {
 			summary: "blocked stop",
 			reason: "tests not run",
 		};
-		expect(convertToStopResponse(output)).toEqual({
+		expect(convertToStopResponseData(output)).toEqual({
 			decision: "block",
 			reason: "tests not run",
 		});
@@ -506,7 +506,7 @@ describe("convertToStopResponse", () => {
 			action: "continue",
 			summary: "allowing stop",
 		};
-		expect(convertToStopResponse(output)).toEqual({});
+		expect(convertToStopResponseData(output)).toEqual({});
 	});
 
 	test("returns empty object for block without reason", () => {
@@ -515,15 +515,15 @@ describe("convertToStopResponse", () => {
 			action: "block",
 			summary: "blocked",
 		};
-		expect(convertToStopResponse(output)).toEqual({});
+		expect(convertToStopResponseData(output)).toEqual({});
 	});
 });
 
 // =============================================================================
-// convertToUserPromptSubmitResponse tests
+// convertToUserPromptSubmitResponseData tests
 // =============================================================================
 
-describe("convertToUserPromptSubmitResponse", () => {
+describe("convertToUserPromptSubmitResponseData", () => {
 	test("returns block with reason for block action", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
@@ -531,7 +531,7 @@ describe("convertToUserPromptSubmitResponse", () => {
 			summary: "blocked prompt",
 			reason: "please clarify",
 		};
-		expect(convertToUserPromptSubmitResponse(output)).toEqual({
+		expect(convertToUserPromptSubmitResponseData(output)).toEqual({
 			decision: "block",
 			reason: "please clarify",
 		});
@@ -544,7 +544,7 @@ describe("convertToUserPromptSubmitResponse", () => {
 			summary: "added context",
 			claudeContext: "User is working on feature X",
 		};
-		expect(convertToUserPromptSubmitResponse(output)).toEqual({
+		expect(convertToUserPromptSubmitResponseData(output)).toEqual({
 			additionalContext: "User is working on feature X",
 		});
 	});
@@ -555,7 +555,7 @@ describe("convertToUserPromptSubmitResponse", () => {
 			action: "none",
 			summary: "no action",
 		};
-		expect(convertToUserPromptSubmitResponse(output)).toEqual({});
+		expect(convertToUserPromptSubmitResponseData(output)).toEqual({});
 	});
 
 	test("returns empty object for block without reason", () => {
@@ -564,22 +564,22 @@ describe("convertToUserPromptSubmitResponse", () => {
 			action: "block",
 			summary: "blocked",
 		};
-		expect(convertToUserPromptSubmitResponse(output)).toEqual({});
+		expect(convertToUserPromptSubmitResponseData(output)).toEqual({});
 	});
 });
 
 // =============================================================================
-// convertToPermissionRequestResponse tests
+// convertToPermissionRequestResponseData tests
 // =============================================================================
 
-describe("convertToPermissionRequestResponse", () => {
+describe("convertToPermissionRequestResponseData", () => {
 	test("returns allow behavior for allow action", () => {
 		const output: AnyPipelineOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed",
 		};
-		expect(convertToPermissionRequestResponse(output)).toEqual({
+		expect(convertToPermissionRequestResponseData(output)).toEqual({
 			behavior: "allow",
 			message: undefined,
 			interrupt: undefined,
@@ -595,7 +595,7 @@ describe("convertToPermissionRequestResponse", () => {
 			reason: "dangerous",
 			interrupt: true,
 		};
-		expect(convertToPermissionRequestResponse(output)).toEqual({
+		expect(convertToPermissionRequestResponseData(output)).toEqual({
 			behavior: "deny",
 			message: "dangerous",
 			interrupt: true,
@@ -610,7 +610,7 @@ describe("convertToPermissionRequestResponse", () => {
 			summary: "allowed with modifications",
 			updatedInput: { timeout: 5000 },
 		};
-		expect(convertToPermissionRequestResponse(output)).toEqual({
+		expect(convertToPermissionRequestResponseData(output)).toEqual({
 			behavior: "allow",
 			message: undefined,
 			interrupt: undefined,
@@ -623,7 +623,7 @@ describe("convertToPermissionRequestResponse", () => {
 			status: "skipped",
 			summary: "skipped",
 		};
-		expect(convertToPermissionRequestResponse(output)).toEqual({
+		expect(convertToPermissionRequestResponseData(output)).toEqual({
 			behavior: "allow",
 			message: undefined,
 			interrupt: undefined,
@@ -787,7 +787,7 @@ describe("extractPersistedState", () => {
 	test("returns empty object when no prefix", () => {
 		const schema = z.object({});
 		// Create env class without prefix
-		class NoPrefix extends ClaudeBinaryPluginState.create("", schema) {
+		class NoPrefix extends PluginEnv.create("", schema) {
 			protected readonly prefix = "";
 		}
 		const instance = new NoPrefix();
@@ -796,7 +796,7 @@ describe("extractPersistedState", () => {
 
 	test("returns empty object when PLUGIN_STATE not set", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 		expect(extractPersistedState(instance)).toEqual({});
 	});
@@ -807,7 +807,7 @@ describe("extractPersistedState", () => {
 		env.set("TEST_PLUGIN_STATE", encoded);
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 		expect(extractPersistedState(instance)).toEqual(state);
 	});
@@ -816,7 +816,7 @@ describe("extractPersistedState", () => {
 		env.set("TEST_PLUGIN_STATE", "not-valid-base64!!!!");
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 		expect(extractPersistedState(instance)).toEqual({});
 	});
@@ -826,7 +826,7 @@ describe("extractPersistedState", () => {
 		env.set("TEST_PLUGIN_STATE", encoded);
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 		expect(extractPersistedState(instance)).toEqual({});
 	});
@@ -836,7 +836,7 @@ describe("extractPersistedState", () => {
 		env.set("TEST_PLUGIN_STATE", encoded);
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 		expect(extractPersistedState(instance)).toEqual({});
 	});
@@ -861,7 +861,7 @@ describe("createBaseState", () => {
 		env.set("CLAUDE_PROJECT_DIR", "/project/dir");
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		const baseEnv = createBaseState("/cwd", "/env/file", instance);
@@ -870,7 +870,7 @@ describe("createBaseState", () => {
 
 	test("falls back to cwd when CLAUDE_PROJECT_DIR not set", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		const baseEnv = createBaseState("/cwd", "/env/file", instance);
@@ -881,7 +881,7 @@ describe("createBaseState", () => {
 		env.set("CLAUDE_PLUGIN_ROOT", "/plugin/root");
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		const baseEnv = createBaseState("/cwd", "/env/file", instance);
@@ -890,7 +890,7 @@ describe("createBaseState", () => {
 
 	test("falls back to empty string when CLAUDE_PLUGIN_ROOT not set", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		const baseEnv = createBaseState("/cwd", "/env/file", instance);
@@ -899,7 +899,7 @@ describe("createBaseState", () => {
 
 	test("uses provided claudeEnvFile", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		const baseEnv = createBaseState("/cwd", "/custom/env/file", instance);
@@ -908,7 +908,7 @@ describe("createBaseState", () => {
 
 	test("includes logger methods", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 		const instance = new EnvClass();
 
 		const baseEnv = createBaseState("/cwd", "/env/file", instance);
@@ -946,7 +946,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		await expect(
 			runPipeline({
@@ -975,7 +975,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		await expect(
 			runPipeline({
@@ -1014,7 +1014,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		// The pipeline handler returns an allow decision
 		const handler = async () => ({
@@ -1061,7 +1061,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		// Pipeline should not be called since tool doesn't match
 		let pipelineCalled = false;
@@ -1112,7 +1112,7 @@ describe("runPipeline", () => {
 		const schema = z.object({
 			VERBOSE: z.boolean().default(false),
 		});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		// Setup function that returns state
 		const setup = async () => {
@@ -1167,7 +1167,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		// Handler that returns invalid output (missing status/summary)
 		const handler = async () => ({ invalid: "output" }) as unknown as AnyPipelineOutput;
@@ -1207,7 +1207,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		const handler = async () => ({
 			status: "executed" as const,
@@ -1251,7 +1251,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
+		const EnvClass = PluginEnv.create("TEST", schema);
 
 		const handler = async () => ({
 			status: "executed" as const,

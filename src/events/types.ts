@@ -3,7 +3,7 @@
  * @module
  */
 
-import type { HookEventName, HookPermissionsMode } from "./enums.js";
+import type { HookPermissionsMode, HookType } from "./enums.js";
 
 // =============================================================================
 // I/O TYPES
@@ -42,7 +42,7 @@ export interface HookEventOptions<TState = unknown> extends IO {
 	 */
 	pluginVersion?: string;
 	/**
-	 * ClaudeBinaryPluginState subclass for type-safe state loading.
+	 * PluginEnv subclass for type-safe state loading.
 	 */
 	stateClass: new () => TState;
 }
@@ -65,7 +65,7 @@ export interface HookEventBase {
 	/** Current permission mode (optional - not present in SessionStart) */
 	permission_mode?: HookPermissionsMode;
 	/** The type of hook event */
-	hook_event_name: HookEventName;
+	hook_event_name: HookType;
 }
 
 // =============================================================================
@@ -111,8 +111,8 @@ export type ToolResponse = Record<string, unknown>;
  * Event fired after Claude creates tool parameters but before the tool executes.
  * @public
  */
-export interface PreToolUseEvent extends HookEventBase {
-	hook_event_name: HookEventName.PreToolUse;
+export interface PreToolUseInput extends HookEventBase {
+	hook_event_name: HookType.PreToolUse;
 	/** Name of the tool being invoked */
 	tool_name: ToolName;
 	/** Input parameters for the tool */
@@ -149,8 +149,8 @@ export interface PreToolUseOutput {
  * Event fired immediately after a tool completes successfully.
  * @public
  */
-export interface PostToolUseEvent extends HookEventBase {
-	hook_event_name: HookEventName.PostToolUse;
+export interface PostToolUseInput extends HookEventBase {
+	hook_event_name: HookType.PostToolUse;
 	/** Name of the tool that was invoked */
 	tool_name: ToolName;
 	/** Input parameters that were passed to the tool */
@@ -179,8 +179,8 @@ export interface PostToolUseOutput {
  * Event fired when a permission dialog is about to be shown to the user.
  * @public
  */
-export interface PermissionRequestEvent extends HookEventBase {
-	hook_event_name: HookEventName.PermissionRequest;
+export interface PermissionRequestInput extends HookEventBase {
+	hook_event_name: HookType.PermissionRequest;
 	/** The permission message being shown */
 	message: string;
 	/** Type of notification/permission being requested */
@@ -237,8 +237,8 @@ export type NotificationType =
  * Event fired when Claude Code sends a notification.
  * @public
  */
-export interface NotificationEvent extends HookEventBase {
-	hook_event_name: HookEventName.Notification;
+export interface NotificationInput extends HookEventBase {
+	hook_event_name: HookType.Notification;
 	/** The notification message */
 	message: string;
 	/** Type of notification */
@@ -253,8 +253,8 @@ export interface NotificationEvent extends HookEventBase {
  * Event fired when the user submits a prompt, before Claude processes it.
  * @public
  */
-export interface UserPromptSubmitEvent extends HookEventBase {
-	hook_event_name: HookEventName.UserPromptSubmit;
+export interface UserPromptSubmitInput extends HookEventBase {
+	hook_event_name: HookType.UserPromptSubmit;
 	/** The user's prompt text */
 	prompt: string;
 }
@@ -277,8 +277,8 @@ export interface UserPromptSubmitOutput {
  * Event fired when the main Claude Code agent finishes responding.
  * @public
  */
-export interface StopEvent extends HookEventBase {
-	hook_event_name: HookEventName.Stop;
+export interface StopInput extends HookEventBase {
+	hook_event_name: HookType.Stop;
 	/** Whether a stop hook is currently active */
 	stop_hook_active: boolean;
 }
@@ -287,8 +287,8 @@ export interface StopEvent extends HookEventBase {
  * Event fired when a subagent (Task tool) finishes responding.
  * @public
  */
-export interface SubagentStopEvent extends HookEventBase {
-	hook_event_name: HookEventName.SubagentStop;
+export interface SubagentStopInput extends HookEventBase {
+	hook_event_name: HookType.SubagentStop;
 	/** Whether a stop hook is currently active */
 	stop_hook_active: boolean;
 }
@@ -307,8 +307,8 @@ export type PreCompactTrigger = "manual" | "auto";
  * Event fired before Claude Code compacts the context window.
  * @public
  */
-export interface PreCompactEvent extends HookEventBase {
-	hook_event_name: HookEventName.PreCompact;
+export interface PreCompactInput extends HookEventBase {
+	hook_event_name: HookType.PreCompact;
 	/** What triggered the compact operation */
 	trigger: PreCompactTrigger;
 	/** Custom instructions for the compact operation */
@@ -329,8 +329,8 @@ export type SessionStartSource = "startup" | "resume" | "clear" | "compact";
  * Event fired when Claude Code starts or resumes a session.
  * @public
  */
-export interface SessionStartEvent extends HookEventBase {
-	hook_event_name: HookEventName.SessionStart;
+export interface SessionStartInput extends HookEventBase {
+	hook_event_name: HookType.SessionStart;
 	/** What triggered the session start */
 	source: SessionStartSource;
 }
@@ -359,8 +359,8 @@ export type SessionEndReason = "clear" | "logout" | "prompt_input_exit" | "other
  * Event fired when a Claude Code session terminates.
  * @public
  */
-export interface SessionEndEvent extends HookEventBase {
-	hook_event_name: HookEventName.SessionEnd;
+export interface SessionEndInput extends HookEventBase {
+	hook_event_name: HookType.SessionEnd;
 	/** Why the session is ending */
 	reason: SessionEndReason;
 }

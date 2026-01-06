@@ -6,10 +6,10 @@
  * commands without requiring actual Claude Code integration.
  *
  * **Key Utilities:**
- * - {@link Mocks.IO} - Mock stdin/stdout for hook testing
- * - {@link Mocks.Env} - Mock environment variables
- * - {@link Mocks.Command} - Run command handlers with mocked I/O
- * - {@link Mocks.Shell} - Mock shell command execution
+ * - {@link TestFixtures.IO} - Mock stdin/stdout for hook testing
+ * - {@link TestFixtures.Env} - Mock environment variables
+ * - {@link TestFixtures.Command} - Run command handlers with mocked I/O
+ * - {@link TestFixtures.Shell} - Mock shell command execution
  *
  * **Testing Philosophy:**
  * Plugin tests should be isolated and fast. These utilities enable:
@@ -20,15 +20,15 @@
  *
  * @example
  * ```typescript
- * import { Mocks } from "claude-binary-plugin";
+ * import { TestFixtures } from "claude-binary-plugin";
  *
  * test("hook blocks dangerous command", async () => {
- *   const io = Mocks.IO.create({
+ *   const io = TestFixtures.IO.create({
  *     tool_name: "Bash",
  *     tool_input: { command: "rm -rf /" },
  *   });
  *
- *   await Mocks.Hook.run(myHook);
+ *   await TestFixtures.Hook.run(myHook);
  *
  *   const output = JSON.parse(io.getStdout());
  *   expect(output.hookSpecificOutput.permissionDecision).toBe("deny");
@@ -42,7 +42,7 @@
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
 import type { HookEventBase, IO } from "../events/types.js";
-import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/plugin-state.js";
 
 // =============================================================================
 // LOGGER MOCKS
@@ -86,7 +86,7 @@ export function mockLogger(): {
  * Mock state class for testing plugin handlers.
  * @public
  */
-export class MockState extends ClaudeBinaryPluginState {
+export class MockState extends PluginEnv {
 	protected readonly prefix = "MOCK";
 }
 
@@ -469,23 +469,23 @@ export interface BufferShellResult {
 }
 
 /**
- * Options for Buffer shell executor operations.
+ * Options for in-memory shell executor operations.
  *
  * @public
  */
-export interface BufferShellExecutorOptions {
+export interface InMemoryShellExecutorOptions {
 	/** Timeout in milliseconds */
 	timeout?: number;
 }
 
 /**
- * Function type for executing shell commands with Buffer output.
+ * Function type for in-memory shell command execution.
  * Accepts an array of command arguments and optional options.
  *
  * @example
  * ```typescript
  * async function runLinter(
- *   shell: BufferShellExecutor = defaultBufferShellExecutor
+ *   shell: InMemoryShellExecutor = defaultInMemoryShellExecutor
  * ): Promise<LintResult> {
  *   const result = await shell(["biome", "check", "--write", "file.ts"]);
  *   return result.exitCode === 0 ? { success: true } : { success: false };
@@ -494,18 +494,21 @@ export interface BufferShellExecutorOptions {
  *
  * @public
  */
-export type BufferShellExecutor = (cmd: string[], options?: BufferShellExecutorOptions) => Promise<BufferShellResult>;
+export type InMemoryShellExecutor = (
+	cmd: string[],
+	options?: InMemoryShellExecutorOptions,
+) => Promise<BufferShellResult>;
 
 /**
- * Default buffer shell executor using Bun.$.
+ * Default in-memory shell executor using Bun.$.
  * Executes commands quietly with nothrow to capture all output.
  * Supports timeout option to prevent hanging.
  *
  * @public
  */
-export const defaultBufferShellExecutor: BufferShellExecutor = async (
+export const defaultInMemoryShellExecutor: InMemoryShellExecutor = async (
 	cmd: string[],
-	options?: BufferShellExecutorOptions,
+	options?: InMemoryShellExecutorOptions,
 ) => {
 	const DEFAULT_TIMEOUT_MS = 30_000;
 	const timeout = options?.timeout ?? DEFAULT_TIMEOUT_MS;
@@ -555,11 +558,11 @@ export function createMockBufferShellResult(
  * Creates a mock buffer shell executor with predefined responses.
  *
  * @param handler - Function that determines response based on command
- * @returns A BufferShellExecutor that returns predefined results
+ * @returns A InMemoryShellExecutor that returns predefined results
  *
  * @example
  * ```typescript
- * const mockShell = createMockBufferShellExecutor(async (cmd) => {
+ * const mockShell = createMockInMemoryShellExecutor(async (cmd) => {
  *   const cmdString = cmd.join(" ");
  *   if (cmdString.includes("--write")) {
  *     return createMockBufferShellResult(0);
@@ -573,9 +576,9 @@ export function createMockBufferShellResult(
  *
  * @public
  */
-export function createMockBufferShellExecutor(
-	handler: (cmd: string[], options?: BufferShellExecutorOptions) => Promise<BufferShellResult>,
-): BufferShellExecutor {
+export function createMockInMemoryShellExecutor(
+	handler: (cmd: string[], options?: InMemoryShellExecutorOptions) => Promise<BufferShellResult>,
+): InMemoryShellExecutor {
 	return handler;
 }
 
@@ -816,10 +819,10 @@ export function testFatalErrorHandler(
  *
  * @remarks
  * **For plugin testing, prefer the fluent API via `plugin.test()`** - see
- * {@link PluginTestBuilder} for type-safe hook and command testing with
+ * {@link PluginTester} for type-safe hook and command testing with
  * full type inference from your plugin schema.
  *
- * The `Mocks` class provides lower-level utilities for SDK development
+ * The `TestFixtures` class provides lower-level utilities for SDK development
  * or edge cases where the fluent API is insufficient.
  *
  * **Method Categories:**
@@ -831,25 +834,25 @@ export function testFatalErrorHandler(
  *
  * @example
  * ```typescript
- * import { Mocks } from "claude-binary-plugin";
+ * import { TestFixtures } from "claude-binary-plugin";
  *
  * // Mock environment
- * const env = Mocks.createEnv({ CLAUDE_PROJECT_DIR: "/test" });
+ * const env = TestFixtures.createEnv({ CLAUDE_PROJECT_DIR: "/test" });
  * afterEach(() => env.restore());
  *
  * // Mock I/O for hook testing
- * const io = Mocks.createIO({ tool_name: "Bash", tool_input: { command: "ls" } });
- * const exitCode = await Mocks.runHook(main);
+ * const io = TestFixtures.createIO({ tool_name: "Bash", tool_input: { command: "ls" } });
+ * const exitCode = await TestFixtures.runHook(main);
  *
  * // Mock shell executor
- * const shell = Mocks.shellExecutor({
- *   "git status": Mocks.shellResult(0, "On branch main"),
+ * const shell = TestFixtures.shellExecutor({
+ *   "git status": TestFixtures.shellResult(0, "On branch main"),
  * });
  * ```
  *
  * @public
  */
-export class Mocks {
+export class TestFixtures {
 	// Private constructor prevents instantiation
 	private constructor() {}
 
@@ -918,7 +921,7 @@ export class Mocks {
 	static readonly envPresets = envPresets;
 
 	/**
-	 * Mock state class for ClaudeBinaryPluginState.
+	 * Mock state class for PluginEnv.
 	 *
 	 * @public
 	 */
@@ -1053,25 +1056,25 @@ export class Mocks {
 	}
 
 	/**
-	 * Create a mock buffer shell executor.
+	 * Create a mock in-memory shell executor.
 	 *
 	 * @param handler - Function that determines response based on command
-	 * @returns A BufferShellExecutor that returns predefined results
+	 * @returns A InMemoryShellExecutor that returns predefined results
 	 *
 	 * @public
 	 */
-	static bufferShellExecutor(
-		handler: (cmd: string[], options?: BufferShellExecutorOptions) => Promise<BufferShellResult>,
-	): BufferShellExecutor {
-		return createMockBufferShellExecutor(handler);
+	static inMemoryShellExecutor(
+		handler: (cmd: string[], options?: InMemoryShellExecutorOptions) => Promise<BufferShellResult>,
+	): InMemoryShellExecutor {
+		return createMockInMemoryShellExecutor(handler);
 	}
 
 	/**
-	 * Default buffer shell executor using Bun.$.
+	 * Default in-memory shell executor using Bun.$.
 	 *
 	 * @public
 	 */
-	static readonly defaultBufferShellExecutor = defaultBufferShellExecutor;
+	static readonly defaultInMemoryShellExecutor = defaultInMemoryShellExecutor;
 
 	// =========================================================================
 	// UTILITY CLASSES

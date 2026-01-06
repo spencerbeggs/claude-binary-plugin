@@ -322,7 +322,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { Pipeline, ClaudeBinaryPluginState, setPluginInfo } from "claude-binary-plugin";
+import { Pipeline, PluginEnv, setPluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -335,7 +335,7 @@ const PLUGIN_VERSION = "${pluginVersion}";
 const pluginConfig = pluginDefinition.config;
 
 // Create environment class from plugin options schema (with pluginName for logging)
-const EnvClass = ClaudeBinaryPluginState.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
+const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {

@@ -38,7 +38,7 @@
  * const dir = SessionRegistry.getByProjectDir("/path/to/project");
  * ```
  *
- * @see {@link ClaudeBinaryPluginState} - Uses registry for state lookups
+ * @see {@link PluginEnv} - Uses registry for state lookups
  * @module
  */
 
@@ -209,7 +209,7 @@ export function closeDb(): void {
  *
  * @see {@link SessionRegistration} - Registration parameters
  * @see {@link SessionRecord} - Database record structure
- * @see {@link ClaudeBinaryPluginState} - Uses registry for state lookups
+ * @see {@link PluginEnv} - Uses registry for state lookups
  * @public
  */
 export const SessionRegistry = {

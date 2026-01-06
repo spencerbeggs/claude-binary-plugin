@@ -3,7 +3,7 @@
  *
  * @remarks
  * This module provides the core enum and type definitions used throughout
- * the hook system. The {@link HookEventName} enum identifies hook event types,
+ * the hook system. The {@link HookType} enum identifies hook event types,
  * and {@link HookPermissionsMode} controls Claude Code's permission behavior.
  *
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
@@ -56,14 +56,14 @@ export type HookPermissionsMode = "default" | "plan" | "acceptEdits" | "bypassPe
  *
  * @example
  * ```typescript
- * import { HookEventName } from "claude-binary-plugin";
+ * import { HookType } from "claude-binary-plugin";
  *
  * // Use in switch statements
- * function handleEvent(name: HookEventName) {
+ * function handleEvent(name: HookType) {
  *   switch (name) {
- *     case HookEventName.PreToolUse:
+ *     case HookType.PreToolUse:
  *       return "Security check required";
- *     case HookEventName.SessionStart:
+ *     case HookType.SessionStart:
  *       return "Initialize session";
  *     default:
  *       return "No action";
@@ -74,7 +74,7 @@ export type HookPermissionsMode = "default" | "plan" | "acceptEdits" | "bypassPe
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export enum HookEventName {
+export enum HookType {
 	/**
 	 * Fired before a tool executes.
 	 * Can allow, deny, modify input, or defer to user.

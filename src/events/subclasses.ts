@@ -18,7 +18,7 @@
  * @example
  * ```typescript
  * // Direct usage (for raw handlers)
- * const { event, env } = await PreToolUseHookEvent.create({
+ * const { event, env } = await PreToolUseEvent.create({
  *   stdin: process.stdin,
  *   stdout: process.stdout,
  *   stderr: process.stderr,
@@ -39,36 +39,36 @@
 import { HookEventSchemas } from "../core/schemas.js";
 import { OTELConfig } from "../otel/classes/OTELConfig.js";
 import { getSidecarClient } from "../otel/client.js";
-import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/plugin-state.js";
 import { HookEvent } from "./base.js";
-import { HookEventName } from "./enums.js";
+import { HookType } from "./enums.js";
 import {
-	PermissionRequestResponseBuilder,
-	PostToolUseResponseBuilder,
-	PreToolUseResponseBuilder,
-	SessionStartResponseBuilder,
-	StopResponseBuilder,
-	UserPromptSubmitResponseBuilder,
+	PermissionRequestResponse,
+	PostToolUseResponse,
+	PreToolUseResponse,
+	SessionStartResponse,
+	StopResponse,
+	UserPromptSubmitResponse,
 } from "./response-builders.js";
 import type {
 	HookEventOptions,
-	NotificationEvent,
+	NotificationInput,
 	NotificationType,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
+	PermissionRequestInput,
+	PostToolUseInput,
+	PreCompactInput,
 	PreCompactTrigger,
-	PreToolUseEvent,
-	SessionEndEvent,
+	PreToolUseInput,
+	SessionEndInput,
 	SessionEndReason,
-	SessionStartEvent,
+	SessionStartInput,
 	SessionStartSource,
-	StopEvent,
-	SubagentStopEvent,
+	StopInput,
+	SubagentStopInput,
 	ToolInput,
 	ToolName,
 	ToolResponse,
-	UserPromptSubmitEvent,
+	UserPromptSubmitInput,
 } from "./types.js";
 import { SchemaValidator } from "./validation.js";
 
@@ -86,7 +86,7 @@ import { SchemaValidator } from "./validation.js";
  * - **Ask**: Defer to the user for permission decision
  *
  * The event includes the tool name, input parameters, and a unique `tool_use_id`
- * for correlation with {@link PostToolUseHookEvent} events.
+ * for correlation with {@link PostToolUseEvent} events.
  *
  * @example
  * ```typescript
@@ -114,15 +114,15 @@ import { SchemaValidator } from "./validation.js";
  *
  * @typeParam TState - The plugin state type containing options and computed state
  *
- * @see {@link PostToolUseHookEvent} - Fires after tool completion
+ * @see {@link PostToolUseEvent} - Fires after tool completion
  * @see {@link PreToolUseOutput} - Valid output structure for pipeline handlers
- * @see {@link PreToolUseResponseBuilder} - Fluent builder for responses
+ * @see {@link PreToolUseResponse} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#pretooluse | PreToolUse Hook Documentation}
  * @public
  */
-export class PreToolUseHookEvent<TState = unknown> extends HookEvent<TState> implements PreToolUseEvent {
+export class PreToolUseEvent<TState = unknown> extends HookEvent<TState> implements PreToolUseInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.PreToolUse as const;
+	override hook_event_name = HookType.PreToolUse as const;
 	/** The name of the tool being invoked (e.g., "Bash", "Edit", "Write") */
 	tool_name: ToolName;
 	/** The input parameters for the tool, structure varies by tool type */
@@ -130,36 +130,36 @@ export class PreToolUseHookEvent<TState = unknown> extends HookEvent<TState> imp
 	/** Unique identifier for this tool invocation, used to correlate with PostToolUse */
 	tool_use_id: string;
 
-	constructor(params: PreToolUseEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: PreToolUseInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.tool_name = params.tool_name;
 		this.tool_input = params.tool_input;
 		this.tool_use_id = params.tool_use_id;
 	}
 
-	override response(): PreToolUseResponseBuilder {
-		return new PreToolUseResponseBuilder();
+	override response(): PreToolUseResponse {
+		return new PreToolUseResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: PreToolUseHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "PreToolUseHookEvent";
+	): Promise<{ event: PreToolUseEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "PreToolUseEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read PreToolUseEvent from stdin");
+			throw new Error("Failed to read PreToolUseInput from stdin");
 		}
-		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreToolUse, hookName)) as PreToolUseEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreToolUse, hookName)) as PreToolUseInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new PreToolUseHookEvent(parsed, options, state);
+		const event = new PreToolUseEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -176,7 +176,7 @@ export class PreToolUseHookEvent<TState = unknown> extends HookEvent<TState> imp
  * - **Continue**: Allow the result to pass through unchanged
  *
  * The `tool_use_id` can be used to correlate with the corresponding
- * {@link PreToolUseHookEvent} for the same tool invocation.
+ * {@link PreToolUseEvent} for the same tool invocation.
  *
  * @example
  * ```typescript
@@ -201,15 +201,15 @@ export class PreToolUseHookEvent<TState = unknown> extends HookEvent<TState> imp
  *
  * @typeParam TState - The plugin state type containing options and computed state
  *
- * @see {@link PreToolUseHookEvent} - Fires before tool execution
+ * @see {@link PreToolUseEvent} - Fires before tool execution
  * @see {@link PostToolUseOutput} - Valid output structure for pipeline handlers
- * @see {@link PostToolUseResponseBuilder} - Fluent builder for responses
+ * @see {@link PostToolUseResponse} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#posttooluse | PostToolUse Hook Documentation}
  * @public
  */
-export class PostToolUseHookEvent<TState = unknown> extends HookEvent<TState> implements PostToolUseEvent {
+export class PostToolUseEvent<TState = unknown> extends HookEvent<TState> implements PostToolUseInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.PostToolUse as const;
+	override hook_event_name = HookType.PostToolUse as const;
 	/** The name of the tool that was invoked */
 	tool_name: ToolName;
 	/** The input parameters that were passed to the tool */
@@ -219,7 +219,7 @@ export class PostToolUseHookEvent<TState = unknown> extends HookEvent<TState> im
 	/** Unique identifier matching the corresponding PreToolUse event */
 	tool_use_id: string;
 
-	constructor(params: PostToolUseEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: PostToolUseInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.tool_name = params.tool_name;
 		this.tool_input = params.tool_input;
@@ -227,29 +227,29 @@ export class PostToolUseHookEvent<TState = unknown> extends HookEvent<TState> im
 		this.tool_use_id = params.tool_use_id;
 	}
 
-	override response(): PostToolUseResponseBuilder {
-		return new PostToolUseResponseBuilder();
+	override response(): PostToolUseResponse {
+		return new PostToolUseResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: PostToolUseHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "PostToolUseHookEvent";
+	): Promise<{ event: PostToolUseEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "PostToolUseEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read PostToolUseEvent from stdin");
+			throw new Error("Failed to read PostToolUseInput from stdin");
 		}
-		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PostToolUse, hookName)) as PostToolUseEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PostToolUse, hookName)) as PostToolUseInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new PostToolUseHookEvent(parsed, options, state);
+		const event = new PostToolUseEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -292,51 +292,51 @@ export class PostToolUseHookEvent<TState = unknown> extends HookEvent<TState> im
  * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link PermissionRequestOutput} - Valid output structure for pipeline handlers
- * @see {@link PermissionRequestResponseBuilder} - Fluent builder for responses
+ * @see {@link PermissionRequestResponse} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export class PermissionRequestHookEvent<TState = unknown> extends HookEvent<TState> implements PermissionRequestEvent {
+export class PermissionRequestEvent<TState = unknown> extends HookEvent<TState> implements PermissionRequestInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.PermissionRequest as const;
+	override hook_event_name = HookType.PermissionRequest as const;
 	/** The permission request message shown to the user */
 	message: string;
 	/** The type of notification/permission being requested */
 	notification_type: string;
 
-	constructor(params: PermissionRequestEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: PermissionRequestInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.message = params.message;
 		this.notification_type = params.notification_type;
 	}
 
-	override response(): PermissionRequestResponseBuilder {
-		return new PermissionRequestResponseBuilder();
+	override response(): PermissionRequestResponse {
+		return new PermissionRequestResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: PermissionRequestHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "PermissionRequestHookEvent";
+	): Promise<{ event: PermissionRequestEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "PermissionRequestEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read PermissionRequestEvent from stdin");
+			throw new Error("Failed to read PermissionRequestInput from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.PermissionRequest,
 			hookName,
-		)) as PermissionRequestEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		)) as PermissionRequestInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new PermissionRequestHookEvent(parsed, options, state);
+		const event = new PermissionRequestEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -372,15 +372,15 @@ export class PermissionRequestHookEvent<TState = unknown> extends HookEvent<TSta
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export class NotificationHookEvent<TState = unknown> extends HookEvent<TState> implements NotificationEvent {
+export class NotificationEvent<TState = unknown> extends HookEvent<TState> implements NotificationInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.Notification as const;
+	override hook_event_name = HookType.Notification as const;
 	/** The notification message content */
 	message: string;
 	/** The category/type of notification (e.g., "progress", "status") */
 	notification_type: NotificationType;
 
-	constructor(params: NotificationEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: NotificationInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.message = params.message;
 		this.notification_type = params.notification_type;
@@ -388,27 +388,27 @@ export class NotificationHookEvent<TState = unknown> extends HookEvent<TState> i
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: NotificationHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "NotificationHookEvent";
+	): Promise<{ event: NotificationEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "NotificationEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read NotificationEvent from stdin");
+			throw new Error("Failed to read NotificationInput from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.Notification,
 			hookName,
-		)) as NotificationEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		)) as NotificationInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new NotificationHookEvent(parsed, options, state);
+		const event = new NotificationEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -451,48 +451,48 @@ export class NotificationHookEvent<TState = unknown> extends HookEvent<TState> i
  * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link UserPromptSubmitOutput} - Valid output structure for pipeline handlers
- * @see {@link UserPromptSubmitResponseBuilder} - Fluent builder for responses
+ * @see {@link UserPromptSubmitResponse} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#userpromptsubmit | UserPromptSubmit Hook Documentation}
  * @public
  */
-export class UserPromptSubmitHookEvent<TState = unknown> extends HookEvent<TState> implements UserPromptSubmitEvent {
+export class UserPromptSubmitEvent<TState = unknown> extends HookEvent<TState> implements UserPromptSubmitInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.UserPromptSubmit as const;
+	override hook_event_name = HookType.UserPromptSubmit as const;
 	/** The user's prompt text */
 	prompt: string;
 
-	constructor(params: UserPromptSubmitEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: UserPromptSubmitInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.prompt = params.prompt;
 	}
 
-	override response(): UserPromptSubmitResponseBuilder {
-		return new UserPromptSubmitResponseBuilder();
+	override response(): UserPromptSubmitResponse {
+		return new UserPromptSubmitResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: UserPromptSubmitHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "UserPromptSubmitHookEvent";
+	): Promise<{ event: UserPromptSubmitEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "UserPromptSubmitEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read UserPromptSubmitEvent from stdin");
+			throw new Error("Failed to read UserPromptSubmitInput from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.UserPromptSubmit,
 			hookName,
-		)) as UserPromptSubmitEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		)) as UserPromptSubmitInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new UserPromptSubmitHookEvent(parsed, options, state);
+		const event = new UserPromptSubmitEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -535,46 +535,46 @@ export class UserPromptSubmitHookEvent<TState = unknown> extends HookEvent<TStat
  *
  * @typeParam TState - The plugin state type containing options and computed state
  *
- * @see {@link SubagentStopHookEvent} - Similar hook for subagents
+ * @see {@link SubagentStopEvent} - Similar hook for subagents
  * @see {@link StopPipelineOutput} - Valid output structure for pipeline handlers
- * @see {@link StopResponseBuilder} - Fluent builder for responses
+ * @see {@link StopResponse} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#stop | Stop Hook Documentation}
  * @public
  */
-export class StopHookEvent<TState = unknown> extends HookEvent<TState> implements StopEvent {
+export class StopEvent<TState = unknown> extends HookEvent<TState> implements StopInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.Stop as const;
+	override hook_event_name = HookType.Stop as const;
 	/** Whether stop hooks are currently active for this session */
 	stop_hook_active: boolean;
 
-	constructor(params: StopEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: StopInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.stop_hook_active = params.stop_hook_active;
 	}
 
-	override response(): StopResponseBuilder {
-		return new StopResponseBuilder();
+	override response(): StopResponse {
+		return new StopResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: StopHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "StopHookEvent";
+	): Promise<{ event: StopEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "StopEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read StopEvent from stdin");
+			throw new Error("Failed to read StopInput from stdin");
 		}
-		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.Stop, hookName)) as StopEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.Stop, hookName)) as StopInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new StopHookEvent(parsed, options, state);
+		const event = new StopEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -583,7 +583,7 @@ export class StopHookEvent<TState = unknown> extends HookEvent<TState> implement
  * Hook event fired when a Claude subagent finishes responding.
  *
  * @remarks
- * SubagentStop is similar to {@link StopHookEvent} but fires for subagents
+ * SubagentStop is similar to {@link StopEvent} but fires for subagents
  * (spawned via the Task tool) rather than the main agent. This allows hooks
  * to control when subagents are allowed to complete their work.
  *
@@ -605,50 +605,50 @@ export class StopHookEvent<TState = unknown> extends HookEvent<TState> implement
  *
  * @typeParam TState - The plugin state type containing options and computed state
  *
- * @see {@link StopHookEvent} - Similar hook for the main agent
+ * @see {@link StopEvent} - Similar hook for the main agent
  * @see {@link SubagentStopPipelineOutput} - Valid output structure for pipeline handlers
- * @see {@link StopResponseBuilder} - Fluent builder for responses (shared with Stop)
+ * @see {@link StopResponse} - Fluent builder for responses (shared with Stop)
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#subagentstop | SubagentStop Hook Documentation}
  * @public
  */
-export class SubagentStopHookEvent<TState = unknown> extends HookEvent<TState> implements SubagentStopEvent {
+export class SubagentStopEvent<TState = unknown> extends HookEvent<TState> implements SubagentStopInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.SubagentStop as const;
+	override hook_event_name = HookType.SubagentStop as const;
 	/** Whether stop hooks are currently active for this session */
 	stop_hook_active: boolean;
 
-	constructor(params: SubagentStopEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: SubagentStopInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.stop_hook_active = params.stop_hook_active;
 	}
 
-	override response(): StopResponseBuilder {
-		return new StopResponseBuilder();
+	override response(): StopResponse {
+		return new StopResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: SubagentStopHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "SubagentStopHookEvent";
+	): Promise<{ event: SubagentStopEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "SubagentStopEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read SubagentStopEvent from stdin");
+			throw new Error("Failed to read SubagentStopInput from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.SubagentStop,
 			hookName,
-		)) as SubagentStopEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		)) as SubagentStopInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new SubagentStopHookEvent(parsed, options, state);
+		const event = new SubagentStopEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -685,15 +685,15 @@ export class SubagentStopHookEvent<TState = unknown> extends HookEvent<TState> i
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export class PreCompactHookEvent<TState = unknown> extends HookEvent<TState> implements PreCompactEvent {
+export class PreCompactEvent<TState = unknown> extends HookEvent<TState> implements PreCompactInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.PreCompact as const;
+	override hook_event_name = HookType.PreCompact as const;
 	/** The reason compaction was triggered (e.g., "context_limit") */
 	trigger: PreCompactTrigger;
 	/** User-provided instructions for how to handle compaction */
 	custom_instructions: string;
 
-	constructor(params: PreCompactEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: PreCompactInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.trigger = params.trigger;
 		this.custom_instructions = params.custom_instructions;
@@ -701,23 +701,23 @@ export class PreCompactHookEvent<TState = unknown> extends HookEvent<TState> imp
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: PreCompactHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "PreCompactHookEvent";
+	): Promise<{ event: PreCompactEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "PreCompactEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read PreCompactEvent from stdin");
+			throw new Error("Failed to read PreCompactInput from stdin");
 		}
-		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreCompact, hookName)) as PreCompactEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreCompact, hookName)) as PreCompactInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new PreCompactHookEvent(parsed, options, state);
+		const event = new PreCompactEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -764,42 +764,42 @@ export class PreCompactHookEvent<TState = unknown> extends HookEvent<TState> imp
  *
  * @typeParam TState - The plugin state type containing options and computed state
  *
- * @see {@link SessionEndHookEvent} - Fires when the session terminates
+ * @see {@link SessionEndEvent} - Fires when the session terminates
  * @see {@link SessionStartOutput} - Valid output structure for pipeline handlers
- * @see {@link SessionStartResponseBuilder} - Fluent builder for responses
+ * @see {@link SessionStartResponse} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#sessionstart | SessionStart Hook Documentation}
  * @public
  */
-export class SessionStartHookEvent<TState = unknown> extends HookEvent<TState> implements SessionStartEvent {
+export class SessionStartEvent<TState = unknown> extends HookEvent<TState> implements SessionStartInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.SessionStart as const;
+	override hook_event_name = HookType.SessionStart as const;
 	/** Whether this is a new session or a resumed one ("new" | "resume") */
 	source: SessionStartSource;
 
-	constructor(params: SessionStartEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: SessionStartInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.source = params.source;
 	}
 
-	override response(): SessionStartResponseBuilder {
-		return new SessionStartResponseBuilder();
+	override response(): SessionStartResponse {
+		return new SessionStartResponse();
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: SessionStartHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "SessionStartHookEvent";
+	): Promise<{ event: SessionStartEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "SessionStartEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read SessionStartEvent from stdin");
+			throw new Error("Failed to read SessionStartInput from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(
 			eventText,
 			HookEventSchemas.SessionStart,
 			hookName,
-		)) as SessionStartEvent;
+		)) as SessionStartInput;
 		const name = options.name ?? parsed.hook_event_name;
 
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
@@ -815,7 +815,7 @@ export class SessionStartHookEvent<TState = unknown> extends HookEvent<TState> i
 			await client.ensureRunning(config);
 		}
 
-		const event = new SessionStartHookEvent(parsed, options, state);
+		const event = new SessionStartEvent(parsed, options, state);
 		return { event, state };
 	}
 }
@@ -847,41 +847,41 @@ export class SessionStartHookEvent<TState = unknown> extends HookEvent<TState> i
  *
  * @typeParam TState - The plugin state type containing options and computed state
  *
- * @see {@link SessionStartHookEvent} - Fires when the session begins
+ * @see {@link SessionStartEvent} - Fires when the session begins
  * @see {@link SessionEndPipelineOutput} - Valid output structure for pipeline handlers
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#sessionend | SessionEnd Hook Documentation}
  * @public
  */
-export class SessionEndHookEvent<TState = unknown> extends HookEvent<TState> implements SessionEndEvent {
+export class SessionEndEvent<TState = unknown> extends HookEvent<TState> implements SessionEndInput {
 	/** {@inheritDoc HookEvent.hook_event_name} */
-	override hook_event_name = HookEventName.SessionEnd as const;
+	override hook_event_name = HookType.SessionEnd as const;
 	/** The reason the session is ending (e.g., "user_exit", "timeout") */
 	reason: SessionEndReason;
 
-	constructor(params: SessionEndEvent, options: HookEventOptions<TState>, state?: TState) {
+	constructor(params: SessionEndInput, options: HookEventOptions<TState>, state?: TState) {
 		super(params, options, state);
 		this.reason = params.reason;
 	}
 
 	static override async create<TState = unknown>(
 		options: HookEventOptions<TState>,
-	): Promise<{ event: SessionEndHookEvent<TState>; state: TState }> {
-		const hookName = options.name ?? "SessionEndHookEvent";
+	): Promise<{ event: SessionEndEvent<TState>; state: TState }> {
+		const hookName = options.name ?? "SessionEndEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const eventText = await HookEvent.readInputText(options);
 		if (!eventText) {
-			throw new Error("Failed to read SessionEndEvent from stdin");
+			throw new Error("Failed to read SessionEndInput from stdin");
 		}
-		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.SessionEnd, hookName)) as SessionEndEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.SessionEnd, hookName)) as SessionEndInput;
+		const sessionEnvDir = await PluginEnv.getSessionEnvDir(parsed.session_id);
 		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
 		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
 		})) as TState;
-		const event = new SessionEndHookEvent(parsed, options, state);
+		const event = new SessionEndEvent(parsed, options, state);
 		return { event, state };
 	}
 }

@@ -63,7 +63,7 @@ const testPlugin = ClaudeBinaryPlugin.create({
 // TESTS
 // =============================================================================
 
-describe("PluginTestBuilder", () => {
+describe("PluginTester", () => {
 	let env: MockEnvContext;
 
 	afterEach(() => {
@@ -71,7 +71,7 @@ describe("PluginTestBuilder", () => {
 	});
 
 	describe("plugin.test()", () => {
-		test("returns a PluginTestBuilder instance", () => {
+		test("returns a PluginTester instance", () => {
 			const builder = testPlugin.test();
 
 			expect(builder).toBeDefined();
@@ -285,57 +285,57 @@ describe("PluginTestBuilder", () => {
 	});
 });
 
-describe("Mocks class", () => {
-	test("Mocks has I/O methods", async () => {
-		const { Mocks } = await import("./mocks.js");
+describe("TestFixtures class", () => {
+	test("TestFixtures has I/O methods", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(typeof Mocks.createIO).toBe("function");
-		expect(typeof Mocks.resetIO).toBe("function");
+		expect(typeof TestFixtures.createIO).toBe("function");
+		expect(typeof TestFixtures.resetIO).toBe("function");
 	});
 
-	test("Mocks has environment methods and presets", async () => {
-		const { Mocks } = await import("./mocks.js");
+	test("TestFixtures has environment methods and presets", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(typeof Mocks.createEnv).toBe("function");
-		expect(Mocks.envPresets).toBeDefined();
-		expect(typeof Mocks.envPresets.claudeHook).toBe("function");
-		expect(Mocks.MockStateClass).toBeDefined();
+		expect(typeof TestFixtures.createEnv).toBe("function");
+		expect(TestFixtures.envPresets).toBeDefined();
+		expect(typeof TestFixtures.envPresets.claudeHook).toBe("function");
+		expect(TestFixtures.MockStateClass).toBeDefined();
 	});
 
-	test("Mocks has command methods", async () => {
-		const { Mocks } = await import("./mocks.js");
+	test("TestFixtures has command methods", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(typeof Mocks.createCommand).toBe("function");
-		expect(typeof Mocks.runCommand).toBe("function");
-		expect(typeof Mocks.testFatalError).toBe("function");
+		expect(typeof TestFixtures.createCommand).toBe("function");
+		expect(typeof TestFixtures.runCommand).toBe("function");
+		expect(typeof TestFixtures.testFatalError).toBe("function");
 	});
 
-	test("Mocks has hook methods", async () => {
-		const { Mocks } = await import("./mocks.js");
+	test("TestFixtures has hook methods", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(typeof Mocks.runHook).toBe("function");
+		expect(typeof TestFixtures.runHook).toBe("function");
 	});
 
-	test("Mocks has shell methods", async () => {
-		const { Mocks } = await import("./mocks.js");
+	test("TestFixtures has shell methods", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(typeof Mocks.shellResult).toBe("function");
-		expect(typeof Mocks.shellExecutor).toBe("function");
-		expect(Mocks.defaultShellExecutor).toBeDefined();
+		expect(typeof TestFixtures.shellResult).toBe("function");
+		expect(typeof TestFixtures.shellExecutor).toBe("function");
+		expect(TestFixtures.defaultShellExecutor).toBeDefined();
 	});
 
-	test("Mocks has buffer shell methods", async () => {
-		const { Mocks } = await import("./mocks.js");
+	test("TestFixtures has in-memory shell methods", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(typeof Mocks.bufferShellResult).toBe("function");
-		expect(typeof Mocks.bufferShellExecutor).toBe("function");
-		expect(Mocks.defaultBufferShellExecutor).toBeDefined();
+		expect(typeof TestFixtures.bufferShellResult).toBe("function");
+		expect(typeof TestFixtures.inMemoryShellExecutor).toBe("function");
+		expect(TestFixtures.defaultInMemoryShellExecutor).toBeDefined();
 	});
 
-	test("Mocks has utility properties", async () => {
-		const { Mocks } = await import("./mocks.js");
+	test("TestFixtures has utility properties", async () => {
+		const { TestFixtures } = await import("./mocks.js");
 
-		expect(Mocks.ExitError).toBeDefined();
-		expect(typeof Mocks.logger).toBe("function");
+		expect(TestFixtures.ExitError).toBeDefined();
+		expect(typeof TestFixtures.logger).toBe("function");
 	});
 });

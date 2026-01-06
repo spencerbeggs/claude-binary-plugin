@@ -14,7 +14,7 @@
  * **Execution Flow:**
  * 1. Parse CLI arguments from `--cmd=name` invocation
  * 2. Validate arguments against command's Zod schema
- * 3. Load environment via `ClaudeBinaryPluginState.forContext("command")`
+ * 3. Load environment via `PluginEnv.forContext("command")`
  * 4. Call command handler with `{ args, options, state }`
  * 5. Write markdown output to stdout
  * 6. Exit with appropriate code (0=success, 1=issues found, 2=error)
@@ -46,7 +46,7 @@
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { BaseState, CommandHandler, CommandOutput, PluginState } from "../pipeline/config.js";
-import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/plugin-state.js";
 
 // =============================================================================
 // INTERNAL SCHEMA UTILITIES
@@ -188,7 +188,7 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 	/** Zod schema for validating arguments */
 	argsSchema: z.ZodType<TArgs>;
 	/** State class for loading env vars */
-	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
+	stateClass: new () => PluginEnv<TOptions>;
 }
 
 // =============================================================================
@@ -311,7 +311,7 @@ export class Commands {
 						"Commands must be run within a Claude Code session that has been initialized by SessionStart hook.",
 				);
 			}
-			await ClaudeBinaryPluginState.loadAllHookFiles(sessionEnvDir);
+			await PluginEnv.loadAllHookFiles(sessionEnvDir);
 
 			// Create state instance after loading session files (constructor reads from Bun.env)
 			const stateInstance = new stateClass();
@@ -556,7 +556,7 @@ export class Commands {
 	static findSessionEnvDir(): string | undefined {
 		// First try via session ID in SQLite registry
 		if (Bun.env.CLAUDE_SESSION_ID) {
-			const dir = ClaudeBinaryPluginState.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
+			const dir = PluginEnv.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
 			if (dir) return dir;
 		}
 
@@ -574,7 +574,7 @@ export class Commands {
 
 		// Try project directory in SQLite registry (saved during SessionStart)
 		const projectDir = process.cwd();
-		const dir = ClaudeBinaryPluginState.getProjectSessionEnvDir(projectDir);
+		const dir = PluginEnv.getProjectSessionEnvDir(projectDir);
 		if (dir) return dir;
 
 		return undefined;
@@ -620,7 +620,7 @@ export class Commands {
 	 * Create the base state object.
 	 * @internal
 	 */
-	private static createBaseState(stateInstance: ClaudeBinaryPluginState<unknown>): BaseState {
+	private static createBaseState(stateInstance: PluginEnv<unknown>): BaseState {
 		const prefix = stateInstance.getPrefix() ?? "";
 		return {
 			projectDir: Bun.env[`${prefix}_PROJECT_DIR`] ?? Bun.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
@@ -641,7 +641,7 @@ export class Commands {
 	 * @returns State object parsed from `PREFIX_PLUGIN_STATE`
 	 * @internal
 	 */
-	private static extractPersistedState(stateInstance: ClaudeBinaryPluginState<unknown>): Record<string, unknown> {
+	private static extractPersistedState(stateInstance: PluginEnv<unknown>): Record<string, unknown> {
 		const prefix = stateInstance.getPrefix();
 		if (!prefix) {
 			return {};

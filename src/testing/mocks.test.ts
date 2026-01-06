@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { HookEventName } from "../events/enums.js";
-import { SessionStartHookEvent } from "../events/subclasses.js";
-import type { SessionStartEvent } from "../events/types.js";
+import { HookType } from "../events/enums.js";
+import { SessionStartEvent } from "../events/subclasses.js";
+import type { SessionStartInput } from "../events/types.js";
 import type { MockEnvContext } from "./mocks.js";
 import {
 	MockExitError,
-	createMockBufferShellExecutor,
 	createMockBufferShellResult,
+	createMockInMemoryShellExecutor,
 	createMockShellExecutor,
 	createMockShellResult,
-	defaultBufferShellExecutor,
+	defaultInMemoryShellExecutor,
 	defaultShellExecutor,
 	envPresets,
 	mockCommand,
@@ -34,12 +34,12 @@ describe("mockIO", () => {
 	const TEST_UUID_2 = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 
 	test("creates mock IO with streams", () => {
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/transcript.json",
 			cwd: "/home/user",
 			permission_mode: "default",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		};
 
@@ -53,17 +53,17 @@ describe("mockIO", () => {
 	test("works with async HookEvent.create", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/transcript.json",
 			cwd: "/project",
 			permission_mode: "acceptEdits",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "resume",
 		};
 
 		const io = mockIO(input);
-		const { event } = await SessionStartHookEvent.create(io);
+		const { event } = await SessionStartEvent.create(io);
 
 		expect(event.session_id).toBe(TEST_UUID);
 		expect(event.source).toBe("resume");
@@ -71,12 +71,12 @@ describe("mockIO", () => {
 	});
 
 	test("stdout.write is a mock function", () => {
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/t.json",
 			cwd: "/",
 			permission_mode: "default",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		};
 
@@ -90,12 +90,12 @@ describe("mockIO", () => {
 	});
 
 	test("stderr.write is a mock function", () => {
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/t.json",
 			cwd: "/",
 			permission_mode: "default",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		};
 
@@ -111,42 +111,42 @@ describe("mockIO", () => {
 	test("resetMockIO cleans up properly", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/t.json",
 			cwd: "/",
 			permission_mode: "default",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		};
 
 		// First call should work
 		const io1 = mockIO(input);
-		const { event: event1 } = await SessionStartHookEvent.create(io1);
+		const { event: event1 } = await SessionStartEvent.create(io1);
 		expect(event1.session_id).toBe(TEST_UUID);
 
 		// Reset the mock
 		resetMockIO();
 
 		// Second call with different input should work
-		const input2: SessionStartEvent = {
+		const input2: SessionStartInput = {
 			...input,
 			session_id: TEST_UUID_2,
 		};
 		const io2 = mockIO(input2);
-		const { event: event2 } = await SessionStartHookEvent.create(io2);
+		const { event: event2 } = await SessionStartEvent.create(io2);
 		expect(event2.session_id).toBe(TEST_UUID_2);
 	});
 
 	test("captures stdout from actual write calls", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/t.json",
 			cwd: "/",
 			permission_mode: "default",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		};
 
@@ -163,12 +163,12 @@ describe("mockIO", () => {
 	test("captures stderr from actual write calls", async () => {
 		env = mockEnv(envPresets.claudeHook());
 
-		const input: SessionStartEvent = {
+		const input: SessionStartInput = {
 			session_id: TEST_UUID,
 			transcript_path: "/tmp/t.json",
 			cwd: "/",
 			permission_mode: "default",
-			hook_event_name: HookEventName.SessionStart,
+			hook_event_name: HookType.SessionStart,
 			source: "startup",
 		};
 
@@ -507,21 +507,21 @@ describe("createMockShellExecutor", () => {
 	});
 });
 
-describe("defaultBufferShellExecutor", () => {
+describe("defaultInMemoryShellExecutor", () => {
 	test("executes command and returns Buffer result", async () => {
-		const result = await defaultBufferShellExecutor(["echo", "hello"]);
+		const result = await defaultInMemoryShellExecutor(["echo", "hello"]);
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout.toString()).toContain("hello");
 	});
 
 	test("handles command errors", async () => {
-		const result = await defaultBufferShellExecutor(["false"]);
+		const result = await defaultInMemoryShellExecutor(["false"]);
 		expect(result.exitCode).toBe(1);
 	});
 
 	test("respects timeout option", async () => {
 		// This test would actually timeout, so we'll just verify the interface
-		const result = await defaultBufferShellExecutor(["echo", "test"], { timeout: 5000 });
+		const result = await defaultInMemoryShellExecutor(["echo", "test"], { timeout: 5000 });
 		expect(result.exitCode).toBe(0);
 	});
 });
@@ -552,9 +552,9 @@ describe("createMockBufferShellResult", () => {
 	});
 });
 
-describe("createMockBufferShellExecutor", () => {
+describe("createMockInMemoryShellExecutor", () => {
 	test("returns results from handler function", async () => {
-		const mockShell = createMockBufferShellExecutor(async (cmd) => {
+		const mockShell = createMockInMemoryShellExecutor(async (cmd) => {
 			if (cmd.includes("--write")) {
 				return createMockBufferShellResult(0);
 			}
@@ -570,7 +570,7 @@ describe("createMockBufferShellExecutor", () => {
 
 	test("passes command array to handler", async () => {
 		let receivedCmd: string[] = [];
-		const mockShell = createMockBufferShellExecutor(async (cmd, _options) => {
+		const mockShell = createMockInMemoryShellExecutor(async (cmd, _options) => {
 			receivedCmd = cmd;
 			return createMockBufferShellResult(0);
 		});
@@ -581,7 +581,7 @@ describe("createMockBufferShellExecutor", () => {
 
 	test("passes options to handler", async () => {
 		let receivedOptions: { timeout?: number } | undefined;
-		const mockShell = createMockBufferShellExecutor(async (_cmd, options) => {
+		const mockShell = createMockInMemoryShellExecutor(async (_cmd, options) => {
 			receivedOptions = options;
 			return createMockBufferShellResult(0);
 		});
