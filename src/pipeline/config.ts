@@ -18,7 +18,7 @@
  *   hooks: {
  *     SessionStart: [{
  *       name: "project-context",
- *       pipeline: async ({ input, env }) => {
+ *       pipeline: async ({ input, state }) => {
  *         return { additionalContext: "Project uses TypeScript" };
  *       }
  *     }],
@@ -84,19 +84,19 @@ import { OutputSchemas } from "./types.js";
  *
  * @example
  * ```ts
- * const handler: Pipeline["PreToolUse"] = ({ input, options, computed }) => {
+ * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
  *   // input: PreToolUseEvent
  *   // options: { DEBUG: boolean, MODE: string }
- *   // computed: { GIT_INSTALLED: string, CAN_PUSH: string }
+ *   // state: { projectDir, pluginDir, packageManager, ... }
  *   return { permissionDecision: "allow" };
  * };
  * ```
  */
 /**
- * Full environment passed to handlers: BaseEnv + state from setup().
+ * Full state passed to handlers: BaseState + computed state from setup().
  * @public
  */
-export type PluginEnv<TState> = BaseEnv & TState;
+export type PluginState<TState> = BaseState & TState;
 
 /**
  * @public
@@ -106,8 +106,8 @@ export interface PipelineContext<TInput, TOptions, TState = Record<string, unkno
 	input: TInput;
 	/** Validated options from plugin schema */
 	options: TOptions;
-	/** Environment: base paths + state from setup() */
-	env: PluginEnv<TState>;
+	/** State: base paths + computed state from setup() */
+	state: PluginState<TState>;
 }
 
 /**
@@ -127,7 +127,7 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
 export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ctx: {
 	event: TEvent;
 	options: TOptions;
-	env: PluginEnv<TState>;
+	state: PluginState<TState>;
 }) => void | Promise<void>;
 
 // =============================================================================
@@ -141,7 +141,7 @@ export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ct
  * ```ts
  * import type { Pipeline } from "../plugin.js";
  *
- * const handler: Pipeline["SessionStart"] = ({ input, options, computed }) => {
+ * const handler: Pipeline["SessionStart"] = ({ input, options, state }) => {
  *   return {
  *     status: "executed",
  *     action: "context",
@@ -178,7 +178,7 @@ export type SessionEndPipeline<TOptions, TState = Record<string, string>> = Pipe
  * ```ts
  * import type { Pipeline } from "../plugin.js";
  *
- * const handler: Pipeline["PreToolUse"] = ({ input, options, computed }) => {
+ * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
  *   if (input.tool_name === "Bash") {
  *     return {
  *       status: "executed",
@@ -304,7 +304,7 @@ export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = Ra
  * ```ts
  * import type { Pipeline } from "../plugin.js";
  *
- * const handler: Pipeline["PreToolUseRaw"] = async ({ event, options, computed }) => {
+ * const handler: Pipeline["PreToolUseRaw"] = async ({ event, options, state }) => {
  *   event.end(event.response().allow());
  * };
  * export default handler;
@@ -688,10 +688,10 @@ export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
  *
  * @example
  * ```ts
- * const handler: Commands["lint"] = async ({ args, options, env }) => {
+ * const handler: Commands["lint"] = async ({ args, options, state }) => {
  *   // args: { path: string, fix: boolean } - validated from CLI
  *   // options: { AUTO_ALLOW_ENABLED: boolean, ... } - from schema
- *   // env: { projectDir, pluginDir, packageManager, ... } - base + state
+ *   // state: { projectDir, pluginDir, packageManager, ... } - base + computed
  *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
  * };
  * ```
@@ -702,8 +702,8 @@ export interface CommandContext<TArgs, TOptions, TState = Record<string, unknown
 	args: TArgs;
 	/** Validated options from plugin schema */
 	options: TOptions;
-	/** Environment: base paths + state from setup() */
-	env: PluginEnv<TState>;
+	/** State: base paths + computed state from setup() */
+	state: PluginState<TState>;
 }
 
 /**
@@ -739,7 +739,7 @@ export interface CommandOutput {
 export type CommandsMap = Record<string, CommandDefinition>;
 
 /**
- * Base environment values provided to setup and handlers.
+ * Base state values provided to setup and handlers.
  * These are the core paths that the pipeline provides automatically.
  *
  * Persisted as:
@@ -748,7 +748,7 @@ export type CommandsMap = Record<string, CommandDefinition>;
  * - `PREFIX_PLUGIN_ENV_FILE`
  * @public
  */
-export interface BaseEnv {
+export interface BaseState {
 	/** Project directory (from CLAUDE_PROJECT_DIR or cwd) */
 	readonly projectDir: string;
 	/** Plugin root directory (from CLAUDE_PLUGIN_ROOT) */
@@ -756,7 +756,7 @@ export interface BaseEnv {
 	/** Path to the session env file (from CLAUDE_ENV_FILE) */
 	readonly pluginEnvFile: string;
 
-	// Logger methods (bound from ClaudeBinaryPluginEnv instance)
+	// Logger methods (bound from ClaudeBinaryPluginState instance)
 	/** Log at INFO level */
 	log(message: string, ...args: unknown[]): void;
 	/** Log at INFO level (alias for log) */
@@ -776,8 +776,8 @@ export interface SetupContext<TOptions> {
 	cwd: string;
 	/** Session ID from Claude Code */
 	sessionId: string;
-	/** Base environment paths (projectDir, pluginDir, pluginEnvFile) */
-	env: BaseEnv;
+	/** Base state paths (projectDir, pluginDir, pluginEnvFile) */
+	state: BaseState;
 }
 
 /**
@@ -867,7 +867,7 @@ export interface PluginConfig<
 
 	/**
 	 * Command definitions with typed argument schemas.
-	 * Commands receive `{ args, options, computed }` context.
+	 * Commands receive `{ args, options, state }` context.
 	 *
 	 * @example
 	 * ```ts
@@ -962,7 +962,7 @@ export interface PluginConfig<
  *   hooks: {
  *     SessionStart: [{
  *       name: "project-context",
- *       pipeline: async ({ input, env }) => {
+ *       pipeline: async ({ input, state }) => {
  *         return { additionalContext: "Hello from plugin!" };
  *       }
  *     }],
@@ -1264,8 +1264,8 @@ export interface PluginBuildOptions {
  * // In hooks/my-hook.hook.ts
  * import type { Pipeline } from "../plugin.js";
  *
- * const handler: Pipeline["PreToolUse"] = ({ input, options, computed }) => {
- *   // input, options, and computed are fully typed!
+ * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
+ *   // input, options, and state are fully typed!
  *   return { permissionDecision: "allow" };
  * };
  * export default handler;
@@ -1307,7 +1307,7 @@ export namespace ClaudeBinaryPlugin {
 
 	/**
 	 * Extract the inferred State type from a plugin's setup function.
-	 * State is merged with BaseEnv to form the full PluginEnv passed to handlers.
+	 * State is merged with BaseState to form the full PluginState passed to handlers.
 	 *
 	 * @example
 	 * ```ts
@@ -1328,10 +1328,10 @@ export namespace ClaudeBinaryPlugin {
 	 * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
 	 *
 	 * // Pipeline handlers (pure transformation)
-	 * const handler: Pipeline["PreToolUse"] = ({ input, options, env }) => { ... };
+	 * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => { ... };
 	 *
 	 * // Raw handlers (full event access)
-	 * const handler: Pipeline["PreToolUseRaw"] = ({ event, options, env }) => { ... };
+	 * const handler: Pipeline["PreToolUseRaw"] = ({ event, options, state }) => { ... };
 	 * ```
 	 */
 	export interface InferPipeline<T> {
@@ -1375,8 +1375,8 @@ export namespace ClaudeBinaryPlugin {
 	 * export type Commands = ClaudeBinaryPlugin.InferCommands<typeof plugin>;
 	 *
 	 * // In commands/lint.cmd.ts
-	 * const handler: Commands["lint"] = async ({ args, options, env }) => {
-	 *   // args, options, and env are fully typed!
+	 * const handler: Commands["lint"] = async ({ args, options, state }) => {
+	 *   // args, options, and state are fully typed!
 	 *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
 	 * };
 	 * ```

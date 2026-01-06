@@ -2,7 +2,7 @@
  * Environment variable management for Claude Code plugins.
  *
  * @remarks
- * This module provides the {@link ClaudeBinaryPluginEnv} base class for managing
+ * This module provides the {@link ClaudeBinaryPluginState} base class for managing
  * plugin configuration through environment variables. It implements a three-layer
  * model for plugin configuration:
  *
@@ -10,7 +10,7 @@
  * 2. **Options Layer** - User-configurable settings via environment variables
  * 3. **State Layer** - Computed values from `setup()` during SessionStart
  *
- * The class handles context-aware loading through {@link ClaudeBinaryPluginEnv.forContext | `forContext()`}:
+ * The class handles context-aware loading through {@link ClaudeBinaryPluginState.forContext | `forContext()`}:
  * - `"sessionStart"` - Loads user `.env` files from project root
  * - `"hook"` - Loads persisted state from session-env directory
  * - `"command"` - Parses `--vars` argument for CLI commands
@@ -20,7 +20,7 @@
  *
  * @example
  * ```typescript
- * import { ClaudeBinaryPluginEnv } from "claude-binary-plugin";
+ * import { ClaudeBinaryPluginState } from "claude-binary-plugin";
  * import { z } from "zod";
  *
  * const schema = z.object({
@@ -28,7 +28,7 @@
  *   MY_PLUGIN_API_KEY: z.string().min(1),
  * });
  *
- * class MyPluginEnv extends ClaudeBinaryPluginEnv<z.infer<typeof schema>> {
+ * class MyPluginEnv extends ClaudeBinaryPluginState<z.infer<typeof schema>> {
  *   protected readonly prefix = "MY_PLUGIN";
  *   protected readonly schema = schema;
  *
@@ -232,7 +232,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  * @example Basic usage with SessionStart hook
  * ```typescript
  * import { z } from "zod";
- * import { ClaudeBinaryPluginEnv } from "claude-binary-plugin";
+ * import { ClaudeBinaryPluginState } from "claude-binary-plugin";
  *
  * const myPluginEnvSchema = z.object({
  *   MY_PLUGIN_ENABLED: z.enum(["true", "false"]),
@@ -241,7 +241,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  *
  * type MyPluginEnvVars = z.infer<typeof myPluginEnvSchema>;
  *
- * class MyPluginEnv extends ClaudeBinaryPluginEnv<MyPluginEnvVars> {
+ * class MyPluginEnv extends ClaudeBinaryPluginState<MyPluginEnvVars> {
  *   protected readonly prefix = "MY_PLUGIN";
  *   protected schema = myPluginEnvSchema;
  *
@@ -277,7 +277,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  *   fix: z.boolean().default(true),
  * });
  *
- * class MyPluginEnv extends ClaudeBinaryPluginEnv<MyPluginEnvVars> {
+ * class MyPluginEnv extends ClaudeBinaryPluginState<MyPluginEnvVars> {
  *   protected readonly prefix = "MY_PLUGIN";
  *   protected schema = myPluginEnvSchema;
  *
@@ -478,11 +478,11 @@ export class EnvFileLoadError extends Error {
  * @typeParam TSchema - TypeScript interface defining the environment variable schema
  *
  * @see `forContext()` - Context-aware factory method (has overloads)
- * @see {@link ClaudeBinaryPluginEnv.initializeSession | initializeSession()} - Session initialization
+ * @see {@link ClaudeBinaryPluginState.initializeSession | initializeSession()} - Session initialization
  * @see {@link SessionRegistry} - SQLite session lookup
  * @public
  */
-export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
+export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> {
 	/**
 	 * Environment variable prefix for this plugin (e.g., "MY_PLUGIN").
 	 * Subclasses must override this to define their namespace.
@@ -645,10 +645,10 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	// ─────────────────────────────────────────────────────────────────────────────
 
 	/**
-	 * Creates a concrete `ClaudeBinaryPluginEnv` subclass from configuration.
+	 * Creates a concrete `ClaudeBinaryPluginState` subclass from configuration.
 	 *
 	 * @remarks
-	 * This factory method creates a runtime subclass of `ClaudeBinaryPluginEnv`
+	 * This factory method creates a runtime subclass of `ClaudeBinaryPluginState`
 	 * with the specified prefix, schema, and plugin name. It's primarily used
 	 * by the build system to generate plugin entrypoints that don't require
 	 * manually defining an env class.
@@ -665,14 +665,14 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * import { ClaudeBinaryPluginEnv } from "claude-binary-plugin";
+	 * import { ClaudeBinaryPluginState } from "claude-binary-plugin";
 	 * import { z } from "zod";
 	 *
 	 * const schema = z.object({
 	 *   MY_PLUGIN_DEBUG: z.enum(["true", "false"]).default("false"),
 	 * });
 	 *
-	 * const MyEnvClass = ClaudeBinaryPluginEnv.create("MY_PLUGIN", schema, "my-plugin");
+	 * const MyEnvClass = ClaudeBinaryPluginState.create("MY_PLUGIN", schema, "my-plugin");
 	 *
 	 * // Use in hook context
 	 * const env = await MyEnvClass.forContext("sessionStart", { hookName: "init" });
@@ -686,8 +686,8 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 		prefix: string,
 		schema: ZodSchema<T>,
 		pluginName?: string,
-	): new () => ClaudeBinaryPluginEnv<T> & { validated: T } {
-		return class extends ClaudeBinaryPluginEnv<T> {
+	): new () => ClaudeBinaryPluginState<T> & { validated: T } {
+		return class extends ClaudeBinaryPluginState<T> {
 			protected readonly prefix = prefix;
 			protected override readonly pluginName = pluginName ?? "";
 			protected override schema = schema;
@@ -695,7 +695,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 			get validated(): T {
 				return this.vars as T;
 			}
-		} as new () => ClaudeBinaryPluginEnv<T> & { validated: T };
+		} as new () => ClaudeBinaryPluginState<T> & { validated: T };
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -733,22 +733,22 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * });
 	 * ```
 	 */
-	static async forContext<T extends ClaudeBinaryPluginEnv>(
+	static async forContext<T extends ClaudeBinaryPluginState>(
 		this: new () => T,
 		context: "sessionStart",
 		params: SessionStartContextParams,
 	): Promise<T>;
-	static async forContext<T extends ClaudeBinaryPluginEnv>(
+	static async forContext<T extends ClaudeBinaryPluginState>(
 		this: new () => T,
 		context: "hook",
 		params: HookContextParams,
 	): Promise<T>;
-	static async forContext<T extends ClaudeBinaryPluginEnv, TArgs = Record<string, unknown>>(
+	static async forContext<T extends ClaudeBinaryPluginState, TArgs = Record<string, unknown>>(
 		this: new () => T,
 		context: "command",
 		params: CommandContextParams,
 	): Promise<CommandContextResult<T, TArgs>>;
-	static async forContext<T extends ClaudeBinaryPluginEnv, TArgs = Record<string, unknown>>(
+	static async forContext<T extends ClaudeBinaryPluginState, TArgs = Record<string, unknown>>(
 		this: new () => T,
 		context: EnvContext,
 		params: SessionStartContextParams | HookContextParams | CommandContextParams,
@@ -758,7 +758,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 				const p = params as SessionStartContextParams;
 				const projectRoot = p.projectRoot || Bun.env.CLAUDE_PROJECT_DIR;
 				if (projectRoot) {
-					await ClaudeBinaryPluginEnv.loadUserEnvFiles(projectRoot, p.fs);
+					await ClaudeBinaryPluginState.loadUserEnvFiles(projectRoot, p.fs);
 				}
 				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
 				const instance = new this();
@@ -778,10 +778,10 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 				// Load env vars from session-env directory
 				// Claude Code does NOT source hook files, so we must load them manually
 				if (p.sessionEnvDir) {
-					await ClaudeBinaryPluginEnv.loadAllHookFiles(p.sessionEnvDir, p.fs);
+					await ClaudeBinaryPluginState.loadAllHookFiles(p.sessionEnvDir, p.fs);
 				} else {
 					// Fallback to prefixed env file check (won't work in practice, but keep for API compat)
-					await ClaudeBinaryPluginEnv.loadFromSessionEnvFile(instance.prefix, p.fs);
+					await ClaudeBinaryPluginState.loadFromSessionEnvFile(instance.prefix, p.fs);
 				}
 
 				instance.loadVarsFromEnv();
@@ -825,7 +825,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 					if (content === null) {
 						throw new EnvFileLoadError(varsPath, "failed to read file");
 					}
-					ClaudeBinaryPluginEnv.parseEnvFileContent(content);
+					ClaudeBinaryPluginState.parseEnvFileContent(content);
 				}
 
 				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
@@ -834,8 +834,8 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 
 				// Parse and validate command args if command config exists
 				let parsedArgs: TArgs | undefined;
-				if (p.commandName && (ClaudeBinaryPluginEnv as typeof ClaudeBinaryPluginEnv).commands) {
-					const commandConfig = (ClaudeBinaryPluginEnv as typeof ClaudeBinaryPluginEnv).commands?.[p.commandName];
+				if (p.commandName && (ClaudeBinaryPluginState as typeof ClaudeBinaryPluginState).commands) {
+					const commandConfig = (ClaudeBinaryPluginState as typeof ClaudeBinaryPluginState).commands?.[p.commandName];
 					if (commandConfig?.argsSchema) {
 						// Convert args array to object for validation
 						const argsObj: Record<string, unknown> = {};
@@ -950,7 +950,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 
 		const content = await fs.readFile(envFilePath);
 		if (content !== null && content.trim().length > 0) {
-			ClaudeBinaryPluginEnv.parseEnvFileContent(content);
+			ClaudeBinaryPluginState.parseEnvFileContent(content);
 		}
 	}
 
@@ -991,7 +991,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 		for (const filePath of files) {
 			const content = await fs.readFile(filePath);
 			if (content !== null && content.trim().length > 0) {
-				ClaudeBinaryPluginEnv.parseEnvFileContent(content);
+				ClaudeBinaryPluginState.parseEnvFileContent(content);
 				loadedCount++;
 			}
 		}
@@ -1011,7 +1011,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * const sessionEnvDir = ClaudeBinaryPluginEnv.getSessionEnvDir(event.session_id);
+	 * const sessionEnvDir = ClaudeBinaryPluginState.getSessionEnvDir(event.session_id);
 	 * // "/Users/user/.claude/session-env/abc-123-def"
 	 * ```
 	 */
@@ -1117,7 +1117,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 				if (content === null) {
 					throw new EnvFileLoadError(filePath, "file exists but could not be read");
 				}
-				ClaudeBinaryPluginEnv.parseEnvFileContent(content);
+				ClaudeBinaryPluginState.parseEnvFileContent(content);
 				loadedFiles.push(fileName);
 			}
 		}
@@ -1149,7 +1149,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 *   MY_PLUGIN_ENABLED: "true",
 	 *   MY_PLUGIN_API_KEY: apiKey,
 	 * };
-	 * const result = await ClaudeBinaryPluginEnv.persistVars(sessionId, vars);
+	 * const result = await ClaudeBinaryPluginState.persistVars(sessionId, vars);
 	 * if (result.persisted) {
 	 *   console.log(`Persisted to: ${result.path}`);
 	 * }
@@ -1168,7 +1168,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 		}
 
 		// Write variables to the env file (Claude Code already created the directory)
-		await ClaudeBinaryPluginEnv.writeToEnvFile(claudeEnvFile, vars, fs);
+		await ClaudeBinaryPluginState.writeToEnvFile(claudeEnvFile, vars, fs);
 
 		// Make the file executable (required for bash to source it)
 		await fs.chmod(claudeEnvFile, "+x");
@@ -1253,7 +1253,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * This is a universal template method for session initialization. It:
 	 * 1. Creates a plugin env instance
 	 * 2. Calls the subclass's setupForSession() method to get variables
-	 * 3. Persists those variables using ClaudeBinaryPluginEnv.persistVars()
+	 * 3. Persists those variables using ClaudeBinaryPluginState.persistVars()
 	 * 4. Returns the initialized environment and persistence result
 	 *
 	 * Subclasses implement `setupForSession()` to define their detection logic.
@@ -1265,7 +1265,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * @example
 	 * ```typescript
 	 * // In SessionStart hook
-	 * const { env, persisted } = await MyPluginEnv.initializeSession({
+	 * const { state, persisted } = await MyPluginState.initializeSession({
 	 *   hookName: event.name
 	 * });
 	 *
@@ -1274,15 +1274,15 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * }
 	 * ```
 	 */
-	static async initializeSession<T extends ClaudeBinaryPluginEnv>(
+	static async initializeSession<T extends ClaudeBinaryPluginState>(
 		this: new () => T,
 		params: SessionStartContextParams,
-	): Promise<{ env: T; persisted: PersistResult }> {
+	): Promise<{ state: T; persisted: PersistResult }> {
 		// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
 		const instance = new this();
 
 		// Pass sessionId to logger so log files go to the correct session directory
-		const log = DebugLogger.create(params.hookName || "ClaudeBinaryPluginEnv", {
+		const log = DebugLogger.create(params.hookName || "ClaudeBinaryPluginState", {
 			sessionId: params.sessionId,
 		});
 		const fs = params.fs || defaultPluginEnvFileSystem;
@@ -1290,14 +1290,14 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 		// Load user .env files first (same as forContext("sessionStart"))
 		const projectRoot = params.projectRoot || Bun.env.CLAUDE_PROJECT_DIR;
 		if (projectRoot) {
-			await ClaudeBinaryPluginEnv.loadUserEnvFiles(projectRoot, fs);
+			await ClaudeBinaryPluginState.loadUserEnvFiles(projectRoot, fs);
 		}
 
 		// Get session ID from params (passed from event data) or fallback to environment
 		const sessionId = params.sessionId || Bun.env.CLAUDE_SESSION_ID;
 		if (!sessionId) {
 			return {
-				env: instance,
+				state: instance,
 				persisted: {
 					persisted: false,
 					reason: "session_id not available (not in event data or CLAUDE_SESSION_ID env var)",
@@ -1333,7 +1333,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 			}
 		}
 
-		const persistResult = await ClaudeBinaryPluginEnv.persistVars(sessionId, vars, fs);
+		const persistResult = await ClaudeBinaryPluginState.persistVars(sessionId, vars, fs);
 		log.debug(
 			`persisted=${persistResult.persisted}, path=${persistResult.path ?? "(none)"}, reason=${persistResult.reason ?? "(none)"}`,
 		);
@@ -1343,11 +1343,11 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 		if (envFilePath && sessionId && projectDir) {
 			const sessionEnvDir = envFilePath.replace(/\/hook-\d+\.sh$/, "");
 			if (sessionEnvDir !== envFilePath) {
-				ClaudeBinaryPluginEnv.registerSession(sessionId, projectDir, sessionEnvDir);
+				ClaudeBinaryPluginState.registerSession(sessionId, projectDir, sessionEnvDir);
 			}
 		}
 
-		return { env: instance, persisted: persistResult };
+		return { state: instance, persisted: persistResult };
 	}
 
 	/**
@@ -1363,7 +1363,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * class MyPluginEnv extends ClaudeBinaryPluginEnv<MyEnvVars> {
+	 * class MyPluginEnv extends ClaudeBinaryPluginState<MyEnvVars> {
 	 *   protected async setupForSession(params: SessionStartContextParams): Promise<Record<string, string>> {
 	 *     // Detect environment
 	 *     const apiKey = await detectApiKey();
@@ -1638,9 +1638,9 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * ClaudeBinaryPluginEnv.escapeForBash('Hello "world"') // 'Hello \\"world\\"'
-	 * ClaudeBinaryPluginEnv.escapeForBash('Run `cmd`') // 'Run \\`cmd\\`'
-	 * ClaudeBinaryPluginEnv.escapeForBash('Cost: $50') // 'Cost: \\$50'
+	 * ClaudeBinaryPluginState.escapeForBash('Hello "world"') // 'Hello \\"world\\"'
+	 * ClaudeBinaryPluginState.escapeForBash('Run `cmd`') // 'Run \\`cmd\\`'
+	 * ClaudeBinaryPluginState.escapeForBash('Cost: $50') // 'Cost: \\$50'
 	 * ```
 	 * @public
 	 */
@@ -1659,7 +1659,7 @@ export abstract class ClaudeBinaryPluginEnv<TSchema = Record<string, string>> {
 	 * ```typescript
 	 * const result = schema.safeParse(data);
 	 * if (!result.success) {
-	 *   console.log(ClaudeBinaryPluginEnv.formatZodError(result.error));
+	 *   console.log(ClaudeBinaryPluginState.formatZodError(result.error));
 	 * }
 	 * ```
 	 * @public

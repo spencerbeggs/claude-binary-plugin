@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { MockEnvContext } from "../testing/mocks.js";
 import { mockEnv } from "../testing/mocks.js";
-import type { PluginEnvFileSystem, ZodErrorMinimal } from "./plugin-env.js";
-import { ClaudeBinaryPluginEnv, escapeForBashDoubleQuotes, formatZodError } from "./plugin-env.js";
+import type { PluginEnvFileSystem, ZodErrorMinimal } from "./plugin-state.js";
+import { ClaudeBinaryPluginState, escapeForBashDoubleQuotes, formatZodError } from "./plugin-state.js";
 
 describe("escapeForBashDoubleQuotes", () => {
 	test("escapes double quotes", () => {
@@ -48,7 +48,7 @@ describe("escapeForBashDoubleQuotes", () => {
 });
 
 // Mock implementation for testing
-class TestPluginEnv extends ClaudeBinaryPluginEnv<{ TEST_VAR: string; TEST_ENABLED: "true" | "false" }> {
+class TestPluginEnv extends ClaudeBinaryPluginState<{ TEST_VAR: string; TEST_ENABLED: "true" | "false" }> {
 	protected readonly prefix = "TEST_PLUGIN";
 }
 
@@ -65,7 +65,7 @@ function createMockFileSystem(files: Map<string, string>): PluginEnvFileSystem {
 	};
 }
 
-describe("ClaudeBinaryPluginEnv", () => {
+describe("ClaudeBinaryPluginState", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
@@ -73,7 +73,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 	});
 
 	afterEach(() => {
-		// EXCEPTION: This file tests ClaudeBinaryPluginEnv which directly manipulates env vars.
+		// EXCEPTION: This file tests ClaudeBinaryPluginState which directly manipulates env vars.
 		// We must manually clean up vars set by the code under test (not via env.set()).
 		// This is an acceptable exception since we're testing env manipulation itself.
 		const testVars = [
@@ -96,38 +96,38 @@ describe("ClaudeBinaryPluginEnv", () => {
 
 	describe("parseEnvFileContent", () => {
 		test("parses simple VAR=value format", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("TEST_VAR=hello");
+			ClaudeBinaryPluginState.parseEnvFileContent("TEST_VAR=hello");
 			expect(Bun.env.TEST_VAR).toBe("hello");
 		});
 
 		test("parses export VAR=value format", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("export TEST_VAR=world");
+			ClaudeBinaryPluginState.parseEnvFileContent("export TEST_VAR=world");
 			expect(Bun.env.TEST_VAR).toBe("world");
 		});
 
 		test("parses quoted values", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent('TEST_VAR="quoted value"');
+			ClaudeBinaryPluginState.parseEnvFileContent('TEST_VAR="quoted value"');
 			expect(Bun.env.TEST_VAR).toBe("quoted value");
 		});
 
 		test("skips comments", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("# This is a comment\nTEST_VAR=value");
+			ClaudeBinaryPluginState.parseEnvFileContent("# This is a comment\nTEST_VAR=value");
 			expect(Bun.env.TEST_VAR).toBe("value");
 		});
 
 		test("skips empty lines", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("\n\nTEST_VAR=value\n\n");
+			ClaudeBinaryPluginState.parseEnvFileContent("\n\nTEST_VAR=value\n\n");
 			expect(Bun.env.TEST_VAR).toBe("value");
 		});
 
 		test("does not overwrite existing env vars", () => {
 			env.set("TEST_VAR", "existing");
-			ClaudeBinaryPluginEnv.parseEnvFileContent("TEST_VAR=new");
+			ClaudeBinaryPluginState.parseEnvFileContent("TEST_VAR=new");
 			expect(Bun.env.TEST_VAR).toBe("existing");
 		});
 
 		test("handles multiple lines", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("VAR1=value1\nexport VAR2=value2\nVAR3=value3");
+			ClaudeBinaryPluginState.parseEnvFileContent("VAR1=value1\nexport VAR2=value2\nVAR3=value3");
 			expect(Bun.env.VAR1).toBe("value1");
 			expect(Bun.env.VAR2).toBe("value2");
 			expect(Bun.env.VAR3).toBe("value3");
@@ -135,7 +135,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 
 		test("parses JSON values with escaped quotes", () => {
 			// This is how JSON is persisted to session env files
-			ClaudeBinaryPluginEnv.parseEnvFileContent('export JSON_VAR="{\\"key\\":\\"value\\"}"');
+			ClaudeBinaryPluginState.parseEnvFileContent('export JSON_VAR="{\\"key\\":\\"value\\"}"');
 			expect(Bun.env.JSON_VAR).toBe('{"key":"value"}');
 			// Verify it's valid JSON
 			const jsonVar = Bun.env.JSON_VAR;
@@ -145,7 +145,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 
 		test("parses complex JSON with nested objects", () => {
 			const jsonContent = 'export ENABLED="{\\"biome\\":true,\\"turbo\\":false}"';
-			ClaudeBinaryPluginEnv.parseEnvFileContent(jsonContent);
+			ClaudeBinaryPluginState.parseEnvFileContent(jsonContent);
 			expect(Bun.env.ENABLED).toBe('{"biome":true,"turbo":false}');
 			const enabled = Bun.env.ENABLED;
 			expect(enabled).toBeDefined();
@@ -153,12 +153,12 @@ describe("ClaudeBinaryPluginEnv", () => {
 		});
 
 		test("parses single-quoted values", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("SINGLE='single quoted value'");
+			ClaudeBinaryPluginState.parseEnvFileContent("SINGLE='single quoted value'");
 			expect(Bun.env.SINGLE).toBe("single quoted value");
 		});
 
 		test("parses unquoted values", () => {
-			ClaudeBinaryPluginEnv.parseEnvFileContent("UNQUOTED=no-quotes-here");
+			ClaudeBinaryPluginState.parseEnvFileContent("UNQUOTED=no-quotes-here");
 			expect(Bun.env.UNQUOTED).toBe("no-quotes-here");
 		});
 	});
@@ -177,7 +177,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 				Bun.env.TEST_PLUGIN_SESSION_ENV_FILE = hookFilePath;
 
 				// loadFromSessionEnvFile reads from the prefixed env var
-				await ClaudeBinaryPluginEnv.loadFromSessionEnvFile("TEST_PLUGIN");
+				await ClaudeBinaryPluginState.loadFromSessionEnvFile("TEST_PLUGIN");
 				expect(Bun.env.TEST_VAR).toBe("loaded");
 			} finally {
 				// Clean up
@@ -189,14 +189,14 @@ describe("ClaudeBinaryPluginEnv", () => {
 
 		test("returns silently if prefixed env var is not set", async () => {
 			delete Bun.env.TEST_PLUGIN_SESSION_ENV_FILE;
-			await ClaudeBinaryPluginEnv.loadFromSessionEnvFile("TEST_PLUGIN");
+			await ClaudeBinaryPluginState.loadFromSessionEnvFile("TEST_PLUGIN");
 			// No error thrown
 		});
 
 		test("returns silently if file does not exist", async () => {
 			Bun.env.TEST_PLUGIN_SESSION_ENV_FILE = "/nonexistent/hook-0.sh";
 			try {
-				await ClaudeBinaryPluginEnv.loadFromSessionEnvFile("TEST_PLUGIN");
+				await ClaudeBinaryPluginState.loadFromSessionEnvFile("TEST_PLUGIN");
 				// No error thrown
 			} finally {
 				delete Bun.env.TEST_PLUGIN_SESSION_ENV_FILE;
@@ -273,7 +273,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 			const files = new Map([["/tmp/project/.env", "USER_VAR=user_value"]]);
 			const fs = createMockFileSystem(files);
 
-			const loaded = await ClaudeBinaryPluginEnv.loadUserEnvFiles("/tmp/project", fs);
+			const loaded = await ClaudeBinaryPluginState.loadUserEnvFiles("/tmp/project", fs);
 			expect(loaded).toEqual([".env"]);
 			expect(Bun.env.USER_VAR).toBe("user_value");
 		});
@@ -282,7 +282,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 			const files = new Map([["/tmp/project/.env.local", "LOCAL_VAR=local_value"]]);
 			const fs = createMockFileSystem(files);
 
-			const loaded = await ClaudeBinaryPluginEnv.loadUserEnvFiles("/tmp/project", fs);
+			const loaded = await ClaudeBinaryPluginState.loadUserEnvFiles("/tmp/project", fs);
 			expect(loaded).toEqual([".env.local"]);
 			expect(Bun.env.LOCAL_VAR).toBe("local_value");
 		});
@@ -294,7 +294,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 			]);
 			const fs = createMockFileSystem(files);
 
-			const loaded = await ClaudeBinaryPluginEnv.loadUserEnvFiles("/tmp/project", fs);
+			const loaded = await ClaudeBinaryPluginState.loadUserEnvFiles("/tmp/project", fs);
 			expect(loaded).toContain(".env");
 			expect(loaded).toContain(".env.local");
 			expect(Bun.env.VAR1).toBe("value1");
@@ -303,7 +303,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 
 		test("returns empty array if no env files exist", async () => {
 			const fs = createMockFileSystem(new Map());
-			const loaded = await ClaudeBinaryPluginEnv.loadUserEnvFiles("/tmp/project", fs);
+			const loaded = await ClaudeBinaryPluginState.loadUserEnvFiles("/tmp/project", fs);
 			expect(loaded).toEqual([]);
 		});
 	});
@@ -509,7 +509,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 			await Bun.write(tmpFile, "export SOURCED_VAR=sourced_value\n");
 
 			try {
-				await ClaudeBinaryPluginEnv.loadFromFile(tmpFile);
+				await ClaudeBinaryPluginState.loadFromFile(tmpFile);
 				expect(Bun.env.SOURCED_VAR).toBe("sourced_value");
 			} finally {
 				// Clean up
@@ -518,7 +518,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 		});
 
 		test("returns silently if file does not exist", async () => {
-			await ClaudeBinaryPluginEnv.loadFromFile("/nonexistent/file.sh");
+			await ClaudeBinaryPluginState.loadFromFile("/nonexistent/file.sh");
 			// No error thrown
 		});
 
@@ -528,7 +528,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 			await Bun.write(tmpFile, "this is not valid bash syntax <<<\n");
 
 			try {
-				await expect(ClaudeBinaryPluginEnv.loadFromFile(tmpFile)).rejects.toThrow(/bash source failed/);
+				await expect(ClaudeBinaryPluginState.loadFromFile(tmpFile)).rejects.toThrow(/bash source failed/);
 			} finally {
 				await Bun.$`rm -f ${tmpFile}`;
 			}
@@ -541,7 +541,7 @@ describe("ClaudeBinaryPluginEnv", () => {
 			await Bun.write(tmpFile, "export EXISTING_VAR=new_value\n");
 
 			try {
-				await ClaudeBinaryPluginEnv.loadFromFile(tmpFile);
+				await ClaudeBinaryPluginState.loadFromFile(tmpFile);
 				expect(Bun.env.EXISTING_VAR).toBe("existing");
 			} finally {
 				await Bun.$`rm -f ${tmpFile}`;
@@ -558,7 +558,7 @@ describe("loadAllHookFiles", () => {
 			await Bun.write(`${tempDir}/hook-0.sh`, "export HOOK_VAR_0=value0\n");
 			await Bun.write(`${tempDir}/hook-1.sh`, "export HOOK_VAR_1=value1\n");
 
-			const loadedCount = await ClaudeBinaryPluginEnv.loadAllHookFiles(tempDir);
+			const loadedCount = await ClaudeBinaryPluginState.loadAllHookFiles(tempDir);
 
 			expect(loadedCount).toBe(2);
 			expect(Bun.env.HOOK_VAR_0).toBe("value0");
@@ -579,7 +579,7 @@ describe("loadAllHookFiles", () => {
 			// Create a non-hook file
 			await Bun.write(`${tempDir}/other-file.txt`, "not a hook");
 
-			const loadedCount = await ClaudeBinaryPluginEnv.loadAllHookFiles(tempDir);
+			const loadedCount = await ClaudeBinaryPluginState.loadAllHookFiles(tempDir);
 			expect(loadedCount).toBe(0);
 		} finally {
 			await Bun.$`rm -rf ${tempDir}`.quiet().nothrow();
@@ -592,7 +592,7 @@ describe("loadAllHookFiles", () => {
 			await Bun.$`mkdir -p ${tempDir}`.quiet();
 			// No hook files created
 
-			const loadedCount = await ClaudeBinaryPluginEnv.loadAllHookFiles(tempDir);
+			const loadedCount = await ClaudeBinaryPluginState.loadAllHookFiles(tempDir);
 			expect(loadedCount).toBe(0);
 		} finally {
 			await Bun.$`rm -rf ${tempDir}`.quiet().nothrow();
@@ -606,7 +606,7 @@ describe("loadAllHookFiles", () => {
 			await Bun.write(`${tempDir}/hook-0.sh`, "export VALID_VAR=valid\n");
 			await Bun.write(`${tempDir}/hook-1.sh`, "   \n  \n"); // Empty content
 
-			const loadedCount = await ClaudeBinaryPluginEnv.loadAllHookFiles(tempDir);
+			const loadedCount = await ClaudeBinaryPluginState.loadAllHookFiles(tempDir);
 
 			expect(loadedCount).toBe(1);
 			expect(Bun.env.VALID_VAR).toBe("valid");
@@ -623,14 +623,14 @@ describe("registerSession and getSessionEnvDir", () => {
 		const projectDir = "/tmp/test-project";
 		const sessionEnvDir = "/tmp/test-session-env";
 
-		ClaudeBinaryPluginEnv.registerSession(sessionId, projectDir, sessionEnvDir);
+		ClaudeBinaryPluginState.registerSession(sessionId, projectDir, sessionEnvDir);
 
-		const retrieved = ClaudeBinaryPluginEnv.getSessionEnvDir(sessionId);
+		const retrieved = ClaudeBinaryPluginState.getSessionEnvDir(sessionId);
 		expect(retrieved).toBe(sessionEnvDir);
 	});
 
 	test("getSessionEnvDir returns undefined for unknown session", () => {
-		const result = ClaudeBinaryPluginEnv.getSessionEnvDir("unknown-session-id");
+		const result = ClaudeBinaryPluginState.getSessionEnvDir("unknown-session-id");
 		// May return undefined or a cached session from previous tests
 		expect(result === undefined || typeof result === "string").toBe(true);
 	});
@@ -640,9 +640,9 @@ describe("registerSession and getSessionEnvDir", () => {
 		const projectDir = `/tmp/test-project-${Date.now()}`;
 		const sessionEnvDir = "/tmp/test-session-env";
 
-		ClaudeBinaryPluginEnv.registerSession(sessionId, projectDir, sessionEnvDir);
+		ClaudeBinaryPluginState.registerSession(sessionId, projectDir, sessionEnvDir);
 
-		const retrieved = ClaudeBinaryPluginEnv.getProjectSessionEnvDir(projectDir);
+		const retrieved = ClaudeBinaryPluginState.getProjectSessionEnvDir(projectDir);
 		expect(retrieved).toBe(sessionEnvDir);
 	});
 });
@@ -661,7 +661,7 @@ describe("persistVars", () => {
 	test("returns error when CLAUDE_ENV_FILE not set", async () => {
 		delete Bun.env.CLAUDE_ENV_FILE;
 
-		const result = await ClaudeBinaryPluginEnv.persistVars("test-session", { MY_VAR: "value" });
+		const result = await ClaudeBinaryPluginState.persistVars("test-session", { MY_VAR: "value" });
 
 		expect(result.persisted).toBe(false);
 		expect(result.reason).toContain("CLAUDE_ENV_FILE not available");
@@ -676,7 +676,7 @@ describe("persistVars", () => {
 			await Bun.write(envFilePath, "# existing content\n");
 			env.set("CLAUDE_ENV_FILE", envFilePath);
 
-			const result = await ClaudeBinaryPluginEnv.persistVars("test-session", { MY_VAR: "my_value" });
+			const result = await ClaudeBinaryPluginState.persistVars("test-session", { MY_VAR: "my_value" });
 
 			expect(result.persisted).toBe(true);
 			expect(result.path).toBe(envFilePath);
@@ -697,7 +697,7 @@ describe("persistVars", () => {
 			await Bun.write(envFilePath, 'export VAR1="old_value1"\nexport VAR2="old_value2"\n');
 			env.set("CLAUDE_ENV_FILE", envFilePath);
 
-			const result = await ClaudeBinaryPluginEnv.persistVars("test-session", { VAR1: "new_value1" });
+			const result = await ClaudeBinaryPluginState.persistVars("test-session", { VAR1: "new_value1" });
 
 			expect(result.persisted).toBe(true);
 
@@ -737,7 +737,7 @@ describe("defaultPluginEnvFileSystem", () => {
 		const tempFile = `/tmp/test-write-${Date.now()}.txt`;
 		try {
 			// Import the default file system
-			const { defaultPluginEnvFileSystem } = await import("./plugin-env.js");
+			const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
 
 			await defaultPluginEnvFileSystem.writeFile(tempFile, "test content");
 
@@ -751,7 +751,7 @@ describe("defaultPluginEnvFileSystem", () => {
 	test("mkdir creates directory", async () => {
 		const tempDir = `/tmp/test-mkdir-${Date.now()}`;
 		try {
-			const { defaultPluginEnvFileSystem } = await import("./plugin-env.js");
+			const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
 
 			await defaultPluginEnvFileSystem.mkdir(tempDir);
 
@@ -765,7 +765,7 @@ describe("defaultPluginEnvFileSystem", () => {
 	test("chmod changes file permissions", async () => {
 		const tempFile = `/tmp/test-chmod-${Date.now()}.sh`;
 		try {
-			const { defaultPluginEnvFileSystem } = await import("./plugin-env.js");
+			const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
 
 			await Bun.write(tempFile, "#!/bin/bash\necho hello\n");
 			await defaultPluginEnvFileSystem.chmod(tempFile, "+x");
@@ -778,7 +778,7 @@ describe("defaultPluginEnvFileSystem", () => {
 	});
 
 	test("exists returns false for catch block", async () => {
-		const { defaultPluginEnvFileSystem } = await import("./plugin-env.js");
+		const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
 		// This tests the catch block - a path with invalid characters might trigger it
 		// Though in practice Bun.file might handle it gracefully
 		const result = await defaultPluginEnvFileSystem.exists("/some/path/that/does/not/exist");

@@ -13,7 +13,7 @@
  *
  * **Execution Flow:**
  * 1. Parse stdin JSON and create HookEvent instance
- * 2. Load environment via ClaudeBinaryPluginEnv
+ * 2. Load environment via ClaudeBinaryPluginState
  * 3. Run setup() if SessionStart to compute state
  * 4. Apply tool filters for PreToolUse/PostToolUse
  * 5. Call pipeline handler with `{ input, options, env }` context
@@ -35,7 +35,6 @@
  */
 
 import { z } from "zod";
-import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
 import {
 	NotificationHookEvent,
 	PermissionRequestHookEvent,
@@ -50,7 +49,8 @@ import {
 } from "../events/subclasses.js";
 import type { HookOutcome } from "../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
-import type { BaseEnv, PipelineHandler, SetupFunction } from "./config.js";
+import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
+import type { BaseState, PipelineHandler, SetupFunction } from "./config.js";
 
 // =============================================================================
 // INTERNAL RESPONSE TYPES (for Claude Code response builder)
@@ -402,8 +402,8 @@ export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, 
 	pluginVersion: string;
 	/** The pipeline handler function */
 	pipeline: PipelineHandler<unknown, unknown, TOptions, TState>;
-	/** Environment class for loading env vars */
-	envClass: new () => ClaudeBinaryPluginEnv<TOptions>;
+	/** State class for loading env vars */
+	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
 	/** Tool filter (for PreToolUse/PostToolUse) */
 	tools?: string[];
 	/** Zod schema for validating options (used for SessionStart persistence) */
@@ -576,7 +576,7 @@ function applyPipelineOutput(event: any, hookType: HookEventType, output: unknow
 export async function runPipeline<TOptions = unknown, TState = Record<string, string>>(
 	options: RunPipelineOptions<TOptions, TState>,
 ): Promise<never> {
-	const { hookType, hookName, pluginName, pluginVersion, pipeline, envClass, tools, schema, setup } = options;
+	const { hookType, hookName, pluginName, pluginVersion, pipeline, stateClass, tools, schema, setup } = options;
 	const startTime = performance.now();
 
 	// Merge provided I/O with defaults
@@ -599,8 +599,8 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 	// Create the event from stdin
 	// biome-ignore lint/suspicious/noExplicitAny: Dynamic event creation requires runtime typing
 	let event: any;
-	// biome-ignore lint/suspicious/noExplicitAny: Dynamic env creation requires runtime typing
-	let env: any;
+	// biome-ignore lint/suspicious/noExplicitAny: Dynamic state instance requires runtime typing
+	let stateInstance: any;
 	try {
 		// biome-ignore lint/suspicious/noExplicitAny: EventClass is dynamically selected at runtime
 		const result = await (EventClass as any).create({
@@ -611,10 +611,10 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			stdout: io.stdout,
 			stderr: io.stderr,
 			inputText: io.inputText,
-			envClass,
+			stateClass,
 		});
 		event = result.event;
-		env = result.env;
+		stateInstance = result.state;
 	} catch (error) {
 		// Handle validation errors with debug output
 		if (error instanceof z.ZodError) {
@@ -657,14 +657,14 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 	}
 
 	try {
-		// Extract options from env.vars (validated schema output)
-		const validatedOptions = (env.vars ?? {}) as TOptions;
+		// Extract options from stateInstance.vars (validated schema output)
+		const validatedOptions = (stateInstance.vars ?? {}) as TOptions;
 
 		// For SessionStart, run setup() BEFORE the hook to get fresh state.
-		// For other hooks, extract state from the persisted env.
+		// For other hooks, extract state from the persisted stateInstance.
 		const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE ?? "";
 		const cwd = "cwd" in event ? (event.cwd as string) : io.cwd();
-		const baseEnv = createBaseEnv(cwd, claudeEnvFile, env);
+		const baseState = createBaseState(cwd, claudeEnvFile, stateInstance);
 
 		let state: TState;
 		if (hookType === "SessionStart" && setup) {
@@ -672,25 +672,25 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 				options: validatedOptions,
 				cwd,
 				sessionId: event.session_id,
-				env: baseEnv,
+				state: baseState,
 			})) as TState;
 		} else {
-			state = extractStateFromEnv(env) as TState;
+			state = extractPersistedState(stateInstance) as TState;
 		}
 
-		// Merge base env with state to create full plugin env
-		// Include logger methods from the env instance
-		const pluginEnv = {
-			...baseEnv,
+		// Merge base state with computed state to create full plugin state
+		// Include logger methods from the state instance
+		const pluginState = {
+			...baseState,
 			...state,
-			// Bind logger methods from env instance so they work in handlers
-			log: env.log.bind(env),
-			info: env.info.bind(env),
-			debug: env.debug.bind(env),
+			// Bind logger methods from state instance so they work in handlers
+			log: stateInstance.log.bind(stateInstance),
+			info: stateInstance.info.bind(stateInstance),
+			debug: stateInstance.debug.bind(stateInstance),
 		};
 
 		// Call the pipeline handler with new context shape
-		const output = await pipeline({ input: event, options: validatedOptions, env: pluginEnv });
+		const output = await pipeline({ input: event, options: validatedOptions, state: pluginState });
 
 		// Calculate duration (rounded to whole ms to match Claude Code)
 		const durationMs = Math.round(performance.now() - startTime);
@@ -744,10 +744,10 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 			if (hookType === "SessionStart") {
 				await persistSessionEnv({
 					event: event as SessionStartHookEvent,
-					env: env as ClaudeBinaryPluginEnv<unknown>,
+					stateInstance: stateInstance as ClaudeBinaryPluginState<unknown>,
 					schema,
 					state: state as Record<string, unknown>,
-					baseEnv,
+					baseState,
 				});
 			}
 
@@ -817,24 +817,24 @@ function isDebugEnabled(): boolean {
 }
 
 /**
- * Extract state from the environment.
+ * Extract persisted state from the environment.
  * Reads `prefix`_PLUGIN_STATE and parses it as JSON.
  *
- * @param env - The plugin environment instance
+ * @param stateInstance - The plugin state instance
  * @returns State object parsed from `prefix`_PLUGIN_STATE
  * @internal
  */
-function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
-	const prefix = env.getPrefix();
+function extractPersistedState(stateInstance: ClaudeBinaryPluginState<unknown>): Record<string, unknown> {
+	const prefix = stateInstance.getPrefix();
 
 	// Always log to file for debugging (bypasses stderr issues)
 	const debugLog = (msg: string) => {
 		if (isDebugEnabled()) {
-			// Use env's logger if available, otherwise console.error
-			if (typeof env.info === "function") {
-				env.info(`[extractStateFromEnv] ${msg}`);
+			// Use state instance's logger if available, otherwise console.error
+			if (typeof stateInstance.info === "function") {
+				stateInstance.info(`[extractPersistedState] ${msg}`);
 			} else {
-				console.error(`[extractStateFromEnv] ${msg}`);
+				console.error(`[extractPersistedState] ${msg}`);
 			}
 		}
 	};
@@ -877,27 +877,31 @@ function extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string
  */
 interface PersistSessionEnvOptions {
 	event: SessionStartHookEvent;
-	env: ClaudeBinaryPluginEnv<unknown>;
+	stateInstance: ClaudeBinaryPluginState<unknown>;
 	schema?: z.ZodType<unknown>;
 	/** State from setup() - will be JSON-stringified */
 	state?: Record<string, unknown>;
-	/** Base env (projectDir, pluginDir, pluginEnvFile) */
-	baseEnv: BaseEnv;
+	/** Base state (projectDir, pluginDir, pluginEnvFile) */
+	baseState: BaseState;
 }
 
 /**
- * Create the base env object for the setup function.
+ * Create the base state object for the setup function.
  * @internal
  */
-function createBaseEnv(cwd: string, claudeEnvFile: string, env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
+function createBaseState(
+	cwd: string,
+	claudeEnvFile: string,
+	stateInstance: ClaudeBinaryPluginState<unknown>,
+): BaseState {
 	return {
 		projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? cwd,
 		pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "",
 		pluginEnvFile: claudeEnvFile,
-		// Bind logger methods from env instance
-		log: env.log.bind(env),
-		info: env.info.bind(env),
-		debug: env.debug.bind(env),
+		// Bind logger methods from state instance
+		log: stateInstance.log.bind(stateInstance),
+		info: stateInstance.info.bind(stateInstance),
+		debug: stateInstance.debug.bind(stateInstance),
 	};
 }
 
@@ -913,14 +917,14 @@ function createBaseEnv(cwd: string, claudeEnvFile: string, env: ClaudeBinaryPlug
  * Options from the schema are persisted with their original keys for compatibility.
  */
 async function persistSessionEnv(options: PersistSessionEnvOptions): Promise<void> {
-	const { event, env, schema, state, baseEnv } = options;
+	const { event, stateInstance, schema, state, baseState } = options;
 	const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE;
 	if (!claudeEnvFile) {
 		return; // No env file to write to
 	}
 
-	// Get the plugin prefix from the env instance
-	const prefix = env.getPrefix();
+	// Get the plugin prefix from the state instance
+	const prefix = stateInstance.getPrefix();
 	if (!prefix) {
 		return; // No prefix, can't construct variable names
 	}
@@ -928,11 +932,11 @@ async function persistSessionEnv(options: PersistSessionEnvOptions): Promise<voi
 	const vars: Record<string, string> = {};
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Base env vars (always written)
+	// Base state vars (always written)
 	// ─────────────────────────────────────────────────────────────────────────
-	vars[`${prefix}_PROJECT_DIR`] = baseEnv.projectDir;
-	vars[`${prefix}_PLUGIN_DIR`] = baseEnv.pluginDir;
-	vars[`${prefix}_PLUGIN_ENV_FILE`] = baseEnv.pluginEnvFile;
+	vars[`${prefix}_PROJECT_DIR`] = baseState.projectDir;
+	vars[`${prefix}_PLUGIN_DIR`] = baseState.pluginDir;
+	vars[`${prefix}_PLUGIN_ENV_FILE`] = baseState.pluginEnvFile;
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// Options (validated from schema with defaults)
@@ -974,12 +978,12 @@ async function persistSessionEnv(options: PersistSessionEnvOptions): Promise<voi
 	}
 
 	// Persist all variables
-	await ClaudeBinaryPluginEnv.persistVars(event.session_id, vars);
+	await ClaudeBinaryPluginState.persistVars(event.session_id, vars);
 
 	// Register session in SQLite registry for subsequent lookups
 	const sessionEnvDir = claudeEnvFile.replace(/\/hook-\d+\.sh$/, "");
-	if (sessionEnvDir !== claudeEnvFile && event.session_id && baseEnv.projectDir) {
-		ClaudeBinaryPluginEnv.registerSession(event.session_id, baseEnv.projectDir, sessionEnvDir);
+	if (sessionEnvDir !== claudeEnvFile && event.session_id && baseState.projectDir) {
+		ClaudeBinaryPluginState.registerSession(event.session_id, baseState.projectDir, sessionEnvDir);
 	}
 }
 
@@ -997,9 +1001,9 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
 	/** Plugin version for telemetry */
 	pluginVersion: string;
 	/** The raw handler function */
-	handler: (ctx: { event: unknown; options: TOptions; env: TState }) => void | Promise<void>;
-	/** Environment class */
-	envClass: new () => ClaudeBinaryPluginEnv<TOptions>;
+	handler: (ctx: { event: unknown; options: TOptions; state: TState }) => void | Promise<void>;
+	/** State class */
+	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
 }
 
 /**
@@ -1027,7 +1031,7 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
 export async function runRawHandler<TOptions, TState = Record<string, string>>(
 	options: RunRawHandlerOptions<TOptions, TState>,
 ): Promise<void> {
-	const { hookType, hookName, pluginName, pluginVersion, handler, envClass } = options;
+	const { hookType, hookName, pluginName, pluginVersion, handler, stateClass } = options;
 
 	const EventClass = getHookEventClasses()[hookType];
 	if (!EventClass) {
@@ -1037,8 +1041,8 @@ export async function runRawHandler<TOptions, TState = Record<string, string>>(
 
 	// biome-ignore lint/suspicious/noExplicitAny: Dynamic event creation requires runtime typing
 	let event: any;
-	// biome-ignore lint/suspicious/noExplicitAny: Dynamic env creation requires runtime typing
-	let env: any;
+	// biome-ignore lint/suspicious/noExplicitAny: Dynamic state creation requires runtime typing
+	let stateInstance: any;
 	try {
 		// biome-ignore lint/suspicious/noExplicitAny: EventClass is dynamically selected at runtime
 		const result = await (EventClass as any).create({
@@ -1048,10 +1052,10 @@ export async function runRawHandler<TOptions, TState = Record<string, string>>(
 			stdin: process.stdin,
 			stdout: process.stdout,
 			stderr: process.stderr,
-			envClass,
+			stateClass,
 		});
 		event = result.event;
-		env = result.env;
+		stateInstance = result.state;
 	} catch (error) {
 		// Handle validation errors with debug output
 		if (error instanceof z.ZodError) {
@@ -1067,15 +1071,15 @@ export async function runRawHandler<TOptions, TState = Record<string, string>>(
 		throw error;
 	}
 
-	// Extract options and state, merge with base env
-	const handlerOptions = (env.vars ?? {}) as TOptions;
+	// Extract options and state, merge with base state
+	const handlerOptions = (stateInstance.vars ?? {}) as TOptions;
 	const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE ?? "";
 	const cwd = "cwd" in event ? (event.cwd as string) : process.cwd();
-	const baseEnv = createBaseEnv(cwd, claudeEnvFile, env);
-	const state = extractStateFromEnv(env);
-	const pluginEnv = { ...baseEnv, ...state } as TState;
+	const baseState = createBaseState(cwd, claudeEnvFile, stateInstance);
+	const persistedState = extractPersistedState(stateInstance);
+	const pluginState = { ...baseState, ...persistedState } as TState;
 
-	await handler({ event, options: handlerOptions, env: pluginEnv });
+	await handler({ event, options: handlerOptions, state: pluginState });
 }
 
 /**
@@ -1147,8 +1151,8 @@ export async function handleUnknownHook(hookKey: string, validHooks: string[]): 
 // =============================================================================
 
 export {
-	createBaseEnv,
-	extractStateFromEnv,
+	createBaseState,
+	extractPersistedState,
 	getHookEventClasses,
 	isDebugEnabled,
 	mapToOutcome,

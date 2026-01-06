@@ -14,7 +14,7 @@
  *
  * **Core Exports:**
  * - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations
- * - {@link ClaudeBinaryPluginEnv} - Base class for environment management
+ * - {@link ClaudeBinaryPluginState} - Base class for state management
  * - {@link buildPlugin} - Compile plugins to executables
  * - Hook event classes (`PreToolUseHookEvent`, `SessionStartHookEvent`, etc.)
  *
@@ -43,8 +43,8 @@
 // CORE TYPES
 // =============================================================================
 
-export type { EnvCodecMetadata } from "./env/codecs.js";
-export { EnvCodecs } from "./env/codecs.js";
+export type { EnvCodecMetadata } from "./state/codecs.js";
+export { EnvCodecs } from "./state/codecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -58,11 +58,11 @@ export type {
 	ZodErrorMinimal,
 	ZodIssueMinimal,
 	ZodSchema,
-} from "./env/plugin-env.js";
-export { ClaudeBinaryPluginEnv, EnvFileLoadError } from "./env/plugin-env.js";
-export type { SessionRecord, SessionRegistration } from "./env/session-registry.js";
+} from "./state/plugin-state.js";
+export { ClaudeBinaryPluginState, EnvFileLoadError } from "./state/plugin-state.js";
+export type { SessionRecord, SessionRegistration } from "./state/session-registry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry, closeDb } from "./env/session-registry.js";
+export { SessionRegistry, closeDb } from "./state/session-registry.js";
 export type {
 	DebugLoggerOptions,
 	FileSystem,
@@ -281,7 +281,7 @@ export { main as sidecarMain } from "./otel/sidecar/main.js";
 // =============================================================================
 
 export type {
-	BaseEnv,
+	BaseState,
 	CommandContext,
 	CommandDefinition,
 	CommandHandler,
@@ -304,7 +304,7 @@ export type {
 	PipelineHookDefinition,
 	PluginBuildOptions,
 	PluginConfig,
-	PluginEnv,
+	PluginState,
 	PostToolUseHookDefinition,
 	PostToolUsePipeline,
 	PostToolUseRawHandler,
@@ -462,4 +462,4 @@ export type {
 	MockFatalErrorResult,
 	MockIOResult,
 } from "./testing/mocks.js";
-export { MockEnv, MockExitError, Mocks } from "./testing/mocks.js";
+export { MockExitError, MockState, Mocks } from "./testing/mocks.js";

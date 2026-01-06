@@ -18,9 +18,9 @@ For deeper context, reference these files:
 - `src/pipeline/config.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
 - `src/pipeline/runtime.ts` - `runPipeline()` execution and response mapping
 - `src/build/builder.ts` - `buildPlugin()` compilation and entrypoint generation
-- `src/env/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class for environment management
+- `src/state/plugin-state.ts` - `ClaudeBinaryPluginState` base class for state management
 - `src/commands/runtime.ts` - `runCommand()` for CLI command execution
-- `src/env/session-registry.ts` - SQLite session lookup for state persistence
+- `src/state/session-registry.ts` - SQLite session lookup for state persistence
 - `src/core/schemas.ts` - Zod schemas for Claude Code hook event inputs
 - `src/otel/client.ts` - SidecarClient for fire-and-forget telemetry
 - `src/otel/constants.ts` - OTEL attribute and metric name constants
@@ -31,8 +31,22 @@ For deeper context, reference these files:
 `claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
 that compile to single-file Bun executables. It provides a declarative
 pipeline system for defining hooks and commands with Zod-validated
-inputs/outputs, OpenTelemetry observability, and type-safe environment
+inputs/outputs, OpenTelemetry observability, and type-safe state
 management.
+
+## Release Status
+
+**Target: 1.0.0** - This module is working toward its initial public release.
+
+- **Feature complete** - Core functionality is implemented and stable
+- **API refinement phase** - Focusing on API ergonomics and consistency
+- **Documentation focus** - Improving docs to help users understand usage
+- **Not yet public** - No external users or published packages
+- **No backward compatibility concerns** - Make clean API changes freely
+  without deprecation warnings or migration guides
+
+When refactoring or renaming APIs, prefer clean breaks over compatibility
+shims. Remove old code entirely rather than maintaining aliases.
 
 ## Development Commands
 
@@ -108,7 +122,7 @@ bun run build
 - `src/pipeline/runtime.ts` - `runPipeline()`, response mapping
 - `src/pipeline/types.ts` - Output schemas per hook type
 - `src/build/builder.ts` - `buildPlugin()`, entrypoint generation
-- `src/env/plugin-env.ts` - `ClaudeBinaryPluginEnv` base class
+- `src/state/plugin-state.ts` - `ClaudeBinaryPluginState` base class
 - `src/core/schemas.ts` - Zod schemas for hook event inputs
 - `src/otel/` - OpenTelemetry integration (class-based API)
 
@@ -116,8 +130,8 @@ bun run build
 
 1. Claude Code invokes plugin binary with hook event JSON on stdin
 2. Plugin runtime parses input with Zod schema (`src/schemas.ts`)
-3. Environment loaded via `ClaudeBinaryPluginEnv` (options + state)
-4. Handler called with `{ input, options, env }` context
+3. State loaded via `ClaudeBinaryPluginState` (options + computed state)
+4. Handler called with `{ input, options, state }` context
 5. Handler returns pipeline output with `status`, `action`, `summary`
 6. Runtime validates output, emits OTEL telemetry
 7. JSON response written to stdout, process exits

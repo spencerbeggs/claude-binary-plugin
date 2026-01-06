@@ -44,7 +44,7 @@ const plugin = ClaudeBinaryPlugin.create({
   }),
 
   // Runs at SessionStart to compute derived state
-  setup: async ({ options, cwd, env }) => {
+  setup: async ({ options, cwd }) => {
     return { detectedPackageManager: await detectPM(cwd) };
   },
 
@@ -103,7 +103,7 @@ Every hook handler receives context from three distinct layers:
 ┌───────────────────────────────────────────────────────────────────┐
 │  Handler Function                                                  │
 │  ───────────────────────────────────────────────────────────────  │
-│  ({ input, options, env }) => PipelineOutput                      │
+│  ({ input, options, state }) => PipelineOutput                    │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -149,7 +149,7 @@ Defines the handler function directly:
 ```typescript
 {
   name: "simple-check",
-  pipeline: async ({ input, options, env }) => {
+  pipeline: async ({ input, options, state }) => {
     return { status: "executed", action: "allow", summary: "ok" };
   },
 }
@@ -297,12 +297,12 @@ integration with existing hook scripts.
 3. Runtime parses input with Zod schema (src/schemas.ts)
    PreToolUseInputSchema.parse(stdinData)
 
-4. Runtime loads environment:
+4. Runtime loads state:
    - SessionStart: Load .env files, run setup()
    - Other hooks: Load from CLAUDE_ENV_FILE via session registry
 
 5. Runtime calls handler with typed context
-   handler({ input, options, env })
+   handler({ input, options, state })
 
 6. Handler returns pipeline output
    { status: "executed", action: "allow", summary: "..." }
@@ -359,7 +359,7 @@ Subsequent Hooks (PreToolUse, etc.)
 └──────────────────┘
        │
        ▼
-│  State available in handler({ env: { packageManager, ... } })
+│  State available in handler({ state: { packageManager, ... } })
 ```
 
 ## Build System
@@ -371,7 +371,7 @@ The `buildPlugin()` function in `src/builder.ts`:
 1. **Generates entrypoint code** - Creates a TypeScript file that:
    - Imports the plugin configuration
    - Imports all hook handler modules
-   - Creates the env class from schema
+   - Creates the state class from schema
    - Routes CLI arguments to the correct hook handler
    - Calls `runPipeline()` with the right configuration
 
@@ -410,7 +410,7 @@ switch (hookKey) {
       hookType: "PreToolUse",
       hookName: "security",
       pipeline: securityHandler,
-      envClass: EnvClass,
+      stateClass: StateClass,
       tools: ["Bash"],
       setup: plugin.setup,
       schema: plugin.schema,
@@ -434,10 +434,10 @@ runPipeline(options)
        ├──▶ Create HookEvent from stdin
        │         │
        │         ▼
-       │    EventClass.create({ stdin, stdout, stderr, envClass })
+       │    EventClass.create({ stdin, stdout, stderr, stateClass })
        │         │
        │         ▼
-       │    Parse JSON, validate with Zod, create env instance
+       │    Parse JSON, validate with Zod, create state instance
        │
        ├──▶ Check tool filter (PreToolUse/PostToolUse)
        │         │
@@ -453,7 +453,7 @@ runPipeline(options)
        ├──▶ Call pipeline handler
        │         │
        │         ▼
-       │    output = await pipeline({ input, options, env })
+       │    output = await pipeline({ input, options, state })
        │
        ├──▶ Validate output is pipeline format
        │         │
@@ -498,11 +498,11 @@ Claude Code's expected response:
 }
 ```
 
-## Environment Management
+## State Management
 
-### ClaudeBinaryPluginEnv Class
+### ClaudeBinaryPluginState Class
 
-The `ClaudeBinaryPluginEnv` class in `src/plugin-env.ts` provides:
+The `ClaudeBinaryPluginState` class in `src/state/plugin-state.ts` provides:
 
 1. **Schema validation** - Validates env vars against Zod schema
 2. **Context-aware loading** - Different loading strategies per context
@@ -523,7 +523,7 @@ const env = await MyEnv.forContext("sessionStart", {
 const env = await MyEnv.forContext("hook", {
   hookName: "my-hook",
   sessionId: event.session_id,
-  sessionEnvDir: ClaudeBinaryPluginEnv.getSessionEnvDir(event.session_id),
+  sessionEnvDir: ClaudeBinaryPluginState.getSessionEnvDir(event.session_id),
 });
 
 // Commands: Parse --vars argument
@@ -973,14 +973,14 @@ import type { Commands } from "../plugin.js";
 const handler: Commands["lint"] = async ({
   args,
   options,
-  env
+  state
 }): Promise<CommandOutput> => {
   // args: Validated from Zod schema
   // options: Plugin options (DEBUG, etc.) from Layer 2
-  // env: Computed state from setup()
+  // state: Computed state from setup()
 
   const targetPaths = args._positionals;
-  const results = await runLinters(targetPaths, env.enabled);
+  const results = await runLinters(targetPaths, state.enabled);
 
   return {
     exitCode: 0,  // 0=success, 1=issues found, 2=fatal error
@@ -1062,7 +1062,7 @@ Key elements:
 │  3. Find session env dir (SQLite or CLAUDE_ENV_FILE)          │
 │  4. Load hook-*.sh files to restore persisted state           │
 │  5. Decode {PREFIX}_PLUGIN_STATE from base64 JSON             │
-│  6. Call handler({ args, options, env })                      │
+│  6. Call handler({ args, options, state })                    │
 │  7. Output markdown to stdout                                  │
 │  8. Exit with code                                             │
 └───────────────────────────────────────────────────────────────┘
@@ -1107,20 +1107,20 @@ State persisted to hook-0.sh as base64 JSON
        ▼
 Commands load state via:
   1. SessionRegistry.getByProjectDir(cwd) → session-env dir
-  2. ClaudeBinaryPluginEnv.loadAllHookFiles(dir) → parse hook-*.sh
-  3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ env })
+  2. ClaudeBinaryPluginState.loadAllHookFiles(dir) → parse hook-*.sh
+  3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ state })
 ```
 
 This enables commands to use detection results without re-running:
 
 ```typescript
-// In command handler - no need to detect, just use env
-const handler: Commands["lint"] = async ({ env }) => {
-  if (env.enabled.biome) {
-    await runBiome(env.config.biome);
+// In command handler - no need to detect, just use state
+const handler: Commands["lint"] = async ({ state }) => {
+  if (state.enabled.biome) {
+    await runBiome(state.config.biome);
   }
-  if (env.enabled.shellcheck) {
-    await runShellcheck(env.config.shellcheckBin);
+  if (state.enabled.shellcheck) {
+    await runShellcheck(state.config.shellcheckBin);
   }
   // ...
 };
@@ -1138,8 +1138,8 @@ src/
 ├── core/
 │   ├── schemas.ts        # Input Zod schemas
 │   └── tool-inputs.ts    # Tool input types
-├── env/
-│   ├── plugin-env.ts     # ClaudeBinaryPluginEnv base class
+├── state/
+│   ├── plugin-state.ts   # ClaudeBinaryPluginState base class
 │   ├── session-registry.ts # SQLite session lookup
 │   └── codecs.ts         # Zod codecs for env vars
 ├── events/

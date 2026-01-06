@@ -49,11 +49,10 @@
 
 import { z } from "zod";
 import { HookEventSchemas } from "../core/schemas.js";
-import { ClaudeBinaryPluginEnv, formatZodError as formatZodErrorAsMarkdown } from "../env/plugin-env.js";
-import { DebugLogger } from "../utils/debug-logger.js";
-import type { HookEventName } from "./enums.js";
 import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
-import type { HookPermissionsMode } from "./enums.js";
+import { ClaudeBinaryPluginState, formatZodError as formatZodErrorAsMarkdown } from "../state/plugin-state.js";
+import { DebugLogger } from "../utils/debug-logger.js";
+import type { HookEventName, HookPermissionsMode } from "./enums.js";
 import { HookResponseBuilder } from "./response-builders.js";
 import type { HookEventBase, HookEventOptions, IO } from "./types.js";
 import { SchemaValidator } from "./validation.js";
@@ -66,7 +65,7 @@ import { SchemaValidator } from "./validation.js";
  * subclasses inherit:
  *
  * - **I/O Management**: Reading JSON from stdin, writing responses to stdout
- * - **Environment Loading**: Session-aware environment context via {@link ClaudeBinaryPluginEnv}
+ * - **Environment Loading**: Session-aware environment context via {@link ClaudeBinaryPluginState}
  * - **Response Building**: Fluent API for constructing hook responses
  * - **Telemetry**: Automatic OTEL event emission for observability
  * - **Error Handling**: Global error handlers for graceful failure
@@ -92,14 +91,14 @@ import { SchemaValidator } from "./validation.js";
  * event.error("Something went wrong");
  * ```
  *
- * @typeParam TEnv - The plugin environment type, typically inferred from plugin schema
+ * @typeParam TState - The plugin state type, typically inferred from plugin schema
  *
  * @see {@link PreToolUseHookEvent} - Most commonly used subclass
  * @see {@link HookEventOptions} - Options for event creation
  * @see {@link HookResponseBuilder} - Base response builder class
  * @public
  */
-export class HookEvent<TEnv = unknown> implements HookEventBase {
+export class HookEvent<TState = unknown> implements HookEventBase {
 	/** Custom name for this hook instance, used in logging and telemetry */
 	name: string;
 	/** Unique Claude Code session identifier (UUID format) */
@@ -114,8 +113,8 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	hook_event_name: HookEventName;
 	/** Debug logger instance for structured logging with timing */
 	readonly log: DebugLogger;
-	/** The loaded plugin environment containing options and computed state */
-	readonly env?: TEnv;
+	/** The loaded plugin state containing options and computed state */
+	readonly state?: TState;
 
 	/**
 	 * Standard input stream for reading event data.
@@ -153,7 +152,7 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	 */
 	private telemetryEmitted = false;
 
-	constructor(params: HookEventBase, options: HookEventOptions<TEnv>, env?: TEnv) {
+	constructor(params: HookEventBase, options: HookEventOptions<TState>, state?: TState) {
 		this.name = options.name ?? params.hook_event_name;
 		this.session_id = params.session_id;
 		this.transcript_path = params.transcript_path;
@@ -170,7 +169,7 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 			pluginName: options.pluginName,
 			sessionId: params.session_id,
 		});
-		this.env = env;
+		this.state = state;
 	}
 
 	/**
@@ -541,22 +540,24 @@ export class HookEvent<TEnv = unknown> implements HookEventBase {
 	 * @throws Error if stdin is empty or invalid JSON
 	 * @public
 	 */
-	static async create<TEnv = unknown>(options: HookEventOptions<TEnv>): Promise<{ event: HookEvent<TEnv>; env: TEnv }> {
+	static async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: HookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "HookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
 		const params = await HookEvent.readInputText(options);
 		if (params) {
 			const parsed = (await SchemaValidator.parse(params, HookEventSchemas.Any, hookName)) as HookEventBase;
-			const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-			// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-			const env = (await (options.envClass as any).forContext("hook", {
+			const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+			// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+			const state = (await (options.stateClass as any).forContext("hook", {
 				sessionId: parsed.session_id,
 				sessionEnvDir,
 				hookName,
-			})) as TEnv;
-			const event = new HookEvent(parsed, options, env);
-			return { event, env };
+			})) as TState;
+			const event = new HookEvent(parsed, options, state);
+			return { event, state };
 		}
 		throw new Error("Failed to read HookEvent from stdin");
 	}

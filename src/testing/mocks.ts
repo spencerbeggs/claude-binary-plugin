@@ -41,8 +41,8 @@
  */
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
-import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
 import type { HookEventBase, IO } from "../events/types.js";
+import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
 
 // =============================================================================
 // LOGGER MOCKS
@@ -83,10 +83,10 @@ export function mockLogger(): {
 // =============================================================================
 
 /**
- * Mock environment class for testing.
+ * Mock state class for testing plugin handlers.
  * @public
  */
-export class MockEnv extends ClaudeBinaryPluginEnv {
+export class MockState extends ClaudeBinaryPluginState {
 	protected readonly prefix = "MOCK";
 }
 
@@ -101,8 +101,8 @@ export interface MockIOResult extends IO {
 	getStdout: () => string;
 	/** Get all captured stderr output as a string */
 	getStderr: () => string;
-	/** Mock environment class */
-	envClass: typeof MockEnv;
+	/** Mock state class */
+	stateClass: typeof MockState;
 }
 
 /**
@@ -155,7 +155,7 @@ export function mockIO<T extends HookEventBase>(input: T): MockIOResult {
 		stderr: {
 			write: mock(() => true),
 		} as unknown as typeof process.stderr,
-		envClass: MockEnv,
+		stateClass: MockState,
 		getStdout: () => stdoutBuffer,
 		getStderr: () => stderrBuffer,
 	};
@@ -914,11 +914,11 @@ export class Mocks {
 	static readonly envPresets = envPresets;
 
 	/**
-	 * Mock environment class for ClaudeBinaryPluginEnv.
+	 * Mock state class for ClaudeBinaryPluginState.
 	 *
 	 * @public
 	 */
-	static readonly MockEnvClass = MockEnv;
+	static readonly MockStateClass = MockState;
 
 	// =========================================================================
 	// COMMAND MOCKING

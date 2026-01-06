@@ -13,7 +13,7 @@ import type {
 	UserPromptSubmitEvent,
 } from "./index.js";
 import {
-	ClaudeBinaryPluginEnv,
+	ClaudeBinaryPluginState,
 	HookEvent,
 	HookEventName,
 	HookResponseBuilder,
@@ -41,8 +41,8 @@ import { envPresets, mockEnv } from "./testing/mocks.js";
 // TEST UTILITIES
 // =============================================================================
 
-// Mock environment class for testing
-class MockEnv extends ClaudeBinaryPluginEnv {
+// Mock state class for testing
+class MockState extends ClaudeBinaryPluginState {
 	protected readonly prefix = "MOCK";
 }
 
@@ -58,7 +58,7 @@ function mockBunStdin<T extends HookEventBase>(input: T) {
 		stderr: {
 			write: mock(() => true),
 		} as unknown as typeof process.stderr,
-		envClass: MockEnv,
+		stateClass: MockState,
 	};
 }
 
@@ -518,7 +518,7 @@ describe("HookEvent", () => {
 			stdin: process.stdin,
 			stdout: { write: mock(() => true) } as unknown as typeof process.stdout,
 			stderr: { write: mock(() => true) } as unknown as typeof process.stderr,
-			envClass: MockEnv,
+			stateClass: MockState,
 		};
 
 		await expect(HookEvent.create(io)).rejects.toThrow("Failed to read HookEvent from stdin");
@@ -569,7 +569,7 @@ describe("PreToolUseHookEvent", () => {
 			stdin: process.stdin,
 			stdout: { write: mock(() => true) } as unknown as typeof process.stdout,
 			stderr: { write: mock(() => true) } as unknown as typeof process.stderr,
-			envClass: MockEnv,
+			stateClass: MockState,
 		};
 
 		await expect(PreToolUseHookEvent.create(io)).rejects.toThrow("Failed to read PreToolUseEvent from stdin");

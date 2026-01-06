@@ -28,7 +28,7 @@ export interface IO {
  * Options for creating a HookEvent.
  * @public
  */
-export interface HookEventOptions<TEnv = unknown> extends IO {
+export interface HookEventOptions<TState = unknown> extends IO {
 	/** Name for the debug logger (e.g., "workflow-context", "code-check") */
 	name?: string;
 	/**
@@ -42,9 +42,9 @@ export interface HookEventOptions<TEnv = unknown> extends IO {
 	 */
 	pluginVersion?: string;
 	/**
-	 * ClaudeBinaryPluginEnv subclass for type-safe environment loading.
+	 * ClaudeBinaryPluginState subclass for type-safe state loading.
 	 */
-	envClass: new () => TEnv;
+	stateClass: new () => TState;
 }
 
 // =============================================================================

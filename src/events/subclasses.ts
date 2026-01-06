@@ -37,9 +37,9 @@
  */
 
 import { HookEventSchemas } from "../core/schemas.js";
-import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
 import { OTELConfig } from "../otel/classes/OTELConfig.js";
 import { getSidecarClient } from "../otel/client.js";
+import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
 import { HookEvent } from "./base.js";
 import { HookEventName } from "./enums.js";
 import {
@@ -112,7 +112,7 @@ import { SchemaValidator } from "./validation.js";
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link PostToolUseHookEvent} - Fires after tool completion
  * @see {@link PreToolUseOutput} - Valid output structure for pipeline handlers
@@ -120,7 +120,7 @@ import { SchemaValidator } from "./validation.js";
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#pretooluse | PreToolUse Hook Documentation}
  * @public
  */
-export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements PreToolUseEvent {
+export class PreToolUseHookEvent<TState = unknown> extends HookEvent<TState> implements PreToolUseEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.PreToolUse as const;
 	/** The name of the tool being invoked (e.g., "Bash", "Edit", "Write") */
@@ -130,8 +130,8 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 	/** Unique identifier for this tool invocation, used to correlate with PostToolUse */
 	tool_use_id: string;
 
-	constructor(params: PreToolUseEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: PreToolUseEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.tool_name = params.tool_name;
 		this.tool_input = params.tool_input;
 		this.tool_use_id = params.tool_use_id;
@@ -141,9 +141,9 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 		return new PreToolUseResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: PreToolUseHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: PreToolUseHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "PreToolUseHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -152,15 +152,15 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 			throw new Error("Failed to read PreToolUseEvent from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreToolUse, hookName)) as PreToolUseEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new PreToolUseHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new PreToolUseHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -199,7 +199,7 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link PreToolUseHookEvent} - Fires before tool execution
  * @see {@link PostToolUseOutput} - Valid output structure for pipeline handlers
@@ -207,7 +207,7 @@ export class PreToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#posttooluse | PostToolUse Hook Documentation}
  * @public
  */
-export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements PostToolUseEvent {
+export class PostToolUseHookEvent<TState = unknown> extends HookEvent<TState> implements PostToolUseEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.PostToolUse as const;
 	/** The name of the tool that was invoked */
@@ -219,8 +219,8 @@ export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implem
 	/** Unique identifier matching the corresponding PreToolUse event */
 	tool_use_id: string;
 
-	constructor(params: PostToolUseEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: PostToolUseEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.tool_name = params.tool_name;
 		this.tool_input = params.tool_input;
 		this.tool_response = params.tool_response;
@@ -231,9 +231,9 @@ export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implem
 		return new PostToolUseResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: PostToolUseHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: PostToolUseHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "PostToolUseHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -242,15 +242,15 @@ export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implem
 			throw new Error("Failed to read PostToolUseEvent from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PostToolUse, hookName)) as PostToolUseEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new PostToolUseHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new PostToolUseHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -289,14 +289,14 @@ export class PostToolUseHookEvent<TEnv = unknown> extends HookEvent<TEnv> implem
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link PermissionRequestOutput} - Valid output structure for pipeline handlers
  * @see {@link PermissionRequestResponseBuilder} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements PermissionRequestEvent {
+export class PermissionRequestHookEvent<TState = unknown> extends HookEvent<TState> implements PermissionRequestEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.PermissionRequest as const;
 	/** The permission request message shown to the user */
@@ -304,8 +304,8 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
 	/** The type of notification/permission being requested */
 	notification_type: string;
 
-	constructor(params: PermissionRequestEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: PermissionRequestEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.message = params.message;
 		this.notification_type = params.notification_type;
 	}
@@ -314,9 +314,9 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
 		return new PermissionRequestResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: PermissionRequestHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: PermissionRequestHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "PermissionRequestHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -329,15 +329,15 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
 			HookEventSchemas.PermissionRequest,
 			hookName,
 		)) as PermissionRequestEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new PermissionRequestHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new PermissionRequestHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -366,13 +366,13 @@ export class PermissionRequestHookEvent<TEnv = unknown> extends HookEvent<TEnv> 
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link NotificationPipelineOutput} - Valid output structure for pipeline handlers
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export class NotificationHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements NotificationEvent {
+export class NotificationHookEvent<TState = unknown> extends HookEvent<TState> implements NotificationEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.Notification as const;
 	/** The notification message content */
@@ -380,15 +380,15 @@ export class NotificationHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 	/** The category/type of notification (e.g., "progress", "status") */
 	notification_type: NotificationType;
 
-	constructor(params: NotificationEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: NotificationEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.message = params.message;
 		this.notification_type = params.notification_type;
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: NotificationHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: NotificationHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "NotificationHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -401,15 +401,15 @@ export class NotificationHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 			HookEventSchemas.Notification,
 			hookName,
 		)) as NotificationEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new NotificationHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new NotificationHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -448,21 +448,21 @@ export class NotificationHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link UserPromptSubmitOutput} - Valid output structure for pipeline handlers
  * @see {@link UserPromptSubmitResponseBuilder} - Fluent builder for responses
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#userpromptsubmit | UserPromptSubmit Hook Documentation}
  * @public
  */
-export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements UserPromptSubmitEvent {
+export class UserPromptSubmitHookEvent<TState = unknown> extends HookEvent<TState> implements UserPromptSubmitEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.UserPromptSubmit as const;
 	/** The user's prompt text */
 	prompt: string;
 
-	constructor(params: UserPromptSubmitEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: UserPromptSubmitEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.prompt = params.prompt;
 	}
 
@@ -470,9 +470,9 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
 		return new UserPromptSubmitResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: UserPromptSubmitHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: UserPromptSubmitHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "UserPromptSubmitHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -485,15 +485,15 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
 			HookEventSchemas.UserPromptSubmit,
 			hookName,
 		)) as UserPromptSubmitEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new UserPromptSubmitHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new UserPromptSubmitHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -533,7 +533,7 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link SubagentStopHookEvent} - Similar hook for subagents
  * @see {@link StopPipelineOutput} - Valid output structure for pipeline handlers
@@ -541,14 +541,14 @@ export class UserPromptSubmitHookEvent<TEnv = unknown> extends HookEvent<TEnv> i
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#stop | Stop Hook Documentation}
  * @public
  */
-export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements StopEvent {
+export class StopHookEvent<TState = unknown> extends HookEvent<TState> implements StopEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.Stop as const;
 	/** Whether stop hooks are currently active for this session */
 	stop_hook_active: boolean;
 
-	constructor(params: StopEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: StopEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.stop_hook_active = params.stop_hook_active;
 	}
 
@@ -556,9 +556,9 @@ export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements St
 		return new StopResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: StopHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: StopHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "StopHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -567,15 +567,15 @@ export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements St
 			throw new Error("Failed to read StopEvent from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.Stop, hookName)) as StopEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new StopHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new StopHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -603,7 +603,7 @@ export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements St
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link StopHookEvent} - Similar hook for the main agent
  * @see {@link SubagentStopPipelineOutput} - Valid output structure for pipeline handlers
@@ -611,14 +611,14 @@ export class StopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements St
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#subagentstop | SubagentStop Hook Documentation}
  * @public
  */
-export class SubagentStopHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements SubagentStopEvent {
+export class SubagentStopHookEvent<TState = unknown> extends HookEvent<TState> implements SubagentStopEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.SubagentStop as const;
 	/** Whether stop hooks are currently active for this session */
 	stop_hook_active: boolean;
 
-	constructor(params: SubagentStopEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: SubagentStopEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.stop_hook_active = params.stop_hook_active;
 	}
 
@@ -626,9 +626,9 @@ export class SubagentStopHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		return new StopResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: SubagentStopHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: SubagentStopHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "SubagentStopHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -641,15 +641,15 @@ export class SubagentStopHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 			HookEventSchemas.SubagentStop,
 			hookName,
 		)) as SubagentStopEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new SubagentStopHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new SubagentStopHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -679,13 +679,13 @@ export class SubagentStopHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link PreCompactPipelineOutput} - Valid output structure for pipeline handlers
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @public
  */
-export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements PreCompactEvent {
+export class PreCompactHookEvent<TState = unknown> extends HookEvent<TState> implements PreCompactEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.PreCompact as const;
 	/** The reason compaction was triggered (e.g., "context_limit") */
@@ -693,15 +693,15 @@ export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 	/** User-provided instructions for how to handle compaction */
 	custom_instructions: string;
 
-	constructor(params: PreCompactEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: PreCompactEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.trigger = params.trigger;
 		this.custom_instructions = params.custom_instructions;
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: PreCompactHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: PreCompactHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "PreCompactHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -710,15 +710,15 @@ export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 			throw new Error("Failed to read PreCompactEvent from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.PreCompact, hookName)) as PreCompactEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new PreCompactHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new PreCompactHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -762,7 +762,7 @@ export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link SessionEndHookEvent} - Fires when the session terminates
  * @see {@link SessionStartOutput} - Valid output structure for pipeline handlers
@@ -770,14 +770,14 @@ export class PreCompactHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#sessionstart | SessionStart Hook Documentation}
  * @public
  */
-export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements SessionStartEvent {
+export class SessionStartHookEvent<TState = unknown> extends HookEvent<TState> implements SessionStartEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.SessionStart as const;
 	/** Whether this is a new session or a resumed one ("new" | "resume") */
 	source: SessionStartSource;
 
-	constructor(params: SessionStartEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: SessionStartEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.source = params.source;
 	}
 
@@ -785,9 +785,9 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		return new SessionStartResponseBuilder();
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: SessionStartHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: SessionStartHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "SessionStartHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -802,11 +802,11 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 		)) as SessionStartEvent;
 		const name = options.name ?? parsed.hook_event_name;
 
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const { env } = (await (options.envClass as any).initializeSession({
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const { state } = (await (options.stateClass as any).initializeSession({
 			hookName: name,
 			sessionId: parsed.session_id,
-		})) as { env: TEnv; persisted: unknown };
+		})) as { state: TState; persisted: unknown };
 
 		// Initialize OTEL sidecar if telemetry is enabled
 		if (OTELConfig.isEnabled()) {
@@ -815,8 +815,8 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
 			await client.ensureRunning(config);
 		}
 
-		const event = new SessionStartHookEvent(parsed, options, env);
-		return { event, env };
+		const event = new SessionStartHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }
 
@@ -845,27 +845,27 @@ export class SessionStartHookEvent<TEnv = unknown> extends HookEvent<TEnv> imple
  * export default handler;
  * ```
  *
- * @typeParam TEnv - The plugin environment type containing options and computed state
+ * @typeParam TState - The plugin state type containing options and computed state
  *
  * @see {@link SessionStartHookEvent} - Fires when the session begins
  * @see {@link SessionEndPipelineOutput} - Valid output structure for pipeline handlers
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#sessionend | SessionEnd Hook Documentation}
  * @public
  */
-export class SessionEndHookEvent<TEnv = unknown> extends HookEvent<TEnv> implements SessionEndEvent {
+export class SessionEndHookEvent<TState = unknown> extends HookEvent<TState> implements SessionEndEvent {
 	/** {@inheritDoc HookEvent.hook_event_name} */
 	override hook_event_name = HookEventName.SessionEnd as const;
 	/** The reason the session is ending (e.g., "user_exit", "timeout") */
 	reason: SessionEndReason;
 
-	constructor(params: SessionEndEvent, options: HookEventOptions<TEnv>, env?: TEnv) {
-		super(params, options, env);
+	constructor(params: SessionEndEvent, options: HookEventOptions<TState>, state?: TState) {
+		super(params, options, state);
 		this.reason = params.reason;
 	}
 
-	static override async create<TEnv = unknown>(
-		options: HookEventOptions<TEnv>,
-	): Promise<{ event: SessionEndHookEvent<TEnv>; env: TEnv }> {
+	static override async create<TState = unknown>(
+		options: HookEventOptions<TState>,
+	): Promise<{ event: SessionEndHookEvent<TState>; state: TState }> {
 		const hookName = options.name ?? "SessionEndHookEvent";
 		HookEvent.setupGlobalErrorHandlers(hookName);
 
@@ -874,14 +874,14 @@ export class SessionEndHookEvent<TEnv = unknown> extends HookEvent<TEnv> impleme
 			throw new Error("Failed to read SessionEndEvent from stdin");
 		}
 		const parsed = (await SchemaValidator.parse(eventText, HookEventSchemas.SessionEnd, hookName)) as SessionEndEvent;
-		const sessionEnvDir = await ClaudeBinaryPluginEnv.getSessionEnvDir(parsed.session_id);
-		// biome-ignore lint/suspicious/noExplicitAny: Dynamic env loading
-		const env = (await (options.envClass as any).forContext("hook", {
+		const sessionEnvDir = await ClaudeBinaryPluginState.getSessionEnvDir(parsed.session_id);
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic state loading
+		const state = (await (options.stateClass as any).forContext("hook", {
 			sessionId: parsed.session_id,
 			sessionEnvDir,
 			hookName,
-		})) as TEnv;
-		const event = new SessionEndHookEvent(parsed, options, env);
-		return { event, env };
+		})) as TState;
+		const event = new SessionEndHookEvent(parsed, options, state);
+		return { event, state };
 	}
 }

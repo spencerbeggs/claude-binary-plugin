@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Writable } from "node:stream";
 import { z } from "zod";
-import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
+import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
 import type { MockEnvContext } from "../testing/mocks.js";
 import { mockEnv } from "../testing/mocks.js";
 import type { IODependencies } from "./runtime.js";
@@ -13,8 +13,8 @@ import {
 	convertToSessionStartResponse,
 	convertToStopResponse,
 	convertToUserPromptSubmitResponse,
-	createBaseEnv,
-	extractStateFromEnv,
+	createBaseState,
+	extractPersistedState,
 	isDebugEnabled,
 	mapToOutcome,
 	mapToPermissionDecision,
@@ -69,13 +69,13 @@ function createMockExit(): (code: number) => never {
 	};
 }
 
-describe("ClaudeBinaryPluginEnv.create", () => {
+describe("ClaudeBinaryPluginState.create", () => {
 	test("creates a class with the correct prefix", () => {
 		const schema = z.object({
 			DEBUG: z.boolean().default(false),
 		});
 
-		const EnvClass = ClaudeBinaryPluginEnv.create("MY_PLUGIN", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("MY_PLUGIN", schema);
 		const instance = new EnvClass();
 
 		// The class should be instantiable
@@ -88,7 +88,7 @@ describe("ClaudeBinaryPluginEnv.create", () => {
 			LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		});
 
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
 		// The validated getter should exist (actual validation happens during hook creation)
@@ -98,8 +98,8 @@ describe("ClaudeBinaryPluginEnv.create", () => {
 	test("creates unique classes for different prefixes", () => {
 		const schema = z.object({});
 
-		const ClassA = ClaudeBinaryPluginEnv.create("PREFIX_A", schema);
-		const ClassB = ClaudeBinaryPluginEnv.create("PREFIX_B", schema);
+		const ClassA = ClaudeBinaryPluginState.create("PREFIX_A", schema);
+		const ClassB = ClaudeBinaryPluginState.create("PREFIX_B", schema);
 
 		// They should be different classes
 		expect(ClassA).not.toBe(ClassB);
@@ -115,7 +115,7 @@ describe("ClaudeBinaryPluginEnv.create", () => {
 			ENABLED: z.coerce.boolean().default(true),
 		});
 
-		const EnvClass = ClaudeBinaryPluginEnv.create("COMPLEX", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("COMPLEX", schema);
 		const instance = new EnvClass();
 
 		expect(instance).toBeDefined();
@@ -151,7 +151,7 @@ describe("PLUGIN_STATE base64 encoding", () => {
 		expect(encoded).not.toContain("`");
 		expect(encoded).not.toContain('"');
 
-		// Verify decoding works (simulates extractStateFromEnv)
+		// Verify decoding works (simulates extractPersistedState)
 		const decoded = Buffer.from(encoded, "base64").toString("utf8");
 		const parsed = JSON.parse(decoded);
 
@@ -193,7 +193,7 @@ describe("PLUGIN_STATE base64 encoding", () => {
 		expect(parsed.config.markdownlint).toBe("/path/to/`config`/file.json");
 	});
 
-	test("extractStateFromEnv decodes base64 state from env var", () => {
+	test("extractPersistedState decodes base64 state from env var", () => {
 		const state = {
 			projectDir: "/home/user",
 			command: "$TEST_DIR/run.sh",
@@ -205,7 +205,7 @@ describe("PLUGIN_STATE base64 encoding", () => {
 
 		// Create env class and instance
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
 		// The instance should have the prefix
@@ -770,10 +770,10 @@ describe("isDebugEnabled", () => {
 });
 
 // =============================================================================
-// extractStateFromEnv tests
+// extractPersistedState tests
 // =============================================================================
 
-describe("extractStateFromEnv", () => {
+describe("extractPersistedState", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
@@ -787,18 +787,18 @@ describe("extractStateFromEnv", () => {
 	test("returns empty object when no prefix", () => {
 		const schema = z.object({});
 		// Create env class without prefix
-		class NoPrefix extends ClaudeBinaryPluginEnv.create("", schema) {
+		class NoPrefix extends ClaudeBinaryPluginState.create("", schema) {
 			protected readonly prefix = "";
 		}
 		const instance = new NoPrefix();
-		expect(extractStateFromEnv(instance)).toEqual({});
+		expect(extractPersistedState(instance)).toEqual({});
 	});
 
 	test("returns empty object when PLUGIN_STATE not set", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
-		expect(extractStateFromEnv(instance)).toEqual({});
+		expect(extractPersistedState(instance)).toEqual({});
 	});
 
 	test("decodes base64 PLUGIN_STATE", () => {
@@ -807,18 +807,18 @@ describe("extractStateFromEnv", () => {
 		env.set("TEST_PLUGIN_STATE", encoded);
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
-		expect(extractStateFromEnv(instance)).toEqual(state);
+		expect(extractPersistedState(instance)).toEqual(state);
 	});
 
 	test("returns empty object for invalid base64", () => {
 		env.set("TEST_PLUGIN_STATE", "not-valid-base64!!!!");
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
-		expect(extractStateFromEnv(instance)).toEqual({});
+		expect(extractPersistedState(instance)).toEqual({});
 	});
 
 	test("returns empty object for non-object state", () => {
@@ -826,9 +826,9 @@ describe("extractStateFromEnv", () => {
 		env.set("TEST_PLUGIN_STATE", encoded);
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
-		expect(extractStateFromEnv(instance)).toEqual({});
+		expect(extractPersistedState(instance)).toEqual({});
 	});
 
 	test("returns empty object for null state", () => {
@@ -836,17 +836,17 @@ describe("extractStateFromEnv", () => {
 		env.set("TEST_PLUGIN_STATE", encoded);
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
-		expect(extractStateFromEnv(instance)).toEqual({});
+		expect(extractPersistedState(instance)).toEqual({});
 	});
 });
 
 // =============================================================================
-// createBaseEnv tests
+// createBaseState tests
 // =============================================================================
 
-describe("createBaseEnv", () => {
+describe("createBaseState", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
@@ -861,19 +861,19 @@ describe("createBaseEnv", () => {
 		env.set("CLAUDE_PROJECT_DIR", "/project/dir");
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
-		const baseEnv = createBaseEnv("/cwd", "/env/file", instance);
+		const baseEnv = createBaseState("/cwd", "/env/file", instance);
 		expect(baseEnv.projectDir).toBe("/project/dir");
 	});
 
 	test("falls back to cwd when CLAUDE_PROJECT_DIR not set", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
-		const baseEnv = createBaseEnv("/cwd", "/env/file", instance);
+		const baseEnv = createBaseState("/cwd", "/env/file", instance);
 		expect(baseEnv.projectDir).toBe("/cwd");
 	});
 
@@ -881,37 +881,37 @@ describe("createBaseEnv", () => {
 		env.set("CLAUDE_PLUGIN_ROOT", "/plugin/root");
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
-		const baseEnv = createBaseEnv("/cwd", "/env/file", instance);
+		const baseEnv = createBaseState("/cwd", "/env/file", instance);
 		expect(baseEnv.pluginDir).toBe("/plugin/root");
 	});
 
 	test("falls back to empty string when CLAUDE_PLUGIN_ROOT not set", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
-		const baseEnv = createBaseEnv("/cwd", "/env/file", instance);
+		const baseEnv = createBaseState("/cwd", "/env/file", instance);
 		expect(baseEnv.pluginDir).toBe("");
 	});
 
 	test("uses provided claudeEnvFile", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
-		const baseEnv = createBaseEnv("/cwd", "/custom/env/file", instance);
+		const baseEnv = createBaseState("/cwd", "/custom/env/file", instance);
 		expect(baseEnv.pluginEnvFile).toBe("/custom/env/file");
 	});
 
 	test("includes logger methods", () => {
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 		const instance = new EnvClass();
 
-		const baseEnv = createBaseEnv("/cwd", "/env/file", instance);
+		const baseEnv = createBaseState("/cwd", "/env/file", instance);
 		expect(typeof baseEnv.log).toBe("function");
 		expect(typeof baseEnv.info).toBe("function");
 		expect(typeof baseEnv.debug).toBe("function");
@@ -946,7 +946,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		await expect(
 			runPipeline({
@@ -956,7 +956,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: async () => ({ status: "executed", summary: "ok" }),
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				io: mockIO,
 			}),
 		).rejects.toThrow(ExitError);
@@ -975,7 +975,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		await expect(
 			runPipeline({
@@ -984,7 +984,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: async () => ({ status: "executed", summary: "ok" }),
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				io: mockIO,
 			}),
 		).rejects.toThrow(ExitError);
@@ -1014,7 +1014,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		// The pipeline handler returns an allow decision
 		const handler = async () => ({
@@ -1030,7 +1030,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: handler,
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				io: mockIO,
 			}),
 		).rejects.toThrow(ExitError);
@@ -1061,7 +1061,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		// Pipeline should not be called since tool doesn't match
 		let pipelineCalled = false;
@@ -1077,7 +1077,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: handler,
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				tools: ["Bash"], // Only handle Bash tool
 				io: mockIO,
 			}),
@@ -1112,7 +1112,7 @@ describe("runPipeline", () => {
 		const schema = z.object({
 			DEBUG: z.boolean().default(false),
 		});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		// Setup function that returns state
 		const setup = async () => {
@@ -1120,10 +1120,10 @@ describe("runPipeline", () => {
 		};
 
 		// Handler that uses the state
-		const handler = async ({ env: handlerEnv }: { env: { detectedPM?: string } }) => ({
+		const handler = async ({ state: handlerState }: { state: { detectedPM?: string } }) => ({
 			status: "executed" as const,
 			action: "context" as const,
-			summary: `detected: ${handlerEnv.detectedPM ?? "none"}`,
+			summary: `detected: ${handlerState.detectedPM ?? "none"}`,
 			claudeContext: "Session started",
 		});
 
@@ -1134,7 +1134,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: handler,
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				setup,
 				schema,
 				io: mockIO,
@@ -1167,7 +1167,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		// Handler that returns invalid output (missing status/summary)
 		const handler = async () => ({ invalid: "output" }) as unknown as AnyPipelineOutput;
@@ -1179,7 +1179,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: handler,
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				io: mockIO,
 			}),
 		).rejects.toThrow();
@@ -1207,7 +1207,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		const handler = async () => ({
 			status: "executed" as const,
@@ -1223,7 +1223,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: handler,
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				io: mockIO,
 			}),
 		).rejects.toThrow(ExitError);
@@ -1251,7 +1251,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({});
-		const EnvClass = ClaudeBinaryPluginEnv.create("TEST", schema);
+		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 
 		const handler = async () => ({
 			status: "executed" as const,
@@ -1266,7 +1266,7 @@ describe("runPipeline", () => {
 				pluginName: "test-plugin",
 				pluginVersion: "1.0.0",
 				pipeline: handler,
-				envClass: EnvClass,
+				stateClass: EnvClass,
 				io: mockIO,
 			}),
 		).rejects.toThrow(ExitError);

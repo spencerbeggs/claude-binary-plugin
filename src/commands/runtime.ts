@@ -14,8 +14,8 @@
  * **Execution Flow:**
  * 1. Parse CLI arguments from `--cmd=name` invocation
  * 2. Validate arguments against command's Zod schema
- * 3. Load environment via `ClaudeBinaryPluginEnv.forContext("command")`
- * 4. Call command handler with `{ args, options, env }`
+ * 3. Load environment via `ClaudeBinaryPluginState.forContext("command")`
+ * 4. Call command handler with `{ args, options, state }`
  * 5. Write markdown output to stdout
  * 6. Exit with appropriate code (0=success, 1=issues found, 2=error)
  *
@@ -30,11 +30,11 @@
  * await runCommand({
  *   name: "lint",
  *   argsSchema: emptyArgsSchema,
- *   handler: async ({ args, options, env }) => ({
+ *   handler: async ({ args, options, state }) => ({
  *     exitCode: 0,
  *     output: "# Lint Results\n\nAll checks passed!",
  *   }),
- *   envClass: MyPluginEnv,
+ *   stateClass: MyPluginState,
  * });
  * ```
  *
@@ -45,8 +45,8 @@
 
 import { dirname } from "node:path";
 import { z } from "zod";
-import { ClaudeBinaryPluginEnv } from "../env/plugin-env.js";
-import type { BaseEnv, CommandHandler, CommandOutput, PluginEnv } from "../pipeline/config.js";
+import type { BaseState, CommandHandler, CommandOutput, PluginState } from "../pipeline/config.js";
+import { ClaudeBinaryPluginState } from "../state/plugin-state.js";
 
 // =============================================================================
 // INTERNAL SCHEMA UTILITIES
@@ -187,8 +187,8 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 	rawArgs: string[];
 	/** Zod schema for validating arguments */
 	argsSchema: z.ZodType<TArgs>;
-	/** Environment class for loading env vars */
-	envClass: new () => ClaudeBinaryPluginEnv<TOptions>;
+	/** State class for loading env vars */
+	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
 }
 
 // =============================================================================
@@ -233,13 +233,13 @@ export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
  * // Run a command handler
  * await Commands.run({
  *   commandName: "lint",
- *   handler: async ({ args, options, env }) => ({
+ *   handler: async ({ args, options, state }) => ({
  *     exitCode: 0,
  *     output: "# Results\n\nAll checks passed!",
  *   }),
  *   rawArgs: ["--fix", "src/"],
  *   argsSchema: z.object({ fix: z.boolean().default(false) }),
- *   envClass: MyEnv,
+ *   stateClass: MyState,
  * });
  *
  * // Parse arguments without execution
@@ -282,13 +282,13 @@ export class Commands {
 	 *   commandName: "lint",
 	 *   pluginName: "my-plugin",
 	 *   pluginVersion: "1.0.0",
-	 *   handler: async ({ args, options, env }) => ({
+	 *   handler: async ({ args, options, state }) => ({
 	 *     exitCode: 0,
 	 *     output: "# Lint Results\n\nAll checks passed!",
 	 *   }),
 	 *   rawArgs: process.argv.slice(2),
 	 *   argsSchema: Commands.emptySchema,
-	 *   envClass: MyEnv,
+	 *   stateClass: MyState,
 	 * });
 	 * ```
 	 *
@@ -296,13 +296,13 @@ export class Commands {
 	 * @public
 	 */
 	static async run<TArgs, TOptions, TState>(options: RunCommandOptions<TArgs, TOptions, TState>): Promise<never> {
-		const { commandName, handler, rawArgs, argsSchema, envClass } = options;
+		const { commandName, handler, rawArgs, argsSchema, stateClass } = options;
 
 		try {
 			// Parse and validate arguments (async for path validation)
 			const args = await Commands.parse(rawArgs, argsSchema);
 
-			// Load session env files (must be done before creating env instance)
+			// Load session env files (must be done before creating state instance)
 			// This is required - if we can't find session env, the command won't have state
 			const sessionEnvDir = Commands.findSessionEnvDir();
 			if (!sessionEnvDir) {
@@ -311,18 +311,18 @@ export class Commands {
 						"Commands must be run within a Claude Code session that has been initialized by SessionStart hook.",
 				);
 			}
-			await ClaudeBinaryPluginEnv.loadAllHookFiles(sessionEnvDir);
+			await ClaudeBinaryPluginState.loadAllHookFiles(sessionEnvDir);
 
-			// Create env instance after loading session files (constructor reads from Bun.env)
-			const envInstance = new envClass();
+			// Create state instance after loading session files (constructor reads from Bun.env)
+			const stateInstance = new stateClass();
 
-			const validatedOptions = envInstance.vars as TOptions;
-			const baseEnv = Commands.createBaseEnv(envInstance);
-			const state = Commands.extractStateFromEnv(envInstance);
-			const pluginEnv = { ...baseEnv, ...state } as PluginEnv<TState>;
+			const validatedOptions = stateInstance.vars as TOptions;
+			const baseState = Commands.createBaseState(stateInstance);
+			const persistedState = Commands.extractPersistedState(stateInstance);
+			const pluginState = { ...baseState, ...persistedState } as PluginState<TState>;
 
 			// Call the handler
-			const result = await handler({ args, options: validatedOptions, env: pluginEnv });
+			const result = await handler({ args, options: validatedOptions, state: pluginState });
 
 			// Validate output
 			Commands.validateOutput(result, commandName);
@@ -556,7 +556,7 @@ export class Commands {
 	static findSessionEnvDir(): string | undefined {
 		// First try via session ID in SQLite registry
 		if (Bun.env.CLAUDE_SESSION_ID) {
-			const dir = ClaudeBinaryPluginEnv.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
+			const dir = ClaudeBinaryPluginState.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
 			if (dir) return dir;
 		}
 
@@ -574,7 +574,7 @@ export class Commands {
 
 		// Try project directory in SQLite registry (saved during SessionStart)
 		const projectDir = process.cwd();
-		const dir = ClaudeBinaryPluginEnv.getProjectSessionEnvDir(projectDir);
+		const dir = ClaudeBinaryPluginState.getProjectSessionEnvDir(projectDir);
 		if (dir) return dir;
 
 		return undefined;
@@ -617,32 +617,32 @@ export class Commands {
 	}
 
 	/**
-	 * Create the base env object.
+	 * Create the base state object.
 	 * @internal
 	 */
-	private static createBaseEnv(env: ClaudeBinaryPluginEnv<unknown>): BaseEnv {
-		const prefix = env.getPrefix() ?? "";
+	private static createBaseState(stateInstance: ClaudeBinaryPluginState<unknown>): BaseState {
+		const prefix = stateInstance.getPrefix() ?? "";
 		return {
 			projectDir: Bun.env[`${prefix}_PROJECT_DIR`] ?? Bun.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 			pluginDir: Bun.env[`${prefix}_PLUGIN_DIR`] ?? Bun.env.CLAUDE_PLUGIN_ROOT ?? "",
 			pluginEnvFile: Bun.env[`${prefix}_PLUGIN_ENV_FILE`] ?? Bun.env.CLAUDE_ENV_FILE ?? "",
-			// Bind logger methods from env instance
-			log: env.log.bind(env),
-			info: env.info.bind(env),
-			debug: env.debug.bind(env),
+			// Bind logger methods from state instance
+			log: stateInstance.log.bind(stateInstance),
+			info: stateInstance.info.bind(stateInstance),
+			debug: stateInstance.debug.bind(stateInstance),
 		};
 	}
 
 	/**
-	 * Extract state from the environment.
+	 * Extract persisted state from the environment.
 	 * Reads `PREFIX_PLUGIN_STATE` and parses it as JSON.
 	 *
-	 * @param env - The plugin environment instance
+	 * @param stateInstance - The plugin state instance
 	 * @returns State object parsed from `PREFIX_PLUGIN_STATE`
 	 * @internal
 	 */
-	private static extractStateFromEnv(env: ClaudeBinaryPluginEnv<unknown>): Record<string, unknown> {
-		const prefix = env.getPrefix();
+	private static extractPersistedState(stateInstance: ClaudeBinaryPluginState<unknown>): Record<string, unknown> {
+		const prefix = stateInstance.getPrefix();
 		if (!prefix) {
 			return {};
 		}

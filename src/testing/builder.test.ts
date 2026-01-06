@@ -299,7 +299,7 @@ describe("Mocks class", () => {
 		expect(typeof Mocks.createEnv).toBe("function");
 		expect(Mocks.envPresets).toBeDefined();
 		expect(typeof Mocks.envPresets.claudeHook).toBe("function");
-		expect(Mocks.MockEnvClass).toBeDefined();
+		expect(Mocks.MockStateClass).toBeDefined();
 	});
 
 	test("Mocks has command methods", async () => {
