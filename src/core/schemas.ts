@@ -33,6 +33,8 @@
  */
 
 import { z } from "zod";
+import type { SessionId, ToolUseId, TranscriptPath } from "../types/branded.js";
+import { JsonObjectSchema } from "../types/json.js";
 
 // =============================================================================
 // SCHEMA REGISTRY
@@ -131,6 +133,31 @@ const _SessionStartSourceSchema = z.enum(["startup", "resume", "clear", "compact
 const _SessionEndReasonSchema = z.enum(["clear", "logout", "prompt_input_exit", "other"]);
 
 // =============================================================================
+// BRANDED SCHEMAS
+// =============================================================================
+
+/**
+ * Zod schema for SessionId (branded string).
+ * @internal
+ */
+const _SessionIdSchema = z
+	.string()
+	.uuid()
+	.transform((val): SessionId => val as SessionId);
+
+/**
+ * Zod schema for ToolUseId (branded string).
+ * @internal
+ */
+const _ToolUseIdSchema = z.string().transform((val): ToolUseId => val as ToolUseId);
+
+/**
+ * Zod schema for TranscriptPath (branded string).
+ * @internal
+ */
+const _TranscriptPathSchema = z.string().transform((val): TranscriptPath => val as TranscriptPath);
+
+// =============================================================================
 // BASE SCHEMA
 // =============================================================================
 
@@ -140,9 +167,9 @@ const _SessionEndReasonSchema = z.enum(["clear", "logout", "prompt_input_exit", 
  */
 const _HookEventBaseSchema = z.object({
 	/** Unique identifier for the current session (UUID format) */
-	session_id: z.string().uuid(),
+	session_id: _SessionIdSchema,
 	/** Absolute path to the conversation transcript JSON file (optional) */
-	transcript_path: z.string().optional(),
+	transcript_path: _TranscriptPathSchema.optional(),
 	/** Current working directory (optional) */
 	cwd: z.string().optional(),
 	/** Current permission mode (optional - not present in SessionStart) */
@@ -171,10 +198,10 @@ export const PreToolUseEventSchema = _HookEventBaseSchema
 		hook_event_name: z.literal("PreToolUse"),
 		/** Name of the tool being invoked */
 		tool_name: z.string(),
-		/** Input parameters for the tool */
-		tool_input: z.record(z.string(), z.unknown()),
+		/** Input parameters for the tool (JSON object from Claude) */
+		tool_input: JsonObjectSchema,
 		/** Unique identifier for this tool use */
-		tool_use_id: z.string(),
+		tool_use_id: _ToolUseIdSchema,
 	})
 	.register(hookEventSchemaRegistry, {
 		description: "Fired after Claude creates tool parameters but before the tool executes.",
@@ -197,12 +224,12 @@ export const PostToolUseEventSchema = _HookEventBaseSchema
 		hook_event_name: z.literal("PostToolUse"),
 		/** Name of the tool that was invoked */
 		tool_name: z.string(),
-		/** Input parameters that were passed to the tool */
-		tool_input: z.record(z.string(), z.unknown()),
-		/** Response returned by the tool */
-		tool_response: z.record(z.string(), z.unknown()),
+		/** Input parameters that were passed to the tool (JSON object from Claude) */
+		tool_input: JsonObjectSchema,
+		/** Response returned by the tool (JSON object) */
+		tool_response: JsonObjectSchema,
 		/** Unique identifier for this tool use */
-		tool_use_id: z.string(),
+		tool_use_id: _ToolUseIdSchema,
 	})
 	.register(hookEventSchemaRegistry, {
 		description: "Fired immediately after a tool completes successfully.",

@@ -64,6 +64,25 @@ export { EnvFileLoadError, PluginEnv } from "./state/plugin-state.js";
 export type { SessionRecord, SessionRegistration } from "./state/session-registry.js";
 // Session registry for persistent session lookups
 export { SessionRegistry, closeDb } from "./state/session-registry.js";
+// Branded types for type-safe identifiers
+export type { HookName, SessionId, ToolUseId, TranscriptPath } from "./types/branded.js";
+// JSON type utilities (re-exported from type-fest with Zod schemas)
+export type {
+	JsonArray,
+	JsonObject,
+	JsonObjectWith,
+	JsonPrimitive,
+	JsonValue,
+	Jsonifiable,
+	Jsonify,
+	OTELAttributeValue,
+	OTELAttributes,
+	OTELHeaders,
+	ParsedJson,
+} from "./types/json.js";
+export { JsonArraySchema, JsonObjectSchema, JsonPrimitiveSchema, JsonValueSchema } from "./types/json.js";
+// Type utilities re-exported from type-fest for user convenience
+export type { PartialDeep, ReadonlyDeep, RequiredDeep, Tagged, WritableDeep } from "./types/utility.js";
 export type {
 	DebugLoggerOptions,
 	FileSystem,

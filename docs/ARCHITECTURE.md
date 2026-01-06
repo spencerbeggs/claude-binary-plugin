@@ -107,6 +107,51 @@ Every hook handler receives context from three distinct layers:
 └───────────────────────────────────────────────────────────────────┘
 ```
 
+### Type Safety
+
+The SDK uses `type-fest` for enhanced type safety throughout the pipeline:
+
+**Immutable Handler Context:**
+
+Handler parameters are deeply readonly via `ReadonlyDeep<T>`:
+
+```typescript
+interface HandlerContext<TInput, TOptions, TState> {
+  input: ReadonlyDeep<TInput>;     // Cannot mutate input
+  options: ReadonlyDeep<TOptions>; // Cannot mutate options
+  state: ReadonlyDeep<PluginState<TState>>; // Cannot mutate state
+}
+```
+
+This prevents accidental mutations - handlers should be pure functions.
+
+**JSON Types:**
+
+Tool inputs and outputs use precise JSON types instead of `Record<string, unknown>`:
+
+```typescript
+import type { JsonObject, JsonValue } from "claude-binary-plugin";
+
+// tool_input: JsonObject (not Record<string, unknown>)
+// Ensures values are JSON-serializable
+```
+
+**Branded Identifiers:**
+
+String identifiers use branded types to prevent mixing them up:
+
+| Type | Field | Purpose |
+| ---- | ----- | ------- |
+| `SessionId` | `session_id` | Claude Code session UUID |
+| `ToolUseId` | `tool_use_id` | Tool invocation identifier |
+| `TranscriptPath` | `transcript_path` | Conversation transcript file |
+| `HookName` | hook config | Custom hook identifier |
+
+```typescript
+// These are distinct types - can't accidentally swap them
+function processHook(sessionId: SessionId, toolUseId: ToolUseId) { }
+```
+
 ### Hook Event Types
 
 Claude Code sends different event types at different lifecycle points:
@@ -1159,6 +1204,9 @@ src/
 ├── testing/
 │   ├── mocks.ts          # Low-level test utilities
 │   └── builder.ts        # PluginTestBuilder (see TESTING.md)
+├── types/
+│   ├── json.ts           # JSON types from type-fest, Zod schemas
+│   └── branded.ts        # Branded types (SessionId, ToolUseId, etc.)
 ├── utils/
 │   └── debug-logger.ts   # File-based debug logging
 └── otel/

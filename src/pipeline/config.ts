@@ -32,6 +32,7 @@
  * ```
  */
 
+import type { ReadonlyDeep } from "type-fest";
 import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";
 import type { PluginBuildResult } from "../build/builder.js";
@@ -104,15 +105,26 @@ import { OutputSchemas } from "./types.js";
 export type PluginState<TState> = BaseState & TState;
 
 /**
+ * Context provided to pipeline handlers.
+ *
+ * @remarks
+ * All properties are deeply readonly to prevent accidental mutations.
+ * Handlers should treat their context as immutable and return new
+ * output objects rather than modifying input.
+ *
+ * @typeParam TInput - Hook event input type (e.g., PreToolUseInput)
+ * @typeParam TOptions - Validated options from plugin schema
+ * @typeParam TState - Computed state from setup function
+ *
  * @public
  */
 export interface HandlerContext<TInput, TOptions, TState = Record<string, unknown>> {
-	/** Hook event input from Claude Code */
-	input: TInput;
-	/** Validated options from plugin schema */
-	options: TOptions;
-	/** State: base paths + computed state from setup() */
-	state: PluginState<TState>;
+	/** Hook event input from Claude Code (readonly) */
+	input: ReadonlyDeep<TInput>;
+	/** Validated options from plugin schema (readonly) */
+	options: ReadonlyDeep<TOptions>;
+	/** State: base paths + computed state from setup() (readonly) */
+	state: ReadonlyDeep<PluginState<TState>>;
 }
 
 /**
@@ -126,13 +138,23 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
 
 /**
  * Raw handler: full access to event object for advanced use cases.
- * User is responsible for calling event.end() with appropriate response.
+ *
+ * @remarks
+ * Unlike pipeline handlers, raw handlers receive the full event object
+ * which remains mutable (for calling methods like `event.end()`).
+ * Options and state are deeply readonly to prevent mutations.
+ *
+ * User is responsible for calling `event.end()` with appropriate response.
+ *
  * @public
  */
 export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ctx: {
+	/** Full event object (mutable for method calls) */
 	event: TEvent;
-	options: TOptions;
-	state: PluginState<TState>;
+	/** Validated options from plugin schema (readonly) */
+	options: ReadonlyDeep<TOptions>;
+	/** State: base paths + computed state from setup() (readonly) */
+	state: ReadonlyDeep<PluginState<TState>>;
 }) => void | Promise<void>;
 
 // =============================================================================

@@ -136,6 +136,8 @@ See `docs/TESTING.md` for testing utilities and `docs/SCHEMA.md` for OTEL.
 - `src/build/builder.ts` - `PluginBuilder` class, entrypoint generation
 - `src/state/plugin-state.ts` - `ClaudeBinaryPluginState` base class
 - `src/core/schemas.ts` - Zod schemas for hook event inputs
+- `src/types/json.ts` - JSON type utilities (from type-fest) with Zod schemas
+- `src/types/branded.ts` - Branded types for type-safe identifiers
 - `src/otel/` - OpenTelemetry integration (class-based API)
 
 ### Data Flow
@@ -197,6 +199,39 @@ All handlers must return a pipeline output object:
 - Type-only imports must use `import type`
 - Uses `tsgo` (native TypeScript) for type checking
 
+### Type Safety Utilities
+
+The SDK uses `type-fest` for enhanced type safety:
+
+**JSON Types** - Precise types for JSON data (tool inputs/outputs):
+
+```typescript
+import type { JsonObject, JsonValue } from "claude-binary-plugin";
+import { JsonObjectSchema } from "claude-binary-plugin";
+
+// tool_input and tool_response are typed as JsonObject
+// Use JsonObjectSchema for Zod validation
+```
+
+**Branded Types** - Prevent mixing up string identifiers:
+
+```typescript
+import type { SessionId, ToolUseId } from "claude-binary-plugin";
+
+// These are distinct types that can't be accidentally swapped
+function processHook(sessionId: SessionId, toolUseId: ToolUseId) { }
+```
+
+**Immutable Handler Context** - All handler parameters are deeply readonly:
+
+```typescript
+// HandlerContext uses ReadonlyDeep from type-fest
+const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
+  // input.tool_name = "x"; // Compile error - readonly
+  return { status: "executed", action: "allow", summary: "ok" };
+};
+```
+
 ### Testing Patterns
 
 See `docs/TESTING.md` for comprehensive testing documentation.
@@ -205,8 +240,8 @@ The SDK provides a fluent testing API via `plugin.test()`:
 
 ```typescript
 const ctx = plugin.test()
-  .withOptions({ DEBUG: false })
-  .withState({ packageManager: "bun" });
+  .withOptions({ DEBUG: false })  // PartialDeep - only specify what you need
+  .withState({ packageManager: "bun" });  // PartialDeep - deeply partial
 
 const result = await ctx
   .withPreToolUseInput({ tool_name: "Bash", tool_input: { command: "ls" } })
@@ -215,6 +250,9 @@ const result = await ctx
 expect(result.action).toBe("allow");
 ctx.dispose();
 ```
+
+Test methods use `PartialDeep` from type-fest, so you only need to provide
+the fields your test cares about - nested objects are also partial.
 
 ## OTEL Telemetry
 

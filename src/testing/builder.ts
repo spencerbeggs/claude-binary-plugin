@@ -38,6 +38,7 @@
  */
 
 import { mock, spyOn } from "bun:test";
+import type { PartialDeep } from "type-fest";
 import type { z } from "zod";
 import type { ShellResult } from "../build/builder.js";
 import type { CommandDefinition, PluginConfig } from "../pipeline/config.js";
@@ -271,32 +272,48 @@ export class PluginTester<
 	/**
 	 * Set the plugin options for this test.
 	 *
-	 * @param options - Full options object matching the plugin schema
+	 * @remarks
+	 * Accepts deeply partial options - only specify fields needed for your test.
+	 * Unspecified fields will be undefined unless the plugin schema provides defaults.
+	 *
+	 * @param options - Partial options object (deeply partial)
 	 * @returns this for chaining
 	 *
 	 * @example
 	 * ```typescript
-	 * ctx.withOptions({ TIMEOUT_MS: 5000, API_KEY: "test-key" });
+	 * // Only specify what the test needs
+	 * ctx.withOptions({ TIMEOUT_MS: 5000 });
+	 *
+	 * // Nested objects are also partial
+	 * ctx.withOptions({ config: { debug: true } });
 	 * ```
 	 */
-	withOptions(options: TOptions): this {
-		this.state.options = options;
+	withOptions(options: PartialDeep<TOptions>): this {
+		this.state.options = options as TOptions;
 		return this;
 	}
 
 	/**
 	 * Set the plugin state (from setup function) for this test.
 	 *
-	 * @param state - Full state object matching setup() return type
+	 * @remarks
+	 * Accepts deeply partial state - only specify fields needed for your test.
+	 * This simulates what setup() would return without running actual detection.
+	 *
+	 * @param state - Partial state object (deeply partial)
 	 * @returns this for chaining
 	 *
 	 * @example
 	 * ```typescript
-	 * ctx.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" });
+	 * // Only specify what the test needs
+	 * ctx.withState({ packageManager: "bun" });
+	 *
+	 * // Nested objects are also partial
+	 * ctx.withState({ config: { linters: { biome: true } } });
 	 * ```
 	 */
-	withState(state: TState): this {
-		this.state.state = state;
+	withState(state: PartialDeep<TState>): this {
+		this.state.state = state as TState;
 		return this;
 	}
 

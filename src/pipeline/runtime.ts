@@ -34,6 +34,7 @@
  * @module
  */
 
+import type { ReadonlyDeep } from "type-fest";
 import { z } from "zod";
 import {
 	NotificationEvent,
@@ -50,7 +51,7 @@ import {
 import type { HookOutcome } from "../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
 import { PluginEnv } from "../state/plugin-state.js";
-import type { BaseState, PipelineHandler, SetupFunction } from "./config.js";
+import type { BaseState, PipelineHandler, PluginState, SetupFunction } from "./config.js";
 
 // =============================================================================
 // INTERNAL RESPONSE TYPES (for Claude Code response builder)
@@ -690,7 +691,12 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 		};
 
 		// Call the pipeline handler with new context shape
-		const output = await pipeline({ input: event, options: validatedOptions, state: pluginState });
+		// Cast to ReadonlyDeep - values are already immutable from parsing
+		const output = await pipeline({
+			input: event,
+			options: validatedOptions as ReadonlyDeep<TOptions>,
+			state: pluginState as ReadonlyDeep<PluginState<TState>>,
+		});
 
 		// Calculate duration (rounded to whole ms to match Claude Code)
 		const durationMs = Math.round(performance.now() - startTime);

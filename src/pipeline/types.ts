@@ -51,6 +51,7 @@
  */
 
 import { z } from "zod";
+import { JsonObjectSchema } from "../types/json.js";
 
 // =============================================================================
 // EXECUTION STATUS
@@ -336,7 +337,7 @@ export const PipelineOutputBaseSchema = z.object({
 	// ─────────────────────────────────────────────────────────────────────────
 
 	/** Modified tool input (PreToolUse only) */
-	updatedInput: z.record(z.string(), z.unknown()).optional(),
+	updatedInput: JsonObjectSchema.optional(),
 });
 
 /** @public */
@@ -364,7 +365,7 @@ export const PreToolUseOutputSchema = z.discriminatedUnion("status", [
 			userMessage: z.string().optional(),
 			claudeContext: z.string().optional(),
 			reason: z.string().optional(),
-			updatedInput: z.record(z.string(), z.unknown()).optional(),
+			updatedInput: JsonObjectSchema.optional(),
 		})
 		.strict(),
 
@@ -395,7 +396,7 @@ export const PreToolUseOutputSchema = z.discriminatedUnion("status", [
 			summary: z.string(),
 			action: z.enum(["allow", "deny", "ask", "modify"]),
 			reason: z.string().optional(),
-			updatedInput: z.record(z.string(), z.unknown()).optional(),
+			updatedInput: JsonObjectSchema.optional(),
 		})
 		.strict(),
 
@@ -709,7 +710,7 @@ export const PermissionRequestOutputSchema = z.discriminatedUnion("status", [
 			userMessage: z.string().optional(),
 			claudeContext: z.string().optional(),
 			reason: z.string().optional(),
-			updatedInput: z.record(z.string(), z.unknown()).optional(),
+			updatedInput: JsonObjectSchema.optional(),
 			interrupt: z.boolean().optional(),
 		})
 		.strict(),
