@@ -37,6 +37,7 @@ pkgs/generators/test.ts
 **/src/api-extractor-*.ts
 .claude/settings.local.json
 .claude/plans
+CLAUDE.local.md
 **/coverage-debug
 .playwright-mcp
 bin
