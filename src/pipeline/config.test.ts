@@ -190,7 +190,7 @@ describe("Pipeline Output Schemas", () => {
 describe("ClaudeBinaryPlugin", () => {
 	test("create() returns compiled plugin config", () => {
 		const envSchema = z.object({
-			DEBUG: z.boolean().default(false),
+			VERBOSE: z.boolean().default(false),
 		});
 
 		const plugin = ClaudeBinaryPlugin.create({

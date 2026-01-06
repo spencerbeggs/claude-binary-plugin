@@ -13,13 +13,18 @@
  * export default ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   schema: z.object({
- *     DEBUG: z.boolean().default(false),
+ *     TIMEOUT_MS: z.number().default(30000),
  *   }),
  *   hooks: {
  *     SessionStart: [{
  *       name: "project-context",
  *       pipeline: async ({ input, state }) => {
- *         return { additionalContext: "Project uses TypeScript" };
+ *         return {
+ *           status: "executed",
+ *           action: "context",
+ *           summary: "added project context",
+ *           claudeContext: "Project uses TypeScript",
+ *         };
  *       }
  *     }],
  *   }
@@ -957,13 +962,18 @@ export interface PluginConfig<
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   schema: z.object({
- *     DEBUG: z.boolean().default(false),
+ *     TIMEOUT_MS: z.number().default(30000),
  *   }),
  *   hooks: {
  *     SessionStart: [{
  *       name: "project-context",
  *       pipeline: async ({ input, state }) => {
- *         return { additionalContext: "Hello from plugin!" };
+ *         return {
+ *           status: "executed",
+ *           action: "context",
+ *           summary: "added context",
+ *           claudeContext: "Hello from plugin!",
+ *         };
  *       }
  *     }],
  *   }
@@ -1029,7 +1039,7 @@ export class ClaudeBinaryPlugin<
 	 * ```ts
 	 * const plugin = ClaudeBinaryPlugin.create({
 	 *   prefix: "MY_PLUGIN",
-	 *   schema: z.object({ DEBUG: z.boolean().default(false) }),
+	 *   schema: z.object({ ALLOW_SUDO: z.boolean().default(false) }),
 	 *   hooks: {
 	 *     PreToolUse: [{
 	 *       name: "security",
@@ -1122,7 +1132,7 @@ export class ClaudeBinaryPlugin<
 	 *
 	 *   beforeEach(() => {
 	 *     ctx = plugin.test()
-	 *       .withOptions({ DEBUG: false, API_KEY: "test" })
+	 *       .withOptions({ ALLOW_SUDO: false, API_KEY: "test" })
 	 *       .withState({ packageManager: "bun", gitRepo: true });
 	 *   });
 	 *

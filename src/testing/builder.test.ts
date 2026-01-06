@@ -10,7 +10,7 @@ import { mockEnv } from "./mocks.js";
 // =============================================================================
 
 const testSchema = z.object({
-	DEBUG: z.string().default("false"),
+	VERBOSE: z.string().default("false"),
 	API_KEY: z.string().optional(),
 });
 
@@ -83,7 +83,7 @@ describe("PluginTestBuilder", () => {
 		test("builder is chainable", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "true", API_KEY: "test" })
+				.withOptions({ VERBOSE: "true", API_KEY: "test" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" });
 
 			expect(builder).toBeDefined();
@@ -93,7 +93,7 @@ describe("PluginTestBuilder", () => {
 	describe("withOptions()", () => {
 		test("accepts valid options matching schema", () => {
 			const builder = testPlugin.test().withOptions({
-				DEBUG: "true",
+				VERBOSE: "true",
 				API_KEY: "secret-key",
 			});
 
@@ -102,7 +102,7 @@ describe("PluginTestBuilder", () => {
 
 		test("allows optional fields to be omitted", () => {
 			const builder = testPlugin.test().withOptions({
-				DEBUG: "false",
+				VERBOSE: "false",
 				// API_KEY is optional
 			});
 
@@ -137,7 +137,7 @@ describe("PluginTestBuilder", () => {
 		test("withPreToolUseInput() sets PreToolUse input", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withPreToolUseInput({
 					tool_name: "Bash",
@@ -150,7 +150,7 @@ describe("PluginTestBuilder", () => {
 		test("withPostToolUseInput() sets PostToolUse input", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withPostToolUseInput({
 					tool_name: "Bash",
@@ -164,7 +164,7 @@ describe("PluginTestBuilder", () => {
 		test("withSessionStartInput() sets SessionStart input", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withSessionStartInput({
 					source: "startup",
@@ -176,7 +176,7 @@ describe("PluginTestBuilder", () => {
 		test("withSessionEndInput() sets SessionEnd input", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withSessionEndInput({
 					reason: "logout",
@@ -188,7 +188,7 @@ describe("PluginTestBuilder", () => {
 		test("withStopInput() sets Stop input", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withStopInput({
 					stop_hook_active: true,
@@ -200,7 +200,7 @@ describe("PluginTestBuilder", () => {
 		test("withUserPromptSubmitInput() sets UserPromptSubmit input", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withUserPromptSubmitInput({
 					prompt: "Hello Claude!",
@@ -214,7 +214,7 @@ describe("PluginTestBuilder", () => {
 		test("registers shell mock responses", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" })
 				.withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" })
 				.withShell("npm --version", { exitCode: 0, stdout: "10.0.0", stderr: "" });
@@ -233,7 +233,7 @@ describe("PluginTestBuilder", () => {
 		});
 
 		test("runHook() throws if state not set", async () => {
-			const builder = testPlugin.test().withOptions({ DEBUG: "false" });
+			const builder = testPlugin.test().withOptions({ VERBOSE: "false" });
 
 			await expect(builder.runHook("PreToolUse", "security")).rejects.toThrow(
 				"withState() must be called before running tests",
@@ -247,7 +247,7 @@ describe("PluginTestBuilder", () => {
 		});
 
 		test("runCommand() throws if state not set", async () => {
-			const builder = testPlugin.test().withOptions({ DEBUG: "false" });
+			const builder = testPlugin.test().withOptions({ VERBOSE: "false" });
 
 			await expect(builder.runCommand("lint")).rejects.toThrow("withState() must be called before running tests");
 		});
@@ -257,7 +257,7 @@ describe("PluginTestBuilder", () => {
 		test("can be called multiple times safely", () => {
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" });
 
 			builder.dispose();
@@ -270,7 +270,7 @@ describe("PluginTestBuilder", () => {
 
 			const builder = testPlugin
 				.test()
-				.withOptions({ DEBUG: "false" })
+				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" });
 
 			// Builder internally sets env vars during setupMocks

@@ -62,7 +62,7 @@ import { z } from "zod";
 const plugin = ClaudeBinaryPlugin.create({
   prefix: "MY_PLUGIN",
   schema: z.object({
-    DEBUG: z.string().default("false").transform(v => v === "true"),
+    TIMEOUT_MS: z.coerce.number().default(30000),
   }),
   hooks: {
     SessionStart: [{

@@ -35,12 +35,12 @@ import { ClaudeBinaryPlugin } from "claude-binary-plugin/pipeline";
 import { z } from "zod";
 
 const plugin = ClaudeBinaryPlugin.create({
-  // Environment variable prefix (e.g., MY_PLUGIN_DEBUG)
+  // Environment variable prefix (e.g., MY_PLUGIN_TIMEOUT_MS)
   prefix: "MY_PLUGIN",
 
   // Zod schema for validating plugin options from env vars
   schema: z.object({
-    DEBUG: z.string().default("false").transform(v => v === "true"),
+    TIMEOUT_MS: z.coerce.number().default(30000),
   }),
 
   // Runs at SessionStart to compute derived state
@@ -84,7 +84,7 @@ Every hook handler receives context from three distinct layers:
 │  Layer 2: OPTIONS                                                  │
 │  ───────────────────────────────────────────────────────────────  │
 │  Source: Environment variables with plugin prefix                  │
-│  Content: User-configurable settings (DEBUG, API_KEY, etc.)       │
+│  Content: User-configurable settings (TIMEOUT_MS, API_KEY, etc.)  │
 │  Validation: Plugin's Zod schema with defaults and transforms    │
 │  Access: handler({ options, ... }) - typed from schema            │
 └───────────────────────────────────────────────────────────────────┘
@@ -976,7 +976,7 @@ const handler: Commands["lint"] = async ({
   state
 }): Promise<CommandOutput> => {
   // args: Validated from Zod schema
-  // options: Plugin options (DEBUG, etc.) from Layer 2
+  // options: Plugin options (TIMEOUT_MS, etc.) from Layer 2
   // state: Computed state from setup()
 
   const targetPaths = args._positionals;

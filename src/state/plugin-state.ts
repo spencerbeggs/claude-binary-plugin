@@ -24,7 +24,7 @@
  * import { z } from "zod";
  *
  * const schema = z.object({
- *   MY_PLUGIN_DEBUG: z.enum(["true", "false"]).default("false"),
+ *   MY_PLUGIN_TIMEOUT_MS: z.coerce.number().default(30000),
  *   MY_PLUGIN_API_KEY: z.string().min(1),
  * });
  *
@@ -32,8 +32,8 @@
  *   protected readonly prefix = "MY_PLUGIN";
  *   protected readonly schema = schema;
  *
- *   get debug(): boolean {
- *     return this.varsRequired.MY_PLUGIN_DEBUG === "true";
+ *   get timeoutMs(): number {
+ *     return this.varsRequired.MY_PLUGIN_TIMEOUT_MS;
  *   }
  * }
  *
@@ -669,14 +669,14 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 * import { z } from "zod";
 	 *
 	 * const schema = z.object({
-	 *   MY_PLUGIN_DEBUG: z.enum(["true", "false"]).default("false"),
+	 *   MY_PLUGIN_TIMEOUT_MS: z.coerce.number().default(30000),
 	 * });
 	 *
 	 * const MyEnvClass = ClaudeBinaryPluginState.create("MY_PLUGIN", schema, "my-plugin");
 	 *
 	 * // Use in hook context
 	 * const env = await MyEnvClass.forContext("sessionStart", { hookName: "init" });
-	 * console.log(env.validated.MY_PLUGIN_DEBUG); // "false" (typed!)
+	 * console.log(env.validated.MY_PLUGIN_TIMEOUT_MS); // 30000 (typed!)
 	 * ```
 	 *
 	 * @see `forContext()` - Loading environment by context

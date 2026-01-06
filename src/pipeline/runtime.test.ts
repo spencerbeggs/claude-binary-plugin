@@ -72,7 +72,7 @@ function createMockExit(): (code: number) => never {
 describe("ClaudeBinaryPluginState.create", () => {
 	test("creates a class with the correct prefix", () => {
 		const schema = z.object({
-			DEBUG: z.boolean().default(false),
+			VERBOSE: z.boolean().default(false),
 		});
 
 		const EnvClass = ClaudeBinaryPluginState.create("MY_PLUGIN", schema);
@@ -84,7 +84,7 @@ describe("ClaudeBinaryPluginState.create", () => {
 
 	test("validated getter returns typed environment", () => {
 		const schema = z.object({
-			DEBUG: z.boolean().default(false),
+			VERBOSE: z.boolean().default(false),
 			LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		});
 
@@ -1110,7 +1110,7 @@ describe("runPipeline", () => {
 		};
 
 		const schema = z.object({
-			DEBUG: z.boolean().default(false),
+			VERBOSE: z.boolean().default(false),
 		});
 		const EnvClass = ClaudeBinaryPluginState.create("TEST", schema);
 

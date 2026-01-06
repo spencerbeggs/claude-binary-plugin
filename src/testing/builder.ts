@@ -15,7 +15,7 @@
  *
  *   beforeEach(() => {
  *     ctx = myPlugin.test()
- *       .withOptions({ DEBUG: false, API_KEY: "test" })
+ *       .withOptions({ ALLOW_SUDO: false, API_KEY: "test" })
  *       .withState({ packageManager: "bun", gitRepo: true });
  *   });
  *
@@ -266,7 +266,7 @@ export class PluginTestBuilder<
 	 *
 	 * @example
 	 * ```typescript
-	 * ctx.withOptions({ DEBUG: true, API_KEY: "test-key" });
+	 * ctx.withOptions({ TIMEOUT_MS: 5000, API_KEY: "test-key" });
 	 * ```
 	 */
 	withOptions(options: TOptions): this {
