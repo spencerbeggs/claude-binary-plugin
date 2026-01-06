@@ -25,7 +25,7 @@
  *
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
- *   schema: z.object({ TIMEOUT_MS: z.number().default(30000) }),
+ *   options: z.object({ TIMEOUT_MS: z.number().default(30000) }),
  *   setup: async ({ cwd }) => ({ detected: true }),
  *   hooks: {
  *     PreToolUse: [{ name: "security", pipeline: "./hooks/security.ts" }],

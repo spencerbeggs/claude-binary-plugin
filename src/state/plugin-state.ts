@@ -475,14 +475,14 @@ export class EnvFileLoadError extends Error {
  * State persistence uses Claude Code's `CLAUDE_ENV_FILE` mechanism with
  * {@link SessionRegistry} providing SQLite-based session lookups.
  *
- * @typeParam TSchema - TypeScript interface defining the environment variable schema
+ * @typeParam TOptions - TypeScript interface defining the environment variable schema
  *
  * @see `forContext()` - Context-aware factory method (has overloads)
  * @see {@link ClaudeBinaryPluginState.initializeSession | initializeSession()} - Session initialization
  * @see {@link SessionRegistry} - SQLite session lookup
  * @public
  */
-export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> {
+export abstract class ClaudeBinaryPluginState<TOptions = Record<string, string>> {
 	/**
 	 * Environment variable prefix for this plugin (e.g., "MY_PLUGIN").
 	 * Subclasses must override this to define their namespace.
@@ -503,13 +503,13 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 * Optional Zod schema for validating environment variables.
 	 * Subclasses should override this to provide type-safe validation.
 	 */
-	protected schema?: ZodSchema<TSchema>;
+	protected schema?: ZodSchema<TOptions>;
 
 	/**
 	 * Internal storage for validated environment variables.
 	 * Populated by factory methods after loading and validating.
 	 */
-	private _vars: TSchema | null = null;
+	private _vars: TOptions | null = null;
 
 	/**
 	 * Debug logger instance for this env.
@@ -568,7 +568,7 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 *
 	 * @returns The validated schema object or null
 	 */
-	get vars(): TSchema | null {
+	get vars(): TOptions | null {
 		return this._vars;
 	}
 
@@ -578,7 +578,7 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 * @returns The validated schema object
 	 * @throws Error if variables haven't been loaded
 	 */
-	get varsRequired(): TSchema {
+	get varsRequired(): TOptions {
 		if (this._vars === null) {
 			throw new Error(
 				"Environment variables not loaded. Use forContext() or initializeSession() to load variables first.",
@@ -593,7 +593,7 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 *
 	 * @returns The validated schema object, or null if no schema defined
 	 */
-	protected loadVarsFromEnv(): TSchema | null {
+	protected loadVarsFromEnv(): TOptions | null {
 		if (!this.schema) {
 			return null;
 		}
@@ -622,7 +622,7 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 *
 	 * @param vars - The validated environment variables
 	 */
-	protected setVars(vars: TSchema): void {
+	protected setVars(vars: TOptions): void {
 		this._vars = vars;
 	}
 
@@ -1469,7 +1469,7 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 * @returns The validated schema object
 	 * @throws ZodError if validation fails
 	 */
-	validate(): TSchema {
+	validate(): TOptions {
 		if (!this.schema) {
 			throw new Error("No schema defined for validation");
 		}
@@ -1527,7 +1527,7 @@ export abstract class ClaudeBinaryPluginState<TSchema = Record<string, string>> 
 	 * }
 	 * ```
 	 */
-	validateWithContext(): ValidationResult<TSchema> {
+	validateWithContext(): ValidationResult<TOptions> {
 		if (!this.schema) {
 			throw new Error("No schema defined for validation");
 		}

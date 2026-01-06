@@ -39,7 +39,7 @@ const plugin = ClaudeBinaryPlugin.create({
   prefix: "MY_PLUGIN",
 
   // Zod schema for validating plugin options from env vars
-  schema: z.object({
+  options: z.object({
     TIMEOUT_MS: z.coerce.number().default(30000),
   }),
 
@@ -413,7 +413,7 @@ switch (hookKey) {
       stateClass: StateClass,
       tools: ["Bash"],
       setup: plugin.setup,
-      schema: plugin.schema,
+      optionsSchema: plugin.options,
     });
     break;
   // ... other hooks
@@ -932,7 +932,7 @@ Commands are defined in the plugin configuration alongside hooks:
 ```typescript
 const plugin = ClaudeBinaryPlugin.create({
   prefix: "MY_PLUGIN",
-  schema: optionsSchema,
+  options: optionsSchema,
   setup: async (ctx) => { /* detection logic */ },
 
   // Commands - CLI tools invoked via --cmd=<name>

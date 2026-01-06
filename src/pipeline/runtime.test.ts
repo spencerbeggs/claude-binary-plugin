@@ -1136,7 +1136,7 @@ describe("runPipeline", () => {
 				pipeline: handler,
 				stateClass: EnvClass,
 				setup,
-				schema,
+				optionsSchema: schema,
 				io: mockIO,
 			}),
 		).rejects.toThrow(ExitError);

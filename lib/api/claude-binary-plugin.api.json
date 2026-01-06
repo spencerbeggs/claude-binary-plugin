@@ -148,7 +148,7 @@
   },
   "kind": "Package",
   "canonicalReference": "claude-binary-plugin!",
-  "docComment": "/**\n * Claude Binary Plugin SDK\n *\n * @remarks\n *\n * The `claude-binary-plugin` package provides a TypeScript SDK for building Claude Code plugins that compile to single-file Bun executables.\n *\n * **Key Features:** - Declarative pipeline system for hook handlers - Zod-validated inputs and outputs - OpenTelemetry observability integration - Type-safe environment management - SQLite-based session state persistence\n *\n * **Core Exports:** - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations - {@link ClaudeBinaryPluginState} - Base class for state management - {@link buildPlugin} - Compile plugins to executables - Hook event classes (`PreToolUseHookEvent`, `SessionStartHookEvent`, etc.)\n *\n * @example\n * ```typescript\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({ DEBUG: z.string().default(\"false\") }),\n *   setup: async ({ cwd }) => ({ detected: true }),\n *   hooks: {\n *     PreToolUse: [{ name: \"security\", pipeline: \"./hooks/security.ts\" }],\n *   },\n * });\n *\n * export default plugin;\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @packageDocumentation\n */\n",
+  "docComment": "/**\n * Claude Binary Plugin SDK\n *\n * @remarks\n *\n * The `claude-binary-plugin` package provides a TypeScript SDK for building Claude Code plugins that compile to single-file Bun executables.\n *\n * **Key Features:** - Declarative pipeline system for hook handlers - Zod-validated inputs and outputs - OpenTelemetry observability integration - Type-safe environment management - SQLite-based session state persistence\n *\n * **Core Exports:** - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations - {@link ClaudeBinaryPluginState} - Base class for state management - {@link buildPlugin} - Compile plugins to executables - Hook event classes (`PreToolUseHookEvent`, `SessionStartHookEvent`, etc.)\n *\n * @example\n * ```typescript\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({ TIMEOUT_MS: z.number().default(30000) }),\n *   setup: async ({ cwd }) => ({ detected: true }),\n *   hooks: {\n *     PreToolUse: [{ name: \"security\", pipeline: \"./hooks/security.ts\" }],\n *   },\n * });\n *\n * export default plugin;\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @packageDocumentation\n */\n",
   "name": "claude-binary-plugin",
   "preserveMemberOrder": false,
   "members": [
@@ -1928,11 +1928,11 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class",
-          "docComment": "/**\n * Claude Code plugin with declarative hook definitions.\n *\n * @remarks\n *\n * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins. Use the static `create()` factory to instantiate plugins with full type inference.\n *\n * **Three-Layer Model:** 1. **Input** - Hook event data from Claude Code (stdin JSON) 2. **Options** - User-configurable settings validated by Zod schema 3. **State** - Computed values from `setup()` function at SessionStart\n *\n * **Static Methods:** - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)\n *\n * **Type Inference:** Use the namespace utilities to extract types from plugin instances: - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup() - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands\n *\n * The constructor for this class is marked as internal. Third-party code should not call the constructor directly or create subclasses that extend the `ClaudeBinaryPlugin` class.\n *\n * @typeParam TEnv - Zod schema type for environment validation\n *\n * @typeParam TSetup - Setup function type (used to infer state)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @example\n * ```ts\n * // plugin.config.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({\n *     DEBUG: z.boolean().default(false),\n *   }),\n *   hooks: {\n *     SessionStart: [{\n *       name: \"project-context\",\n *       pipeline: async ({ input, state }) => {\n *         return { additionalContext: \"Hello from plugin!\" };\n *       }\n *     }],\n *   }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n * ```\n *\n * @example\n *\n * Building a plugin programmatically\n * ```ts\n * import plugin from \"./plugin.config.ts\";\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n *\n * await ClaudeBinaryPlugin.build(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
+          "docComment": "/**\n * Claude Code plugin with declarative hook definitions.\n *\n * @remarks\n *\n * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins. Use the static `create()` factory to instantiate plugins with full type inference.\n *\n * **Three-Layer Model:** 1. **Input** - Hook event data from Claude Code (stdin JSON) 2. **Options** - User-configurable settings validated by Zod schema 3. **State** - Computed values from `setup()` function at SessionStart\n *\n * **Static Methods:** - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)\n *\n * **Type Inference:** Use the namespace utilities to extract types from plugin instances: - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup() - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands\n *\n * The constructor for this class is marked as internal. Third-party code should not call the constructor directly or create subclasses that extend the `ClaudeBinaryPlugin` class.\n *\n * @typeParam TOptionsSchema - Zod schema for plugin options validation\n *\n * @typeParam TSetup - Setup function type (used to infer state)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @example\n * ```ts\n * // plugin.config.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({\n *     TIMEOUT_MS: z.number().default(30000),\n *   }),\n *   hooks: {\n *     SessionStart: [{\n *       name: \"project-context\",\n *       pipeline: async ({ input, state }) => {\n *         return {\n *           status: \"executed\",\n *           action: \"context\",\n *           summary: \"added context\",\n *           claudeContext: \"Hello from plugin!\",\n *         };\n *       }\n *     }],\n *   }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n * ```\n *\n * @example\n *\n * Building a plugin programmatically\n * ```ts\n * import plugin from \"./plugin.config.ts\";\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n *\n * await ClaudeBinaryPlugin.build(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export declare class ClaudeBinaryPlugin<TEnv extends "
+              "text": "export declare class ClaudeBinaryPlugin<TOptionsSchema extends "
             },
             {
               "kind": "Reference",
@@ -1963,7 +1963,7 @@
             },
             {
               "kind": "Content",
-              "text": "<TEnv>>) => unknown) | undefined"
+              "text": "<TOptionsSchema>>) => unknown) | undefined"
             },
             {
               "kind": "Content",
@@ -2017,7 +2017,7 @@
           "releaseTag": "Public",
           "typeParameters": [
             {
-              "typeParameterName": "TEnv",
+              "typeParameterName": "TOptionsSchema",
               "constraintTokenRange": {
                 "startIndex": 1,
                 "endIndex": 2
@@ -2154,7 +2154,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv, TSetup, TCommands>"
+                  "text": "<TOptionsSchema, TSetup, TCommands>"
                 },
                 {
                   "kind": "Content",
@@ -2176,11 +2176,11 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.create:member(1)",
-              "docComment": "/**\n * Create a new plugin instance.\n *\n * @remarks\n *\n * This is the primary factory for creating Claude Code plugins. The returned instance contains the configuration and can be passed to `ClaudeBinaryPlugin.build()` for compilation.\n *\n * @param config - Plugin configuration\n *\n * @typeParam TEnv - Zod schema type for environment validation\n *\n * @typeParam TSetup - Setup function type (inferred from config.setup)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @returns Plugin instance ready for building or export\n *\n * @example\n * ```ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: {\n *     PreToolUse: [{\n *       name: \"security\",\n *       tools: [\"Bash\"],\n *       pipeline: \"./hooks/security.hook.ts\",\n *     }],\n *   },\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Create a new plugin instance.\n *\n * @remarks\n *\n * This is the primary factory for creating Claude Code plugins. The returned instance contains the configuration and can be passed to `ClaudeBinaryPlugin.build()` for compilation.\n *\n * @param config - Plugin configuration\n *\n * @typeParam TOptionsSchema - Zod schema for plugin options validation\n *\n * @typeParam TSetup - Setup function type (inferred from config.setup)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @returns Plugin instance ready for building or export\n *\n * @example\n * ```ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({ ALLOW_SUDO: z.boolean().default(false) }),\n *   hooks: {\n *     PreToolUse: [{\n *       name: \"security\",\n *       tools: [\"Bash\"],\n *       pipeline: \"./hooks/security.hook.ts\",\n *     }],\n *   },\n * });\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "static create<TEnv extends "
+                  "text": "static create<TOptionsSchema extends "
                 },
                 {
                   "kind": "Reference",
@@ -2211,7 +2211,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv>>) => unknown) | undefined"
+                  "text": "<TOptionsSchema>>) => unknown) | undefined"
                 },
                 {
                   "kind": "Content",
@@ -2267,7 +2267,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv, TSetup, TCommands>"
+                  "text": "<TOptionsSchema, TSetup, TCommands>"
                 },
                 {
                   "kind": "Content",
@@ -2280,7 +2280,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv, TSetup, TCommands>"
+                  "text": "<TOptionsSchema, TSetup, TCommands>"
                 },
                 {
                   "kind": "Content",
@@ -2289,7 +2289,7 @@
               ],
               "typeParameters": [
                 {
-                  "typeParameterName": "TEnv",
+                  "typeParameterName": "TOptionsSchema",
                   "constraintTokenRange": {
                     "startIndex": 1,
                     "endIndex": 2
@@ -2347,7 +2347,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin#test:member(1)",
-              "docComment": "/**\n * Create a test builder for this plugin.\n *\n * @remarks\n *\n * Returns a fluent test builder with full type inference for options, state, and hook inputs. Use this in your test files to create type-safe test contexts.\n *\n * **Lifecycle:** 1. Create test context with `plugin.test()` 2. Configure with `.withOptions()` and `.withState()` (required) 3. Set hook input with hook-specific methods (e.g., `.withPreToolUseInput()`) 4. Run test with `.runHook()` or `.runCommand()` 5. Clean up with `.dispose()` in `afterEach()`\n *\n * @returns A new PluginTestBuilder instance with full type inference\n *\n * @example\n * ```ts\n * import plugin from \"../plugin.config.js\";\n *\n * describe(\"security hook\", () => {\n *   let ctx: ReturnType<typeof plugin.test>;\n *\n *   beforeEach(() => {\n *     ctx = plugin.test()\n *       .withOptions({ DEBUG: false, API_KEY: \"test\" })\n *       .withState({ packageManager: \"bun\", gitRepo: true });\n *   });\n *\n *   afterEach(() => ctx.dispose());\n *\n *   test(\"blocks dangerous commands\", async () => {\n *     const result = await ctx\n *       .withPreToolUseInput({\n *         tool_name: \"Bash\",\n *         tool_input: { command: \"rm -rf /\" },\n *       })\n *       .runHook(\"PreToolUse\", \"security\");\n *\n *     expect(result.action).toBe(\"deny\");\n *   });\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Create a test builder for this plugin.\n *\n * @remarks\n *\n * Returns a fluent test builder with full type inference for options, state, and hook inputs. Use this in your test files to create type-safe test contexts.\n *\n * **Lifecycle:** 1. Create test context with `plugin.test()` 2. Configure with `.withOptions()` and `.withState()` (required) 3. Set hook input with hook-specific methods (e.g., `.withPreToolUseInput()`) 4. Run test with `.runHook()` or `.runCommand()` 5. Clean up with `.dispose()` in `afterEach()`\n *\n * @returns A new PluginTestBuilder instance with full type inference\n *\n * @example\n * ```ts\n * import plugin from \"../plugin.config.js\";\n *\n * describe(\"security hook\", () => {\n *   let ctx: ReturnType<typeof plugin.test>;\n *\n *   beforeEach(() => {\n *     ctx = plugin.test()\n *       .withOptions({ ALLOW_SUDO: false, API_KEY: \"test\" })\n *       .withState({ packageManager: \"bun\", gitRepo: true });\n *   });\n *\n *   afterEach(() => ctx.dispose());\n *\n *   test(\"blocks dangerous commands\", async () => {\n *     const result = await ctx\n *       .withPreToolUseInput({\n *         tool_name: \"Bash\",\n *         tool_input: { command: \"rm -rf /\" },\n *       })\n *       .runHook(\"PreToolUse\", \"security\");\n *\n *     expect(result.action).toBe(\"deny\");\n *   });\n * });\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2369,7 +2369,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv>, "
+                  "text": "<TOptionsSchema>, "
                 },
                 {
                   "kind": "Reference",
@@ -2405,7 +2405,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv>>, TCommands>"
+                  "text": "<TOptionsSchema>>, TCommands>"
                 },
                 {
                   "kind": "Content",
@@ -2431,7 +2431,7 @@
         {
           "kind": "Namespace",
           "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:namespace",
-          "docComment": "/**\n * Namespace for type inference utilities. Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.\n *\n * @example\n * ```ts\n * // In plugin.config.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   schema: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: { ... }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n *\n * // In hooks/my-hook.hook.ts\n * import type { Pipeline } from \"../plugin.config.js\";\n *\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, state }) => {\n *   // input, options, and state are fully typed!\n *   return { permissionDecision: \"allow\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Namespace for type inference utilities. Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.\n *\n * @example\n * ```ts\n * // In plugin.config.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: { ... }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n *\n * // In hooks/my-hook.hook.ts\n * import type { Pipeline } from \"../plugin.config.js\";\n *\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, state }) => {\n *   // input, options, and state are fully typed!\n *   return { permissionDecision: \"allow\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -2492,12 +2492,12 @@
             },
             {
               "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSchema:type",
-              "docComment": "/**\n * Helper type to extract schema from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractOptionsSchema:type",
+              "docComment": "/**\n * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "type ExtractSchema<T> = "
+                  "text": "type ExtractOptionsSchema<T> = "
                 },
                 {
                   "kind": "Content",
@@ -2518,7 +2518,7 @@
                 }
               ],
               "releaseTag": "Public",
-              "name": "ExtractSchema",
+              "name": "ExtractOptionsSchema",
               "typeParameters": [
                 {
                   "typeParameterName": "T",
@@ -2748,8 +2748,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "ExtractSchema",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSchema:type"
+                  "text": "ExtractOptionsSchema",
+                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractOptionsSchema:type"
                 },
                 {
                   "kind": "Content",
@@ -3894,11 +3894,11 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginState:class",
-          "docComment": "/**\n * Base class for plugin environment variable management.\n *\n * @remarks\n *\n * This abstract class provides the infrastructure for loading, validating, and persisting environment variables in Claude Code plugins. Plugins extend this class and provide:\n *\n * - A `prefix` property for namespacing variables (e.g., `\"MY_PLUGIN\"`) - A `schema` property for Zod validation (optional) - Typed getter properties for accessing validated values - A `setupForSession()` method for SessionStart detection logic\n *\n * The class handles three contexts via the static `forContext()` method:\n *\n * | Context | When | Loading Strategy | |---------|------|------------------| | `sessionStart` | SessionStart hook | Loads `.env` files from project root | | `hook` | Other hooks | Loads from session-env directory | | `command` | CLI commands | Parses `--vars=path` argument |\n *\n * State persistence uses Claude Code's `CLAUDE_ENV_FILE` mechanism with {@link SessionRegistry} providing SQLite-based session lookups.\n *\n * @typeParam TSchema - TypeScript interface defining the environment variable schema\n *\n * @see\n *\n * `forContext()` - Context-aware factory method (has overloads)\n *\n * @see\n *\n * {@link ClaudeBinaryPluginState.initializeSession | initializeSession()} - Session initialization\n *\n * @see\n *\n * {@link SessionRegistry} - SQLite session lookup\n *\n * @public\n */\n",
+          "docComment": "/**\n * Base class for plugin environment variable management.\n *\n * @remarks\n *\n * This abstract class provides the infrastructure for loading, validating, and persisting environment variables in Claude Code plugins. Plugins extend this class and provide:\n *\n * - A `prefix` property for namespacing variables (e.g., `\"MY_PLUGIN\"`) - A `schema` property for Zod validation (optional) - Typed getter properties for accessing validated values - A `setupForSession()` method for SessionStart detection logic\n *\n * The class handles three contexts via the static `forContext()` method:\n *\n * | Context | When | Loading Strategy | |---------|------|------------------| | `sessionStart` | SessionStart hook | Loads `.env` files from project root | | `hook` | Other hooks | Loads from session-env directory | | `command` | CLI commands | Parses `--vars=path` argument |\n *\n * State persistence uses Claude Code's `CLAUDE_ENV_FILE` mechanism with {@link SessionRegistry} providing SQLite-based session lookups.\n *\n * @typeParam TOptions - TypeScript interface defining the environment variable schema\n *\n * @see\n *\n * `forContext()` - Context-aware factory method (has overloads)\n *\n * @see\n *\n * {@link ClaudeBinaryPluginState.initializeSession | initializeSession()} - Session initialization\n *\n * @see\n *\n * {@link SessionRegistry} - SQLite session lookup\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export declare abstract class ClaudeBinaryPluginState<TSchema = "
+              "text": "export declare abstract class ClaudeBinaryPluginState<TOptions = "
             },
             {
               "kind": "Reference",
@@ -3918,7 +3918,7 @@
           "releaseTag": "Public",
           "typeParameters": [
             {
-              "typeParameterName": "TSchema",
+              "typeParameterName": "TOptions",
               "constraintTokenRange": {
                 "startIndex": 0,
                 "endIndex": 0
@@ -3980,7 +3980,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!ClaudeBinaryPluginState.create:member(1)",
-              "docComment": "/**\n * Creates a concrete `ClaudeBinaryPluginState` subclass from configuration.\n *\n * @remarks\n *\n * This factory method creates a runtime subclass of `ClaudeBinaryPluginState` with the specified prefix, schema, and plugin name. It's primarily used by the build system to generate plugin entrypoints that don't require manually defining an env class.\n *\n * The returned class has a `validated` getter that provides typed access to the validated environment variables.\n *\n * @param prefix - Environment variable prefix (e.g., `\"MY_PLUGIN\"`)\n *\n * @param schema - Zod schema for validating environment variables\n *\n * @param pluginName - Optional plugin name for logging (e.g., `\"my-plugin\"`)\n *\n * @typeParam T - The type of validated environment variables (inferred from schema)\n *\n * @returns A constructor for the configured env class\n *\n * @example\n * ```typescript\n * import { ClaudeBinaryPluginState } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const schema = z.object({\n *   MY_PLUGIN_DEBUG: z.enum([\"true\", \"false\"]).default(\"false\"),\n * });\n *\n * const MyEnvClass = ClaudeBinaryPluginState.create(\"MY_PLUGIN\", schema, \"my-plugin\");\n *\n * // Use in hook context\n * const env = await MyEnvClass.forContext(\"sessionStart\", { hookName: \"init\" });\n * console.log(env.validated.MY_PLUGIN_DEBUG); // \"false\" (typed!)\n * ```\n *\n * @see\n *\n * `forContext()` - Loading environment by context\n *\n * @public\n */\n",
+              "docComment": "/**\n * Creates a concrete `ClaudeBinaryPluginState` subclass from configuration.\n *\n * @remarks\n *\n * This factory method creates a runtime subclass of `ClaudeBinaryPluginState` with the specified prefix, schema, and plugin name. It's primarily used by the build system to generate plugin entrypoints that don't require manually defining an env class.\n *\n * The returned class has a `validated` getter that provides typed access to the validated environment variables.\n *\n * @param prefix - Environment variable prefix (e.g., `\"MY_PLUGIN\"`)\n *\n * @param schema - Zod schema for validating environment variables\n *\n * @param pluginName - Optional plugin name for logging (e.g., `\"my-plugin\"`)\n *\n * @typeParam T - The type of validated environment variables (inferred from schema)\n *\n * @returns A constructor for the configured env class\n *\n * @example\n * ```typescript\n * import { ClaudeBinaryPluginState } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const schema = z.object({\n *   MY_PLUGIN_TIMEOUT_MS: z.coerce.number().default(30000),\n * });\n *\n * const MyEnvClass = ClaudeBinaryPluginState.create(\"MY_PLUGIN\", schema, \"my-plugin\");\n *\n * // Use in hook context\n * const env = await MyEnvClass.forContext(\"sessionStart\", { hookName: \"init\" });\n * console.log(env.validated.MY_PLUGIN_TIMEOUT_MS); // 30000 (typed!)\n * ```\n *\n * @see\n *\n * `forContext()` - Loading environment by context\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -5468,7 +5468,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "TSchema | null"
+                  "text": "TOptions | null"
                 },
                 {
                   "kind": "Content",
@@ -5904,7 +5904,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TSchema>"
+                  "text": "<TOptions>"
                 },
                 {
                   "kind": "Content",
@@ -5997,7 +5997,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "TSchema"
+                  "text": "TOptions"
                 },
                 {
                   "kind": "Content",
@@ -6045,7 +6045,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "TSchema"
+                  "text": "TOptions"
                 },
                 {
                   "kind": "Content",
@@ -6145,7 +6145,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TSchema>"
+                  "text": "<TOptions>"
                 },
                 {
                   "kind": "Content",
@@ -6176,7 +6176,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "TSchema | null"
+                  "text": "TOptions | null"
                 },
                 {
                   "kind": "Content",
@@ -6206,7 +6206,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "TSchema"
+                  "text": "TOptions"
                 },
                 {
                   "kind": "Content",
@@ -39491,11 +39491,11 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!PluginConfig:interface",
-          "docComment": "/**\n * Plugin configuration options.\n *\n * @typeParam TEnv - Zod schema type for environment validation\n *\n * @typeParam TSetup - Setup function type (used to infer computed vars)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @public\n */\n",
+          "docComment": "/**\n * Plugin configuration options.\n *\n * @typeParam TOptionsSchema - Zod schema for plugin options validation\n *\n * @typeParam TSetup - Setup function type (used to infer computed vars)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export interface PluginConfig<TEnv extends "
+              "text": "export interface PluginConfig<TOptionsSchema extends "
             },
             {
               "kind": "Reference",
@@ -39526,7 +39526,7 @@
             },
             {
               "kind": "Content",
-              "text": "<TEnv>>) => unknown) | undefined"
+              "text": "<TOptionsSchema>>) => unknown) | undefined"
             },
             {
               "kind": "Content",
@@ -39580,7 +39580,7 @@
           "releaseTag": "Public",
           "typeParameters": [
             {
-              "typeParameterName": "TEnv",
+              "typeParameterName": "TOptionsSchema",
               "constraintTokenRange": {
                 "startIndex": 1,
                 "endIndex": 2
@@ -39722,7 +39722,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<TEnv>>"
+                  "text": "<TOptionsSchema>>"
                 },
                 {
                   "kind": "Content",
@@ -39794,6 +39794,33 @@
             },
             {
               "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!PluginConfig#options:member",
+              "docComment": "/**\n * Zod schema for plugin options (environment variables). Defines the configurable options validated at startup and injected into handlers. Options can be set via .env files or Claude Code settings.json.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "options: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "TOptionsSchema"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "options",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
               "canonicalReference": "claude-binary-plugin!PluginConfig#persistLocal:member",
               "docComment": "/**\n * Whether to persist to local cache after build.\n *\n * @defaultValue true\n */\n",
               "excerptTokens": [
@@ -39841,33 +39868,6 @@
               "isOptional": false,
               "releaseTag": "Public",
               "name": "prefix",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!PluginConfig#schema:member",
-              "docComment": "/**\n * Zod schema for plugin environment variables. These are validated at startup and injected into handlers.\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "schema: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "TEnv"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "schema",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
                 "endIndex": 2
@@ -41211,7 +41211,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginTestBuilder#withOptions:member(1)",
-              "docComment": "/**\n * Set the plugin options for this test.\n *\n * @param options - Full options object matching the plugin schema\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * ctx.withOptions({ DEBUG: true, API_KEY: \"test-key\" });\n * ```\n *\n */\n",
+              "docComment": "/**\n * Set the plugin options for this test.\n *\n * @param options - Full options object matching the plugin schema\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * ctx.withOptions({ TIMEOUT_MS: 5000, API_KEY: \"test-key\" });\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -48657,6 +48657,38 @@
             },
             {
               "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!RunPipelineOptions#optionsSchema:member",
+              "docComment": "/**\n * Zod schema for validating plugin options (used for SessionStart persistence)\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "optionsSchema?: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "z.ZodType",
+                  "canonicalReference": "zod!ZodType:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TOptions>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "optionsSchema",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 3
+              }
+            },
+            {
+              "kind": "PropertySignature",
               "canonicalReference": "claude-binary-plugin!RunPipelineOptions#pipeline:member",
               "docComment": "/**\n * The pipeline handler function\n */\n",
               "excerptTokens": [
@@ -48739,38 +48771,6 @@
               "propertyTypeTokenRange": {
                 "startIndex": 1,
                 "endIndex": 2
-              }
-            },
-            {
-              "kind": "PropertySignature",
-              "canonicalReference": "claude-binary-plugin!RunPipelineOptions#schema:member",
-              "docComment": "/**\n * Zod schema for validating options (used for SessionStart persistence)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "schema?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "z.ZodType",
-                  "canonicalReference": "zod!ZodType:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<TOptions>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "schema",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
               }
             },
             {

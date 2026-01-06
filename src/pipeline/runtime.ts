@@ -406,8 +406,8 @@ export interface RunPipelineOptions<TOptions = unknown, TState = Record<string, 
 	stateClass: new () => ClaudeBinaryPluginState<TOptions>;
 	/** Tool filter (for PreToolUse/PostToolUse) */
 	tools?: string[];
-	/** Zod schema for validating options (used for SessionStart persistence) */
-	schema?: z.ZodType<TOptions>;
+	/** Zod schema for validating plugin options (used for SessionStart persistence) */
+	optionsSchema?: z.ZodType<TOptions>;
 	/** Setup function for computing derived variables (used for SessionStart persistence) */
 	setup?: SetupFunction<TOptions>;
 	/** I/O dependencies (defaults to process.*) - for testing */
@@ -576,7 +576,7 @@ function applyPipelineOutput(event: any, hookType: HookEventType, output: unknow
 export async function runPipeline<TOptions = unknown, TState = Record<string, string>>(
 	options: RunPipelineOptions<TOptions, TState>,
 ): Promise<never> {
-	const { hookType, hookName, pluginName, pluginVersion, pipeline, stateClass, tools, schema, setup } = options;
+	const { hookType, hookName, pluginName, pluginVersion, pipeline, stateClass, tools, optionsSchema, setup } = options;
 	const startTime = performance.now();
 
 	// Merge provided I/O with defaults
@@ -745,7 +745,7 @@ export async function runPipeline<TOptions = unknown, TState = Record<string, st
 				await persistSessionEnv({
 					event: event as SessionStartHookEvent,
 					stateInstance: stateInstance as ClaudeBinaryPluginState<unknown>,
-					schema,
+					schema: optionsSchema,
 					state: state as Record<string, unknown>,
 					baseState,
 				});

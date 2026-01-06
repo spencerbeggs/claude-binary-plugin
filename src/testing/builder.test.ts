@@ -24,7 +24,7 @@ interface TestState {
 
 const testPlugin = ClaudeBinaryPlugin.create({
 	prefix: "TEST_PLUGIN",
-	schema: testSchema,
+	options: testSchema,
 	setup: async (ctx: SetupContext<TestOptions>): Promise<TestState> => {
 		return {
 			packageManager: "bun",

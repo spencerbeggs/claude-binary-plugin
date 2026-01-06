@@ -12,7 +12,7 @@
  *
  * export default ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
- *   schema: z.object({
+ *   options: z.object({
  *     TIMEOUT_MS: z.number().default(30000),
  *   }),
  *   hooks: {
@@ -826,15 +826,15 @@ export type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions
 /**
  * Plugin configuration options.
  *
- * @typeParam TEnv - Zod schema type for environment validation
+ * @typeParam TOptionsSchema - Zod schema for plugin options validation
  * @typeParam TSetup - Setup function type (used to infer computed vars)
  * @typeParam TCommands - Map of command names to their definitions
  * @public
  */
 export interface PluginConfig<
-	TEnv extends $ZodType,
+	TOptionsSchema extends $ZodType,
 	// Use function type constraint directly to avoid default type parameter issues
-	TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
+	TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
 	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
 > {
 	/**
@@ -845,10 +845,11 @@ export interface PluginConfig<
 	prefix: string;
 
 	/**
-	 * Zod schema for plugin environment variables.
-	 * These are validated at startup and injected into handlers.
+	 * Zod schema for plugin options (environment variables).
+	 * Defines the configurable options validated at startup and injected into handlers.
+	 * Options can be set via .env files or Claude Code settings.json.
 	 */
-	schema: TEnv;
+	options: TOptionsSchema;
 
 	/**
 	 * Setup function for computing derived environment variables.
@@ -868,7 +869,7 @@ export interface PluginConfig<
 	/**
 	 * Hook definitions organized by event type.
 	 */
-	hooks: HooksMap<z.infer<TEnv>>;
+	hooks: HooksMap<z.infer<TOptionsSchema>>;
 
 	/**
 	 * Command definitions with typed argument schemas.
@@ -961,7 +962,7 @@ export interface PluginConfig<
  * // plugin.config.ts
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
- *   schema: z.object({
+ *   options: z.object({
  *     TIMEOUT_MS: z.number().default(30000),
  *   }),
  *   hooks: {
@@ -994,7 +995,7 @@ export interface PluginConfig<
  * });
  * ```
  *
- * @typeParam TEnv - Zod schema type for environment validation
+ * @typeParam TOptionsSchema - Zod schema for plugin options validation
  * @typeParam TSetup - Setup function type (used to infer state)
  * @typeParam TCommands - Map of command names to their definitions
  *
@@ -1002,21 +1003,21 @@ export interface PluginConfig<
  * @public
  */
 export class ClaudeBinaryPlugin<
-	TEnv extends $ZodType,
-	TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
+	TOptionsSchema extends $ZodType,
+	TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
 	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
 > {
 	/**
 	 * The plugin configuration.
 	 * @public
 	 */
-	readonly config: PluginConfig<TEnv, TSetup, TCommands>;
+	readonly config: PluginConfig<TOptionsSchema, TSetup, TCommands>;
 
 	/**
 	 * Private constructor - use `ClaudeBinaryPlugin.create()` instead.
 	 * @internal
 	 */
-	private constructor(config: PluginConfig<TEnv, TSetup, TCommands>) {
+	private constructor(config: PluginConfig<TOptionsSchema, TSetup, TCommands>) {
 		this.config = config;
 	}
 
@@ -1028,7 +1029,7 @@ export class ClaudeBinaryPlugin<
 	 * The returned instance contains the configuration and can be passed
 	 * to `ClaudeBinaryPlugin.build()` for compilation.
 	 *
-	 * @typeParam TEnv - Zod schema type for environment validation
+	 * @typeParam TOptionsSchema - Zod schema for plugin options validation
 	 * @typeParam TSetup - Setup function type (inferred from config.setup)
 	 * @typeParam TCommands - Map of command names to their definitions
 	 *
@@ -1039,7 +1040,7 @@ export class ClaudeBinaryPlugin<
 	 * ```ts
 	 * const plugin = ClaudeBinaryPlugin.create({
 	 *   prefix: "MY_PLUGIN",
-	 *   schema: z.object({ ALLOW_SUDO: z.boolean().default(false) }),
+	 *   options: z.object({ ALLOW_SUDO: z.boolean().default(false) }),
 	 *   hooks: {
 	 *     PreToolUse: [{
 	 *       name: "security",
@@ -1053,10 +1054,10 @@ export class ClaudeBinaryPlugin<
 	 * @public
 	 */
 	static create<
-		TEnv extends $ZodType,
-		TSetup extends ((ctx: SetupContext<z.infer<TEnv>>) => unknown) | undefined = undefined,
+		TOptionsSchema extends $ZodType,
+		TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
 		TCommands extends Record<string, CommandDefinition> = Record<string, never>,
-	>(config: PluginConfig<TEnv, TSetup, TCommands>): ClaudeBinaryPlugin<TEnv, TSetup, TCommands> {
+	>(config: PluginConfig<TOptionsSchema, TSetup, TCommands>): ClaudeBinaryPlugin<TOptionsSchema, TSetup, TCommands> {
 		return new ClaudeBinaryPlugin(config);
 	}
 
@@ -1154,9 +1155,9 @@ export class ClaudeBinaryPlugin<
 	 * @public
 	 */
 	test(): PluginTestBuilder<
-		z.infer<TEnv>,
+		z.infer<TOptionsSchema>,
 		ExtractSetupReturn<NonNullable<TSetup>>,
-		HooksMap<z.infer<TEnv>>,
+		HooksMap<z.infer<TOptionsSchema>>,
 		TCommands
 	> {
 		// Dynamic import to enable tree-shaking when test() is not used
@@ -1264,7 +1265,7 @@ export interface PluginBuildOptions {
  * // In plugin.config.ts
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
- *   schema: z.object({ DEBUG: z.boolean().default(false) }),
+ *   options: z.object({ DEBUG: z.boolean().default(false) }),
  *   hooks: { ... }
  * });
  *
@@ -1284,11 +1285,11 @@ export interface PluginBuildOptions {
  */
 export namespace ClaudeBinaryPlugin {
 	/**
-	 * Helper type to extract schema from a ClaudeBinaryPlugin instance.
+	 * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.
 	 * @public
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+	export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
 
 	/**
 	 * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
@@ -1313,7 +1314,7 @@ export namespace ClaudeBinaryPlugin {
 	 * ```
 	 * @public
 	 */
-	export type InferOptions<T> = z.infer<ExtractSchema<T>>;
+	export type InferOptions<T> = z.infer<ExtractOptionsSchema<T>>;
 
 	/**
 	 * Extract the inferred State type from a plugin's setup function.

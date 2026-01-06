@@ -30,7 +30,7 @@
  *
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
- *   schema: z.object({}),
+ *   options: z.object({}),
  *   hooks: { SessionStart: [{ name: "init", pipeline: "./hooks/init.ts" }] },
  * });
  *
@@ -225,7 +225,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         pipeline: ${fileHookImport},
         envClass: EnvClass,
         tools: ${toolsArg},
-        schema: pluginConfig.schema,
+        optionsSchema: pluginConfig.options,
         setup: pluginConfig.setup,
       });
     }`);
@@ -242,7 +242,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         pipeline: hookDef.pipeline,
         envClass: EnvClass,
         tools: ${toolsArg},
-        schema: pluginConfig.schema,
+        optionsSchema: pluginConfig.options,
         setup: pluginConfig.setup,
       });
     }`);
@@ -334,8 +334,8 @@ const PLUGIN_VERSION = "${pluginVersion}";
 // Extract config from plugin definition
 const pluginConfig = pluginDefinition.config;
 
-// Create environment class from plugin schema (with pluginName for logging)
-const EnvClass = ClaudeBinaryPluginState.create(pluginConfig.prefix, pluginConfig.schema, PLUGIN_NAME);
+// Create environment class from plugin options schema (with pluginName for logging)
+const EnvClass = ClaudeBinaryPluginState.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {

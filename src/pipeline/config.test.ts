@@ -195,7 +195,7 @@ describe("ClaudeBinaryPlugin", () => {
 
 		const plugin = ClaudeBinaryPlugin.create({
 			prefix: "TEST_PLUGIN",
-			schema: envSchema,
+			options: envSchema,
 			hooks: {
 				SessionStart: [
 					{
@@ -221,7 +221,7 @@ describe("ClaudeBinaryPlugin", () => {
 	test("create() accepts multiple hooks per event type", () => {
 		const plugin = ClaudeBinaryPlugin.create({
 			prefix: "MULTI",
-			schema: z.object({}),
+			options: z.object({}),
 			hooks: {
 				PreToolUse: [
 					{
@@ -258,7 +258,7 @@ describe("ClaudeBinaryPlugin", () => {
 	test("create() accepts raw handler mode", () => {
 		const plugin = ClaudeBinaryPlugin.create({
 			prefix: "RAW",
-			schema: z.object({}),
+			options: z.object({}),
 			hooks: {
 				PreToolUse: [
 					{
@@ -279,7 +279,7 @@ describe("ClaudeBinaryPlugin", () => {
 		// This is a compile-time test - if types are wrong, this won't compile
 		const plugin = ClaudeBinaryPlugin.create({
 			prefix: "TYPED",
-			schema: z.object({}),
+			options: z.object({}),
 			hooks: {
 				SessionStart: [
 					{
