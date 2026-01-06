@@ -1,26 +1,54 @@
 /**
  * Sidecar client for hook-side IPC communication.
  *
- * Provides a non-blocking, fire-and-forget interface for sending
- * telemetry to the OTEL sidecar process.
+ * @remarks
+ * This module provides the {@link SidecarClient} class for sending telemetry
+ * to the OTEL sidecar process. It uses a fire-and-forget pattern to ensure
+ * hooks are never blocked by telemetry operations.
  *
+ * **Design principles:**
+ * - Non-blocking: Messages are queued and sent asynchronously
+ * - Resilient: Connection failures are handled silently
+ * - Lazy reconnection: Reconnects on next emit, not immediately
+ * - Auto-spawning: Creates sidecar if not running
+ *
+ * **Message types:**
+ * - `ping` - Initialize sidecar with OTEL config
+ * - `event` - Log structured events
+ * - `metric` - Record metric values
+ * - `span` - Create trace spans
+ * - `shutdown` - Signal session/sidecar termination
+ *
+ * @example
+ * ```typescript
+ * const client = new SidecarClient(sessionId);
+ * await client.preconnect();
+ * client.emit({ type: "event", sessionId, data: { ... } });
+ * await client.flush();
+ * ```
+ *
+ * @see {@link getSidecarClient} - Get/create singleton client
+ * @see docs/SCHEMA.md - OTEL telemetry schema
  * @module
  */
 
 import type { Socket } from "bun";
-import { getSessionEnvDir, parseOTELConfig } from "./config.js";
-import { getSocketPathWithFallback } from "./platform.js";
-import type { OTELConfig, SidecarMessage } from "./protocol.js";
-import { serializeMessage } from "./protocol.js";
-import { socketExists, spawnSidecar } from "./spawn.js";
+import { OTELConfig } from "./classes/OTELConfig.js";
+import { Platform } from "./classes/Platform.js";
+import { SessionEnv } from "./classes/SessionEnv.js";
+import { SidecarLauncher } from "./classes/SidecarLauncher.js";
+import { SidecarMessage } from "./classes/SidecarMessage.js";
+import type { OTELProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
 
 /**
  * Client state for tracking connection status.
+ * @public
  */
-type ClientState = "disconnected" | "connecting" | "connected";
+export type ClientState = "disconnected" | "connecting" | "connected";
 
 /**
  * Socket data for client connections.
+ * @public
  */
 interface SocketData {
 	/** Timestamp when connection was established */
@@ -36,6 +64,7 @@ interface SocketData {
  * - Reconnection is lazy (attempted on next emit)
  *
  * This ensures hooks are never blocked by telemetry operations.
+ * @public
  */
 export class SidecarClient {
 	private sessionId: string;
@@ -43,7 +72,7 @@ export class SidecarClient {
 	private socket: Socket<SocketData> | null = null;
 	private state: ClientState = "disconnected";
 	private connectPromise: Promise<boolean> | null = null;
-	private messageQueue: SidecarMessage[] = [];
+	private messageQueue: SidecarProtocolMessage[] = [];
 	private hasPinged = false;
 
 	constructor(sessionId: string, socketPath?: string) {
@@ -52,9 +81,9 @@ export class SidecarClient {
 		if (socketPath) {
 			this.socketPath = socketPath;
 		} else {
-			const sessionEnvDir = getSessionEnvDir();
+			const sessionEnvDir = SessionEnv.getDir();
 			this.socketPath = sessionEnvDir
-				? getSocketPathWithFallback(sessionEnvDir, sessionId)
+				? Platform.getSocketPathWithFallback(sessionEnvDir, sessionId)
 				: `/tmp/claude-otel-${sessionId}.sock`;
 		}
 	}
@@ -94,7 +123,7 @@ export class SidecarClient {
 	 * @param config - OTEL configuration
 	 * @returns true if sidecar is available
 	 */
-	async ensureRunning(config: OTELConfig): Promise<boolean> {
+	async ensureRunning(config: OTELProtocolConfig): Promise<boolean> {
 		// Try connecting to existing sidecar
 		const connected = await this.tryConnect();
 		if (connected) {
@@ -108,14 +137,14 @@ export class SidecarClient {
 		}
 
 		// Check if socket file exists (sidecar might be starting)
-		const exists = await socketExists(this.socketPath);
+		const exists = await Platform.socketExists(this.socketPath);
 		if (exists) {
 			// Wait a bit and retry
 			return this.waitForSocket(1000);
 		}
 
 		// Spawn new sidecar
-		const result = await spawnSidecar(this.sessionId, config);
+		const result = await SidecarLauncher.spawn(this.sessionId, config);
 		if (!result.success) {
 			return false;
 		}
@@ -144,7 +173,7 @@ export class SidecarClient {
 	 *
 	 * @param message - Message to send
 	 */
-	emit(message: SidecarMessage): void {
+	emit(message: SidecarProtocolMessage): void {
 		if (this.state !== "connected" || !this.socket) {
 			// Queue message and try to connect (spawn if needed)
 			this.messageQueue.push(message);
@@ -157,7 +186,7 @@ export class SidecarClient {
 		}
 
 		try {
-			const serialized = serializeMessage(message);
+			const serialized = SidecarMessage.serialize(message);
 			this.socket.write(serialized);
 		} catch {
 			// Socket error - clear and try reconnect on next emit
@@ -177,8 +206,8 @@ export class SidecarClient {
 		// Send ping before first message to initialize sidecar providers
 		if (!this.hasPinged) {
 			this.hasPinged = true;
-			const config = parseOTELConfig();
-			const pingMessage = serializeMessage({
+			const config = OTELConfig.fromEnv();
+			const pingMessage = SidecarMessage.serialize({
 				type: "ping",
 				sessionId: this.sessionId,
 				config,
@@ -195,7 +224,7 @@ export class SidecarClient {
 			const msg = this.messageQueue.shift();
 			if (msg) {
 				try {
-					const serialized = serializeMessage(msg);
+					const serialized = SidecarMessage.serialize(msg);
 					this.socket.write(serialized);
 				} catch {
 					// Socket error - stop draining
@@ -302,8 +331,8 @@ export class SidecarClient {
 		}
 
 		// Connection failed - spawn the sidecar
-		const config = parseOTELConfig();
-		const result = await spawnSidecar(this.sessionId, config);
+		const config = OTELConfig.fromEnv();
+		const result = await SidecarLauncher.spawn(this.sessionId, config);
 		if (!result.success) {
 			return false;
 		}
@@ -403,6 +432,7 @@ const clients = new Map<string, SidecarClient>();
  *
  * @param sessionId - The Claude Code session ID
  * @returns SidecarClient for the session
+ * @public
  */
 export function getSidecarClient(sessionId: string): SidecarClient {
 	let client = clients.get(sessionId);
@@ -419,6 +449,7 @@ export function getSidecarClient(sessionId: string): SidecarClient {
  * Called when a session ends to clean up resources.
  *
  * @param sessionId - The session ID to remove
+ * @public
  */
 export function removeSidecarClient(sessionId: string): void {
 	const client = clients.get(sessionId);
@@ -432,6 +463,7 @@ export function removeSidecarClient(sessionId: string): void {
  * Clear all cached clients.
  *
  * Useful for testing or cleanup.
+ * @public
  */
 export function clearSidecarClients(): void {
 	for (const client of clients.values()) {

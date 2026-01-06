@@ -1,21 +1,20 @@
 /**
- * Bun macros for compile-time code execution.
- * These functions run at bundle time and their return values are inlined.
+ * Version utilities for the CLI.
+ *
+ * Uses a static JSON import which Bun resolves at bundle time,
+ * embedding the version directly into the compiled binary.
+ *
+ * @module
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+// Static import resolved at bundle time relative to this file
+// biome-ignore lint/correctness/useImportExtensions: JSON imports use .json extension
+import pkg from "../../package.json" with { type: "json" };
 
 /**
- * Returns the package version from package.json at compile time.
- * This macro is evaluated during bundling, so the version is baked into the binary.
+ * Get the package version.
+ * Works both at runtime (development) and when bundled (production).
  */
 export function getPackageVersion(): string {
-	const __filename = fileURLToPath(import.meta.url);
-	const __dirname = dirname(__filename);
-	const packageJsonPath = resolve(__dirname, "../../package.json");
-	const content = readFileSync(packageJsonPath, "utf-8");
-	const packageJson = JSON.parse(content);
-	return packageJson.version ?? "0.0.0";
+	return pkg.version;
 }

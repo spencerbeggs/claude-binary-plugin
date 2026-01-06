@@ -29,6 +29,39 @@ Key design principles:
   distinguishes from Anthropic's (`com.anthropic.claude_code.events`)
 - **Fire-and-forget** - Telemetry never blocks hook execution
 - **Semantic outcomes** - Hook results are classified for easy filtering
+- **Class-based API** - All telemetry accessed via static class methods
+
+### Telemetry Classes
+
+The SDK provides three primary classes for telemetry emission:
+
+```typescript
+import {
+  TelemetryEmitter,
+  TelemetryMetrics,
+  TelemetrySpan,
+  OTELConfig,
+} from "claude-binary-plugin";
+
+// Check if telemetry is enabled
+if (OTELConfig.isEnabled()) {
+  // Emit events
+  TelemetryEmitter.emitHookExecution(event, "pre-bash", { ... });
+
+  // Record metrics
+  TelemetryMetrics.recordCounter(event, "files.processed", 5);
+
+  // Instrument with spans
+  await TelemetrySpan.withHookSpan(event, "validate", async () => { ... });
+}
+```
+
+| Class | Purpose |
+| ----- | ------- |
+| `TelemetryEmitter` | Emit events (`emitHookExecution`, `emitFatalError`, etc.) |
+| `TelemetryMetrics` | Record metrics (counters, histograms, gauges) |
+| `TelemetrySpan` | Span instrumentation for tracing |
+| `OTELConfig` | Configuration and `isEnabled()` check |
 
 ---
 

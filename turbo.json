@@ -1,22 +1,7 @@
 {
 	"$schema": "https://turborepo.com/schema.v2.json",
-	"globalPassThroughEnv": [],
+	"globalPassThroughEnv": ["HOME", "XDG_CONFIG_HOME"],
 	"tasks": {
-		"build": {
-			"dependsOn": ["typecheck", "compile"],
-			"inputs": [
-				"$TURBO_DEFAULTS$",
-				"bun.lock",
-				"package.json",
-				"src/**/*",
-				"lib/scripts/build.mts",
-				"lib/builder/**/*",
-				"bunfig.toml",
-				"tsconfig.json",
-				".npmignore"
-			],
-			"outputs": ["bin/**", "dist/**"]
-		},
 		"compile": {
 			"dependsOn": ["typecheck"],
 			"inputs": [

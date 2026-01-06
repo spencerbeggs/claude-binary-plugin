@@ -4,11 +4,12 @@
  * Claude Binary Plugin Builder CLI
  *
  * Builds a Claude Code plugin from a declarative plugin definition file.
+ * By default, looks for `plugin.config.ts` in the current directory.
  *
  * Usage:
- *   claude-binary-plugin build [plugin-config-path]
  *   claude-binary-plugin build
- *   claude-binary-plugin build ./src/plugin.ts --no-persist
+ *   claude-binary-plugin build plugin.config.ts
+ *   claude-binary-plugin build ./src/plugin.config.ts --no-persist
  *
  * Options:
  *   --no-persist    Don't persist to local cache (overrides config)
@@ -21,18 +22,11 @@ import { Args, Command, Options } from "@effect/cli";
 import { BunContext, BunRuntime } from "@effect/platform-bun";
 import { Console, Effect } from "effect";
 import type { z } from "zod";
-import {
-	buildPlugin,
-	extractPassthroughHookEntries,
-	extractPipelineHookEntries,
-	generateHooksJson,
-	generatePipelinePluginEntrypoint,
-	readPluginManifest,
-} from "../builder.js";
-import type { CompiledPlugin } from "../pipeline.js";
-import { getPackageVersion } from "./macros.js" with { type: "macro" };
+import { PluginBuilder } from "../build/builder.js";
+import type { ClaudeBinaryPlugin } from "../pipeline/config.js";
+import { getPackageVersion } from "./macros.js";
 
-// Package version is inlined at compile time via Bun macro
+// Package version - works both at runtime and when bundled
 const cliVersion = getPackageVersion();
 
 // Build command arguments and options
@@ -75,7 +69,7 @@ const buildCommand = Command.make(
 			const pluginDefinition = yield* Effect.tryPromise({
 				try: async () => {
 					const module = await import(absolutePluginFile);
-					const definition = module.default as CompiledPlugin<z.ZodTypeAny>;
+					const definition = module.default as ClaudeBinaryPlugin<z.ZodTypeAny>;
 					if (!definition?.config) {
 						throw new Error("Plugin file must export a default ClaudeBinaryPlugin.create() result");
 					}
@@ -87,12 +81,12 @@ const buildCommand = Command.make(
 			const config = pluginDefinition.config;
 
 			// Read plugin manifest for name and version
-			const manifest = yield* Effect.promise(() => readPluginManifest(rootDir));
+			const manifest = yield* Effect.promise(() => PluginBuilder.readPluginManifest(rootDir));
 			const pluginName = manifest?.name ?? config.prefix.toLowerCase().replace(/_/g, "-");
 			const pluginVersion = manifest?.version ?? "1.0.0";
 
 			// Extract hook entries
-			const hookEntries = extractPipelineHookEntries(config);
+			const hookEntries = PluginBuilder.extractHookEntries(config);
 
 			// Convert commands object to pipelineCommands format for generatePipelinePluginEntrypoint
 			const pipelineCommands = config.commands
@@ -124,7 +118,7 @@ const buildCommand = Command.make(
 
 			// Generate entrypoint
 			const pluginImportPath = `./${pluginFile.replace(/\.ts$/, ".js")}`;
-			const entrypointSource = generatePipelinePluginEntrypoint({
+			const entrypointSource = PluginBuilder.generateEntrypoint({
 				pluginPath: pluginImportPath,
 				pluginName,
 				pluginVersion,
@@ -143,7 +137,7 @@ const buildCommand = Command.make(
 
 			// Build the plugin
 			const result = yield* Effect.promise(() =>
-				buildPlugin({
+				PluginBuilder.build({
 					rootDir,
 					entrypoint: ".plugin-entrypoint.ts",
 					bytecode: shouldBytecode,
@@ -165,8 +159,8 @@ const buildCommand = Command.make(
 
 			// Generate hooks.json
 			const hooksOutputPath = config.hooksOutputPath ?? "hooks/hooks.json";
-			const passthroughHooks = extractPassthroughHookEntries(config);
-			const hooksJson = generateHooksJson({
+			const passthroughHooks = PluginBuilder.extractPassthroughEntries(config);
+			const hooksJson = PluginBuilder.generateHooksJson({
 				pluginBinaryName: result.output,
 				hooks: hookEntries,
 				passthroughHooks,

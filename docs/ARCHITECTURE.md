@@ -35,16 +35,16 @@ import { ClaudeBinaryPlugin } from "claude-binary-plugin/pipeline";
 import { z } from "zod";
 
 const plugin = ClaudeBinaryPlugin.create({
-  // Environment variable prefix (e.g., MY_PLUGIN_DEBUG)
+  // Environment variable prefix (e.g., MY_PLUGIN_TIMEOUT_MS)
   prefix: "MY_PLUGIN",
 
   // Zod schema for validating plugin options from env vars
-  schema: z.object({
-    DEBUG: z.string().default("false").transform(v => v === "true"),
+  options: z.object({
+    TIMEOUT_MS: z.coerce.number().default(30000),
   }),
 
   // Runs at SessionStart to compute derived state
-  setup: async ({ options, cwd, env }) => {
+  setup: async ({ options, cwd }) => {
     return { detectedPackageManager: await detectPM(cwd) };
   },
 
@@ -75,7 +75,7 @@ Every hook handler receives context from three distinct layers:
 │  ───────────────────────────────────────────────────────────────  │
 │  Source: Claude Code via stdin                                     │
 │  Content: Hook event data (session_id, tool_name, tool_input)     │
-│  Validation: Zod schemas in src/schemas.ts                        │
+│  Validation: Zod schemas in src/core/schemas.ts                   │
 │  Access: handler({ input, ... }) - the `input` parameter          │
 └───────────────────────────────────────────────────────────────────┘
                                   │
@@ -84,7 +84,7 @@ Every hook handler receives context from three distinct layers:
 │  Layer 2: OPTIONS                                                  │
 │  ───────────────────────────────────────────────────────────────  │
 │  Source: Environment variables with plugin prefix                  │
-│  Content: User-configurable settings (DEBUG, API_KEY, etc.)       │
+│  Content: User-configurable settings (TIMEOUT_MS, API_KEY, etc.)  │
 │  Validation: Plugin's Zod schema with defaults and transforms    │
 │  Access: handler({ options, ... }) - typed from schema            │
 └───────────────────────────────────────────────────────────────────┘
@@ -103,8 +103,53 @@ Every hook handler receives context from three distinct layers:
 ┌───────────────────────────────────────────────────────────────────┐
 │  Handler Function                                                  │
 │  ───────────────────────────────────────────────────────────────  │
-│  ({ input, options, env }) => PipelineOutput                      │
+│  ({ input, options, state }) => PipelineOutput                    │
 └───────────────────────────────────────────────────────────────────┘
+```
+
+### Type Safety
+
+The SDK uses `type-fest` for enhanced type safety throughout the pipeline:
+
+**Immutable Handler Context:**
+
+Handler parameters are deeply readonly via `ReadonlyDeep<T>`:
+
+```typescript
+interface HandlerContext<TInput, TOptions, TState> {
+  input: ReadonlyDeep<TInput>;     // Cannot mutate input
+  options: ReadonlyDeep<TOptions>; // Cannot mutate options
+  state: ReadonlyDeep<PluginState<TState>>; // Cannot mutate state
+}
+```
+
+This prevents accidental mutations - handlers should be pure functions.
+
+**JSON Types:**
+
+Tool inputs and outputs use precise JSON types instead of `Record<string, unknown>`:
+
+```typescript
+import type { JsonObject, JsonValue } from "claude-binary-plugin";
+
+// tool_input: JsonObject (not Record<string, unknown>)
+// Ensures values are JSON-serializable
+```
+
+**Branded Identifiers:**
+
+String identifiers use branded types to prevent mixing them up:
+
+| Type | Field | Purpose |
+| ---- | ----- | ------- |
+| `SessionId` | `session_id` | Claude Code session UUID |
+| `ToolUseId` | `tool_use_id` | Tool invocation identifier |
+| `TranscriptPath` | `transcript_path` | Conversation transcript file |
+| `HookName` | hook config | Custom hook identifier |
+
+```typescript
+// These are distinct types - can't accidentally swap them
+function processHook(sessionId: SessionId, toolUseId: ToolUseId) { }
 ```
 
 ### Hook Event Types
@@ -149,7 +194,7 @@ Defines the handler function directly:
 ```typescript
 {
   name: "simple-check",
-  pipeline: async ({ input, options, env }) => {
+  pipeline: async ({ input, options, state }) => {
     return { status: "executed", action: "allow", summary: "ok" };
   },
 }
@@ -294,15 +339,15 @@ integration with existing hook scripts.
 2. Plugin reads JSON from stdin
    { "session_id": "abc-123", "tool_name": "Bash", "tool_input": {...} }
 
-3. Runtime parses input with Zod schema (src/schemas.ts)
+3. Runtime parses input with Zod schema (src/core/schemas.ts)
    PreToolUseInputSchema.parse(stdinData)
 
-4. Runtime loads environment:
+4. Runtime loads state:
    - SessionStart: Load .env files, run setup()
    - Other hooks: Load from CLAUDE_ENV_FILE via session registry
 
 5. Runtime calls handler with typed context
-   handler({ input, options, env })
+   handler({ input, options, state })
 
 6. Handler returns pipeline output
    { status: "executed", action: "allow", summary: "..." }
@@ -359,19 +404,19 @@ Subsequent Hooks (PreToolUse, etc.)
 └──────────────────┘
        │
        ▼
-│  State available in handler({ env: { packageManager, ... } })
+│  State available in handler({ state: { packageManager, ... } })
 ```
 
 ## Build System
 
 ### Build Process
 
-The `buildPlugin()` function in `src/builder.ts`:
+`PluginBuilder.fromConfig()` in `src/build/builder.ts`:
 
 1. **Generates entrypoint code** - Creates a TypeScript file that:
    - Imports the plugin configuration
    - Imports all hook handler modules
-   - Creates the env class from schema
+   - Creates the state class from schema
    - Routes CLI arguments to the correct hook handler
    - Calls `runPipeline()` with the right configuration
 
@@ -410,10 +455,10 @@ switch (hookKey) {
       hookType: "PreToolUse",
       hookName: "security",
       pipeline: securityHandler,
-      envClass: EnvClass,
+      stateClass: StateClass,
       tools: ["Bash"],
       setup: plugin.setup,
-      schema: plugin.schema,
+      optionsSchema: plugin.options,
     });
     break;
   // ... other hooks
@@ -426,7 +471,7 @@ switch (hookKey) {
 
 ### runPipeline() Function
 
-The core runtime function in `src/pipeline-runtime.ts`:
+The core runtime function in `src/pipeline/runtime.ts`:
 
 ```text
 runPipeline(options)
@@ -434,10 +479,10 @@ runPipeline(options)
        ├──▶ Create HookEvent from stdin
        │         │
        │         ▼
-       │    EventClass.create({ stdin, stdout, stderr, envClass })
+       │    EventClass.create({ stdin, stdout, stderr, stateClass })
        │         │
        │         ▼
-       │    Parse JSON, validate with Zod, create env instance
+       │    Parse JSON, validate with Zod, create state instance
        │
        ├──▶ Check tool filter (PreToolUse/PostToolUse)
        │         │
@@ -453,7 +498,7 @@ runPipeline(options)
        ├──▶ Call pipeline handler
        │         │
        │         ▼
-       │    output = await pipeline({ input, options, env })
+       │    output = await pipeline({ input, options, state })
        │
        ├──▶ Validate output is pipeline format
        │         │
@@ -498,11 +543,11 @@ Claude Code's expected response:
 }
 ```
 
-## Environment Management
+## State Management
 
-### ClaudeBinaryPluginEnv Class
+### ClaudeBinaryPluginState Class
 
-The `ClaudeBinaryPluginEnv` class in `src/plugin-env.ts` provides:
+The `ClaudeBinaryPluginState` class in `src/state/plugin-state.ts` provides:
 
 1. **Schema validation** - Validates env vars against Zod schema
 2. **Context-aware loading** - Different loading strategies per context
@@ -523,7 +568,7 @@ const env = await MyEnv.forContext("sessionStart", {
 const env = await MyEnv.forContext("hook", {
   hookName: "my-hook",
   sessionId: event.session_id,
-  sessionEnvDir: ClaudeBinaryPluginEnv.getSessionEnvDir(event.session_id),
+  sessionEnvDir: ClaudeBinaryPluginState.getSessionEnvDir(event.session_id),
 });
 
 // Commands: Parse --vars argument
@@ -660,6 +705,60 @@ This approach works around Claude Code's env file bugs while providing
 reliable state access for both hooks and commands.
 
 ## OTEL Integration
+
+### Class-Based API
+
+The OTEL module uses a class-based API for better discoverability and
+IDE autocomplete. All telemetry functionality is accessed through
+static class methods:
+
+```typescript
+import {
+  OTELConfig,
+  TelemetryEmitter,
+  TelemetryMetrics,
+  TelemetrySpan,
+  Platform,
+  GitInfo,
+} from "claude-binary-plugin";
+
+// Check if telemetry is enabled
+if (OTELConfig.isEnabled()) {
+  // Emit hook execution event
+  TelemetryEmitter.emitHookExecution(event, "pre-bash", {
+    hookType: "PreToolUse",
+    pluginName: "workflow",
+    pluginVersion: "1.0.0",
+    durationMs: 42,
+    success: true,
+    outcome: "allowed",
+  });
+
+  // Record metrics
+  TelemetryMetrics.recordCounter(event, "files.processed", 5);
+  TelemetryMetrics.recordHistogram(event, "parse.duration", 123, "ms");
+}
+
+// Instrument hooks with automatic span tracking
+const handler = TelemetrySpan.instrumentHook("pre-bash", async (event) => {
+  return { status: "executed", action: "allow", summary: "ok" };
+});
+```
+
+**Primary Classes:**
+
+| Class | Purpose |
+| ----- | ------- |
+| `OTELConfig` | Configuration parsing, `isEnabled()` check |
+| `TelemetryEmitter` | Event emission (`emitHookExecution`, etc.) |
+| `TelemetryMetrics` | Metric recording (counters, histograms, gauges) |
+| `TelemetrySpan` | Span instrumentation for tracing |
+| `Platform` | Platform detection, socket path utilities |
+| `GitInfo` | Git repository detection |
+| `PluginInfo` | Plugin metadata for telemetry attributes |
+| `SidecarClient` | IPC client for sidecar communication |
+| `SidecarClientPool` | Client lifecycle management |
+| `SidecarLauncher` | Sidecar process spawning |
 
 ### Sidecar Architecture Overview
 
@@ -878,7 +977,7 @@ Commands are defined in the plugin configuration alongside hooks:
 ```typescript
 const plugin = ClaudeBinaryPlugin.create({
   prefix: "MY_PLUGIN",
-  schema: optionsSchema,
+  options: optionsSchema,
   setup: async (ctx) => { /* detection logic */ },
 
   // Commands - CLI tools invoked via --cmd=<name>
@@ -919,14 +1018,14 @@ import type { Commands } from "../plugin.js";
 const handler: Commands["lint"] = async ({
   args,
   options,
-  env
+  state
 }): Promise<CommandOutput> => {
   // args: Validated from Zod schema
-  // options: Plugin options (DEBUG, etc.) from Layer 2
-  // env: Computed state from setup()
+  // options: Plugin options (TIMEOUT_MS, etc.) from Layer 2
+  // state: Computed state from setup()
 
   const targetPaths = args._positionals;
-  const results = await runLinters(targetPaths, env.enabled);
+  const results = await runLinters(targetPaths, state.enabled);
 
   return {
     exitCode: 0,  // 0=success, 1=issues found, 2=fatal error
@@ -1008,7 +1107,7 @@ Key elements:
 │  3. Find session env dir (SQLite or CLAUDE_ENV_FILE)          │
 │  4. Load hook-*.sh files to restore persisted state           │
 │  5. Decode {PREFIX}_PLUGIN_STATE from base64 JSON             │
-│  6. Call handler({ args, options, env })                      │
+│  6. Call handler({ args, options, state })                    │
 │  7. Output markdown to stdout                                  │
 │  8. Exit with code                                             │
 └───────────────────────────────────────────────────────────────┘
@@ -1053,20 +1152,20 @@ State persisted to hook-0.sh as base64 JSON
        ▼
 Commands load state via:
   1. SessionRegistry.getByProjectDir(cwd) → session-env dir
-  2. ClaudeBinaryPluginEnv.loadAllHookFiles(dir) → parse hook-*.sh
-  3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ env })
+  2. ClaudeBinaryPluginState.loadAllHookFiles(dir) → parse hook-*.sh
+  3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ state })
 ```
 
 This enables commands to use detection results without re-running:
 
 ```typescript
-// In command handler - no need to detect, just use env
-const handler: Commands["lint"] = async ({ env }) => {
-  if (env.enabled.biome) {
-    await runBiome(env.config.biome);
+// In command handler - no need to detect, just use state
+const handler: Commands["lint"] = async ({ state }) => {
+  if (state.enabled.biome) {
+    await runBiome(state.config.biome);
   }
-  if (env.enabled.shellcheck) {
-    await runShellcheck(env.config.shellcheckBin);
+  if (state.enabled.shellcheck) {
+    await runShellcheck(state.config.shellcheckBin);
   }
   // ...
 };
@@ -1077,29 +1176,72 @@ const handler: Commands["lint"] = async ({ env }) => {
 ```text
 src/
 ├── index.ts              # Hook events, response builders
-├── pipeline.ts           # ClaudeBinaryPlugin.create()
-├── pipeline-runtime.ts   # runPipeline(), runRawHandler()
-├── pipeline-types.ts     # Output types, Zod schemas
-├── pipeline-metrics.ts   # Token estimation, metrics
-├── command-runtime.ts    # runCommand(), arg parsing
-├── builder.ts            # buildPlugin(), entrypoint gen
-├── plugin-env.ts         # ClaudeBinaryPluginEnv base class
-├── schemas.ts            # Input Zod schemas
-├── session-registry.ts   # SQLite session lookup
-├── debug-logger.ts       # File-based debug logging
-├── mocks.ts              # Test utilities
+├── build/
+│   └── builder.ts        # PluginBuilder class, entrypoint gen
+├── commands/
+│   └── runtime.ts        # runCommand(), arg parsing
+├── core/
+│   ├── schemas.ts        # Input Zod schemas
+│   └── tool-inputs.ts    # Tool input types
+├── state/
+│   ├── plugin-state.ts   # ClaudeBinaryPluginState base class
+│   ├── session-registry.ts # SQLite session lookup
+│   └── codecs.ts         # Zod codecs for env vars
+├── events/
+│   ├── base.ts           # HookEvent base class
+│   ├── subclasses.ts     # Hook event subclasses
+│   ├── types.ts          # Event types
+│   ├── enums.ts          # HookEventName enum
+│   ├── response-builders.ts # Response builder functions
+│   ├── response-types.ts # Response types
+│   └── validation.ts     # Input validation
+├── pipeline/
+│   ├── config.ts         # ClaudeBinaryPlugin.create()
+│   ├── runtime.ts        # runPipeline(), runRawHandler()
+│   ├── types.ts          # Output types, Zod schemas
+│   ├── metrics.ts        # Token estimation, metrics
+│   └── pipeline.ts       # Pipeline class (unified API)
+├── testing/
+│   ├── mocks.ts          # Low-level test utilities
+│   └── builder.ts        # PluginTestBuilder (see TESTING.md)
+├── types/
+│   ├── json.ts           # JSON types from type-fest, Zod schemas
+│   └── branded.ts        # Branded types (SessionId, ToolUseId, etc.)
+├── utils/
+│   └── debug-logger.ts   # File-based debug logging
 └── otel/
     ├── index.ts          # OTEL module exports
-    ├── client.ts         # SidecarClient for IPC
-    ├── config.ts         # OTEL configuration
+    ├── classes/          # Class-based API (primary)
+    │   ├── index.ts      # Barrel export
+    │   ├── OTELConfig.ts # Configuration parsing
+    │   ├── Platform.ts   # Platform detection
+    │   ├── GitInfo.ts    # Git repo detection
+    │   ├── PluginInfo.ts # Plugin metadata
+    │   ├── SessionEnv.ts # Session utilities
+    │   ├── ClaudeAccountInfo.ts # Account detection
+    │   ├── SidecarMessage.ts # Message serialization
+    │   ├── SidecarClientPool.ts # Client management
+    │   ├── SidecarLauncher.ts # Sidecar spawning
+    │   ├── TelemetryEmitter.ts # Event emission
+    │   ├── TelemetryMetrics.ts # Metric recording
+    │   └── TelemetrySpan.ts # Span instrumentation
+    ├── sidecar/          # Sidecar process
+    │   ├── main.ts       # Entry point
+    │   ├── server.ts     # Unix socket server
+    │   ├── providers.ts  # OTEL providers
+    │   ├── handlers/     # Message handlers
+    │   └── exporters.ts  # OTLP exporters
+    ├── client.ts         # SidecarClient class
+    ├── config.ts         # Low-level config
     ├── constants.ts      # Attribute/metric names
-    ├── events.ts         # Event emitters
-    ├── metrics.ts        # Metric recorders
-    ├── instrumentation.ts# Span wrappers
-    ├── protocol.ts       # Message serialization
-    ├── platform.ts       # Socket path handling
-    ├── spawn.ts          # Sidecar spawning
-    ├── git-info.ts       # Git repo detection
-    ├── plugin-info.ts    # Plugin metadata
-    └── sidecar.ts        # Sidecar entry point
+    ├── protocol.ts       # Message types
+    ├── platform.ts       # Low-level platform
+    ├── git-info.ts       # Low-level git
+    ├── plugin-info.ts    # Low-level plugin info
+    └── spawn.ts          # Low-level sidecar spawn
 ```
+
+## Related Documentation
+
+- `TESTING.md` - Testing utilities and fluent API
+- `SCHEMA.md` - OTEL telemetry schema specification
