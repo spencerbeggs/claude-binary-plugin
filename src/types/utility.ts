@@ -26,25 +26,22 @@
 
 export type {
 	/**
-	 * Make all properties in `T` readonly recursively.
+	 * Create a type that represents the JSON-serialized version of `T`.
 	 *
 	 * @remarks
-	 * This is used internally by `HandlerContext` to make handler parameters
-	 * immutable. You can use it for your own types that should be deeply frozen.
+	 * Transforms a type to what it would look like after `JSON.parse(JSON.stringify(x))`.
+	 * Handles Date → string, undefined removal, etc.
 	 *
 	 * @example
 	 * ```typescript
-	 * type Config = { nested: { value: number } };
-	 * type ImmutableConfig = ReadonlyDeep<Config>;
-	 *
-	 * const config: ImmutableConfig = { nested: { value: 1 } };
-	 * // config.nested.value = 2; // Error: readonly
+	 * type Input = { date: Date; value: number };
+	 * type Serialized = Jsonify<Input>;
+	 * // { date: string; value: number }
 	 * ```
 	 *
 	 * @public
 	 */
-	ReadonlyDeep,
-
+	Jsonify,
 	/**
 	 * Make all properties in `T` optional recursively.
 	 *
@@ -64,7 +61,42 @@ export type {
 	 * @public
 	 */
 	PartialDeep,
-
+	/**
+	 * Make all properties in `T` readonly recursively.
+	 *
+	 * @remarks
+	 * This is used internally by `HandlerContext` to make handler parameters
+	 * immutable. You can use it for your own types that should be deeply frozen.
+	 *
+	 * @example
+	 * ```typescript
+	 * type Config = { nested: { value: number } };
+	 * type ImmutableConfig = ReadonlyDeep<Config>;
+	 *
+	 * const config: ImmutableConfig = { nested: { value: 1 } };
+	 * // config.nested.value = 2; // Error: readonly
+	 * ```
+	 *
+	 * @public
+	 */
+	ReadonlyDeep,
+	/**
+	 * Make all properties in `T` required recursively.
+	 *
+	 * @remarks
+	 * The inverse of `PartialDeep`. Useful for ensuring all fields are
+	 * present after merging partial configurations.
+	 *
+	 * @example
+	 * ```typescript
+	 * type Config = { nested?: { value?: number } };
+	 * type FullConfig = RequiredDeep<Config>;
+	 * // { nested: { value: number } }
+	 * ```
+	 *
+	 * @public
+	 */
+	RequiredDeep,
 	/**
 	 * Create a tagged (branded) type.
 	 *
@@ -90,7 +122,6 @@ export type {
 	 * @public
 	 */
 	Tagged,
-
 	/**
 	 * Make all properties in `T` writable recursively (remove readonly).
 	 *
@@ -110,40 +141,4 @@ export type {
 	 * @public
 	 */
 	WritableDeep,
-
-	/**
-	 * Make all properties in `T` required recursively.
-	 *
-	 * @remarks
-	 * The inverse of `PartialDeep`. Useful for ensuring all fields are
-	 * present after merging partial configurations.
-	 *
-	 * @example
-	 * ```typescript
-	 * type Config = { nested?: { value?: number } };
-	 * type FullConfig = RequiredDeep<Config>;
-	 * // { nested: { value: number } }
-	 * ```
-	 *
-	 * @public
-	 */
-	RequiredDeep,
-
-	/**
-	 * Create a type that represents the JSON-serialized version of `T`.
-	 *
-	 * @remarks
-	 * Transforms a type to what it would look like after `JSON.parse(JSON.stringify(x))`.
-	 * Handles Date → string, undefined removal, etc.
-	 *
-	 * @example
-	 * ```typescript
-	 * type Input = { date: Date; value: number };
-	 * type Serialized = Jsonify<Input>;
-	 * // { date: string; value: number }
-	 * ```
-	 *
-	 * @public
-	 */
-	Jsonify,
 } from "type-fest";
