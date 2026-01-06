@@ -953,7 +953,7 @@ export interface PluginConfig<
  *
  * @example
  * ```ts
- * // plugin.ts
+ * // plugin.config.ts
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   schema: z.object({
@@ -973,9 +973,9 @@ export interface PluginConfig<
  * export default plugin;
  * ```
  *
- * @example Building a plugin
+ * @example Building a plugin programmatically
  * ```ts
- * import plugin from "./plugin.ts";
+ * import plugin from "./plugin.config.ts";
  * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
  *
  * await ClaudeBinaryPlugin.build(plugin, {
@@ -1072,7 +1072,7 @@ export class ClaudeBinaryPlugin<
 	 *
 	 * @example
 	 * ```ts
-	 * import plugin from "./plugin.ts";
+	 * import plugin from "./plugin.config.ts";
 	 * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
 	 *
 	 * const result = await ClaudeBinaryPlugin.build(plugin, {
@@ -1115,7 +1115,7 @@ export class ClaudeBinaryPlugin<
 	 *
 	 * @example
 	 * ```ts
-	 * import plugin from "../plugin.js";
+	 * import plugin from "../plugin.config.js";
 	 *
 	 * describe("security hook", () => {
 	 *   let ctx: ReturnType<typeof plugin.test>;
@@ -1251,7 +1251,7 @@ export interface PluginBuildOptions {
  *
  * @example
  * ```ts
- * // In plugin.ts
+ * // In plugin.config.ts
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   schema: z.object({ DEBUG: z.boolean().default(false) }),
@@ -1262,7 +1262,7 @@ export interface PluginBuildOptions {
  * export default plugin;
  *
  * // In hooks/my-hook.hook.ts
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
  *   // input, options, and state are fully typed!

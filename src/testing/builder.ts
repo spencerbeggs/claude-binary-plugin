@@ -8,7 +8,7 @@
  *
  * @example
  * ```typescript
- * import myPlugin from "../plugin.js";
+ * import myPlugin from "../plugin.config.js";
  *
  * describe("security hook", () => {
  *   let ctx: ReturnType<typeof myPlugin.test>;

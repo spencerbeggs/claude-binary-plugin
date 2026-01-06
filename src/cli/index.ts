@@ -4,11 +4,12 @@
  * Claude Binary Plugin Builder CLI
  *
  * Builds a Claude Code plugin from a declarative plugin definition file.
+ * By default, looks for `plugin.config.ts` in the current directory.
  *
  * Usage:
- *   claude-binary-plugin build [plugin-config-path]
  *   claude-binary-plugin build
- *   claude-binary-plugin build ./src/plugin.ts --no-persist
+ *   claude-binary-plugin build plugin.config.ts
+ *   claude-binary-plugin build ./src/plugin.config.ts --no-persist
  *
  * Options:
  *   --no-persist    Don't persist to local cache (overrides config)

@@ -91,7 +91,7 @@ import { SchemaValidator } from "./validation.js";
  * @example
  * ```typescript
  * // Pipeline handler for PreToolUse
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  * import { ToolInputGuard } from "claude-binary-plugin";
  *
  * const handler: Pipeline["PreToolUse"] = ({ input, options, env }) => {
@@ -181,7 +181,7 @@ export class PreToolUseHookEvent<TState = unknown> extends HookEvent<TState> imp
  * @example
  * ```typescript
  * // Pipeline handler for PostToolUse
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["PostToolUse"] = ({ input, options, env }) => {
  *   // Add context after file reads
@@ -271,7 +271,7 @@ export class PostToolUseHookEvent<TState = unknown> extends HookEvent<TState> im
  * @example
  * ```typescript
  * // Pipeline handler for PermissionRequest
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["PermissionRequest"] = ({ input, options, env }) => {
  *   // Auto-allow git operations
@@ -355,7 +355,7 @@ export class PermissionRequestHookEvent<TState = unknown> extends HookEvent<TSta
  * @example
  * ```typescript
  * // Pipeline handler for Notification
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["Notification"] = ({ input, options, env }) => {
  *   // Log notifications for observability
@@ -430,7 +430,7 @@ export class NotificationHookEvent<TState = unknown> extends HookEvent<TState> i
  * @example
  * ```typescript
  * // Pipeline handler for UserPromptSubmit
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["UserPromptSubmit"] = ({ input, options, env }) => {
  *   // Add project-specific context for certain keywords
@@ -515,7 +515,7 @@ export class UserPromptSubmitHookEvent<TState = unknown> extends HookEvent<TStat
  * @example
  * ```typescript
  * // Pipeline handler for Stop
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["Stop"] = ({ input, options, env }) => {
  *   // Ensure tests pass before allowing stop
@@ -593,7 +593,7 @@ export class StopHookEvent<TState = unknown> extends HookEvent<TState> implement
  * @example
  * ```typescript
  * // Pipeline handler for SubagentStop
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["SubagentStop"] = ({ input, options, env }) => {
  *   // Allow subagents to stop without additional checks
@@ -668,7 +668,7 @@ export class SubagentStopHookEvent<TState = unknown> extends HookEvent<TState> i
  * @example
  * ```typescript
  * // Pipeline handler for PreCompact
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["PreCompact"] = ({ input, options, env }) => {
  *   // Log compaction events for debugging
@@ -741,7 +741,7 @@ export class PreCompactHookEvent<TState = unknown> extends HookEvent<TState> imp
  * @example
  * ```typescript
  * // Pipeline handler for SessionStart
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["SessionStart"] = ({ input, options, env }) => {
  *   // Inject project context at session start
@@ -834,7 +834,7 @@ export class SessionStartHookEvent<TState = unknown> extends HookEvent<TState> i
  * @example
  * ```typescript
  * // Pipeline handler for SessionEnd
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["SessionEnd"] = ({ input, options, env }) => {
  *   // Log session end for analytics

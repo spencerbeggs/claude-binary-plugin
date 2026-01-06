@@ -15,7 +15,7 @@
  * @example
  * ```typescript
  * import { ToolInputGuard } from "claude-binary-plugin";
- * import type { Pipeline } from "../plugin.js";
+ * import type { Pipeline } from "../plugin.config.js";
  *
  * const handler: Pipeline["PreToolUse"] = ({ input }) => {
  *   // Type-safe access to Bash command

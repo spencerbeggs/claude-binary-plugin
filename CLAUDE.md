@@ -11,6 +11,7 @@ For deeper context, reference these files:
 
 - @docs/ARCHITECTURE.md - Complete system architecture, data flow, build
   system, command runtime, OTEL sidecar spawning and handshake
+- @docs/CLI.md - CLI binary usage, zero-config builds, scaffolding plans
 - @docs/SCHEMA.md - OTEL telemetry schema, event types, attributes, metrics
 
 **Core Source Files (load as needed):**
