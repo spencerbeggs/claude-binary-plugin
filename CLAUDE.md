@@ -18,7 +18,7 @@ For deeper context, reference these files:
 
 - `src/pipeline/config.ts` - `ClaudeBinaryPlugin.create()` factory and type inference
 - `src/pipeline/runtime.ts` - `runPipeline()` execution and response mapping
-- `src/build/builder.ts` - `buildPlugin()` compilation and entrypoint generation
+- `src/build/builder.ts` - `PluginBuilder` class for compilation and entrypoint generation
 - `src/state/plugin-state.ts` - `ClaudeBinaryPluginState` base class for state management
 - `src/commands/runtime.ts` - `runCommand()` for CLI command execution
 - `src/state/session-registry.ts` - SQLite session lookup for state persistence
@@ -130,9 +130,10 @@ See `docs/TESTING.md` for testing utilities and `docs/SCHEMA.md` for OTEL.
 
 - `src/index.ts` - Hook event classes, response builders, type exports
 - `src/pipeline/config.ts` - Plugin config types, `ClaudeBinaryPlugin.create()`
+- `src/pipeline/pipeline.ts` - `Pipeline` class (unified API for execution)
 - `src/pipeline/runtime.ts` - `runPipeline()`, response mapping
 - `src/pipeline/types.ts` - Output schemas per hook type
-- `src/build/builder.ts` - `buildPlugin()`, entrypoint generation
+- `src/build/builder.ts` - `PluginBuilder` class, entrypoint generation
 - `src/state/plugin-state.ts` - `ClaudeBinaryPluginState` base class
 - `src/core/schemas.ts` - Zod schemas for hook event inputs
 - `src/otel/` - OpenTelemetry integration (class-based API)
@@ -140,7 +141,7 @@ See `docs/TESTING.md` for testing utilities and `docs/SCHEMA.md` for OTEL.
 ### Data Flow
 
 1. Claude Code invokes plugin binary with hook event JSON on stdin
-2. Plugin runtime parses input with Zod schema (`src/schemas.ts`)
+2. Plugin runtime parses input with Zod schema (`src/core/schemas.ts`)
 3. State loaded via `ClaudeBinaryPluginState` (options + computed state)
 4. Handler called with `{ input, options, state }` context
 5. Handler returns pipeline output with `status`, `action`, `summary`

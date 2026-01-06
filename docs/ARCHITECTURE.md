@@ -75,7 +75,7 @@ Every hook handler receives context from three distinct layers:
 │  ───────────────────────────────────────────────────────────────  │
 │  Source: Claude Code via stdin                                     │
 │  Content: Hook event data (session_id, tool_name, tool_input)     │
-│  Validation: Zod schemas in src/schemas.ts                        │
+│  Validation: Zod schemas in src/core/schemas.ts                   │
 │  Access: handler({ input, ... }) - the `input` parameter          │
 └───────────────────────────────────────────────────────────────────┘
                                   │
@@ -294,7 +294,7 @@ integration with existing hook scripts.
 2. Plugin reads JSON from stdin
    { "session_id": "abc-123", "tool_name": "Bash", "tool_input": {...} }
 
-3. Runtime parses input with Zod schema (src/schemas.ts)
+3. Runtime parses input with Zod schema (src/core/schemas.ts)
    PreToolUseInputSchema.parse(stdinData)
 
 4. Runtime loads state:
@@ -366,7 +366,7 @@ Subsequent Hooks (PreToolUse, etc.)
 
 ### Build Process
 
-The `buildPlugin()` function in `src/builder.ts`:
+`PluginBuilder.fromConfig()` in `src/build/builder.ts`:
 
 1. **Generates entrypoint code** - Creates a TypeScript file that:
    - Imports the plugin configuration
@@ -426,7 +426,7 @@ switch (hookKey) {
 
 ### runPipeline() Function
 
-The core runtime function in `src/pipeline-runtime.ts`:
+The core runtime function in `src/pipeline/runtime.ts`:
 
 ```text
 runPipeline(options)
@@ -1132,7 +1132,7 @@ const handler: Commands["lint"] = async ({ state }) => {
 src/
 ├── index.ts              # Hook events, response builders
 ├── build/
-│   └── builder.ts        # buildPlugin(), entrypoint gen
+│   └── builder.ts        # PluginBuilder class, entrypoint gen
 ├── commands/
 │   └── runtime.ts        # runCommand(), arg parsing
 ├── core/
@@ -1155,7 +1155,7 @@ src/
 │   ├── runtime.ts        # runPipeline(), runRawHandler()
 │   ├── types.ts          # Output types, Zod schemas
 │   ├── metrics.ts        # Token estimation, metrics
-│   └── namespace.ts      # ClaudeBinaryPlugin namespace
+│   └── pipeline.ts       # Pipeline class (unified API)
 ├── testing/
 │   ├── mocks.ts          # Low-level test utilities
 │   └── builder.ts        # PluginTestBuilder (see TESTING.md)
