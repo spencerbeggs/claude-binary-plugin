@@ -342,7 +342,7 @@ export { ClaudeBinaryPlugin } from "./pipeline/config.js";
 export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export { TokenMetrics } from "./pipeline/metrics.js";
 // Unified Pipeline class (preferred)
-export { Pipeline } from "./pipeline/namespace.js";
+export { Pipeline } from "./pipeline/pipeline.js";
 
 // Pipeline types - distinct from events/types.ts output interfaces
 export type {
