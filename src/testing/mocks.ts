@@ -812,11 +812,15 @@ export function testFatalErrorHandler(
 // =============================================================================
 
 /**
- * Testing utilities for Claude Code plugins.
+ * Low-level testing utilities for Claude Code plugins.
  *
  * @remarks
- * The `Mocks` class provides static methods grouping related testing
- * utilities for easier discovery and usage.
+ * **For plugin testing, prefer the fluent API via `plugin.test()`** - see
+ * {@link PluginTestBuilder} for type-safe hook and command testing with
+ * full type inference from your plugin schema.
+ *
+ * The `Mocks` class provides lower-level utilities for SDK development
+ * or edge cases where the fluent API is insufficient.
  *
  * **Method Categories:**
  * - I/O: `createIO`, `resetIO`
