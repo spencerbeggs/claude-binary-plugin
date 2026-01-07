@@ -18472,7 +18472,7 @@
               "text": ";"
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "HookEventType",
           "typeTokenRange": {
@@ -21962,14 +21962,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!IODependencies:interface",
-          "docComment": "/**\n * I/O dependencies for runPipeline. Allows injection for testing without mocking process globals.\n *\n * @public\n */\n",
+          "docComment": "/**\n * I/O dependencies for pipeline execution. Allows injection for testing without mocking process globals.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface IODependencies "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "IODependencies",
           "preserveMemberOrder": false,
@@ -29094,7 +29094,7 @@
               "text": "export interface PermissionRequestResponseData "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "PermissionRequestResponseData",
           "preserveMemberOrder": false,
@@ -29603,88 +29603,19 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!Pipeline:class",
-          "docComment": "/**\n * Pipeline execution and utilities.\n *\n * @remarks\n *\n * The `Pipeline` class provides a single entry point for all pipeline-related operations including hook execution, output validation, and metrics extraction.\n *\n * **Class Organization:**\n *\n * | Category | Methods | |----------|---------| | Execution | `run`, `runRaw`, `handleUnknown` | | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` | | Metrics | `Metrics.*` (static property) |\n *\n * @example\n * ```typescript\n * import { Pipeline } from \"claude-binary-plugin\";\n *\n * // Execute a pipeline handler\n * await Pipeline.run({\n *   hookType: \"PreToolUse\",\n *   hookName: \"security\",\n *   pipeline: myHandler,\n *   envClass: MyEnv,\n * });\n *\n * // Check if output is valid pipeline format\n * if (Pipeline.isOutput(result)) {\n *   console.log(result.status, result.summary);\n * }\n *\n * // Estimate tokens for context\n * const tokens = Pipeline.Metrics.estimateTokens(content, \"code\");\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
+          "docComment": "/**\n * Pipeline utilities for type guards and metrics.\n *\n * @remarks\n *\n * The `Pipeline` class provides a single entry point for pipeline-related utilities including type guards and metrics extraction.\n *\n * **Class Organization:**\n *\n * | Category | Methods | |----------|---------| | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` | | Metrics | `Metrics.*` (static property) |\n *\n * For execution methods (`run`, `runRaw`, `handleUnknown`), see {@link PipelineRuntime}.\n *\n * @example\n * ```typescript\n * import { Pipeline, PipelineRuntime } from \"claude-binary-plugin\";\n *\n * // Check if output is valid pipeline format\n * if (Pipeline.isOutput(result)) {\n *   console.log(result.status, result.action);\n * }\n *\n * // Estimate tokens for context\n * const tokens = Pipeline.Metrics.estimateTokens(content, \"code\");\n *\n * // Execute a pipeline handler (use PipelineRuntime)\n * await PipelineRuntime.run({ ... });\n * ```\n *\n * @see\n *\n * {@link PipelineRuntime} - For hook execution\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export declare class Pipeline "
             }
           ],
-          "fileUrlPath": "src/pipeline/pipeline.ts",
+          "fileUrlPath": "src/pipeline/classes/Pipeline.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "Pipeline",
           "preserveMemberOrder": false,
           "members": [
-            {
-              "kind": "Method",
-              "canonicalReference": "claude-binary-plugin!Pipeline.handleUnknown:member(1)",
-              "docComment": "/**\n * Handle an unknown hook key.\n *\n * @remarks\n *\n * Called when the plugin receives an unrecognized hook key. Emits telemetry, logs an error, and exits with a passthrough response.\n *\n * @param hookKey - The unknown hook key (e.g., \"PreToolUse/unknown\")\n *\n * @param validHooks - Array of valid hook keys for error message\n *\n * @returns Never (exits process)\n *\n * @example\n * ```typescript\n * if (!validHooks.includes(hookKey)) {\n *   await Pipeline.handleUnknown(hookKey, validHooks);\n * }\n * ```\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static handleUnknown(hookKey: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ", validHooks: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string[]"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Promise",
-                  "canonicalReference": "!Promise:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<never>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isStatic": true,
-              "returnTypeTokenRange": {
-                "startIndex": 5,
-                "endIndex": 7
-              },
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "hookKey",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  },
-                  "isOptional": false
-                },
-                {
-                  "parameterName": "validHooks",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 3,
-                    "endIndex": 4
-                  },
-                  "isOptional": false
-                }
-              ],
-              "isOptional": false,
-              "isAbstract": false,
-              "name": "handleUnknown"
-            },
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!Pipeline.isOutput:member(1)",
@@ -30100,7 +30031,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": ";\n        readonly DEFAULT_BUDGET: import(\"./metrics.js\")."
+                  "text": ";\n        readonly DEFAULT_BUDGET: import(\"../metrics.js\")."
                 },
                 {
                   "kind": "Reference",
@@ -30136,204 +30067,6 @@
               "isStatic": true,
               "isProtected": false,
               "isAbstract": false
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "claude-binary-plugin!Pipeline.run:member(1)",
-              "docComment": "/**\n * Execute a pipeline handler.\n *\n * @remarks\n *\n * Main entry point for executing pipeline-style hooks. Handles the full lifecycle: parsing stdin, loading environment, running the handler, emitting telemetry, and writing the response.\n *\n * @param options - Pipeline execution options\n *\n * @returns Never (exits process after writing response)\n *\n * @example\n * ```typescript\n * await Pipeline.run({\n *   hookType: \"PreToolUse\",\n *   hookName: \"security\",\n *   pluginName: \"my-plugin\",\n *   pluginVersion: \"1.0.0\",\n *   pipeline: async ({ input, options, env }) => {\n *     return { status: \"executed\", action: \"allow\", summary: \"allowed\" };\n *   },\n *   envClass: MyEnv,\n *   tools: [\"Bash\", \"Write\"],\n * });\n * ```\n *\n * @see\n *\n * {@link PipelineConfig}\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static run<TOptions = "
-                },
-                {
-                  "kind": "Content",
-                  "text": "unknown"
-                },
-                {
-                  "kind": "Content",
-                  "text": ", TState = "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ">(options: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "PipelineConfig",
-                  "canonicalReference": "claude-binary-plugin!PipelineConfig:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<TOptions, TState>"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Promise",
-                  "canonicalReference": "!Promise:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<never>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "typeParameters": [
-                {
-                  "typeParameterName": "TOptions",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  }
-                },
-                {
-                  "typeParameterName": "TState",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 3,
-                    "endIndex": 5
-                  }
-                }
-              ],
-              "isStatic": true,
-              "returnTypeTokenRange": {
-                "startIndex": 9,
-                "endIndex": 11
-              },
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "options",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 6,
-                    "endIndex": 8
-                  },
-                  "isOptional": false
-                }
-              ],
-              "isOptional": false,
-              "isAbstract": false,
-              "name": "run"
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "claude-binary-plugin!Pipeline.runRaw:member(1)",
-              "docComment": "/**\n * Execute a raw handler.\n *\n * @remarks\n *\n * Entry point for raw handlers that need direct access to the HookEvent object. Raw handlers are responsible for calling `event.end()` themselves.\n *\n * @param options - Raw handler execution options\n *\n * @returns Never (exits process after handler completes)\n *\n * @example\n * ```typescript\n * await Pipeline.runRaw({\n *   hookType: \"PreToolUse\",\n *   hookName: \"custom\",\n *   handler: async ({ event, options, env }) => {\n *     event.end(event.response().allow());\n *   },\n *   envClass: MyEnv,\n * });\n * ```\n *\n * @see\n *\n * {@link RunRawHandlerOptions}\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "static runRaw<TOptions, TState = "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, string>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ">(options: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "RunRawHandlerOptions",
-                  "canonicalReference": "claude-binary-plugin!RunRawHandlerOptions:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<TOptions, TState>"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Promise",
-                  "canonicalReference": "!Promise:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<void>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "typeParameters": [
-                {
-                  "typeParameterName": "TOptions",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                },
-                {
-                  "typeParameterName": "TState",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 3
-                  }
-                }
-              ],
-              "isStatic": true,
-              "returnTypeTokenRange": {
-                "startIndex": 7,
-                "endIndex": 9
-              },
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "options",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 4,
-                    "endIndex": 6
-                  },
-                  "isOptional": false
-                }
-              ],
-              "isOptional": false,
-              "isAbstract": false,
-              "name": "runRaw"
             }
           ],
           "implementsTokenRanges": []
@@ -30495,7 +30228,7 @@
               "text": "> "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -32029,6 +31762,292 @@
             "startIndex": 1,
             "endIndex": 95
           }
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "claude-binary-plugin!PipelineRuntime:class",
+          "docComment": "/**\n * Runtime execution for pipeline-based hooks.\n *\n * @remarks\n *\n * The `PipelineRuntime` class consolidates all runtime execution logic into a single, static class. This includes hook execution, raw handler execution, and unknown hook handling.\n *\n * @example\n * ```typescript\n * import { PipelineRuntime } from \"claude-binary-plugin\";\n *\n * // Execute a pipeline handler\n * await PipelineRuntime.run({\n *   hookType: \"PreToolUse\",\n *   hookName: \"security\",\n *   pluginName: \"my-plugin\",\n *   pluginVersion: \"1.0.0\",\n *   pipeline: myHandler,\n *   stateClass: MyEnv,\n * });\n *\n * // Execute a raw handler\n * await PipelineRuntime.runRaw({\n *   hookType: \"PreToolUse\",\n *   hookName: \"custom\",\n *   pluginName: \"my-plugin\",\n *   pluginVersion: \"1.0.0\",\n *   handler: async ({ event }) => event.end(event.response().allow()),\n *   stateClass: MyEnv,\n * });\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare class PipelineRuntime "
+            }
+          ],
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
+          "releaseTag": "Public",
+          "isAbstract": false,
+          "name": "PipelineRuntime",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PipelineRuntime.handleUnknown:member(1)",
+              "docComment": "/**\n * Handle an unknown hook by emitting telemetry and exiting with error.\n *\n * @remarks\n *\n * This method is called when a plugin receives a hook invocation for a hook that doesn't exist. It: 1. Parses the hook key to extract type and name 2. Reads stdin to get session info for telemetry 3. Emits error telemetry 4. Writes error to stderr 5. Exits with code 2\n *\n * @param hookKey - The hook key in format \"HookType/hook-name\"\n *\n * @param validHooks - Array of valid hook keys for error message\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static handleUnknown(hookKey: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", validHooks: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<never>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "hookKey",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "validHooks",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "handleUnknown"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PipelineRuntime.run:member(1)",
+              "docComment": "/**\n * Execute a pipeline hook handler.\n *\n * @remarks\n *\n * Main entry point for executing pipeline-style hooks. Handles the full lifecycle: parsing stdin, loading environment, running the handler, emitting telemetry, and writing the response.\n *\n * **Execution steps:** 1. Create HookEvent from stdin JSON 2. Check tool filter (PreToolUse/PostToolUse only) 3. Load environment via `stateClass.forContext()` 4. Run `setup()` and persist state if SessionStart 5. Call pipeline handler with `{ input, options, state }` 6. Validate output matches hook type schema 7. Extract metrics and emit OTEL telemetry 8. Convert to response format and write to stdout 9. Exit process with appropriate code\n *\n * @param options - Pipeline configuration\n *\n * @returns Never (exits process after writing response)\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static run<TOptions = "
+                },
+                {
+                  "kind": "Content",
+                  "text": "unknown"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", TState = "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PipelineConfig",
+                  "canonicalReference": "claude-binary-plugin!PipelineConfig:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TOptions, TState>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<never>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "TOptions",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  }
+                },
+                {
+                  "typeParameterName": "TState",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 11
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 6,
+                    "endIndex": 8
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "run"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PipelineRuntime.runRaw:member(1)",
+              "docComment": "/**\n * Execute a raw handler hook.\n *\n * @remarks\n *\n * Raw handlers receive direct access to the HookEvent object instead of the pipeline abstraction. They are responsible for: - Calling `event.end()` or using response builder methods - Managing their own telemetry (optional) - Handling errors and exit codes\n *\n * Use raw handlers when you need: - Direct access to response builder fluent API - Custom response formatting not supported by pipeline outputs - Maximum control over the response flow\n *\n * @param options - Raw handler configuration\n *\n * @public\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static runRaw<TOptions, TState = "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Record",
+                  "canonicalReference": "!Record:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<string, string>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ">(options: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "RunRawHandlerOptions",
+                  "canonicalReference": "claude-binary-plugin!RunRawHandlerOptions:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TOptions, TState>"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<void>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "TOptions",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                },
+                {
+                  "typeParameterName": "TState",
+                  "constraintTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 3
+                  }
+                }
+              ],
+              "isStatic": true,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 9
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "options",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 4,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "runRaw"
+            }
+          ],
+          "implementsTokenRanges": []
         },
         {
           "kind": "TypeAlias",
@@ -40792,7 +40811,7 @@
               "text": "export interface PostToolUseResponseData "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "PostToolUseResponseData",
           "preserveMemberOrder": false,
@@ -44797,14 +44816,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!PreToolUseResponseData:interface",
-          "docComment": "/**\n * Internal type for PreToolUse response builder. This is the format expected by the Claude Code response builder, converted from pipeline output format.\n *\n * @public\n */\n",
+          "docComment": "/**\n * Internal type for PreToolUse response builder.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface PreToolUseResponseData "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "PreToolUseResponseData",
           "preserveMemberOrder": false,
@@ -45734,7 +45753,7 @@
               "text": "> "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -50358,7 +50377,7 @@
               "text": "export interface SessionStartResponseData "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "SessionStartResponseData",
           "preserveMemberOrder": false,
@@ -54211,7 +54230,7 @@
               "text": "export interface StopResponseData "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "StopResponseData",
           "preserveMemberOrder": false,
@@ -63327,7 +63346,7 @@
               "text": "export interface UserPromptSubmitResponseData "
             }
           ],
-          "fileUrlPath": "src/pipeline/runtime.ts",
+          "fileUrlPath": "src/pipeline/classes/PipelineRuntime.ts",
           "releaseTag": "Public",
           "name": "UserPromptSubmitResponseData",
           "preserveMemberOrder": false,

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Writable } from "node:stream";
 import { z } from "zod";
-import { PluginEnv } from "../state/plugin-state.js";
-import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
-import type { IODependencies } from "./classes/PipelineRuntime.js";
-import { PipelineRuntime } from "./classes/PipelineRuntime.js";
-import type { AnyPipelineOutput } from "./types.js";
+import { PluginEnv } from "../../state/plugin-state.js";
+import type { MockEnvContext } from "../../testing/mocks.js";
+import { mockEnv } from "../../testing/mocks.js";
+import type { IODependencies } from "./PipelineRuntime.js";
+import { PipelineRuntime } from "./PipelineRuntime.js";
+import type { AnyPipelineOutput } from "../types.js";
 
 // Access internal test utilities
 const {

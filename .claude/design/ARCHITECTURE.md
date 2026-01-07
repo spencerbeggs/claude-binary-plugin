@@ -418,7 +418,7 @@ Subsequent Hooks (PreToolUse, etc.)
    - Imports all hook handler modules
    - Creates the state class from schema
    - Routes CLI arguments to the correct hook handler
-   - Calls `runPipeline()` with the right configuration
+   - Calls `PipelineRuntime.run()` with the right configuration
 
 2. **Compiles to executable** - Uses `Bun.build()` with:
    - `target: "bun"` for Bun runtime
@@ -434,9 +434,9 @@ Subsequent Hooks (PreToolUse, etc.)
 ```typescript
 // Generated entrypoint (simplified)
 import {
-  runPipeline,
+  PipelineRuntime,
   createEnvClass
-} from "claude-binary-plugin/pipeline-runtime";
+} from "claude-binary-plugin";
 import plugin from "./plugin.ts";
 import securityHandler from "./hooks/security.hook.ts";
 import contextHandler from "./hooks/context.hook.ts";
@@ -451,7 +451,7 @@ const hookKey = process.argv[2];  // e.g., "PreToolUse/security"
 
 switch (hookKey) {
   case "PreToolUse/security":
-    await runPipeline({
+    await PipelineRuntime.run({
       hookType: "PreToolUse",
       hookName: "security",
       pipeline: securityHandler,
@@ -463,18 +463,18 @@ switch (hookKey) {
     break;
   // ... other hooks
   default:
-    handleUnknownHook(hookKey, validHooks);
+    PipelineRuntime.handleUnknown(hookKey, validHooks);
 }
 ```
 
 ## Runtime Execution
 
-### runPipeline() Function
+### PipelineRuntime.run() Method
 
-The core runtime function in `src/pipeline/runtime.ts`:
+The core runtime method in `src/pipeline/classes/PipelineRuntime.ts`:
 
 ```text
-runPipeline(options)
+PipelineRuntime.run(options)
        │
        ├──▶ Create HookEvent from stdin
        │         │
@@ -1100,7 +1100,7 @@ Key elements:
                                   │
                                   ▼
 ┌───────────────────────────────────────────────────────────────┐
-│  runCommand() in command-runtime.ts                            │
+│  Commands.run() in src/commands/runtime.ts                     │
 │  ───────────────────────────────────────────────────────────  │
 │  1. Parse CLI args: --key=value flags, positional args        │
 │  2. Validate against Zod schema                                │
@@ -1179,7 +1179,7 @@ src/
 ├── build/
 │   └── builder.ts        # PluginBuilder class, entrypoint gen
 ├── commands/
-│   └── runtime.ts        # runCommand(), arg parsing
+│   └── runtime.ts        # Commands class, arg parsing
 ├── core/
 │   ├── schemas.ts        # Input Zod schemas
 │   └── tool-inputs.ts    # Tool input types
@@ -1197,10 +1197,11 @@ src/
 │   └── validation.ts     # Input validation
 ├── pipeline/
 │   ├── config.ts         # ClaudeBinaryPlugin.create()
-│   ├── runtime.ts        # runPipeline(), runRawHandler()
 │   ├── types.ts          # Output types, Zod schemas
 │   ├── metrics.ts        # Token estimation, metrics
-│   └── pipeline.ts       # Pipeline class (unified API)
+│   └── classes/
+│       ├── PipelineRuntime.ts # PipelineRuntime.run(), runRaw()
+│       └── Pipeline.ts   # Pipeline utilities (type guards, metrics)
 ├── testing/
 │   ├── mocks.ts          # Low-level test utilities
 │   └── builder.ts        # PluginTester (see TESTING.md)

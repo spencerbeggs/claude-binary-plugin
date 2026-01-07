@@ -2,18 +2,17 @@
  * Tests for Pipeline class.
  *
  * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - Pipeline.run() execution
- * - Pipeline.runRaw() execution
- * - Pipeline.handleUnknown() error handling
+ * Pipeline provides static utility methods:
  * - Pipeline.isOutput() type guard
  * - Pipeline.isPipelineHook() type guard
  * - Pipeline.isRawHook() type guard
  * - Pipeline.Metrics utilities
+ *
+ * For runtime execution tests, see PipelineRuntime.test.ts
  */
 
 import { describe, expect, test } from "bun:test";
-import { Pipeline } from "./classes/Pipeline.js";
+import { Pipeline } from "./Pipeline.js";
 
 describe("Pipeline", () => {
 	test("Pipeline class is exported", () => {

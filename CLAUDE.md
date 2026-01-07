@@ -91,6 +91,7 @@ import {
   // Plugin definition
   ClaudeBinaryPlugin,
   Pipeline,
+  PipelineRuntime,
 
   // State management
   PluginEnv,
@@ -116,8 +117,8 @@ Load these files as needed for deeper context:
 | File | Purpose |
 | ---- | ------- |
 | `src/pipeline/config.ts` | `ClaudeBinaryPlugin.create()` factory |
-| `src/pipeline/runtime.ts` | `runPipeline()` execution |
-| `src/pipeline/pipeline.ts` | `Pipeline` class (unified API) |
+| `src/pipeline/classes/PipelineRuntime.ts` | `PipelineRuntime.run()` execution |
+| `src/pipeline/classes/Pipeline.ts` | `Pipeline` utilities (type guards, metrics) |
 | `src/pipeline/types.ts` | Output schemas per hook type |
 | `src/build/builder.ts` | `PluginBuilder` class |
 | `src/state/plugin-state.ts` | `PluginEnv` base class |
