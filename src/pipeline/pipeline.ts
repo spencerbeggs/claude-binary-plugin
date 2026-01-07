@@ -9,12 +9,10 @@
  * @module
  */
 
-import type { $ZodType } from "zod/v4/core";
 import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "./config.js";
 import { TokenMetrics } from "./metrics.js";
 import type { PipelineConfig, RunRawHandlerOptions } from "./runtime.js";
 import type { AnyPipelineOutput } from "./types.js";
-import { OutputSchemas } from "./types.js";
 
 /**
  * Pipeline execution and utilities.
@@ -29,7 +27,6 @@ import { OutputSchemas } from "./types.js";
  * |----------|---------|
  * | Execution | `run`, `runRaw`, `handleUnknown` |
  * | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` |
- * | Schema | `getOutputSchema` |
  * | Metrics | `Metrics.*` (static property) |
  *
  * @example
@@ -222,31 +219,6 @@ export class Pipeline {
 		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
 	): hook is RawHookDefinition<TEvent, TOptions, TState> {
 		return "handler" in hook && hook.handler !== undefined;
-	}
-
-	// =========================================================================
-	// SCHEMA
-	// =========================================================================
-
-	/**
-	 * Get the output schema for a hook event type.
-	 *
-	 * @remarks
-	 * Returns the Zod schema for validating outputs of the given hook type.
-	 *
-	 * @param hookType - Hook event type (e.g., "PreToolUse", "SessionStart")
-	 * @returns Zod schema for the hook's output type
-	 *
-	 * @example
-	 * ```typescript
-	 * const schema = Pipeline.getOutputSchema("PreToolUse");
-	 * const result = schema.safeParse(output);
-	 * ```
-	 *
-	 * @public
-	 */
-	static getOutputSchema(hookType: keyof typeof OutputSchemas): $ZodType {
-		return OutputSchemas[hookType];
 	}
 
 	// =========================================================================

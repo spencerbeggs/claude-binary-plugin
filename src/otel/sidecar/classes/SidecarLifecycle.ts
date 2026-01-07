@@ -7,7 +7,7 @@
  * @module
  */
 
-import { DEFAULTS } from "../../constants.js";
+import { OtelConfig } from "../../classes/OtelConfig.js";
 import type { SidecarServer } from "./SidecarServer.js";
 
 /**
@@ -75,7 +75,11 @@ export class SidecarLifecycle {
 	 * @param idleTimeoutMs - Idle timeout in milliseconds (default: 5 minutes)
 	 * @param onShutdown - Optional callback when shutdown completes
 	 */
-	constructor(server: SidecarServer, idleTimeoutMs: number = DEFAULTS.IDLE_TIMEOUT_MS, onShutdown?: () => void) {
+	constructor(
+		server: SidecarServer,
+		idleTimeoutMs: number = OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS,
+		onShutdown?: () => void,
+	) {
 		this.server = server;
 		this.idleTimeoutMs = idleTimeoutMs;
 		this.onShutdown = onShutdown;
@@ -178,7 +182,10 @@ export class SidecarLifecycle {
 	 * @param defaultMs - Default value if not set or invalid
 	 * @returns The timeout in milliseconds
 	 */
-	static parseIdleTimeout(envValue: string | undefined, defaultMs: number = DEFAULTS.IDLE_TIMEOUT_MS): number {
+	static parseIdleTimeout(
+		envValue: string | undefined,
+		defaultMs: number = OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS,
+	): number {
 		if (!envValue) return defaultMs;
 
 		const parsed = Number.parseInt(envValue, 10);

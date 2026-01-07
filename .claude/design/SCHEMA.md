@@ -40,11 +40,11 @@ import {
   TelemetryEmitter,
   TelemetryMetrics,
   TelemetrySpan,
-  OTELConfig,
+  OtelConfig,
 } from "claude-binary-plugin";
 
 // Check if telemetry is enabled
-if (OTELConfig.isEnabled()) {
+if (OtelConfig.isEnabled()) {
   // Emit events
   TelemetryEmitter.emitHookExecution(event, "pre-bash", { ... });
 
@@ -58,10 +58,10 @@ if (OTELConfig.isEnabled()) {
 
 | Class | Purpose |
 | ----- | ------- |
-| `TelemetryEmitter` | Emit events (`emitHookExecution`, `emitFatalError`, etc.) |
+| `TelemetryEmitter` | Emit events (`emitHookExecution`, etc.) |
 | `TelemetryMetrics` | Record metrics (counters, histograms, gauges) |
 | `TelemetrySpan` | Span instrumentation for tracing |
-| `OTELConfig` | Configuration and `isEnabled()` check |
+| `OtelConfig` | Configuration and `isEnabled()` check |
 
 ---
 

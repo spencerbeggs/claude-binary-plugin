@@ -3,16 +3,6 @@
 This file provides guidance to Claude Code (claude.ai/code) when working
 with code in this repository.
 
-## Key References
-
-For detailed architecture and schema information, reference these docs:
-
-- @.claude/design/ARCHITECTURE.md - System architecture, data flow, build
-  system, command runtime, OTEL sidecar spawning and handshake
-- @.claude/design/CLI.md - CLI binary usage, zero-config builds
-- @.claude/design/SCHEMA.md - OTEL telemetry schema, event types, metrics
-- @.claude/design/TESTING.md - Testing utilities and fluent API
-
 ## Overview
 
 `claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
@@ -32,8 +22,18 @@ management.
 - **No backward compatibility concerns** - Make clean API changes freely
   without deprecation warnings or migration guides
 
-When refactoring or renaming APIs, prefer clean breaks over compatibility
+IMPORTANT: When refactoring or renaming APIs, prefer clean breaks over compatibility
 shims. Remove old code entirely rather than maintaining aliases.
+
+## Key References
+
+For detailed architecture and schema information, reference these docs:
+
+- @.claude/design/ARCHITECTURE.md - System architecture, data flow, build
+  system, command runtime, OTEL sidecar spawning and handshake
+- @.claude/design/CLI.md - CLI binary usage, zero-config builds
+- @.claude/design/SCHEMA.md - OTEL telemetry schema, event types, metrics
+- @.claude/design/TESTING.md - Testing utilities and fluent API
 
 ## Development Commands
 
@@ -102,7 +102,7 @@ import {
   MockState,
 
   // OTEL
-  OTELConfig,
+  OtelConfig,
   TelemetryEmitter,
   TelemetryMetrics,
   TelemetrySpan,
@@ -134,7 +134,7 @@ Located in `src/otel/classes/` unless noted:
 
 | Class | Purpose |
 | ----- | ------- |
-| `OTELConfig` | Configuration, `isEnabled()` |
+| `OtelConfig` | Configuration, `isEnabled()` |
 | `TelemetryEmitter` | Event emission |
 | `TelemetryMetrics` | Metric recording |
 | `TelemetrySpan` | Span instrumentation |
@@ -156,6 +156,6 @@ Located in `src/otel/classes/` unless noted:
 
 ### OTEL Configuration
 
-- `CLAUDE_CODE_OTEL_ENDPOINT` - OTLP HTTP endpoint
-- `CLAUDE_CODE_OTEL_HEADERS` - Auth headers for endpoint
-- `CLAUDE_CODE_OTEL_SIDECAR_SOCKET` - Custom socket path
+- `OTEL_EXPORTER_OTLP_ENDPOINT` - OTLP HTTP endpoint
+- `OTEL_EXPORTER_OTLP_HEADERS` - Auth headers for endpoint
+- `OTEL_SIDECAR_SOCKET` - Custom socket path

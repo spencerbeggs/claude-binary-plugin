@@ -37,7 +37,7 @@
  */
 
 import { HookEventSchemas } from "../core/schemas.js";
-import { OTELConfig } from "../otel/classes/OTELConfig.js";
+import { OtelConfig } from "../otel/classes/OtelConfig.js";
 import { getSidecarClient } from "../otel/client.js";
 import { PluginEnv } from "../state/plugin-state.js";
 import { HookEvent } from "./base.js";
@@ -809,9 +809,9 @@ export class SessionStartEvent<TState = unknown> extends HookEvent<TState> imple
 		})) as { state: TState; persisted: unknown };
 
 		// Initialize OTEL sidecar if telemetry is enabled
-		if (OTELConfig.isEnabled()) {
+		if (OtelConfig.isEnabled()) {
 			const client = getSidecarClient(parsed.session_id);
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 			await client.ensureRunning(config);
 		}
 

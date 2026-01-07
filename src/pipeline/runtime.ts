@@ -1126,8 +1126,8 @@ export async function handleUnknownHook(hookKey: string, validHooks: string[]): 
 
 	// Emit telemetry for the error
 	try {
-		const { OTELConfig } = await import("../otel/classes/OTELConfig.js");
-		if (OTELConfig.isEnabled()) {
+		const { OtelConfig } = await import("../otel/classes/OtelConfig.js");
+		if (OtelConfig.isEnabled()) {
 			const { TelemetryEmitter } = await import("../otel/classes/TelemetryEmitter.js");
 			TelemetryEmitter.emitHookExecutionDirect({
 				sessionId: sessionId ?? "unknown",

@@ -283,7 +283,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 	const commandCases = pipelineCommands
 		.map((c) => {
 			const importName = commandImportMap.get(c.name);
-			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "emptyArgsSchema";
+			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Commands.emptySchema";
 			return `    case "${c.name}": {
       return runCommandPipeline({
         commandName: "${c.name}",
@@ -309,7 +309,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
 	const commandRuntimeImport = hasPipelineCmds
-		? `import { runCommand as runCommandPipeline, emptyArgsSchema } from "claude-binary-plugin";`
+		? `import { runCommand as runCommandPipeline, Commands } from "claude-binary-plugin";`
 		: "";
 
 	return `#!/usr/bin/env bun
@@ -339,8 +339,8 @@ const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLU
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
-  const { sidecarMain } = await import("claude-binary-plugin");
-  sidecarMain();
+  const { Sidecar } = await import("claude-binary-plugin");
+  Sidecar.main();
 }
 
 const validHooks = [${validHooksArray}];

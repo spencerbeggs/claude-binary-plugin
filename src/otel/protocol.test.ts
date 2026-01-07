@@ -3,7 +3,7 @@
  *
  * @remarks
  * Stub test file for coverage tracking. Tests to be implemented for:
- * - OTELProtocolConfig interface
+ * - OtelProtocolConfig interface
  * - SidecarProtocolMessage union types
  * - PingMessage structure
  * - EventMessage structure
@@ -14,18 +14,18 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { OTELProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
+import type { OtelProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
 
-describe("OTELProtocolConfig", () => {
+describe("OtelProtocolConfig", () => {
 	test("type is usable with minimal config", () => {
-		const config: OTELProtocolConfig = {
+		const config: OtelProtocolConfig = {
 			endpoint: "http://localhost:4318",
 		};
 		expect(config.endpoint).toBe("http://localhost:4318");
 	});
 
 	test("type accepts full config", () => {
-		const config: OTELProtocolConfig = {
+		const config: OtelProtocolConfig = {
 			endpoint: "https://otel.example.com",
 			protocol: "http",
 			serviceName: "claude-code-plugin",

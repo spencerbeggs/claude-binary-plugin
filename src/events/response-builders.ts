@@ -39,8 +39,8 @@
  */
 
 import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
+import { TokenMetrics } from "../pipeline/metrics.js";
 import type { HookResponseData } from "./response-types.js";
-import { estimateTokenCount } from "./response-types.js";
 import type { PermissionRequestDecision, ToolInput } from "./types.js";
 
 /**
@@ -197,7 +197,7 @@ export class HookResponse {
 		const metrics = { ...this._metrics };
 		const additionalContext = hookOutput?.additionalContext as string | undefined;
 		if (additionalContext && metrics.contextTokens === undefined) {
-			metrics.contextTokens = estimateTokenCount(additionalContext);
+			metrics.contextTokens = TokenMetrics.estimate(additionalContext);
 		}
 
 		return {

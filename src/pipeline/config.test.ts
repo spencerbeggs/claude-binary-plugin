@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { ClaudeBinaryPlugin, getOutputSchema, isPipelineHook, isRawHook } from "./config.js";
+import { ClaudeBinaryPlugin } from "./config.js";
+import { Pipeline } from "./pipeline.js";
 import type { PreToolUsePipelineOutput, SessionStartPipelineOutput } from "./types.js";
 import {
-	OutputSchemas,
 	PostToolUseOutputSchema,
 	PreToolUseOutputSchema,
 	SessionStartOutputSchema,
@@ -316,7 +316,7 @@ describe("ClaudeBinaryPlugin", () => {
 });
 
 describe("Helper functions", () => {
-	test("isPipelineHook identifies pipeline hooks", () => {
+	test("Pipeline.isPipelineHook identifies pipeline hooks", () => {
 		const pipelineHook = {
 			name: "test",
 			pipeline: () => ({
@@ -330,11 +330,11 @@ describe("Helper functions", () => {
 			handler: () => {},
 		};
 
-		expect(isPipelineHook(pipelineHook)).toBe(true);
-		expect(isPipelineHook(rawHook)).toBe(false);
+		expect(Pipeline.isPipelineHook(pipelineHook)).toBe(true);
+		expect(Pipeline.isPipelineHook(rawHook)).toBe(false);
 	});
 
-	test("isRawHook identifies raw hooks", () => {
+	test("Pipeline.isRawHook identifies raw hooks", () => {
 		const pipelineHook = {
 			name: "test",
 			pipeline: () => ({
@@ -348,14 +348,7 @@ describe("Helper functions", () => {
 			handler: () => {},
 		};
 
-		expect(isRawHook(rawHook)).toBe(true);
-		expect(isRawHook(pipelineHook)).toBe(false);
-	});
-
-	test("getOutputSchema returns correct schema for each hook type", () => {
-		expect(getOutputSchema("SessionStart")).toBe(OutputSchemas.SessionStart);
-		expect(getOutputSchema("PreToolUse")).toBe(OutputSchemas.PreToolUse);
-		expect(getOutputSchema("PostToolUse")).toBe(OutputSchemas.PostToolUse);
-		expect(getOutputSchema("Stop")).toBe(OutputSchemas.Stop);
+		expect(Pipeline.isRawHook(rawHook)).toBe(true);
+		expect(Pipeline.isRawHook(pipelineHook)).toBe(false);
 	});
 });

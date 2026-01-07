@@ -43,12 +43,6 @@ import type { AnyPipelineOutput, ContentType, ExecutionQuality, PipelineMetrics,
 // =============================================================================
 
 /**
- * OTEL attribute record type.
- * @public
- */
-export type OtelAttributes = Record<string, string | number | boolean | undefined>;
-
-/**
  * Session-level token tracking state.
  * @public
  */
@@ -351,6 +345,8 @@ export class TokenMetrics {
 	 * @param output - Pipeline output returned by the handler
 	 * @param durationMs - Execution duration in milliseconds
 	 * @returns OTEL attributes record for telemetry export
+	 *
+	 * @internal
 	 */
 	static extractAuto(
 		hookType: string,
@@ -359,8 +355,8 @@ export class TokenMetrics {
 		event: Record<string, unknown>,
 		output: AnyPipelineOutput,
 		durationMs: number,
-	): OtelAttributes {
-		const attrs: OtelAttributes = {
+	): Record<string, string | number | boolean | undefined> {
+		const attrs: Record<string, string | number | boolean | undefined> = {
 			// ─────────────────────────────────────────────────────────────────────
 			// Always available
 			// ─────────────────────────────────────────────────────────────────────
@@ -562,9 +558,11 @@ export class TokenMetrics {
 	 * const attrs = TokenMetrics.getSessionAttributes(state);
 	 * // { "session.tokens.total_context_added": 1500, ... }
 	 * ```
+	 *
+	 * @internal
 	 */
-	static getSessionAttributes(state: SessionTokenState): OtelAttributes {
-		const attrs: OtelAttributes = {
+	static getSessionAttributes(state: SessionTokenState): Record<string, string | number | boolean | undefined> {
+		const attrs: Record<string, string | number | boolean | undefined> = {
 			"session.tokens.total_context_added": state.totalContextAdded,
 		};
 

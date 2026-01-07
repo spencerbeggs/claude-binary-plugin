@@ -46,7 +46,6 @@
 export type { EnvCodecMetadata } from "./state/codecs.js";
 export { EnvCodecs } from "./state/codecs.js";
 export type {
-	ClaudeBinaryPluginState,
 	CommandConfig,
 	CommandContextParams,
 	CommandContextResult,
@@ -63,7 +62,7 @@ export type {
 export { EnvFileLoadError, PluginEnv } from "./state/plugin-state.js";
 export type { SessionRecord, SessionRegistration } from "./state/session-registry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry, closeDb } from "./state/session-registry.js";
+export { SessionRegistry } from "./state/session-registry.js";
 // Branded types for type-safe identifiers
 export type { HookName, SessionId, ToolUseId, TranscriptPath } from "./types/branded.js";
 // JSON type utilities (re-exported from type-fest with Zod schemas)
@@ -75,9 +74,9 @@ export type {
 	JsonValue,
 	Jsonifiable,
 	Jsonify,
-	OTELAttributeValue,
-	OTELAttributes,
-	OTELHeaders,
+	OtelAttributeValue,
+	OtelAttributes,
+	OtelHeaders,
 	ParsedJson,
 } from "./types/json.js";
 export { JsonArraySchema, JsonObjectSchema, JsonPrimitiveSchema, JsonValueSchema } from "./types/json.js";
@@ -115,7 +114,6 @@ export {
 
 // Response types
 export type { BlockDecision, HookResponseData } from "./events/response-types.js";
-export { estimateTokenCount } from "./events/response-types.js";
 // HookEvent subclasses
 export {
 	NotificationEvent,
@@ -220,7 +218,6 @@ export {
 	StopEventSchema,
 	SubagentStopEventSchema,
 	UserPromptSubmitEventSchema,
-	hookEventSchemaRegistry,
 } from "./core/schemas.js";
 
 // =============================================================================
@@ -233,7 +230,6 @@ export {
 	CommandArgumentError,
 	// Main class (preferred)
 	Commands,
-	emptyArgsSchema,
 } from "./commands/runtime.js";
 
 // =============================================================================
@@ -245,8 +241,8 @@ export type { ClaudeAccountInfoData } from "./otel/classes/ClaudeAccountInfo.js"
 export { ClaudeAccountInfo } from "./otel/classes/ClaudeAccountInfo.js";
 export type { GitInfoData, GitProvider } from "./otel/classes/GitInfo.js";
 export { GitInfo } from "./otel/classes/GitInfo.js";
-export type { OTELConfigData } from "./otel/classes/OTELConfig.js";
-export { OTELConfig } from "./otel/classes/OTELConfig.js";
+export type { OtelConfigData } from "./otel/classes/OtelConfig.js";
+export { OtelConfig } from "./otel/classes/OtelConfig.js";
 
 // Platform utilities
 export type { PlatformType, SupportedPlatform } from "./otel/classes/Platform.js";
@@ -254,6 +250,8 @@ export { Platform } from "./otel/classes/Platform.js";
 export type { PluginInfoData } from "./otel/classes/PluginInfo.js";
 export { PluginInfo } from "./otel/classes/PluginInfo.js";
 export { SessionEnv } from "./otel/classes/SessionEnv.js";
+// Sidecar entry point (compiled separately by builder)
+export { Sidecar } from "./otel/classes/Sidecar.js";
 export { SidecarClientPool } from "./otel/classes/SidecarClientPool.js";
 export type { SpawnResult } from "./otel/classes/SidecarLauncher.js";
 export { SidecarLauncher } from "./otel/classes/SidecarLauncher.js";
@@ -275,7 +273,6 @@ export { TelemetrySpan } from "./otel/classes/TelemetrySpan.js";
 // Sidecar management
 export type { ClientState } from "./otel/client.js";
 export { SidecarClient } from "./otel/client.js";
-
 // Protocol types (for advanced usage)
 export type {
 	EventData,
@@ -283,7 +280,7 @@ export type {
 	MetricData,
 	MetricMessage,
 	MetricType,
-	OTELProtocolConfig,
+	OtelProtocolConfig,
 	PingMessage,
 	ScopeData,
 	ShutdownMessage,
@@ -292,9 +289,6 @@ export type {
 	SpanEvent,
 	SpanMessage,
 } from "./otel/protocol.js";
-
-// Sidecar entry point (compiled separately by builder)
-export { main as sidecarMain } from "./otel/sidecar/main.js";
 
 // =============================================================================
 // PIPELINE CONFIG
@@ -358,7 +352,7 @@ export type {
 } from "./pipeline/config.js";
 export { ClaudeBinaryPlugin } from "./pipeline/config.js";
 // Pipeline metrics
-export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
+export type { BudgetCheckResult, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export { TokenMetrics } from "./pipeline/metrics.js";
 // Unified Pipeline class (preferred)
 export { Pipeline } from "./pipeline/pipeline.js";
@@ -391,7 +385,6 @@ export {
 	ExecutionStatusSchema,
 	HookActionSchema,
 	NotificationOutputSchema,
-	OutputSchemas,
 	PassthroughOutputSchema,
 	PermissionRequestOutputSchema,
 	PipelineMetricsSchema,

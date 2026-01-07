@@ -9,7 +9,6 @@
  * - Pipeline.isOutput() type guard
  * - Pipeline.isPipelineHook() type guard
  * - Pipeline.isRawHook() type guard
- * - Pipeline.getOutputSchema() schema retrieval
  * - Pipeline.Metrics utilities
  */
 
@@ -31,10 +30,6 @@ describe("Pipeline", () => {
 
 	test("Pipeline.isRawHook is a function", () => {
 		expect(typeof Pipeline.isRawHook).toBe("function");
-	});
-
-	test("Pipeline.getOutputSchema is a function", () => {
-		expect(typeof Pipeline.getOutputSchema).toBe("function");
 	});
 
 	test("Pipeline.Metrics is available", () => {

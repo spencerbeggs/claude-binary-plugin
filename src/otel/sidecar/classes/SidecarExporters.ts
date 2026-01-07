@@ -11,8 +11,8 @@ import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-base";
-import { DEFAULTS } from "../../constants.js";
-import type { OTELProtocolConfig } from "../../protocol.js";
+import { OtelConfig } from "../../classes/OtelConfig.js";
+import type { OtelProtocolConfig } from "../../protocol.js";
 
 /**
  * Static factory class for creating OTEL exporters.
@@ -36,8 +36,8 @@ export class SidecarExporters {
 	 * @param config - OTEL configuration
 	 * @returns Trace exporter or null if disabled
 	 */
-	static createTraceExporter(config: OTELProtocolConfig): OTLPTraceExporter | ConsoleSpanExporter | null {
-		const endpoint = config.endpoint ?? DEFAULTS.ENDPOINT;
+	static createTraceExporter(config: OtelProtocolConfig): OTLPTraceExporter | ConsoleSpanExporter | null {
+		const endpoint = config.endpoint ?? OtelConfig.DEFAULTS.ENDPOINT;
 
 		// Check for console exporter (for debugging)
 		if (Bun.env.OTEL_TRACES_EXPORTER === "console") {
@@ -53,7 +53,7 @@ export class SidecarExporters {
 		return new OTLPTraceExporter({
 			url: `${endpoint}/v1/traces`,
 			headers: config.headers,
-			timeoutMillis: config.exportTimeoutMs ?? DEFAULTS.EXPORT_TIMEOUT_MS,
+			timeoutMillis: config.exportTimeoutMs ?? OtelConfig.DEFAULTS.EXPORT_TIMEOUT_MS,
 		});
 	}
 
@@ -63,8 +63,8 @@ export class SidecarExporters {
 	 * @param config - OTEL configuration
 	 * @returns Metrics exporter or null if disabled
 	 */
-	static createMetricsExporter(config: OTELProtocolConfig): OTLPMetricExporter | null {
-		const endpoint = config.endpoint ?? DEFAULTS.ENDPOINT;
+	static createMetricsExporter(config: OtelProtocolConfig): OTLPMetricExporter | null {
+		const endpoint = config.endpoint ?? OtelConfig.DEFAULTS.ENDPOINT;
 
 		// Check if metrics are disabled
 		if (Bun.env.OTEL_METRICS_EXPORTER === "none") {
@@ -75,7 +75,7 @@ export class SidecarExporters {
 		return new OTLPMetricExporter({
 			url: `${endpoint}/v1/metrics`,
 			headers: config.headers,
-			timeoutMillis: config.exportTimeoutMs ?? DEFAULTS.EXPORT_TIMEOUT_MS,
+			timeoutMillis: config.exportTimeoutMs ?? OtelConfig.DEFAULTS.EXPORT_TIMEOUT_MS,
 		});
 	}
 
@@ -85,8 +85,8 @@ export class SidecarExporters {
 	 * @param config - OTEL configuration
 	 * @returns Logs exporter or null if disabled
 	 */
-	static createLogsExporter(config: OTELProtocolConfig): OTLPLogExporter | null {
-		const endpoint = config.endpoint ?? DEFAULTS.ENDPOINT;
+	static createLogsExporter(config: OtelProtocolConfig): OTLPLogExporter | null {
+		const endpoint = config.endpoint ?? OtelConfig.DEFAULTS.ENDPOINT;
 
 		// Check if logs are disabled
 		if (Bun.env.OTEL_LOGS_EXPORTER === "none") {
@@ -97,7 +97,7 @@ export class SidecarExporters {
 		return new OTLPLogExporter({
 			url: `${endpoint}/v1/logs`,
 			headers: config.headers,
-			timeoutMillis: config.exportTimeoutMs ?? DEFAULTS.EXPORT_TIMEOUT_MS,
+			timeoutMillis: config.exportTimeoutMs ?? OtelConfig.DEFAULTS.EXPORT_TIMEOUT_MS,
 		});
 	}
 }

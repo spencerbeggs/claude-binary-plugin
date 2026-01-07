@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ClaudeAccountInfo } from "./ClaudeAccountInfo.js";
-import { OTELConfig } from "./OTELConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 
-describe("OTELConfig", () => {
+describe("OtelConfig", () => {
 	// Store original env vars
 	let originalEnv: Record<string, string | undefined>;
 
@@ -30,13 +30,13 @@ describe("OTELConfig", () => {
 		test("returns false when CLAUDE_CODE_ENABLE_TELEMETRY is not set", () => {
 			delete process.env.CLAUDE_CODE_ENABLE_TELEMETRY;
 
-			expect(OTELConfig.isEnabled()).toBe(false);
+			expect(OtelConfig.isEnabled()).toBe(false);
 		});
 
 		test("returns false when CLAUDE_CODE_ENABLE_TELEMETRY is not '1'", () => {
 			process.env.CLAUDE_CODE_ENABLE_TELEMETRY = "true";
 
-			expect(OTELConfig.isEnabled()).toBe(false);
+			expect(OtelConfig.isEnabled()).toBe(false);
 		});
 
 		test("returns true when CLAUDE_CODE_ENABLE_TELEMETRY is '1' on supported platform", () => {
@@ -45,9 +45,9 @@ describe("OTELConfig", () => {
 			// This test will pass on darwin/linux, fail on windows
 			const platform = process.platform;
 			if (platform === "darwin" || platform === "linux") {
-				expect(OTELConfig.isEnabled()).toBe(true);
+				expect(OtelConfig.isEnabled()).toBe(true);
 			} else {
-				expect(OTELConfig.isEnabled()).toBe(false);
+				expect(OtelConfig.isEnabled()).toBe(false);
 			}
 		});
 	});
@@ -59,7 +59,7 @@ describe("OTELConfig", () => {
 			delete process.env.OTEL_SERVICE_NAME;
 			delete process.env.OTEL_EXPORTER_OTLP_HEADERS;
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			// Should not have env-based settings
 			expect(config.endpoint).toBeUndefined();
@@ -87,7 +87,7 @@ describe("OTELConfig", () => {
 		test("parses endpoint from env var", () => {
 			process.env.OTEL_EXPORTER_OTLP_ENDPOINT = "http://collector:4318";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.endpoint).toBe("http://collector:4318");
 		});
@@ -95,7 +95,7 @@ describe("OTELConfig", () => {
 		test("parses http protocol", () => {
 			process.env.OTEL_EXPORTER_OTLP_PROTOCOL = "http";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.protocol).toBe("http");
 		});
@@ -103,7 +103,7 @@ describe("OTELConfig", () => {
 		test("parses grpc protocol", () => {
 			process.env.OTEL_EXPORTER_OTLP_PROTOCOL = "grpc";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.protocol).toBe("grpc");
 		});
@@ -111,7 +111,7 @@ describe("OTELConfig", () => {
 		test("ignores invalid protocol", () => {
 			process.env.OTEL_EXPORTER_OTLP_PROTOCOL = "invalid";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.protocol).toBeUndefined();
 		});
@@ -119,7 +119,7 @@ describe("OTELConfig", () => {
 		test("parses service name", () => {
 			process.env.OTEL_SERVICE_NAME = "my-plugin";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.serviceName).toBe("my-plugin");
 		});
@@ -127,7 +127,7 @@ describe("OTELConfig", () => {
 		test("parses headers from comma-separated string", () => {
 			process.env.OTEL_EXPORTER_OTLP_HEADERS = "Authorization=Bearer token,X-Custom=value";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.headers).toEqual({
 				Authorization: "Bearer token",
@@ -138,7 +138,7 @@ describe("OTELConfig", () => {
 		test("handles headers with equals in value", () => {
 			process.env.OTEL_EXPORTER_OTLP_HEADERS = "Authorization=Bearer a=b=c";
 
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 
 			expect(config.headers).toEqual({
 				Authorization: "Bearer a=b=c",

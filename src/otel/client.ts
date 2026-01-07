@@ -33,12 +33,12 @@
  */
 
 import type { Socket } from "bun";
-import { OTELConfig } from "./classes/OTELConfig.js";
+import { OtelConfig } from "./classes/OtelConfig.js";
 import { Platform } from "./classes/Platform.js";
 import { SessionEnv } from "./classes/SessionEnv.js";
 import { SidecarLauncher } from "./classes/SidecarLauncher.js";
 import { SidecarMessage } from "./classes/SidecarMessage.js";
-import type { OTELProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
+import type { OtelProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
 
 /**
  * Client state for tracking connection status.
@@ -123,7 +123,7 @@ export class SidecarClient {
 	 * @param config - OTEL configuration
 	 * @returns true if sidecar is available
 	 */
-	async ensureRunning(config: OTELProtocolConfig): Promise<boolean> {
+	async ensureRunning(config: OtelProtocolConfig): Promise<boolean> {
 		// Try connecting to existing sidecar
 		const connected = await this.tryConnect();
 		if (connected) {
@@ -206,7 +206,7 @@ export class SidecarClient {
 		// Send ping before first message to initialize sidecar providers
 		if (!this.hasPinged) {
 			this.hasPinged = true;
-			const config = OTELConfig.fromEnv();
+			const config = OtelConfig.fromEnv();
 			const pingMessage = SidecarMessage.serialize({
 				type: "ping",
 				sessionId: this.sessionId,
@@ -331,7 +331,7 @@ export class SidecarClient {
 		}
 
 		// Connection failed - spawn the sidecar
-		const config = OTELConfig.fromEnv();
+		const config = OtelConfig.fromEnv();
 		const result = await SidecarLauncher.spawn(this.sessionId, config);
 		if (!result.success) {
 			return false;

@@ -50,7 +50,7 @@
  * @module
  */
 
-import { OTELConfig } from "../otel/classes/OTELConfig.js";
+import { OtelConfig } from "../otel/classes/OtelConfig.js";
 import type { EnvValidationErrorResult } from "../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
 import { DebugLogger } from "../utils/debug-logger.js";
@@ -1734,7 +1734,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 
 		if (!validation.success) {
 			// Emit to OTEL if enabled
-			if (OTELConfig.isEnabled()) {
+			if (OtelConfig.isEnabled()) {
 				const issues = validation.error.issues ?? [];
 				const firstIssue = issues[0];
 				// Convert PropertyKey[] to string for OTEL attribution
@@ -1816,9 +1816,3 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 		return formatZodError(error, maxErrors);
 	}
 }
-
-/**
- * @deprecated Use {@link PluginEnv} instead. This alias will be removed in a future version.
- * @public
- */
-export type ClaudeBinaryPluginState<TOptions = Record<string, string>> = PluginEnv<TOptions>;

@@ -197,12 +197,27 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 
 /**
  * Empty args schema for commands that don't accept arguments.
- * @public
+ *
+ * @remarks
+ * Use `Commands.emptySchema` to access this schema. This internal export
+ * is used by generated entrypoint code.
+ *
+ * @internal
  */
 export const emptyArgsSchema = z.object({});
 
-/** @public */
-export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
+/**
+ * Type for commands that accept no arguments.
+ *
+ * @remarks
+ * Represents an empty object type. Use with `Commands.emptySchema`
+ * when defining commands that don't accept any arguments.
+ *
+ * @public
+ */
+// biome-ignore lint/complexity/noBannedTypes: Empty object type is intentional for commands with no args
+// biome-ignore lint/style/useConsistentTypeDefinitions: Type alias needed to avoid interface extending object
+export type EmptyArgs = {};
 
 // =============================================================================
 // COMMANDS CLASS

@@ -714,7 +714,7 @@ static class methods:
 
 ```typescript
 import {
-  OTELConfig,
+  OtelConfig,
   TelemetryEmitter,
   TelemetryMetrics,
   TelemetrySpan,
@@ -723,7 +723,7 @@ import {
 } from "claude-binary-plugin";
 
 // Check if telemetry is enabled
-if (OTELConfig.isEnabled()) {
+if (OtelConfig.isEnabled()) {
   // Emit hook execution event
   TelemetryEmitter.emitHookExecution(event, "pre-bash", {
     hookType: "PreToolUse",
@@ -749,7 +749,7 @@ const handler = TelemetrySpan.instrumentHook("pre-bash", async (event) => {
 
 | Class | Purpose |
 | ----- | ------- |
-| `OTELConfig` | Configuration parsing, `isEnabled()` check |
+| `OtelConfig` | Configuration parsing, `isEnabled()` check |
 | `TelemetryEmitter` | Event emission (`emitHookExecution`, etc.) |
 | `TelemetryMetrics` | Metric recording (counters, histograms, gauges) |
 | `TelemetrySpan` | Span instrumentation for tracing |
@@ -1213,7 +1213,7 @@ src/
     ├── index.ts          # OTEL module exports
     ├── classes/          # Class-based API (primary)
     │   ├── index.ts      # Barrel export
-    │   ├── OTELConfig.ts # Configuration parsing
+    │   ├── OtelConfig.ts # Configuration parsing
     │   ├── Platform.ts   # Platform detection
     │   ├── GitInfo.ts    # Git repo detection
     │   ├── PluginInfo.ts # Plugin metadata
@@ -1226,19 +1226,20 @@ src/
     │   ├── TelemetryMetrics.ts # Metric recording
     │   └── TelemetrySpan.ts # Span instrumentation
     ├── sidecar/          # Sidecar process
-    │   ├── main.ts       # Entry point
-    │   ├── server.ts     # Unix socket server
-    │   ├── providers.ts  # OTEL providers
-    │   ├── handlers/     # Message handlers
-    │   └── exporters.ts  # OTLP exporters
+    │   └── classes/      # Sidecar implementation
+    │       ├── SidecarServer.ts # Unix socket server
+    │       ├── SidecarRouter.ts # Message routing
+    │       ├── SidecarProviders.ts # OTEL providers
+    │       ├── SidecarExporters.ts # OTLP exporters
+    │       ├── SidecarResource.ts # Resource attributes
+    │       ├── SidecarLifecycle.ts # Idle timeout, shutdown
+    │       ├── SidecarLog.ts # Log handler
+    │       ├── EventHandler.ts # Event message handler
+    │       ├── MetricHandler.ts # Metric message handler
+    │       └── SpanHandler.ts # Span message handler
     ├── client.ts         # SidecarClient class
-    ├── config.ts         # Low-level config
-    ├── constants.ts      # Attribute/metric names
     ├── protocol.ts       # Message types
-    ├── platform.ts       # Low-level platform
-    ├── git-info.ts       # Low-level git
-    ├── plugin-info.ts    # Low-level plugin info
-    └── spawn.ts          # Low-level sidecar spawn
+    └── version.macro.ts  # Build-time version injection
 ```
 
 ## Related Documentation

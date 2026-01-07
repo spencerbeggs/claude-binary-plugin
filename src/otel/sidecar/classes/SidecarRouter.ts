@@ -6,7 +6,7 @@
  * @module
  */
 
-import type { OTELProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";
+import type { OtelProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";
 import { EventHandler } from "./EventHandler.js";
 import { MetricHandler } from "./MetricHandler.js";
 import { SidecarLog } from "./SidecarLog.js";
@@ -35,7 +35,7 @@ export class SidecarRouter {
 	/**
 	 * Per-session configuration storage.
 	 */
-	private static sessionConfigs = new Map<string, OTELProtocolConfig>();
+	private static sessionConfigs = new Map<string, OtelProtocolConfig>();
 
 	/**
 	 * Handle an incoming sidecar message.

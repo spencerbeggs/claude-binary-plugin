@@ -834,7 +834,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		expect(entrypoint).toContain("--sidecar");
 		expect(entrypoint).toContain("runSidecar");
-		expect(entrypoint).toContain("sidecarMain");
+		expect(entrypoint).toContain("Sidecar.main()");
 	});
 
 	test("calls setPluginInfo with plugin name and version", () => {

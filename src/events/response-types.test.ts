@@ -1,33 +1,9 @@
 /**
- * Tests for hook response types and utilities.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - BlockDecision type
- * - HookResponseData interface
- * - estimateTokenCount() function
+ * Tests for hook response types.
  */
 
 import { describe, expect, test } from "bun:test";
 import type { BlockDecision, HookResponseData } from "./response-types.js";
-import { estimateTokenCount } from "./response-types.js";
-
-describe("estimateTokenCount", () => {
-	test("estimates tokens for empty string", () => {
-		expect(estimateTokenCount("")).toBe(0);
-	});
-
-	test("estimates tokens for short string", () => {
-		// ~4 chars per token
-		expect(estimateTokenCount("hello")).toBe(2);
-	});
-
-	test("estimates tokens for longer string", () => {
-		const text = "This is a longer string that should have more tokens";
-		const estimate = estimateTokenCount(text);
-		expect(estimate).toBeGreaterThan(10);
-	});
-});
 
 describe("HookResponseData", () => {
 	test("type structure is correct", () => {

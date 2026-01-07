@@ -75,7 +75,6 @@ import type {
 	SubagentStopPipelineOutput,
 	UserPromptSubmitPipelineOutput,
 } from "./types.js";
-import { OutputSchemas } from "./types.js";
 
 // =============================================================================
 // HANDLER TYPES
@@ -1416,34 +1415,3 @@ export namespace ClaudeBinaryPlugin {
 	};
 }
 
-// =============================================================================
-// HELPER FUNCTIONS FOR BUILDER
-// =============================================================================
-
-/**
- * Check if a hook definition uses pipeline mode.
- * @public
- */
-export function isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
-	hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
-): hook is PipelineHookDefinition<TInput, TOutput, TOptions> {
-	return "pipeline" in hook && hook.pipeline !== undefined;
-}
-
-/**
- * Check if a hook definition uses raw handler mode.
- * @public
- */
-export function isRawHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
-	hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
-): hook is RawHookDefinition<TEvent, TOptions, TState> {
-	return "handler" in hook && hook.handler !== undefined;
-}
-
-/**
- * Get the output schema for a hook event type.
- * @public
- */
-export function getOutputSchema(hookType: keyof typeof OutputSchemas): $ZodType {
-	return OutputSchemas[hookType];
-}

@@ -30,12 +30,3 @@ export interface HookResponseData {
 	/** Reason for blocking (required when decision is "block") */
 	reason?: string;
 }
-
-/**
- * Estimate token count for a string.
- * Uses a simple heuristic: ~4 characters per token on average.
- * @public
- */
-export function estimateTokenCount(text: string): number {
-	return Math.ceil(text.length / 4);
-}

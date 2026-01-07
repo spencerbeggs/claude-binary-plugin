@@ -7,9 +7,9 @@
  *
  * @example
  * ```typescript
- * import { TelemetryEmitter, OTELConfig } from "claude-binary-plugin";
+ * import { TelemetryEmitter, OtelConfig } from "claude-binary-plugin";
  *
- * if (OTELConfig.isEnabled()) {
+ * if (OtelConfig.isEnabled()) {
  *   await TelemetryEmitter.preconnect(sessionId);
  *
  *   TelemetryEmitter.emitHookExecution(event, "pre-bash", {
@@ -28,10 +28,9 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { EVENT_NAMES, SCOPE } from "../constants.js";
 import type { EventData } from "../protocol.js";
 import { getSdkVersion } from "../version.macro.js";
-import { OTELConfig } from "./OTELConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
 
 // SDK version - works both at runtime and when bundled
@@ -313,6 +312,32 @@ export class TelemetryEmitter {
 	} as const;
 
 	/**
+	 * Scope configuration for OTEL instrumentation.
+	 * Aligns with Claude Code's native scope naming pattern.
+	 * @public
+	 */
+	static readonly SCOPE = {
+		/** The scope name for all plugin hook telemetry. */
+		NAME: "systems.savvyweb.claude_code.events",
+	} as const;
+
+	/**
+	 * Event names for hook telemetry.
+	 * Uses `claude_code.hook.*` pattern to align with Anthropic's naming.
+	 * @public
+	 */
+	static readonly EVENT_NAMES = {
+		/** Main event emitted when a hook execution completes. */
+		HOOK_EXECUTION: "claude_code.hook.execution",
+		/** Event emitted when schema validation fails. */
+		SCHEMA_VALIDATION_ERROR: "claude_code.hook.validation_error",
+		/** Event emitted when environment variable validation fails. */
+		ENV_VALIDATION_ERROR: "claude_code.hook.env_error",
+		/** Event emitted when an uncaught exception occurs. */
+		FATAL_ERROR: "claude_code.hook.fatal_error",
+	} as const;
+
+	/**
 	 * Pre-connect to the OTEL sidecar for faster emission.
 	 *
 	 * @remarks
@@ -324,7 +349,7 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * if (OTELConfig.isEnabled()) {
+	 * if (OtelConfig.isEnabled()) {
 	 *   await TelemetryEmitter.preconnect(sessionId);
 	 * }
 	 * ```
@@ -332,7 +357,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static async preconnect(sessionId: string): Promise<void> {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 		const client = getSidecarClient(sessionId);
 		await client.preconnect();
 	}
@@ -364,7 +389,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitHookExecution(event: HookEventBase, hookName: string, result: HookExecutionResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const now = new Date();
@@ -372,7 +397,7 @@ export class TelemetryEmitter {
 		// Build attributes with aligned naming
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
@@ -447,13 +472,13 @@ export class TelemetryEmitter {
 			`${hookName} (${result.hookType}): ${result.success ? "success" : "failed"}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.HOOK_EXECUTION,
+			name: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: result.success ? "info" : "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -490,7 +515,7 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitHookExecutionDirect(result: HookExecutionDirectResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(result.sessionId);
 		const now = new Date();
@@ -498,7 +523,7 @@ export class TelemetryEmitter {
 		// Build attributes with aligned naming
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: result.sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: result.hookName,
@@ -527,13 +552,13 @@ export class TelemetryEmitter {
 			`${result.hookName} (${result.hookType}): ${result.success ? "success" : "failed"}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.HOOK_EXECUTION,
+			name: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: result.success ? "info" : "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -569,14 +594,14 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitSchemaValidationError(sessionId: string, hookName: string, result: SchemaValidationErrorResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
@@ -593,13 +618,13 @@ export class TelemetryEmitter {
 		const body = `Schema validation failed in ${hookName}: ${result.errorMessage}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
+			name: TelemetryEmitter.EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -636,14 +661,14 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static emitEnvValidationError(sessionId: string, hookName: string, result: EnvValidationErrorResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.ENV_VALIDATION_ERROR,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.ENV_VALIDATION_ERROR,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
@@ -664,13 +689,13 @@ export class TelemetryEmitter {
 		const body = `Environment validation failed in ${hookName}: ${result.errorMessage}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.ENV_VALIDATION_ERROR,
+			name: TelemetryEmitter.EVENT_NAMES.ENV_VALIDATION_ERROR,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -711,14 +736,14 @@ export class TelemetryEmitter {
 	 * @public
 	 */
 	static async emitFatalError(sessionId: string, result: FatalErrorResult, flushTimeoutMs = 500): Promise<boolean> {
-		if (!OTELConfig.isEnabled()) return false;
+		if (!OtelConfig.isEnabled()) return false;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.FATAL_ERROR,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.FATAL_ERROR,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: result.hookName,
@@ -752,13 +777,13 @@ export class TelemetryEmitter {
 		}
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.FATAL_ERROR,
+			name: TelemetryEmitter.EVENT_NAMES.FATAL_ERROR,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: "fatal",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};

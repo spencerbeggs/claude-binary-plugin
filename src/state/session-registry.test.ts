@@ -27,7 +27,7 @@ describe("SessionRegistry", () => {
 	});
 
 	describe("close", () => {
-		test("SessionRegistry.close() works like closeDb", () => {
+		test("closes and reopens the database connection", () => {
 			// Register a session to ensure DB is open
 			SessionRegistry.register({
 				sessionId: "close-test",

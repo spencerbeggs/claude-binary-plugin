@@ -212,7 +212,9 @@ export function closeDb(): void {
  * @see {@link PluginEnv} - Uses registry for state lookups
  * @public
  */
-export const SessionRegistry = {
+export class SessionRegistry {
+	private constructor() {}
+
 	/**
 	 * Register or update a session mapping.
 	 *
@@ -235,7 +237,7 @@ export const SessionRegistry = {
 	 * });
 	 * ```
 	 */
-	register(params: SessionRegistration): void {
+	static register(params: SessionRegistration): void {
 		const { sessionId, projectDir, sessionEnvDir } = params;
 		if (!sessionId || !projectDir || !sessionEnvDir) {
 			return;
@@ -271,7 +273,7 @@ export const SessionRegistry = {
 		} catch {
 			// Silently fail - don't break hooks if DB has issues
 		}
-	},
+	}
 
 	/**
 	 * Get session-env directory by session ID.
@@ -291,7 +293,7 @@ export const SessionRegistry = {
 	 * }
 	 * ```
 	 */
-	getBySessionId(sessionId: string | undefined): string | undefined {
+	static getBySessionId(sessionId: string | undefined): string | undefined {
 		if (!sessionId) return undefined;
 
 		try {
@@ -304,7 +306,7 @@ export const SessionRegistry = {
 		} catch {
 			return undefined;
 		}
-	},
+	}
 
 	/**
 	 * Get session-env directory by project directory.
@@ -327,7 +329,7 @@ export const SessionRegistry = {
 	 * }
 	 * ```
 	 */
-	getByProjectDir(projectDir: string | undefined): string | undefined {
+	static getByProjectDir(projectDir: string | undefined): string | undefined {
 		if (!projectDir) return undefined;
 
 		try {
@@ -345,7 +347,7 @@ export const SessionRegistry = {
 		} catch {
 			return undefined;
 		}
-	},
+	}
 
 	/**
 	 * Get full session record by session ID.
@@ -357,7 +359,7 @@ export const SessionRegistry = {
 	 * @param sessionId - The Claude Code session UUID
 	 * @returns Full {@link SessionRecord}, or `undefined` if not found
 	 */
-	getRecord(sessionId: string): SessionRecord | undefined {
+	static getRecord(sessionId: string): SessionRecord | undefined {
 		if (!sessionId) return undefined;
 
 		try {
@@ -369,7 +371,7 @@ export const SessionRegistry = {
 		} catch {
 			return undefined;
 		}
-	},
+	}
 
 	/**
 	 * Delete a session by ID.
@@ -381,7 +383,7 @@ export const SessionRegistry = {
 	 *
 	 * @param sessionId - The Claude Code session UUID to delete
 	 */
-	delete(sessionId: string): void {
+	static delete(sessionId: string): void {
 		if (!sessionId) return;
 
 		try {
@@ -390,7 +392,7 @@ export const SessionRegistry = {
 		} catch {
 			// Silently fail
 		}
-	},
+	}
 
 	/**
 	 * Delete sessions older than the specified age.
@@ -413,7 +415,7 @@ export const SessionRegistry = {
 	 * console.log(`Cleaned up ${deleted} stale sessions`);
 	 * ```
 	 */
-	cleanup(maxAgeSeconds = 7 * 24 * 60 * 60): number {
+	static cleanup(maxAgeSeconds = 7 * 24 * 60 * 60): number {
 		try {
 			const database = getDb();
 			const cutoff = Math.floor(Date.now() / 1000) - maxAgeSeconds;
@@ -424,7 +426,7 @@ export const SessionRegistry = {
 		} catch {
 			return 0;
 		}
-	},
+	}
 
 	/**
 	 * Get all sessions from the registry.
@@ -435,14 +437,14 @@ export const SessionRegistry = {
 	 *
 	 * @returns Array of all {@link SessionRecord} entries
 	 */
-	getAll(): SessionRecord[] {
+	static getAll(): SessionRecord[] {
 		try {
 			const database = getDb();
 			return database.query<SessionRecord, []>("SELECT * FROM sessions ORDER BY updated_at DESC").all();
 		} catch {
 			return [];
 		}
-	},
+	}
 
 	/**
 	 * Get count of sessions in the registry.
@@ -453,7 +455,7 @@ export const SessionRegistry = {
 	 *
 	 * @returns Total number of session records
 	 */
-	count(): number {
+	static count(): number {
 		try {
 			const database = getDb();
 			const result = database.query<{ count: number }, []>("SELECT COUNT(*) as count FROM sessions").get();
@@ -461,7 +463,7 @@ export const SessionRegistry = {
 		} catch {
 			return 0;
 		}
-	},
+	}
 
 	/**
 	 * Close the database connection.
@@ -480,5 +482,7 @@ export const SessionRegistry = {
 	 * });
 	 * ```
 	 */
-	close: closeDb,
-};
+	static close(): void {
+		closeDb();
+	}
+}

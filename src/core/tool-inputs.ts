@@ -635,12 +635,12 @@ export type TypedToolName = keyof ToolInputMap;
 // =============================================================================
 
 /**
- * Namespace providing type guards and utilities for Claude Code tool inputs.
+ * Class providing type guards and utilities for Claude Code tool inputs.
  *
  * @remarks
- * The `ToolInputGuard` namespace consolidates all tool input type guards and helpers
- * into a single, discoverable API. Instead of importing individual functions,
- * import the namespace and access methods via dot notation.
+ * The `ToolInputGuard` class consolidates all tool input type guards and helpers
+ * into a single, discoverable API. All methods are static - access them via
+ * `ToolInputGuard.methodName()`.
  *
  * **Type Guard Methods:**
  * - `ToolInputGuard.isWrite(input)` - Check for {@link WriteToolInput}
@@ -687,21 +687,23 @@ export type TypedToolName = keyof ToolInputMap;
  * @see {@link TypedToolName} - Valid tool names
  * @public
  */
-export const ToolInputGuard = {
+export class ToolInputGuard {
+	private constructor() {}
+
 	/**
 	 * Check if input is a valid {@link WriteToolInput}.
 	 *
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid WriteToolInput
 	 */
-	isWrite(input: unknown): input is WriteToolInput {
+	static isWrite(input: unknown): input is WriteToolInput {
 		return (
 			typeof input === "object" &&
 			input !== null &&
 			typeof (input as WriteToolInput).file_path === "string" &&
 			typeof (input as WriteToolInput).content === "string"
 		);
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link EditToolInput}.
@@ -709,7 +711,7 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid EditToolInput
 	 */
-	isEdit(input: unknown): input is EditToolInput {
+	static isEdit(input: unknown): input is EditToolInput {
 		return (
 			typeof input === "object" &&
 			input !== null &&
@@ -717,7 +719,7 @@ export const ToolInputGuard = {
 			typeof (input as EditToolInput).old_string === "string" &&
 			typeof (input as EditToolInput).new_string === "string"
 		);
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link ReadToolInput}.
@@ -725,9 +727,9 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid ReadToolInput
 	 */
-	isRead(input: unknown): input is ReadToolInput {
+	static isRead(input: unknown): input is ReadToolInput {
 		return typeof input === "object" && input !== null && typeof (input as ReadToolInput).file_path === "string";
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link BashToolInput}.
@@ -739,9 +741,9 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid BashToolInput
 	 */
-	isBash(input: unknown): input is BashToolInput {
+	static isBash(input: unknown): input is BashToolInput {
 		return typeof input === "object" && input !== null && typeof (input as BashToolInput).command === "string";
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link GlobToolInput}.
@@ -749,9 +751,9 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid GlobToolInput
 	 */
-	isGlob(input: unknown): input is GlobToolInput {
+	static isGlob(input: unknown): input is GlobToolInput {
 		return typeof input === "object" && input !== null && typeof (input as GlobToolInput).pattern === "string";
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link GrepToolInput}.
@@ -759,9 +761,9 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid GrepToolInput
 	 */
-	isGrep(input: unknown): input is GrepToolInput {
+	static isGrep(input: unknown): input is GrepToolInput {
 		return typeof input === "object" && input !== null && typeof (input as GrepToolInput).pattern === "string";
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link TaskToolInput}.
@@ -769,7 +771,7 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid TaskToolInput
 	 */
-	isTask(input: unknown): input is TaskToolInput {
+	static isTask(input: unknown): input is TaskToolInput {
 		return (
 			typeof input === "object" &&
 			input !== null &&
@@ -777,7 +779,7 @@ export const ToolInputGuard = {
 			typeof (input as TaskToolInput).description === "string" &&
 			typeof (input as TaskToolInput).subagent_type === "string"
 		);
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link WebFetchToolInput}.
@@ -785,14 +787,14 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid WebFetchToolInput
 	 */
-	isWebFetch(input: unknown): input is WebFetchToolInput {
+	static isWebFetch(input: unknown): input is WebFetchToolInput {
 		return (
 			typeof input === "object" &&
 			input !== null &&
 			typeof (input as WebFetchToolInput).url === "string" &&
 			typeof (input as WebFetchToolInput).prompt === "string"
 		);
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link WebSearchToolInput}.
@@ -800,9 +802,9 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid WebSearchToolInput
 	 */
-	isWebSearch(input: unknown): input is WebSearchToolInput {
+	static isWebSearch(input: unknown): input is WebSearchToolInput {
 		return typeof input === "object" && input !== null && typeof (input as WebSearchToolInput).query === "string";
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link NotebookEditToolInput}.
@@ -810,14 +812,14 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid NotebookEditToolInput
 	 */
-	isNotebookEdit(input: unknown): input is NotebookEditToolInput {
+	static isNotebookEdit(input: unknown): input is NotebookEditToolInput {
 		return (
 			typeof input === "object" &&
 			input !== null &&
 			typeof (input as NotebookEditToolInput).notebook_path === "string" &&
 			typeof (input as NotebookEditToolInput).new_source === "string"
 		);
-	},
+	}
 
 	/**
 	 * Check if input is a valid {@link TodoWriteToolInput}.
@@ -825,9 +827,9 @@ export const ToolInputGuard = {
 	 * @param input - Unknown value to check
 	 * @returns `true` if the input is a valid TodoWriteToolInput
 	 */
-	isTodoWrite(input: unknown): input is TodoWriteToolInput {
+	static isTodoWrite(input: unknown): input is TodoWriteToolInput {
 		return typeof input === "object" && input !== null && Array.isArray((input as TodoWriteToolInput).todos);
-	},
+	}
 
 	/**
 	 * Generic type guard for any tool input by name.
@@ -849,22 +851,22 @@ export const ToolInputGuard = {
 	 * }
 	 * ```
 	 */
-	is<T extends TypedToolName>(toolName: T, input: unknown): input is ToolInputMap[T] {
+	static is<T extends TypedToolName>(toolName: T, input: unknown): input is ToolInputMap[T] {
 		const guards: Record<TypedToolName, (input: unknown) => boolean> = {
-			Write: this.isWrite,
-			Edit: this.isEdit,
-			Read: this.isRead,
-			NotebookEdit: this.isNotebookEdit,
-			Glob: this.isGlob,
-			Grep: this.isGrep,
-			Bash: this.isBash,
-			Task: this.isTask,
-			WebFetch: this.isWebFetch,
-			WebSearch: this.isWebSearch,
-			TodoWrite: this.isTodoWrite,
+			Write: ToolInputGuard.isWrite,
+			Edit: ToolInputGuard.isEdit,
+			Read: ToolInputGuard.isRead,
+			NotebookEdit: ToolInputGuard.isNotebookEdit,
+			Glob: ToolInputGuard.isGlob,
+			Grep: ToolInputGuard.isGrep,
+			Bash: ToolInputGuard.isBash,
+			Task: ToolInputGuard.isTask,
+			WebFetch: ToolInputGuard.isWebFetch,
+			WebSearch: ToolInputGuard.isWebSearch,
+			TodoWrite: ToolInputGuard.isTodoWrite,
 		};
 		return guards[toolName](input);
-	},
+	}
 
 	/**
 	 * Get typed tool input or undefined.
@@ -899,7 +901,7 @@ export const ToolInputGuard = {
 	 * const filePath = writeInput?.file_path ?? editInput?.file_path;
 	 * ```
 	 */
-	getTyped<T extends TypedToolName>(toolName: T, input: unknown): ToolInputMap[T] | undefined {
-		return this.is(toolName, input) ? input : undefined;
-	},
-} as const;
+	static getTyped<T extends TypedToolName>(toolName: T, input: unknown): ToolInputMap[T] | undefined {
+		return ToolInputGuard.is(toolName, input) ? input : undefined;
+	}
+}

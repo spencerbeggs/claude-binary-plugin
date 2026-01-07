@@ -10,17 +10,17 @@
 import type { Resource } from "@opentelemetry/resources";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
-import { DEFAULTS, RESOURCE_ATTRS } from "../../constants.js";
-import type { OTELProtocolConfig } from "../../protocol.js";
+import { OtelConfig } from "../../classes/OtelConfig.js";
+import type { OtelProtocolConfig } from "../../protocol.js";
 
 /**
  * Extended configuration for resource creation.
  *
- * Extends OTELProtocolConfig (which includes pluginName and marketplaceName)
+ * Extends OtelProtocolConfig (which includes pluginName and marketplaceName)
  * with version fields for more detailed telemetry.
  * @public
  */
-export interface ResourceConfig extends OTELProtocolConfig {
+export interface ResourceConfig extends OtelProtocolConfig {
 	/** Plugin version for resource attributes */
 	pluginVersion?: string;
 	/** Marketplace version */
@@ -46,6 +46,26 @@ export interface ResourceConfig extends OTELProtocolConfig {
  */
 export class SidecarResource {
 	/**
+	 * Standard OTEL resource attributes.
+	 * Following semantic conventions for service identification.
+	 * @internal
+	 */
+	static readonly ATTRS = {
+		/** Service name (required for all telemetry). */
+		SERVICE_NAME: "service.name",
+		/** Service version. */
+		SERVICE_VERSION: "service.version",
+		/** Service namespace for grouping related services. */
+		SERVICE_NAMESPACE: "service.namespace",
+		/** Deployment environment (e.g., "production", "development"). */
+		DEPLOYMENT_ENV: "deployment.environment",
+		/** Host name. */
+		HOST_NAME: "host.name",
+		/** Operating system type. */
+		OS_TYPE: "os.type",
+	} as const;
+
+	/**
 	 * Create an OTEL Resource from configuration.
 	 *
 	 * @param config - Resource configuration
@@ -53,8 +73,8 @@ export class SidecarResource {
 	 */
 	static create(config: ResourceConfig): Resource {
 		const attributes: Record<string, string> = {
-			[ATTR_SERVICE_NAME]: config.serviceName ?? DEFAULTS.SERVICE_NAME,
-			"service.namespace": DEFAULTS.SERVICE_NAMESPACE,
+			[ATTR_SERVICE_NAME]: config.serviceName ?? OtelConfig.DEFAULTS.SERVICE_NAME,
+			"service.namespace": OtelConfig.DEFAULTS.SERVICE_NAMESPACE,
 			"os.type": process.platform,
 			"host.arch": process.arch,
 		};
@@ -80,7 +100,7 @@ export class SidecarResource {
 
 		// Add deployment environment if set
 		if (Bun.env.DEPLOYMENT_ENV || Bun.env.NODE_ENV) {
-			attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV] = Bun.env.DEPLOYMENT_ENV ?? Bun.env.NODE_ENV ?? "development";
+			attributes[SidecarResource.ATTRS.DEPLOYMENT_ENV] = Bun.env.DEPLOYMENT_ENV ?? Bun.env.NODE_ENV ?? "development";
 		}
 
 		return resourceFromAttributes(attributes);

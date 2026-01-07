@@ -7,10 +7,10 @@
  *
  * @example
  * ```typescript
- * import { OTELConfig } from "claude-binary-plugin";
+ * import { OtelConfig } from "claude-binary-plugin";
  *
- * if (OTELConfig.isEnabled()) {
- *   const config = OTELConfig.fromEnv();
+ * if (OtelConfig.isEnabled()) {
+ *   const config = OtelConfig.fromEnv();
  *   console.log(`Exporting to: ${config.endpoint}`);
  * }
  * ```
@@ -18,7 +18,6 @@
  * @public
  */
 
-import { DEFAULTS, ENV_VARS } from "../constants.js";
 import { ClaudeAccountInfo } from "./ClaudeAccountInfo.js";
 import { Platform } from "./Platform.js";
 
@@ -26,7 +25,7 @@ import { Platform } from "./Platform.js";
  * OTEL configuration data.
  * @public
  */
-export interface OTELConfigData {
+export interface OtelConfigData {
 	/** OTLP endpoint URL */
 	endpoint?: string;
 	/** Protocol to use (http or grpc) */
@@ -62,8 +61,8 @@ export interface OTELConfigData {
  * @example
  * ```typescript
  * // Check if telemetry is enabled
- * if (OTELConfig.isEnabled()) {
- *   const config = OTELConfig.fromEnv();
+ * if (OtelConfig.isEnabled()) {
+ *   const config = OtelConfig.fromEnv();
  *
  *   // Access configuration
  *   console.log(`Endpoint: ${config.endpoint}`);
@@ -73,7 +72,49 @@ export interface OTELConfigData {
  *
  * @public
  */
-export class OTELConfig {
+export class OtelConfig {
+	/**
+	 * Environment variables for OTEL configuration.
+	 * @public
+	 */
+	static readonly ENV_VARS = {
+		/** OTLP endpoint URL. Standard OTEL env var. */
+		OTEL_EXPORTER_ENDPOINT: "OTEL_EXPORTER_OTLP_ENDPOINT",
+		/** OTLP protocol (http or grpc). */
+		OTEL_EXPORTER_PROTOCOL: "OTEL_EXPORTER_OTLP_PROTOCOL",
+		/** OTLP headers as comma-separated key=value pairs. */
+		OTEL_EXPORTER_HEADERS: "OTEL_EXPORTER_OTLP_HEADERS",
+		/** Service name override. */
+		OTEL_SERVICE_NAME: "OTEL_SERVICE_NAME",
+		/** Whether to include high-cardinality session ID in attributes. */
+		OTEL_INCLUDE_SESSION_ID: "OTEL_INCLUDE_SESSION_ID",
+		/** Socket path for sidecar IPC. */
+		OTEL_SIDECAR_SOCKET: "OTEL_SIDECAR_SOCKET",
+		/** Session ID for sidecar correlation. */
+		OTEL_SIDECAR_SESSION_ID: "OTEL_SIDECAR_SESSION_ID",
+		/** Idle timeout in milliseconds before sidecar shuts down. */
+		OTEL_SIDECAR_IDLE_TIMEOUT_MS: "OTEL_SIDECAR_IDLE_TIMEOUT_MS",
+	} as const;
+
+	/**
+	 * Default values for OTEL configuration.
+	 * @public
+	 */
+	static readonly DEFAULTS = {
+		/** Default OTLP endpoint. */
+		ENDPOINT: "http://localhost:4318",
+		/** Default OTLP protocol. */
+		PROTOCOL: "http" as const,
+		/** Default service name. */
+		SERVICE_NAME: "claude-code",
+		/** Default service namespace. */
+		SERVICE_NAMESPACE: "claude-code",
+		/** Default idle timeout in milliseconds (5 minutes). */
+		IDLE_TIMEOUT_MS: 5 * 60 * 1000,
+		/** Default export timeout in milliseconds (30 seconds). */
+		EXPORT_TIMEOUT_MS: 30 * 1000,
+	} as const;
+
 	/**
 	 * OTLP endpoint URL.
 	 * @public
@@ -123,17 +164,17 @@ export class OTELConfig {
 	readonly exportTimeoutMs?: number;
 
 	/**
-	 * Create an OTELConfig instance.
+	 * Create an OtelConfig instance.
 	 *
 	 * @param data - Configuration data
 	 *
 	 * @remarks
-	 * Typically you should use `OTELConfig.fromEnv()` rather than
+	 * Typically you should use `OtelConfig.fromEnv()` rather than
 	 * constructing instances directly.
 	 *
 	 * @public
 	 */
-	constructor(data: OTELConfigData = {}) {
+	constructor(data: OtelConfigData = {}) {
 		this.endpoint = data.endpoint;
 		this.protocol = data.protocol;
 		this.serviceName = data.serviceName;
@@ -156,7 +197,7 @@ export class OTELConfig {
 	 *
 	 * @example
 	 * ```typescript
-	 * if (OTELConfig.isEnabled()) {
+	 * if (OtelConfig.isEnabled()) {
 	 *   // Safe to emit telemetry
 	 * }
 	 * ```
@@ -178,37 +219,37 @@ export class OTELConfig {
 	 *
 	 * @example
 	 * ```typescript
-	 * const config = OTELConfig.fromEnv();
+	 * const config = OtelConfig.fromEnv();
 	 * console.log(`Endpoint: ${config.endpoint || "default"}`);
 	 * ```
 	 *
 	 * @public
 	 */
-	static fromEnv(): OTELConfig {
-		const data: OTELConfigData = {};
+	static fromEnv(): OtelConfig {
+		const data: OtelConfigData = {};
 
 		// Endpoint
-		const endpoint = Bun.env[ENV_VARS.OTEL_EXPORTER_ENDPOINT];
+		const endpoint = Bun.env[OtelConfig.ENV_VARS.OTEL_EXPORTER_ENDPOINT];
 		if (endpoint) {
 			data.endpoint = endpoint;
 		}
 
 		// Protocol
-		const protocol = Bun.env[ENV_VARS.OTEL_EXPORTER_PROTOCOL];
+		const protocol = Bun.env[OtelConfig.ENV_VARS.OTEL_EXPORTER_PROTOCOL];
 		if (protocol === "http" || protocol === "grpc") {
 			data.protocol = protocol;
 		}
 
 		// Service name
-		const serviceName = Bun.env[ENV_VARS.OTEL_SERVICE_NAME];
+		const serviceName = Bun.env[OtelConfig.ENV_VARS.OTEL_SERVICE_NAME];
 		if (serviceName) {
 			data.serviceName = serviceName;
 		}
 
 		// Headers (comma-separated key=value pairs)
-		const headersStr = Bun.env[ENV_VARS.OTEL_EXPORTER_HEADERS];
+		const headersStr = Bun.env[OtelConfig.ENV_VARS.OTEL_EXPORTER_HEADERS];
 		if (headersStr) {
-			data.headers = OTELConfig.parseHeaders(headersStr);
+			data.headers = OtelConfig.parseHeaders(headersStr);
 		}
 
 		// Add Claude account info as resource attributes
@@ -230,7 +271,7 @@ export class OTELConfig {
 			};
 		}
 
-		return new OTELConfig(data);
+		return new OtelConfig(data);
 	}
 
 	/**
@@ -241,7 +282,7 @@ export class OTELConfig {
 	 * @public
 	 */
 	get effectiveEndpoint(): string {
-		return this.endpoint ?? DEFAULTS.ENDPOINT;
+		return this.endpoint ?? OtelConfig.DEFAULTS.ENDPOINT;
 	}
 
 	/**
@@ -252,7 +293,7 @@ export class OTELConfig {
 	 * @public
 	 */
 	get effectiveProtocol(): "http" | "grpc" {
-		return this.protocol ?? DEFAULTS.PROTOCOL;
+		return this.protocol ?? OtelConfig.DEFAULTS.PROTOCOL;
 	}
 
 	/**
@@ -263,7 +304,7 @@ export class OTELConfig {
 	 * @public
 	 */
 	get effectiveServiceName(): string {
-		return this.serviceName ?? DEFAULTS.SERVICE_NAME;
+		return this.serviceName ?? OtelConfig.DEFAULTS.SERVICE_NAME;
 	}
 
 	/**
@@ -273,7 +314,7 @@ export class OTELConfig {
 	 *
 	 * @public
 	 */
-	toJSON(): OTELConfigData {
+	toJSON(): OtelConfigData {
 		return {
 			endpoint: this.endpoint,
 			protocol: this.protocol,

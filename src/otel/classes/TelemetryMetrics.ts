@@ -7,9 +7,9 @@
  *
  * @example
  * ```typescript
- * import { TelemetryMetrics, OTELConfig } from "claude-binary-plugin";
+ * import { TelemetryMetrics, OtelConfig } from "claude-binary-plugin";
  *
- * if (OTELConfig.isEnabled()) {
+ * if (OtelConfig.isEnabled()) {
  *   // Record custom metrics
  *   TelemetryMetrics.recordCounter(event, "files.processed", 5);
  *   TelemetryMetrics.recordHistogram(event, "lint.duration", 123, "ms");
@@ -22,7 +22,7 @@
 
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
-import { OTELConfig } from "./OTELConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
 import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
@@ -135,7 +135,7 @@ export class TelemetryMetrics {
 	 * @public
 	 */
 	static recordHookExecution(event: HookEventBase, hookName: string, durationMs: number, success: boolean): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const baseAttrs = getMetricAttributes(event, hookName, { success });
@@ -205,7 +205,7 @@ export class TelemetryMetrics {
 		decision: "allow" | "block" | "modify",
 		toolName?: string,
 	): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const attrs = getMetricAttributes(event, hookName, {
@@ -253,7 +253,7 @@ export class TelemetryMetrics {
 		value = 1,
 		attributes?: Record<string, string | number | boolean>,
 	): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 
@@ -303,7 +303,7 @@ export class TelemetryMetrics {
 		unit?: string,
 		attributes?: Record<string, string | number | boolean>,
 	): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 
@@ -352,7 +352,7 @@ export class TelemetryMetrics {
 		value: number,
 		attributes?: Record<string, string | number | boolean>,
 	): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 

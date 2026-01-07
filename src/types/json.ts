@@ -162,7 +162,7 @@ export type JsonObjectWith<K extends string> = {
  *
  * @public
  */
-export type OTELAttributeValue = string | number | boolean;
+export type OtelAttributeValue = string | number | boolean;
 
 /**
  * OTEL attribute map.
@@ -173,7 +173,7 @@ export type OTELAttributeValue = string | number | boolean;
  *
  * @public
  */
-export type OTELAttributes = Record<string, OTELAttributeValue>;
+export type OtelAttributes = Record<string, OtelAttributeValue>;
 
 /**
  * OTEL headers map (string values only).
@@ -183,7 +183,7 @@ export type OTELAttributes = Record<string, OTELAttributeValue>;
  *
  * @public
  */
-export type OTELHeaders = Record<string, string>;
+export type OtelHeaders = Record<string, string>;
 
 // =============================================================================
 // ZOD SCHEMAS FOR JSON TYPES

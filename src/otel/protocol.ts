@@ -12,7 +12,7 @@
  * The sidecar uses this to configure its OTEL providers.
  * @public
  */
-export interface OTELProtocolConfig {
+export interface OtelProtocolConfig {
 	/**
 	 * OTLP endpoint URL (e.g., "http://localhost:4318")
 	 * @defaultValue "http://localhost:4318"
@@ -195,7 +195,7 @@ export interface PingMessage {
 	/** Session ID for correlation */
 	sessionId: string;
 	/** OTEL configuration for this session */
-	config: OTELProtocolConfig;
+	config: OtelProtocolConfig;
 }
 
 /**
@@ -262,7 +262,3 @@ export interface SidecarResponse {
 	/** Sidecar version for debugging */
 	version?: string;
 }
-
-// Note: serializeMessage and parseMessage functions have been moved to the
-// SidecarMessage class in ./classes/SidecarMessage.ts
-// Use SidecarMessage.serialize() and SidecarMessage.parse() instead.

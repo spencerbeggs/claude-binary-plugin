@@ -8,9 +8,9 @@
  *
  * @example
  * ```typescript
- * import { TelemetrySpan, OTELConfig } from "claude-binary-plugin";
+ * import { TelemetrySpan, OtelConfig } from "claude-binary-plugin";
  *
- * if (OTELConfig.isEnabled()) {
+ * if (OtelConfig.isEnabled()) {
  *   // Execute code within a traced span
  *   const result = await TelemetrySpan.withHookSpan(event, "validate", async () => {
  *     return validateInput(event.tool_input);
@@ -30,7 +30,7 @@
 import type { HookEventBase } from "../../events/types.js";
 import { getSidecarClient } from "../client.js";
 import type { SpanData } from "../protocol.js";
-import { OTELConfig } from "./OTELConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
 import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
@@ -134,7 +134,7 @@ export class TelemetrySpan {
 		handler: () => Promise<T>,
 		attributes?: Record<string, string | number | boolean>,
 	): Promise<T> {
-		if (!OTELConfig.isEnabled()) {
+		if (!OtelConfig.isEnabled()) {
 			return handler();
 		}
 
