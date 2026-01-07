@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { Pipeline } from "./classes/Pipeline.js";
 import { ClaudeBinaryPlugin } from "./config.js";
-import { Pipeline } from "./pipeline.js";
 import type { PreToolUsePipelineOutput, SessionStartPipelineOutput } from "./types.js";
 import {
 	PostToolUseOutputSchema,

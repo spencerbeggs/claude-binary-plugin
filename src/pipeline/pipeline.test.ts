@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { Pipeline } from "./pipeline.js";
+import { Pipeline } from "./classes/Pipeline.js";
 
 describe("Pipeline", () => {
 	test("Pipeline class is exported", () => {

@@ -1,45 +1,14 @@
 /**
- * Unified Pipeline class for hook execution and metrics.
+ * Pipeline utilities for type guards and metrics.
  *
  * @remarks
- * The `Pipeline` class consolidates all pipeline-related functions into a
- * single, discoverable API. This includes hook execution, output validation,
- * type guards, and token/metric utilities.
- *
- * @module
- */
-
-import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "./config.js";
-import { TokenMetrics } from "./metrics.js";
-import type { PipelineConfig, RunRawHandlerOptions } from "./runtime.js";
-import type { AnyPipelineOutput } from "./types.js";
-
-/**
- * Pipeline execution and utilities.
- *
- * @remarks
- * The `Pipeline` class provides a single entry point for all pipeline-related
- * operations including hook execution, output validation, and metrics extraction.
- *
- * **Class Organization:**
- *
- * | Category | Methods |
- * |----------|---------|
- * | Execution | `run`, `runRaw`, `handleUnknown` |
- * | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` |
- * | Metrics | `Metrics.*` (static property) |
+ * The `Pipeline` class provides utility functions for working with pipeline
+ * outputs, including type guards and token/metric utilities. For execution,
+ * use {@link PipelineRuntime} instead.
  *
  * @example
  * ```typescript
  * import { Pipeline } from "claude-binary-plugin";
- *
- * // Execute a pipeline handler
- * await Pipeline.run({
- *   hookType: "PreToolUse",
- *   hookName: "security",
- *   pipeline: myHandler,
- *   envClass: MyEnv,
- * });
  *
  * // Check if output is valid pipeline format
  * if (Pipeline.isOutput(result)) {
@@ -50,112 +19,52 @@ import type { AnyPipelineOutput } from "./types.js";
  * const tokens = Pipeline.Metrics.estimateTokens(content, "code");
  * ```
  *
+ * @module
+ */
+
+import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "../config.js";
+import { TokenMetrics } from "../metrics.js";
+import type { AnyPipelineOutput } from "../types.js";
+
+/**
+ * Pipeline utilities for type guards and metrics.
+ *
+ * @remarks
+ * The `Pipeline` class provides a single entry point for pipeline-related
+ * utilities including type guards and metrics extraction.
+ *
+ * **Class Organization:**
+ *
+ * | Category | Methods |
+ * |----------|---------|
+ * | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` |
+ * | Metrics | `Metrics.*` (static property) |
+ *
+ * For execution methods (`run`, `runRaw`, `handleUnknown`), see {@link PipelineRuntime}.
+ *
+ * @example
+ * ```typescript
+ * import { Pipeline, PipelineRuntime } from "claude-binary-plugin";
+ *
+ * // Check if output is valid pipeline format
+ * if (Pipeline.isOutput(result)) {
+ *   console.log(result.status, result.action);
+ * }
+ *
+ * // Estimate tokens for context
+ * const tokens = Pipeline.Metrics.estimateTokens(content, "code");
+ *
+ * // Execute a pipeline handler (use PipelineRuntime)
+ * await PipelineRuntime.run({ ... });
+ * ```
+ *
+ * @see {@link PipelineRuntime} - For hook execution
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
 export class Pipeline {
 	// Private constructor prevents instantiation
 	private constructor() {}
-
-	// =========================================================================
-	// EXECUTION
-	// =========================================================================
-
-	/**
-	 * Execute a pipeline handler.
-	 *
-	 * @remarks
-	 * Main entry point for executing pipeline-style hooks. Handles the full
-	 * lifecycle: parsing stdin, loading environment, running the handler,
-	 * emitting telemetry, and writing the response.
-	 *
-	 * @param options - Pipeline execution options
-	 * @returns Never (exits process after writing response)
-	 *
-	 * @example
-	 * ```typescript
-	 * await Pipeline.run({
-	 *   hookType: "PreToolUse",
-	 *   hookName: "security",
-	 *   pluginName: "my-plugin",
-	 *   pluginVersion: "1.0.0",
-	 *   pipeline: async ({ input, options, env }) => {
-	 *     return { status: "executed", action: "allow", summary: "allowed" };
-	 *   },
-	 *   envClass: MyEnv,
-	 *   tools: ["Bash", "Write"],
-	 * });
-	 * ```
-	 *
-	 * @see {@link PipelineConfig}
-	 * @public
-	 */
-	static async run<TOptions = unknown, TState = Record<string, string>>(
-		options: PipelineConfig<TOptions, TState>,
-	): Promise<never> {
-		// Dynamic import to avoid circular dependency
-		const { runPipeline } = await import("./runtime.js");
-		return runPipeline(options);
-	}
-
-	/**
-	 * Execute a raw handler.
-	 *
-	 * @remarks
-	 * Entry point for raw handlers that need direct access to the HookEvent
-	 * object. Raw handlers are responsible for calling `event.end()` themselves.
-	 *
-	 * @param options - Raw handler execution options
-	 * @returns Never (exits process after handler completes)
-	 *
-	 * @example
-	 * ```typescript
-	 * await Pipeline.runRaw({
-	 *   hookType: "PreToolUse",
-	 *   hookName: "custom",
-	 *   handler: async ({ event, options, env }) => {
-	 *     event.end(event.response().allow());
-	 *   },
-	 *   envClass: MyEnv,
-	 * });
-	 * ```
-	 *
-	 * @see {@link RunRawHandlerOptions}
-	 * @public
-	 */
-	static async runRaw<TOptions, TState = Record<string, string>>(
-		options: RunRawHandlerOptions<TOptions, TState>,
-	): Promise<void> {
-		// Dynamic import to avoid circular dependency
-		const { runRawHandler } = await import("./runtime.js");
-		return runRawHandler(options);
-	}
-
-	/**
-	 * Handle an unknown hook key.
-	 *
-	 * @remarks
-	 * Called when the plugin receives an unrecognized hook key. Emits telemetry,
-	 * logs an error, and exits with a passthrough response.
-	 *
-	 * @param hookKey - The unknown hook key (e.g., "PreToolUse/unknown")
-	 * @param validHooks - Array of valid hook keys for error message
-	 * @returns Never (exits process)
-	 *
-	 * @example
-	 * ```typescript
-	 * if (!validHooks.includes(hookKey)) {
-	 *   await Pipeline.handleUnknown(hookKey, validHooks);
-	 * }
-	 * ```
-	 *
-	 * @public
-	 */
-	static async handleUnknown(hookKey: string, validHooks: string[]): Promise<never> {
-		// Dynamic import to avoid circular dependency
-		const { handleUnknownHook } = await import("./runtime.js");
-		return handleUnknownHook(hookKey, validHooks);
-	}
 
 	// =========================================================================
 	// TYPE GUARDS

@@ -294,6 +294,23 @@ export type {
 // PIPELINE CONFIG
 // =============================================================================
 
+// Pipeline utilities (type guards, metrics)
+export { Pipeline } from "./pipeline/classes/Pipeline.js";
+// Pipeline runtime types
+export type {
+	HookEventType,
+	IODependencies,
+	PermissionRequestResponseData,
+	PipelineConfig,
+	PostToolUseResponseData,
+	PreToolUseResponseData,
+	RunRawHandlerOptions,
+	SessionStartResponseData,
+	StopResponseData,
+	UserPromptSubmitResponseData,
+} from "./pipeline/classes/PipelineRuntime.js";
+// Pipeline runtime execution
+export { PipelineRuntime } from "./pipeline/classes/PipelineRuntime.js";
 export type {
 	BaseState,
 	CmdContext,
@@ -354,9 +371,6 @@ export { ClaudeBinaryPlugin } from "./pipeline/config.js";
 // Pipeline metrics
 export type { BudgetCheckResult, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export { TokenMetrics } from "./pipeline/metrics.js";
-// Unified Pipeline class (preferred)
-export { Pipeline } from "./pipeline/pipeline.js";
-
 // Pipeline types - distinct from events/types.ts output interfaces
 export type {
 	AnyPipelineOutput,
@@ -399,23 +413,6 @@ export {
 	UserPromptSubmitOutputSchema,
 	ValidationResultSchema,
 } from "./pipeline/types.js";
-
-// =============================================================================
-// PIPELINE RUNTIME
-// =============================================================================
-
-export type {
-	HookEventType,
-	IODependencies,
-	PermissionRequestResponseData,
-	PipelineConfig,
-	PostToolUseResponseData,
-	PreToolUseResponseData,
-	RunRawHandlerOptions,
-	SessionStartResponseData,
-	StopResponseData,
-	UserPromptSubmitResponseData,
-} from "./pipeline/runtime.js";
 
 // =============================================================================
 // BUILD SYSTEM

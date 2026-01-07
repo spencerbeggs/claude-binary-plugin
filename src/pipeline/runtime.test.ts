@@ -4,8 +4,12 @@ import { z } from "zod";
 import { PluginEnv } from "../state/plugin-state.js";
 import type { MockEnvContext } from "../testing/mocks.js";
 import { mockEnv } from "../testing/mocks.js";
-import type { IODependencies } from "./runtime.js";
-import {
+import type { IODependencies } from "./classes/PipelineRuntime.js";
+import { PipelineRuntime } from "./classes/PipelineRuntime.js";
+import type { AnyPipelineOutput } from "./types.js";
+
+// Access internal test utilities
+const {
 	convertToPermissionRequestResponseData,
 	convertToPostToolUseResponseData,
 	convertToPreToolUseResponseData,
@@ -18,9 +22,7 @@ import {
 	isDebugEnabled,
 	mapToOutcome,
 	mapToPermissionDecision,
-	runPipeline,
-} from "./runtime.js";
-import type { AnyPipelineOutput } from "./types.js";
+} = PipelineRuntime.internal;
 
 /**
  * Base event fields required by all hook events.
@@ -949,7 +951,7 @@ describe("runPipeline", () => {
 		const EnvClass = PluginEnv.create("TEST", schema);
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				// @ts-expect-error - testing invalid hook type
 				hookType: "InvalidHookType",
 				hookName: "test-hook",
@@ -978,7 +980,7 @@ describe("runPipeline", () => {
 		const EnvClass = PluginEnv.create("TEST", schema);
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "PreToolUse",
 				hookName: "test-hook",
 				pluginName: "test-plugin",
@@ -1024,7 +1026,7 @@ describe("runPipeline", () => {
 		});
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "PreToolUse",
 				hookName: "pre-bash",
 				pluginName: "test-plugin",
@@ -1071,7 +1073,7 @@ describe("runPipeline", () => {
 		};
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "PreToolUse",
 				hookName: "pre-bash",
 				pluginName: "test-plugin",
@@ -1128,7 +1130,7 @@ describe("runPipeline", () => {
 		});
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "SessionStart",
 				hookName: "session-start",
 				pluginName: "test-plugin",
@@ -1173,7 +1175,7 @@ describe("runPipeline", () => {
 		const handler = async () => ({ invalid: "output" }) as unknown as AnyPipelineOutput;
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "PreToolUse",
 				hookName: "pre-bash",
 				pluginName: "test-plugin",
@@ -1217,7 +1219,7 @@ describe("runPipeline", () => {
 		});
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "PostToolUse",
 				hookName: "post-bash",
 				pluginName: "test-plugin",
@@ -1260,7 +1262,7 @@ describe("runPipeline", () => {
 		});
 
 		await expect(
-			runPipeline({
+			PipelineRuntime.run({
 				hookType: "Stop",
 				hookName: "stop-check",
 				pluginName: "test-plugin",
