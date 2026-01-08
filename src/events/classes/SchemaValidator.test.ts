@@ -11,8 +11,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { FormattedValidationError } from "./validation.js";
-import { SchemaValidator } from "./validation.js";
+import type { FormattedValidationError } from "./SchemaValidator.js";
+import { SchemaValidator } from "./SchemaValidator.js";
 
 describe("SchemaValidator", () => {
 	test("SchemaValidator is exported", () => {

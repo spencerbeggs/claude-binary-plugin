@@ -24,14 +24,16 @@
  * }
  * ```
  *
+ * @see {@link OtelConfig} - Check if telemetry is enabled
+ * @see {@link TelemetryEmitter} - Emit telemetry events
  * @public
  */
 
 import type { HookEventBase } from "../../events/types.js";
-import { getSidecarClient } from "../client.js";
 import type { SpanData } from "../protocol.js";
 import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
+import { getSidecarClient } from "./SidecarClient.js";
 import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
 /**

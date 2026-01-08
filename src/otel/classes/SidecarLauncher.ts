@@ -17,6 +17,9 @@
  * }
  * ```
  *
+ * @see {@link SidecarClient} - Client for sidecar communication
+ * @see {@link SidecarClientPool} - Pool management for clients
+ * @see {@link Platform} - Platform detection utilities
  * @public
  */
 

@@ -15,6 +15,9 @@
  * }
  * ```
  *
+ * @see {@link TelemetryEmitter} - Emit telemetry events
+ * @see {@link TelemetryMetrics} - Record telemetry metrics
+ * @see {@link TelemetrySpan} - Instrument spans for tracing
  * @public
  */
 

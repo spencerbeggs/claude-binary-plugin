@@ -43,21 +43,19 @@
 
 import type { ReadonlyDeep } from "type-fest";
 import { z } from "zod";
-import {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "../../events/subclasses.js";
+import { NotificationEvent } from "../../events/classes/NotificationEvent.js";
+import { PermissionRequestEvent } from "../../events/classes/PermissionRequestEvent.js";
+import { PostToolUseEvent } from "../../events/classes/PostToolUseEvent.js";
+import { PreCompactEvent } from "../../events/classes/PreCompactEvent.js";
+import { PreToolUseEvent } from "../../events/classes/PreToolUseEvent.js";
+import { SessionEndEvent } from "../../events/classes/SessionEndEvent.js";
+import { SessionStartEvent } from "../../events/classes/SessionStartEvent.js";
+import { StopEvent } from "../../events/classes/StopEvent.js";
+import { SubagentStopEvent } from "../../events/classes/SubagentStopEvent.js";
+import { UserPromptSubmitEvent } from "../../events/classes/UserPromptSubmitEvent.js";
 import type { HookOutcome } from "../../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../../otel/classes/TelemetryEmitter.js";
-import { PluginEnv } from "../../state/plugin-state.js";
+import { PluginEnv } from "../../state/classes/PluginEnv.js";
 import type { BaseState, PipelineHandler, PluginState, SetupFunction } from "../config.js";
 import { TokenMetrics } from "../metrics.js";
 import type { AnyPipelineOutput, ExecutionStatus, HookAction } from "../types.js";

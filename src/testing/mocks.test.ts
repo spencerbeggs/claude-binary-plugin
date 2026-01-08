@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { SessionStartEvent } from "../events/classes/SessionStartEvent.js";
 import { HookType } from "../events/enums.js";
-import { SessionStartEvent } from "../events/subclasses.js";
 import type { SessionStartInput } from "../events/types.js";
 import type { MockEnvContext } from "./mocks.js";
 import {

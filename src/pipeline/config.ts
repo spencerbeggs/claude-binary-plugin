@@ -36,18 +36,16 @@ import type { ReadonlyDeep } from "type-fest";
 import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";
 import type { PluginBuildResult } from "../build/builder.js";
-import type {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "../events/subclasses.js";
+import type { NotificationEvent } from "../events/classes/NotificationEvent.js";
+import type { PermissionRequestEvent } from "../events/classes/PermissionRequestEvent.js";
+import type { PostToolUseEvent } from "../events/classes/PostToolUseEvent.js";
+import type { PreCompactEvent } from "../events/classes/PreCompactEvent.js";
+import type { PreToolUseEvent } from "../events/classes/PreToolUseEvent.js";
+import type { SessionEndEvent } from "../events/classes/SessionEndEvent.js";
+import type { SessionStartEvent } from "../events/classes/SessionStartEvent.js";
+import type { StopEvent } from "../events/classes/StopEvent.js";
+import type { SubagentStopEvent } from "../events/classes/SubagentStopEvent.js";
+import type { UserPromptSubmitEvent } from "../events/classes/UserPromptSubmitEvent.js";
 import type {
 	NotificationInput,
 	PermissionRequestInput,
@@ -1414,4 +1412,3 @@ export namespace ClaudeBinaryPlugin {
 			: never;
 	};
 }
-

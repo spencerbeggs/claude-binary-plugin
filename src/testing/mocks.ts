@@ -5,11 +5,10 @@
  * This module provides mocking utilities for testing hook handlers and
  * commands without requiring actual Claude Code integration.
  *
- * **Key Utilities:**
- * - {@link TestFixtures.IO} - Mock stdin/stdout for hook testing
- * - {@link TestFixtures.Env} - Mock environment variables
- * - {@link TestFixtures.Command} - Run command handlers with mocked I/O
- * - {@link TestFixtures.Shell} - Mock shell command execution
+ * **Public API:**
+ * - {@link TestFixtures} - Static class with all testing utilities
+ * - {@link MockState} - Mock state class for PluginEnv
+ * - {@link MockExitError} - Error thrown by mocked process.exit
  *
  * **Testing Philosophy:**
  * Plugin tests should be isolated and fast. These utilities enable:
@@ -23,26 +22,26 @@
  * import { TestFixtures } from "claude-binary-plugin";
  *
  * test("hook blocks dangerous command", async () => {
- *   const io = TestFixtures.IO.create({
+ *   const io = TestFixtures.createIO({
  *     tool_name: "Bash",
  *     tool_input: { command: "rm -rf /" },
  *   });
  *
- *   await TestFixtures.Hook.run(myHook);
+ *   await TestFixtures.runHook(myHook);
  *
  *   const output = JSON.parse(io.getStdout());
  *   expect(output.hookSpecificOutput.permissionDecision).toBe("deny");
  * });
  * ```
  *
+ * @see {@link TestFixtures} - Main testing utility class
  * @see {@link MockIOResult} - Captured I/O interface
  * @see {@link MockEnvContext} - Environment mock context
- * @module
  */
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
 import type { HookEventBase, IO } from "../events/types.js";
-import { PluginEnv } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/classes/PluginEnv.js";
 
 // =============================================================================
 // LOGGER MOCKS
@@ -63,7 +62,7 @@ import { PluginEnv } from "../state/plugin-state.js";
  * };
  * ```
  *
- * @public
+ * @internal
  */
 export function mockLogger(): {
 	log: (message: string, ...args: unknown[]) => void;
@@ -123,7 +122,7 @@ export interface MockIOResult extends IO {
  * expect(output.hookSpecificOutput.permissionDecision).toBe("deny");
  * ```
  *
- * @public
+ * @internal
  */
 export function mockIO<T extends HookEventBase>(input: T): MockIOResult {
 	const inputStr = JSON.stringify(input);
@@ -165,7 +164,7 @@ export function mockIO<T extends HookEventBase>(input: T): MockIOResult {
  * Resets all mocks created by mockIO().
  * Call this in afterEach() to clean up between tests.
  *
- * @public
+ * @internal
  */
 export function resetMockIO(): void {
 	// @ts-expect-error - accessing mock restore
@@ -225,7 +224,7 @@ export interface MockCommandContext {
  * ctx.restore();
  * ```
  *
- * @public
+ * @internal
  */
 export function mockCommand(args: string[]): MockCommandContext {
 	const originalArgv = process.argv;
@@ -298,7 +297,7 @@ export class MockExitError extends Error {
  * expect(output.logs.join("\n")).toContain("Success");
  * ```
  *
- * @public
+ * @internal
  */
 export async function runMockedCommand(args: string[], mainFn: () => Promise<void>): Promise<MockCommandOutput> {
 	const ctx = mockCommand(args);
@@ -341,7 +340,7 @@ export async function runMockedCommand(args: string[], mainFn: () => Promise<voi
  * });
  * ```
  *
- * @public
+ * @internal
  */
 export async function runMockedHook(mainFn: () => Promise<void>): Promise<number> {
 	const originalExit = process.exit;
@@ -377,7 +376,7 @@ import type { ShellExecutor, ShellResult } from "../build/builder.js";
  * Default shell executor using Bun.$.
  * Executes commands quietly with nothrow to capture all output.
  *
- * @public
+ * @internal
  */
 export const defaultShellExecutor: ShellExecutor = async (cmd: string) => {
 	const result = await $`${{ raw: cmd }}`.quiet().nothrow();
@@ -402,7 +401,7 @@ export const defaultShellExecutor: ShellExecutor = async (cmd: string) => {
  * const errorResult = createMockShellResult(1, "", "command not found");
  * ```
  *
- * @public
+ * @internal
  */
 export function createMockShellResult(exitCode: number, stdout = "", stderr = ""): ShellResult {
 	return { exitCode, stdout, stderr };
@@ -426,7 +425,7 @@ export function createMockShellResult(exitCode: number, stdout = "", stderr = ""
  * expect(result.stdout).toBe("v22.0.0");
  * ```
  *
- * @public
+ * @internal
  */
 export function createMockShellExecutor(
 	responses: Record<string, ShellResult>,
@@ -504,7 +503,7 @@ export type InMemoryShellExecutor = (
  * Executes commands quietly with nothrow to capture all output.
  * Supports timeout option to prevent hanging.
  *
- * @public
+ * @internal
  */
 export const defaultInMemoryShellExecutor: InMemoryShellExecutor = async (
 	cmd: string[],
@@ -540,7 +539,7 @@ export const defaultInMemoryShellExecutor: InMemoryShellExecutor = async (
  * const errorResult = createMockBufferShellResult(1, "", "lint error");
  * ```
  *
- * @public
+ * @internal
  */
 export function createMockBufferShellResult(
 	exitCode: number,
@@ -574,7 +573,7 @@ export function createMockBufferShellResult(
  * });
  * ```
  *
- * @public
+ * @internal
  */
 export function createMockInMemoryShellExecutor(
 	handler: (cmd: string[], options?: InMemoryShellExecutorOptions) => Promise<BufferShellResult>,
@@ -645,7 +644,7 @@ export interface MockEnvContext {
  * });
  * ```
  *
- * @public
+ * @internal
  */
 export function mockEnv(
 	vars: Record<string, string | undefined> = {},
@@ -707,7 +706,7 @@ export function mockEnv(
 /**
  * Preset environment configurations for common test scenarios.
  *
- * @public
+ * @internal
  */
 export const envPresets = {
 	/** Minimal Claude Code hook environment */
@@ -774,7 +773,7 @@ export interface MockFatalErrorResult {
  * });
  * ```
  *
- * @public
+ * @internal
  */
 export function testFatalErrorHandler(
 	handler: (error: unknown) => never,

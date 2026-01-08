@@ -29,16 +29,15 @@
  *
  * @see {@link getSidecarClient} - Get/create singleton client
  * @see docs/SCHEMA.md - OTEL telemetry schema
- * @module
  */
 
 import type { Socket } from "bun";
-import { OtelConfig } from "./classes/OtelConfig.js";
-import { Platform } from "./classes/Platform.js";
-import { SessionEnv } from "./classes/SessionEnv.js";
-import { SidecarLauncher } from "./classes/SidecarLauncher.js";
-import { SidecarMessage } from "./classes/SidecarMessage.js";
-import type { OtelProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
+import type { OtelProtocolConfig, SidecarProtocolMessage } from "../protocol.js";
+import { OtelConfig } from "./OtelConfig.js";
+import { Platform } from "./Platform.js";
+import { SessionEnv } from "./SessionEnv.js";
+import { SidecarLauncher } from "./SidecarLauncher.js";
+import { SidecarMessage } from "./SidecarMessage.js";
 
 /**
  * Client state for tracking connection status.

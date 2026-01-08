@@ -43,8 +43,8 @@
 // CORE TYPES
 // =============================================================================
 
-export type { EnvCodecMetadata } from "./state/codecs.js";
-export { EnvCodecs } from "./state/codecs.js";
+export type { EnvCodecMetadata } from "./state/classes/EnvCodecs.js";
+export { EnvCodecs } from "./state/classes/EnvCodecs.js";
 export type {
 	CommandConfig,
 	CommandContextParams,
@@ -58,11 +58,11 @@ export type {
 	ZodErrorMinimal,
 	ZodIssueMinimal,
 	ZodSchema,
-} from "./state/plugin-state.js";
-export { EnvFileLoadError, PluginEnv } from "./state/plugin-state.js";
-export type { SessionRecord, SessionRegistration } from "./state/session-registry.js";
+} from "./state/classes/PluginEnv.js";
+export { EnvFileLoadError, PluginEnv } from "./state/classes/PluginEnv.js";
+export type { SessionRecord, SessionRegistration } from "./state/classes/SessionRegistry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry } from "./state/session-registry.js";
+export { SessionRegistry } from "./state/classes/SessionRegistry.js";
 // Branded types for type-safe identifiers
 export type { HookName, SessionId, ToolUseId, TranscriptPath } from "./types/branded.js";
 // JSON type utilities (re-exported from type-fest with Zod schemas)
@@ -97,10 +97,13 @@ export { DebugLogger } from "./utils/debug-logger.js";
 // =============================================================================
 
 // Base HookEvent class
-export { HookEvent } from "./events/base.js";
-export type { HookPermissionsMode } from "./events/enums.js";
-// Enums
-export { HookType } from "./events/enums.js";
+export { HookEvent } from "./events/classes/HookEvent.js";
+// HookEvent subclasses
+export { NotificationEvent } from "./events/classes/NotificationEvent.js";
+export { PermissionRequestEvent } from "./events/classes/PermissionRequestEvent.js";
+export { PostToolUseEvent } from "./events/classes/PostToolUseEvent.js";
+export { PreCompactEvent } from "./events/classes/PreCompactEvent.js";
+export { PreToolUseEvent } from "./events/classes/PreToolUseEvent.js";
 // Response builders
 export {
 	HookResponse,
@@ -110,23 +113,20 @@ export {
 	SessionStartResponse,
 	StopResponse,
 	UserPromptSubmitResponse,
-} from "./events/response-builders.js";
-
+} from "./events/classes/ResponseBuilders.js";
+// Schema validation
+export type { FormattedValidationError } from "./events/classes/SchemaValidator.js";
+export { SchemaValidator } from "./events/classes/SchemaValidator.js";
+export { SessionEndEvent } from "./events/classes/SessionEndEvent.js";
+export { SessionStartEvent } from "./events/classes/SessionStartEvent.js";
+export { StopEvent } from "./events/classes/StopEvent.js";
+export { SubagentStopEvent } from "./events/classes/SubagentStopEvent.js";
+export { UserPromptSubmitEvent } from "./events/classes/UserPromptSubmitEvent.js";
+export type { HookPermissionsMode } from "./events/enums.js";
+// Enums
+export { HookType } from "./events/enums.js";
 // Response types
 export type { BlockDecision, HookResponseData } from "./events/response-types.js";
-// HookEvent subclasses
-export {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "./events/subclasses.js";
 // Event type definitions
 export type {
 	HookEventBase,
@@ -158,10 +158,6 @@ export type {
 	UserPromptSubmitInput,
 	UserPromptSubmitOutput,
 } from "./events/types.js";
-
-// Schema validation
-export type { FormattedValidationError } from "./events/validation.js";
-export { SchemaValidator } from "./events/validation.js";
 
 // =============================================================================
 // TYPED TOOL INPUTS
@@ -252,6 +248,9 @@ export { PluginInfo } from "./otel/classes/PluginInfo.js";
 export { SessionEnv } from "./otel/classes/SessionEnv.js";
 // Sidecar entry point (compiled separately by builder)
 export { Sidecar } from "./otel/classes/Sidecar.js";
+// Sidecar management
+export type { ClientState } from "./otel/classes/SidecarClient.js";
+export { SidecarClient } from "./otel/classes/SidecarClient.js";
 export { SidecarClientPool } from "./otel/classes/SidecarClientPool.js";
 export type { SpawnResult } from "./otel/classes/SidecarLauncher.js";
 export { SidecarLauncher } from "./otel/classes/SidecarLauncher.js";
@@ -270,9 +269,6 @@ export type {
 export { TelemetryEmitter } from "./otel/classes/TelemetryEmitter.js";
 export { TelemetryMetrics } from "./otel/classes/TelemetryMetrics.js";
 export { TelemetrySpan } from "./otel/classes/TelemetrySpan.js";
-// Sidecar management
-export type { ClientState } from "./otel/client.js";
-export { SidecarClient } from "./otel/client.js";
 // Protocol types (for advanced usage)
 export type {
 	EventData,

@@ -12,7 +12,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { HookEvent } from "./base.js";
+import { HookEvent } from "./HookEvent.js";
 
 describe("HookEvent", () => {
 	test("module exports HookEvent class", () => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { SidecarClient, clearSidecarClients, getSidecarClient, removeSidecarClient } from "./client.js";
+import { SidecarClient, clearSidecarClients, getSidecarClient, removeSidecarClient } from "./SidecarClient.js";
 
 describe("client", () => {
 	afterEach(() => {

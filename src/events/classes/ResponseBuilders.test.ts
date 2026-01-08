@@ -23,7 +23,7 @@ import {
 	SessionStartResponse,
 	StopResponse,
 	UserPromptSubmitResponse,
-} from "./response-builders.js";
+} from "./ResponseBuilders.js";
 
 describe("HookResponse", () => {
 	test("HookResponse is exported", () => {

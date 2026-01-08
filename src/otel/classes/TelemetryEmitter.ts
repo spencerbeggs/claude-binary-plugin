@@ -23,15 +23,18 @@
  * }
  * ```
  *
+ * @see {@link OtelConfig} - Check if telemetry is enabled
+ * @see {@link TelemetryMetrics} - Record telemetry metrics
+ * @see {@link TelemetrySpan} - Instrument spans for tracing
  * @public
  */
 
 import type { HookEventBase } from "../../events/types.js";
-import { getSidecarClient } from "../client.js";
 import type { EventData } from "../protocol.js";
 import { getSdkVersion } from "../version.macro.js";
 import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
+import { getSidecarClient } from "./SidecarClient.js";
 
 // SDK version - works both at runtime and when bundled
 const SDK_VERSION = getSdkVersion();

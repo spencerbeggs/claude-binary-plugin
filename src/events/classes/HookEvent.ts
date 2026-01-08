@@ -1,61 +1,12 @@
-/**
- * Base HookEvent class providing core functionality for all hook event types.
- *
- * This module defines the abstract base class that all hook event subclasses extend.
- * It handles stdin/stdout I/O, environment loading, telemetry emission, and response
- * building for Claude Code hook integrations.
- *
- * @remarks
- * The HookEvent class implements the three-layer plugin model:
- *
- * 1. **Input Layer**: Hook event data from Claude Code (parsed from stdin JSON)
- * 2. **Options Layer**: User-configurable settings validated by Zod schema
- * 3. **State Layer**: Computed environment from the plugin's `setup()` function
- *
- * For pipeline-based development (recommended), you typically don't interact with
- * HookEvent directly. Instead, use {@link ClaudeBinaryPlugin.create} which handles
- * event creation and response building automatically.
- *
- * For raw handler development, subclasses provide typed access to event-specific
- * properties and specialized response builders.
- *
- * @example
- * ```typescript
- * // Raw handler using HookEvent directly
- * import { PreToolUseEvent } from "claude-binary-plugin";
- *
- * export default async function handler() {
- *   const { event, env } = await PreToolUseEvent.create({
- *     stdin: process.stdin,
- *     stdout: process.stdout,
- *     stderr: process.stderr,
- *     envClass: MyPluginEnv,
- *     name: "my-hook",
- *   });
- *
- *   // Access typed properties
- *   if (event.tool_name === "Bash") {
- *     event.end(event.response().deny("Bash not allowed"), 0);
- *   }
- *
- *   event.end(event.response().allow());
- * }
- * ```
- *
- * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
- * @see docs/ARCHITECTURE.md for the complete three-layer model documentation
- * @module
- */
-
 import { z } from "zod";
-import { HookEventSchemas } from "../core/schemas.js";
-import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
-import { PluginEnv, formatZodError as formatZodErrorAsMarkdown } from "../state/plugin-state.js";
-import { DebugLogger } from "../utils/debug-logger.js";
-import type { HookPermissionsMode, HookType } from "./enums.js";
-import { HookResponse } from "./response-builders.js";
-import type { HookEventBase, HookEventOptions, IO } from "./types.js";
-import { SchemaValidator } from "./validation.js";
+import { HookEventSchemas } from "../../core/schemas.js";
+import type { HookMetrics, HookOutcome } from "../../otel/classes/TelemetryEmitter.js";
+import { PluginEnv, formatZodError as formatZodErrorAsMarkdown } from "../../state/classes/PluginEnv.js";
+import { DebugLogger } from "../../utils/debug-logger.js";
+import type { HookPermissionsMode, HookType } from "../enums.js";
+import type { HookEventBase, HookEventOptions, IO } from "../types.js";
+import { HookResponse } from "./ResponseBuilders.js";
+import { SchemaValidator } from "./SchemaValidator.js";
 
 /**
  * Base class for all hook events in the Claude Code plugin system.
@@ -228,7 +179,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 */
 	protected static async initTelemetry(sessionId: string): Promise<void> {
 		try {
-			const { TelemetryEmitter } = await import("../otel/classes/TelemetryEmitter.js");
+			const { TelemetryEmitter } = await import("../../otel/classes/TelemetryEmitter.js");
 			await TelemetryEmitter.preconnect(sessionId);
 		} catch {
 			// Silently ignore telemetry errors
@@ -332,10 +283,10 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		if (this.telemetryEmitted) return;
 
 		try {
-			const { isOTELEnabled } = require("../otel/config.js") as { isOTELEnabled: () => boolean };
+			const { isOTELEnabled } = require("../../otel/config.js") as { isOTELEnabled: () => boolean };
 			if (!isOTELEnabled()) return;
 
-			const { emitHookExecution } = require("../otel/events.js") as {
+			const { emitHookExecution } = require("../../otel/events.js") as {
 				emitHookExecution: (
 					event: HookEventBase,
 					hookName: string,
@@ -446,10 +397,10 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 */
 	private emitTelemetryError(durationMs: number, errorMessage: string): void {
 		try {
-			const { isOTELEnabled } = require("../otel/config.js") as { isOTELEnabled: () => boolean };
+			const { isOTELEnabled } = require("../../otel/config.js") as { isOTELEnabled: () => boolean };
 			if (!isOTELEnabled()) return;
 
-			const { emitHookExecution } = require("../otel/events.js") as {
+			const { emitHookExecution } = require("../../otel/events.js") as {
 				emitHookExecution: (
 					event: HookEventBase,
 					hookName: string,

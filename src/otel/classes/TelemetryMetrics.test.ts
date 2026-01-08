@@ -3,8 +3,8 @@ import { HookType } from "../../events/enums.js";
 import type { HookEventBase } from "../../events/types.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
 import { mockEnv } from "../../testing/mocks.js";
-import { clearSidecarClients } from "../client.js";
 import { PluginInfo } from "./PluginInfo.js";
+import { clearSidecarClients } from "./SidecarClient.js";
 import { TelemetryMetrics } from "./TelemetryMetrics.js";
 
 // Mock HookEventBase for testing

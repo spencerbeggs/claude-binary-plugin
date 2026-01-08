@@ -15,18 +15,16 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "./subclasses.js";
+import { NotificationEvent } from "./NotificationEvent.js";
+import { PermissionRequestEvent } from "./PermissionRequestEvent.js";
+import { PostToolUseEvent } from "./PostToolUseEvent.js";
+import { PreCompactEvent } from "./PreCompactEvent.js";
+import { PreToolUseEvent } from "./PreToolUseEvent.js";
+import { SessionEndEvent } from "./SessionEndEvent.js";
+import { SessionStartEvent } from "./SessionStartEvent.js";
+import { StopEvent } from "./StopEvent.js";
+import { SubagentStopEvent } from "./SubagentStopEvent.js";
+import { UserPromptSubmitEvent } from "./UserPromptSubmitEvent.js";
 
 describe("HookEvent subclasses", () => {
 	test("PreToolUseEvent is exported", () => {

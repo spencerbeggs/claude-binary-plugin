@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
-import type { PluginEnvFileSystem, ZodErrorMinimal } from "./plugin-state.js";
-import { PluginEnv, escapeForBashDoubleQuotes, formatZodError } from "./plugin-state.js";
+import type { MockEnvContext } from "../../testing/mocks.js";
+import { mockEnv } from "../../testing/mocks.js";
+import type { PluginEnvFileSystem, ZodErrorMinimal } from "./PluginEnv.js";
+import { PluginEnv, escapeForBashDoubleQuotes, formatZodError } from "./PluginEnv.js";
 
 describe("escapeForBashDoubleQuotes", () => {
 	test("escapes double quotes", () => {
@@ -737,7 +737,7 @@ describe("defaultPluginEnvFileSystem", () => {
 		const tempFile = `/tmp/test-write-${Date.now()}.txt`;
 		try {
 			// Import the default file system
-			const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
+			const { defaultPluginEnvFileSystem } = await import("./PluginEnv.js");
 
 			await defaultPluginEnvFileSystem.writeFile(tempFile, "test content");
 
@@ -751,7 +751,7 @@ describe("defaultPluginEnvFileSystem", () => {
 	test("mkdir creates directory", async () => {
 		const tempDir = `/tmp/test-mkdir-${Date.now()}`;
 		try {
-			const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
+			const { defaultPluginEnvFileSystem } = await import("./PluginEnv.js");
 
 			await defaultPluginEnvFileSystem.mkdir(tempDir);
 
@@ -765,7 +765,7 @@ describe("defaultPluginEnvFileSystem", () => {
 	test("chmod changes file permissions", async () => {
 		const tempFile = `/tmp/test-chmod-${Date.now()}.sh`;
 		try {
-			const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
+			const { defaultPluginEnvFileSystem } = await import("./PluginEnv.js");
 
 			await Bun.write(tempFile, "#!/bin/bash\necho hello\n");
 			await defaultPluginEnvFileSystem.chmod(tempFile, "+x");
@@ -778,7 +778,7 @@ describe("defaultPluginEnvFileSystem", () => {
 	});
 
 	test("exists returns false for catch block", async () => {
-		const { defaultPluginEnvFileSystem } = await import("./plugin-state.js");
+		const { defaultPluginEnvFileSystem } = await import("./PluginEnv.js");
 		// This tests the catch block - a path with invalid characters might trigger it
 		// Though in practice Bun.file might handle it gracefully
 		const result = await defaultPluginEnvFileSystem.exists("/some/path/that/does/not/exist");

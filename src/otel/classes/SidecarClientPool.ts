@@ -17,10 +17,12 @@
  * SidecarClientPool.remove(sessionId);
  * ```
  *
+ * @see {@link SidecarClient} - The client instances this pool manages
+ * @see {@link SidecarLauncher} - Spawns sidecar processes
  * @public
  */
 
-import { SidecarClient } from "../client.js";
+import { SidecarClient } from "./SidecarClient.js";
 
 /**
  * Sidecar client pool.

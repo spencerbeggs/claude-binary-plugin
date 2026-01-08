@@ -50,10 +50,10 @@
  * @module
  */
 
-import { OtelConfig } from "../otel/classes/OtelConfig.js";
-import type { EnvValidationErrorResult } from "../otel/classes/TelemetryEmitter.js";
-import { TelemetryEmitter } from "../otel/classes/TelemetryEmitter.js";
-import { DebugLogger } from "../utils/debug-logger.js";
+import { OtelConfig } from "../../otel/classes/OtelConfig.js";
+import type { EnvValidationErrorResult } from "../../otel/classes/TelemetryEmitter.js";
+import { TelemetryEmitter } from "../../otel/classes/TelemetryEmitter.js";
+import { DebugLogger } from "../../utils/debug-logger.js";
 
 /**
  * Zod issue type for error formatting.
@@ -1165,7 +1165,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static getSessionEnvDir(sessionId: string | undefined): string | undefined {
 		// Import inline to avoid circular dependency at module load time
-		const { SessionRegistry } = require("./session-registry.js") as typeof import("./session-registry.js");
+		const { SessionRegistry } = require("./SessionRegistry.js") as typeof import("./SessionRegistry.js");
 		return SessionRegistry.getBySessionId(sessionId);
 	}
 
@@ -1182,7 +1182,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static registerSession(sessionId: string, projectDir: string, sessionEnvDir: string): void {
 		// Import inline to avoid circular dependency at module load time
-		const { SessionRegistry } = require("./session-registry.js") as typeof import("./session-registry.js");
+		const { SessionRegistry } = require("./SessionRegistry.js") as typeof import("./SessionRegistry.js");
 		SessionRegistry.register({ sessionId, projectDir, sessionEnvDir });
 	}
 
@@ -1198,7 +1198,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static getProjectSessionEnvDir(projectDir: string): string | undefined {
 		// Import inline to avoid circular dependency at module load time
-		const { SessionRegistry } = require("./session-registry.js") as typeof import("./session-registry.js");
+		const { SessionRegistry } = require("./SessionRegistry.js") as typeof import("./SessionRegistry.js");
 		return SessionRegistry.getByProjectDir(projectDir);
 	}
 

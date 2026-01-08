@@ -1,47 +1,7 @@
-/**
- * Fluent response builders for constructing Claude Code hook responses.
- *
- * This module provides builder classes that make it easy to construct properly
- * formatted responses for each hook type. Each builder uses the fluent pattern,
- * allowing method chaining for a clean, readable API.
- *
- * @remarks
- * Response builders are used with the {@link HookEvent.end} method to send
- * responses back to Claude Code. Each hook type has a specialized builder
- * that provides type-safe methods for that hook's capabilities.
- *
- * For pipeline-based development, you typically don't use these builders
- * directly - the pipeline runtime handles response construction based on
- * your handler's output. These builders are primarily for raw handler
- * development.
- *
- * @example
- * ```typescript
- * // PreToolUse - Allow a tool call
- * event.end(event.response().allow());
- *
- * // PreToolUse - Deny with reason
- * event.end(event.response().deny("rm -rf not permitted"));
- *
- * // PostToolUse - Add context for Claude
- * event.end(event.response().additionalContext("File was modified successfully"));
- *
- * // SessionStart - Inject project context
- * event.end(event.response().additionalContext("# Project uses TypeScript"));
- *
- * // Stop - Block Claude from stopping
- * event.end(event.response().block("Tests must pass before stopping"));
- * ```
- *
- * @see {@link HookEvent.response} - Creates the appropriate builder for each event type
- * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
- * @module
- */
-
-import type { HookMetrics, HookOutcome } from "../otel/classes/TelemetryEmitter.js";
-import { TokenMetrics } from "../pipeline/metrics.js";
-import type { HookResponseData } from "./response-types.js";
-import type { PermissionRequestDecision, ToolInput } from "./types.js";
+import type { HookMetrics, HookOutcome } from "../../otel/classes/TelemetryEmitter.js";
+import { TokenMetrics } from "../../pipeline/metrics.js";
+import type { HookResponseData } from "../response-types.js";
+import type { PermissionRequestDecision, ToolInput } from "../types.js";
 
 /**
  * Base builder for constructing hook responses with a fluent API.

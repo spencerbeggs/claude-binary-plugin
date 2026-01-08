@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { HookType } from "../../events/enums.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
 import { mockEnv } from "../../testing/mocks.js";
-import { clearSidecarClients, getSidecarClient } from "../client.js";
+import { clearSidecarClients, getSidecarClient } from "./SidecarClient.js";
 import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
 // Type for mock call assertions

@@ -46,7 +46,7 @@
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { BaseState, CommandHandler, CommandOutput, PluginState } from "../pipeline/config.js";
-import { PluginEnv } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/classes/PluginEnv.js";
 
 // =============================================================================
 // INTERNAL SCHEMA UTILITIES

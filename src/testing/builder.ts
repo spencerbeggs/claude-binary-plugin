@@ -34,7 +34,8 @@
  * });
  * ```
  *
- * @module
+ * @see {@link ClaudeBinaryPlugin} - Create plugins with `.test()` method
+ * @see {@link TestFixtures} - Low-level testing utilities
  */
 
 import { mock, spyOn } from "bun:test";

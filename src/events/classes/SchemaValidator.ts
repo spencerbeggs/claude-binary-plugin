@@ -1,8 +1,3 @@
-/**
- * Schema validation with OTEL error capture.
- * @module
- */
-
 import { z } from "zod";
 
 /**
@@ -63,7 +58,7 @@ export class SchemaValidator {
 		// Initialize OTEL if we have a session ID
 		if (sessionId) {
 			try {
-				const { TelemetryEmitter } = await import("../otel/classes/TelemetryEmitter.js");
+				const { TelemetryEmitter } = await import("../../otel/classes/TelemetryEmitter.js");
 				await TelemetryEmitter.preconnect(sessionId);
 			} catch {
 				// Silently ignore telemetry errors - don't block hook initialization
@@ -157,14 +152,14 @@ export class SchemaValidator {
 		if (!sessionId) return;
 
 		try {
-			const { isOTELEnabled } = require("../otel/config.js") as { isOTELEnabled: () => boolean };
+			const { isOTELEnabled } = require("../../otel/config.js") as { isOTELEnabled: () => boolean };
 			if (!isOTELEnabled()) return;
 
-			const { TelemetryEmitter } = require("../otel/classes/TelemetryEmitter.js") as {
-				TelemetryEmitter: typeof import("../otel/classes/TelemetryEmitter.js").TelemetryEmitter;
+			const { TelemetryEmitter } = require("../../otel/classes/TelemetryEmitter.js") as {
+				TelemetryEmitter: typeof import("../../otel/classes/TelemetryEmitter.js").TelemetryEmitter;
 			};
-			const { getSidecarClient } = require("../otel/client.js") as {
-				getSidecarClient: typeof import("../otel/client.js").getSidecarClient;
+			const { getSidecarClient } = require("../../otel/classes/SidecarClient.js") as {
+				getSidecarClient: typeof import("../../otel/classes/SidecarClient.js").getSidecarClient;
 			};
 
 			const formatted = SchemaValidator.formatError(error);

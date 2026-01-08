@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { EnvCodecs, envCodecRegistry } from "./codecs.js";
+import { EnvCodecs, envCodecRegistry } from "./EnvCodecs.js";
 
 // =============================================================================
 // ENV CODECS NAMESPACE TESTS
