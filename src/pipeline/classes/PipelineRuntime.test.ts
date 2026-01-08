@@ -3,7 +3,7 @@ import { Writable } from "node:stream";
 import { z } from "zod";
 import { PluginEnv } from "../../state/classes/PluginEnv.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
-import { mockEnv } from "../../testing/mocks.js";
+import { TestFixtures } from "../../testing/mocks.js";
 import type { AnyPipelineOutput } from "../types.js";
 import type { IODependencies } from "./PipelineRuntime.js";
 import { PipelineRuntime } from "./PipelineRuntime.js";
@@ -129,7 +129,7 @@ describe("PLUGIN_STATE base64 encoding", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({}, { clearPrefix: "TEST_" });
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -739,7 +739,7 @@ describe("isDebugEnabled", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -779,7 +779,7 @@ describe("extractPersistedState", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -852,7 +852,7 @@ describe("createBaseState", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -928,7 +928,7 @@ describe("runPipeline", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({
+		env = TestFixtures.createEnv({
 			CLAUDE_CODE_ENABLE_TELEMETRY: "0", // Disable OTEL during tests
 		});
 	});

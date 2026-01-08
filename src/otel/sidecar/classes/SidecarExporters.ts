@@ -4,7 +4,6 @@
  * Creates exporters for traces, metrics, and logs based on configuration.
  * HTTP exporters are preferred over gRPC for Bun compatibility.
  *
- * @module
  */
 
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";

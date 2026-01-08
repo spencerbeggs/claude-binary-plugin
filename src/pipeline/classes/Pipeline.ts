@@ -19,7 +19,6 @@
  * const tokens = Pipeline.Metrics.estimateTokens(content, "code");
  * ```
  *
- * @module
  */
 
 import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "../config.js";

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { HookType } from "../../events/enums.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
-import { mockEnv } from "../../testing/mocks.js";
+import { TestFixtures } from "../../testing/mocks.js";
 import { clearSidecarClients, getSidecarClient } from "./SidecarClient.js";
 import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
@@ -34,7 +34,7 @@ describe("TelemetryEmitter", () => {
 
 	beforeEach(() => {
 		// Enable OTEL for tests - need to be on darwin/linux and have telemetry enabled
-		env = mockEnv({
+		env = TestFixtures.createEnv({
 			CLAUDE_CODE_ENABLE_TELEMETRY: "1",
 		});
 		// Clear any cached clients

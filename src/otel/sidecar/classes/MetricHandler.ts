@@ -4,7 +4,6 @@
  * Records OTEL metrics from MetricData messages received from hooks.
  * Caches metric instruments for efficient reuse.
  *
- * @module
  */
 
 import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";

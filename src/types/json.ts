@@ -34,7 +34,6 @@
  * ```
  *
  * @see {@link https://github.com/sindresorhus/type-fest | type-fest}
- * @module
  */
 
 // Re-export core JSON types from type-fest

@@ -4,7 +4,6 @@
  * Uses Bun's native `Bun.listen()` with Unix socket support for high-performance
  * IPC between hooks and the sidecar process.
  *
- * @module
  */
 
 import type { Socket, SocketHandler } from "bun";

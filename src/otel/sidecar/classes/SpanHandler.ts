@@ -3,7 +3,6 @@
  *
  * Creates OTEL spans from SpanData messages received from hooks.
  *
- * @module
  */
 
 import { SpanKind, SpanStatusCode } from "@opentelemetry/api";

@@ -4,7 +4,6 @@
  * Writes to /tmp/claude-otel-sidecar.log for troubleshooting.
  * Only logs when running as an actual sidecar process (not in tests).
  *
- * @module
  */
 
 import { appendFileSync } from "node:fs";

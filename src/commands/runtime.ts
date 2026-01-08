@@ -40,7 +40,6 @@
  *
  * @see {@link CommandOutput} - Output format for command handlers
  * @see {@link CommandHandler} - Handler function signature
- * @module
  */
 
 import { dirname } from "node:path";

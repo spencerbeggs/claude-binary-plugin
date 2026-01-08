@@ -4,7 +4,6 @@
  * This class manages the OTEL SDK with trace, metric, and log providers.
  * Providers are initialized lazily on first ping message and are singletons.
  *
- * @module
  */
 
 import { metrics, trace } from "@opentelemetry/api";

@@ -47,7 +47,6 @@
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
  * @see {@link SessionRegistry} - SQLite registry for session lookups
  * @see {@link https://zod.dev | Zod Documentation} - Schema validation library
- * @module
  */
 
 import { OtelConfig } from "../../otel/classes/OtelConfig.js";

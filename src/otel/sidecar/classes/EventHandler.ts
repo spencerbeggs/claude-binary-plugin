@@ -3,7 +3,6 @@
  *
  * Emits OTEL logs from EventData messages received from hooks.
  *
- * @module
  */
 
 import { SeverityNumber } from "@opentelemetry/api-logs";

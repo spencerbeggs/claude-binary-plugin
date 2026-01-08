@@ -7,7 +7,6 @@
  * and {@link HookPermissionsMode} controls Claude Code's permission behavior.
  *
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
- * @module
  */
 
 /**

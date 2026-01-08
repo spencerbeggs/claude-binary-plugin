@@ -45,7 +45,6 @@
  * @see {@link ToolInputGuard} - Namespace with type guards and helpers
  * @see {@link ToolInputMap} - Maps tool names to their input types
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks#pretooluse | PreToolUse Hook Documentation}
- * @module
  */
 
 // =============================================================================

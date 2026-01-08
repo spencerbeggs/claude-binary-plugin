@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
+import { TestFixtures } from "../testing/mocks.js";
 import { CommandArgumentError, Commands } from "./runtime.js";
 
 describe("Commands.parseRaw", () => {
@@ -270,7 +270,7 @@ describe("Commands.findSessionEnvDir", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {

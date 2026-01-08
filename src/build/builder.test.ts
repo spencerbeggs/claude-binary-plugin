@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
+import { TestFixtures } from "../testing/mocks.js";
 import type {
 	GeneratePipelinePluginOptions,
 	MarketplaceManifest,
@@ -467,7 +467,7 @@ describe("getPluginCachePath", () => {
 
 	beforeEach(async () => {
 		await mkdir(join(PLUGIN_DIR, ".claude-plugin"), { recursive: true });
-		env = mockEnv({ HOME: "/test/home" });
+		env = TestFixtures.createEnv({ HOME: "/test/home" });
 	});
 
 	afterEach(async () => {
@@ -563,7 +563,7 @@ describe("syncPluginToCache", () => {
 
 	beforeEach(async () => {
 		await mkdir(join(PLUGIN_DIR, ".claude-plugin"), { recursive: true });
-		env = mockEnv({ HOME: "/test/home" });
+		env = TestFixtures.createEnv({ HOME: "/test/home" });
 	});
 
 	afterEach(async () => {

@@ -4,7 +4,6 @@
  * Resources are immutable collections of attributes that describe the entity
  * producing telemetry (in this case, Claude Code plugin hooks).
  *
- * @module
  */
 
 import type { Resource } from "@opentelemetry/resources";

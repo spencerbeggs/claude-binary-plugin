@@ -4,7 +4,6 @@
  * Messages are sent as JSON Lines (newline-delimited JSON) over Unix sockets.
  * This format is simple, debuggable, and efficient for the expected message sizes.
  *
- * @module
  */
 
 /**

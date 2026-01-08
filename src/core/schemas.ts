@@ -29,7 +29,6 @@
  *
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @see {@link https://zod.dev/metadata | Zod Registries}
- * @module
  */
 
 import { z } from "zod";

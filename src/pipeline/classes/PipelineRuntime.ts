@@ -38,7 +38,6 @@
  * });
  * ```
  *
- * @module
  */
 
 import type { ReadonlyDeep } from "type-fest";

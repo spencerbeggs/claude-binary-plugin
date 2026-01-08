@@ -4,7 +4,6 @@
  * Uses a static JSON import which Bun resolves at bundle time,
  * embedding the version directly into the compiled binary.
  *
- * @module
  */
 
 // Static import resolved at bundle time relative to this file

@@ -1,6 +1,5 @@
 /**
  * Hook response types and telemetry types.
- * @module
  */
 
 /**

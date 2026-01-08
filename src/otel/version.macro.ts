@@ -5,7 +5,6 @@
  * into the bundle. This avoids runtime file reads and ensures the version
  * is baked into the compiled binary.
  *
- * @module
  */
 
 // Static import resolved at compile time relative to this file

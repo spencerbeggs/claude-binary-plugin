@@ -47,7 +47,6 @@
  *
  * @see {@link isPipelineOutput} - Type guard for pipeline outputs
  * @see {@link OutputSchemas} - Map of hook types to output schemas
- * @module
  */
 
 import { z } from "zod";

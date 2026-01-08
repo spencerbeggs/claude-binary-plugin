@@ -21,7 +21,6 @@
  * ```
  *
  * @see {@link https://github.com/sindresorhus/type-fest | type-fest}
- * @module
  */
 
 export type {

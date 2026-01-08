@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { SetupContext } from "../pipeline/config.js";
 import { ClaudeBinaryPlugin } from "../pipeline/config.js";
 import type { MockEnvContext } from "./mocks.js";
-import { mockEnv } from "./mocks.js";
+import { TestFixtures } from "./mocks.js";
 
 // =============================================================================
 // TEST PLUGIN
@@ -266,7 +266,7 @@ describe("PluginTester", () => {
 
 		test("restores environment after disposal", () => {
 			// Set up a known env state
-			env = mockEnv({ ORIGINAL_VAR: "original" });
+			env = TestFixtures.createEnv({ ORIGINAL_VAR: "original" });
 
 			const builder = testPlugin
 				.test()

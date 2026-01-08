@@ -1,6 +1,5 @@
 /**
  * Hook event type definitions and interfaces.
- * @module
  */
 
 import type { HookPermissionsMode, HookType } from "./enums.js";

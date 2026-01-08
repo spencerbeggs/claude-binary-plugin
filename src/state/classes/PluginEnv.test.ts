@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { MockEnvContext } from "../../testing/mocks.js";
-import { mockEnv } from "../../testing/mocks.js";
+import { TestFixtures } from "../../testing/mocks.js";
 import type { PluginEnvFileSystem, ZodErrorMinimal } from "./PluginEnv.js";
 import { PluginEnv, escapeForBashDoubleQuotes, formatZodError } from "./PluginEnv.js";
 
@@ -69,7 +69,7 @@ describe("PluginEnv", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -651,7 +651,7 @@ describe("persistVars", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -714,7 +714,7 @@ describe("validateWithContext and validateOrThrow", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {

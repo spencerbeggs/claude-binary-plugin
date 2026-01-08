@@ -32,7 +32,6 @@
  * ```
  *
  * @see {@link TokenMetrics} - Main token metrics class
- * @module
  */
 
 import { extname } from "node:path";

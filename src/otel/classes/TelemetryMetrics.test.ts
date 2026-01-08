@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, test } from "bun:test";
 import { HookType } from "../../events/enums.js";
 import type { HookEventBase } from "../../events/types.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
-import { mockEnv } from "../../testing/mocks.js";
+import { TestFixtures } from "../../testing/mocks.js";
 import { PluginInfo } from "./PluginInfo.js";
 import { clearSidecarClients } from "./SidecarClient.js";
 import { TelemetryMetrics } from "./TelemetryMetrics.js";
@@ -24,7 +24,7 @@ describe("TelemetryMetrics", () => {
 
 	beforeEach(() => {
 		// Full isolation - tests only see env vars they explicitly set
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {

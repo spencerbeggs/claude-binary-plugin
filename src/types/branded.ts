@@ -36,7 +36,6 @@
  * ```
  *
  * @see {@link https://github.com/sindresorhus/type-fest#tagged | type-fest Tagged}
- * @module
  */
 
 import type { Tagged } from "type-fest";

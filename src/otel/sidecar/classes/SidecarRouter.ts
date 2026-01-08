@@ -3,7 +3,6 @@
  *
  * Routes incoming IPC messages to appropriate handlers.
  *
- * @module
  */
 
 import type { OtelProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";

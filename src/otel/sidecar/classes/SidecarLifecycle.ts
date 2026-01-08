@@ -4,7 +4,6 @@
  * Handles idle timeout, signal handlers, and graceful shutdown for the
  * OTEL sidecar process.
  *
- * @module
  */
 
 import { OtelConfig } from "../../classes/OtelConfig.js";

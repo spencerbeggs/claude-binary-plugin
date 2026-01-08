@@ -55,7 +55,6 @@
  * @see {@link https://zod.dev | Zod Documentation}
  * @see {@link https://zod.dev/metadata | Zod Registries}
  * @see {@link PluginEnv} - Uses codecs for environment validation
- * @module
  */
 
 import { z } from "zod";

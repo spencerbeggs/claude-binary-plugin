@@ -39,7 +39,6 @@
  *
  * @see {@link PluginManifest} - Plugin manifest configuration
  * @see {@link BuildPluginOptions} - Build configuration options
- * @module
  */
 import { relative, resolve } from "node:path";
 import type { PassthroughHookEntry } from "../pipeline/config.js";

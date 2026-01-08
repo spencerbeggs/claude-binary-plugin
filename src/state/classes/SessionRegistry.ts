@@ -39,7 +39,6 @@
  * ```
  *
  * @see {@link PluginEnv} - Uses registry for state lookups
- * @module
  */
 
 import { Database } from "bun:sqlite";
