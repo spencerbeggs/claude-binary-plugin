@@ -1,27 +1,3 @@
-/**
- * Telemetry metric recording for OTEL sidecar.
- *
- * @remarks
- * Provides a class-based API for recording telemetry metrics from hooks.
- * Metrics are serialized and sent to the sidecar process via IPC.
- *
- * @example
- * ```typescript
- * import { TelemetryMetrics, OtelConfig } from "claude-binary-plugin";
- *
- * if (OtelConfig.isEnabled()) {
- *   // Record custom metrics
- *   TelemetryMetrics.recordCounter(event, "files.processed", 5);
- *   TelemetryMetrics.recordHistogram(event, "lint.duration", 123, "ms");
- *   TelemetryMetrics.recordGauge(event, "cache.size", cacheEntries);
- * }
- * ```
- *
- * @see {@link OtelConfig} - Check if telemetry is enabled
- * @see {@link TelemetryEmitter} - Emit telemetry events
- * @public
- */
-
 import type { HookEventBase } from "../../events/types.js";
 import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";

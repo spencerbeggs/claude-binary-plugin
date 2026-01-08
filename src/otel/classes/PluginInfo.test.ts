@@ -1,15 +1,3 @@
-/**
- * Tests for PluginInfo.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - PluginInfo.set() storing plugin info
- * - PluginInfo.get() retrieving plugin info
- * - PluginInfo.reset() resetting to defaults
- * - Default values when not set
- * - Marketplace info handling
- */
-
 import { afterEach, describe, expect, test } from "bun:test";
 import { PluginInfo } from "./PluginInfo.js";
 

@@ -1,10 +1,3 @@
-/**
- * Event/log message handler for OTEL sidecar.
- *
- * Emits OTEL logs from EventData messages received from hooks.
- *
- */
-
 import { SeverityNumber } from "@opentelemetry/api-logs";
 import type { EventData } from "../../protocol.js";
 import { SidecarLog } from "./SidecarLog.js";

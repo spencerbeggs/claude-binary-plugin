@@ -1,15 +1,3 @@
-/**
- * Tests for schema validation with OTEL error capture.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - SchemaValidator.parse() success cases
- * - SchemaValidator.parse() validation failure handling
- * - FormattedValidationError structure
- * - OTEL error emission on validation failure
- * - Two-stage validation (session_id extraction)
- */
-
 import { describe, expect, test } from "bun:test";
 import type { FormattedValidationError } from "./SchemaValidator.js";
 import { SchemaValidator } from "./SchemaValidator.js";

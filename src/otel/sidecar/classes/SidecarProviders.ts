@@ -1,11 +1,3 @@
-/**
- * OTEL Provider management for the sidecar.
- *
- * This class manages the OTEL SDK with trace, metric, and log providers.
- * Providers are initialized lazily on first ping message and are singletons.
- *
- */
-
 import { metrics, trace } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
 import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";

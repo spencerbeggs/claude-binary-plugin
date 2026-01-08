@@ -1,39 +1,3 @@
-/**
- * Auto-instrumentation utilities for pipeline telemetry.
- *
- * @remarks
- * This module provides automatic metric extraction and token estimation for
- * pipeline outputs. It enables observability without requiring hooks to
- * manually calculate metrics.
- *
- * **Token Estimation:**
- * Uses content-type-aware heuristics for more accurate estimates:
- * - Prose/Markdown: ~4 chars/token
- * - Code: ~3.5 chars/token (more symbols)
- * - JSON: ~3 chars/token (heavy punctuation)
- *
- * **Auto-Extracted Metrics:**
- * - Token counts for claudeContext, userMessage, reason
- * - Tool input/response sizes
- * - File operation details (path, extension, content size)
- * - Bash command prefixes and flags
- *
- * **Session Tracking:**
- * Aggregate token tracking across all hooks in a session to monitor
- * context consumption and warn when approaching budget limits.
- *
- * @example
- * ```typescript
- * import { TokenMetrics } from "claude-binary-plugin";
- *
- * const tokens = TokenMetrics.estimate(largeCodeBlock, "code");
- * const metrics = TokenMetrics.extractFromOutput(pipelineOutput);
- * console.log(`Hook added ${metrics.hookTotal} tokens to context`);
- * ```
- *
- * @see {@link TokenMetrics} - Main token metrics class
- */
-
 import { extname } from "node:path";
 import type { AnyPipelineOutput, ContentType, ExecutionQuality, PipelineMetrics, TokenMetricsData } from "./types.js";
 

@@ -1,16 +1,3 @@
-/**
- * Tests for Pipeline class.
- *
- * @remarks
- * Pipeline provides static utility methods:
- * - Pipeline.isOutput() type guard
- * - Pipeline.isPipelineHook() type guard
- * - Pipeline.isRawHook() type guard
- * - Pipeline.Metrics utilities
- *
- * For runtime execution tests, see PipelineRuntime.test.ts
- */
-
 import { describe, expect, test } from "bun:test";
 import { Pipeline } from "./Pipeline.js";
 

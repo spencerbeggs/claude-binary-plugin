@@ -1,11 +1,3 @@
-/**
- * Sidecar lifecycle management.
- *
- * Handles idle timeout, signal handlers, and graceful shutdown for the
- * OTEL sidecar process.
- *
- */
-
 import { OtelConfig } from "../../classes/OtelConfig.js";
 import type { SidecarServer } from "./SidecarServer.js";
 

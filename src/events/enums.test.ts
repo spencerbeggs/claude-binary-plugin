@@ -1,12 +1,3 @@
-/**
- * Tests for hook event enumerations.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - HookType enum values
- * - HookPermissionsMode type validation
- */
-
 import { describe, expect, test } from "bun:test";
 import type { HookPermissionsMode } from "./enums.js";
 import { HookType } from "./enums.js";

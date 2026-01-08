@@ -1,37 +1,3 @@
-/**
- * Pipeline-based hook system for declarative hook definitions.
- *
- * This module provides a higher-level abstraction over the raw hook event system,
- * allowing hooks to be defined as pure transformation functions with strict
- * Zod-validated inputs and outputs.
- *
- * @example
- * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
- * import { z } from "zod";
- *
- * export default ClaudeBinaryPlugin.create({
- *   prefix: "MY_PLUGIN",
- *   options: z.object({
- *     TIMEOUT_MS: z.number().default(30000),
- *   }),
- *   hooks: {
- *     SessionStart: [{
- *       name: "project-context",
- *       pipeline: async ({ input, state }) => {
- *         return {
- *           status: "executed",
- *           action: "context",
- *           summary: "added project context",
- *           claudeContext: "Project uses TypeScript",
- *         };
- *       }
- *     }],
- *   }
- * });
- * ```
- */
-
 import type { ReadonlyDeep } from "type-fest";
 import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";

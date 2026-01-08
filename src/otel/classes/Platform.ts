@@ -1,23 +1,3 @@
-/**
- * Platform detection and socket path utilities for OTEL sidecar.
- *
- * @remarks
- * The sidecar uses Unix sockets for IPC, which are only available on
- * macOS and Linux. Windows support may be added later using named pipes.
- *
- * @example
- * ```typescript
- * import { Platform } from "claude-binary-plugin";
- *
- * if (Platform.isSupported()) {
- *   const socketPath = Platform.getSocketPath(sessionEnvDir);
- *   console.log(`Using socket: ${socketPath}`);
- * }
- * ```
- *
- * @public
- */
-
 import { existsSync } from "node:fs";
 import { platform } from "node:os";
 

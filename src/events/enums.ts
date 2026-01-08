@@ -1,15 +1,4 @@
 /**
- * Hook event enumerations and permission types for Claude Code hooks.
- *
- * @remarks
- * This module provides the core enum and type definitions used throughout
- * the hook system. The {@link HookType} enum identifies hook event types,
- * and {@link HookPermissionsMode} controls Claude Code's permission behavior.
- *
- * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks Documentation}
- */
-
-/**
  * Session permission modes that control Claude Code's behavior.
  *
  * @remarks

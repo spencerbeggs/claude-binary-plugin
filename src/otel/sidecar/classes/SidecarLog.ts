@@ -1,11 +1,3 @@
-/**
- * Simple file logger for sidecar debugging.
- *
- * Writes to /tmp/claude-otel-sidecar.log for troubleshooting.
- * Only logs when running as an actual sidecar process (not in tests).
- *
- */
-
 import { appendFileSync } from "node:fs";
 
 /**

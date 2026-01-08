@@ -1,27 +1,3 @@
-/**
- * Sidecar entry point class.
- *
- * @remarks
- * This class provides the entry point for the OTEL sidecar process.
- * The sidecar runs as a separate process and receives telemetry data
- * from hooks via Unix socket IPC.
- *
- * The `main()` method is called by generated plugin entrypoint code
- * when the plugin binary is invoked with `--sidecar` flag.
- *
- * @example
- * ```typescript
- * // In generated entrypoint (internal use only):
- * if (args.includes("--sidecar")) {
- *   Sidecar.main();
- * }
- * ```
- *
- * @see {@link SidecarLauncher} - For spawning sidecar from hooks
- * @see {@link SidecarClient} - For communicating with sidecar from hooks
- * @public
- */
-
 import type { SidecarProtocolMessage, SidecarResponse } from "../protocol.js";
 import { SidecarLifecycle } from "../sidecar/classes/SidecarLifecycle.js";
 import { SidecarLog } from "../sidecar/classes/SidecarLog.js";

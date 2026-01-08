@@ -1,34 +1,3 @@
-/**
- * Span instrumentation utilities for hooks.
- *
- * @remarks
- * Provides a class-based API for tracing hook execution with spans.
- * Spans capture timing and context, serialize to JSON, and send
- * to the sidecar via fire-and-forget IPC.
- *
- * @example
- * ```typescript
- * import { TelemetrySpan, OtelConfig } from "claude-binary-plugin";
- *
- * if (OtelConfig.isEnabled()) {
- *   // Execute code within a traced span
- *   const result = await TelemetrySpan.withHookSpan(event, "validate", async () => {
- *     return validateInput(event.tool_input);
- *   });
- *
- *   // Wrap a hook handler with automatic instrumentation
- *   const handler = TelemetrySpan.instrumentHook("pre-bash", async (event) => {
- *     // Hook logic - automatically traced
- *     return { status: "executed", action: "allow", summary: "ok" };
- *   });
- * }
- * ```
- *
- * @see {@link OtelConfig} - Check if telemetry is enabled
- * @see {@link TelemetryEmitter} - Emit telemetry events
- * @public
- */
-
 import type { HookEventBase } from "../../events/types.js";
 import type { SpanData } from "../protocol.js";
 import { OtelConfig } from "./OtelConfig.js";

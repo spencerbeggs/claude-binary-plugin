@@ -1,8 +1,4 @@
 /**
- * Hook response types and telemetry types.
- */
-
-/**
  * Decision type for hooks that can block operations.
  * @public
  */

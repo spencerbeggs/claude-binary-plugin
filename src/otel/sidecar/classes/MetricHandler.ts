@@ -1,11 +1,3 @@
-/**
- * Metric message handler for OTEL sidecar.
- *
- * Records OTEL metrics from MetricData messages received from hooks.
- * Caches metric instruments for efficient reuse.
- *
- */
-
 import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
 import type { MetricData } from "../../protocol.js";
 import { SidecarProviders } from "./SidecarProviders.js";

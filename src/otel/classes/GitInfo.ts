@@ -1,26 +1,4 @@
 /**
- * Git repository information for OTEL resource attributes.
- *
- * @remarks
- * Detects git branch, provider (GitHub/GitLab/Bitbucket), owner, and repo
- * from the current working directory. Gracefully handles non-git directories.
- *
- * @example
- * ```typescript
- * import { GitInfo } from "claude-binary-plugin";
- *
- * const info = await GitInfo.detect("/path/to/repo");
- * console.log(`Branch: ${info.branch}`);
- * console.log(`Repo: ${info.owner}/${info.repo}`);
- *
- * const attrs = info.toAttributes();
- * // { "git.branch": "main", "git.provider": "github", ... }
- * ```
- *
- * @public
- */
-
-/**
  * Supported git providers.
  * @public
  */

@@ -1,7 +1,3 @@
-/**
- * Tests for hook response types.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { BlockDecision, HookResponseData } from "./response-types.js";
 

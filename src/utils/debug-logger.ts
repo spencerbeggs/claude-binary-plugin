@@ -1,25 +1,3 @@
-/**
- * File-based debug logger for Claude Code plugins.
- *
- * Writes debug logs to `{pluginName}-debug.log` in the session-env directory,
- * avoiding stderr conflicts with hook JSON output while still providing
- * visibility via `tail -f ~/.claude/session-env/{session-id}/{pluginName}-debug.log`.
- *
- * When OTEL is enabled and session context is set, logs are also emitted
- * to the OTEL sidecar for centralized observability.
- *
- * @example
- * ```ts
- * import { DebugLogger } from "claude-binary-plugin";
- *
- * const log = new DebugLogger({ prefix: "my-hook" });
- * log.info("Starting hook execution");
- * log.debug("Tool input:", JSON.stringify(input));
- * log.warn("Large file detected");
- * log.error("Failed to process", error.message);
- * ```
- */
-
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 

@@ -1,10 +1,3 @@
-/**
- * Span message handler for OTEL sidecar.
- *
- * Creates OTEL spans from SpanData messages received from hooks.
- *
- */
-
 import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import type { SpanData } from "../../protocol.js";
 import { SidecarProviders } from "./SidecarProviders.js";

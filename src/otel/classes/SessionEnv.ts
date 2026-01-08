@@ -1,24 +1,3 @@
-/**
- * Session environment utilities for OTEL telemetry.
- *
- * @remarks
- * Provides utilities for discovering session environment directories
- * and extracting session IDs from paths.
- *
- * @example
- * ```typescript
- * import { SessionEnv } from "claude-binary-plugin";
- *
- * const dir = SessionEnv.getDir();
- * if (dir) {
- *   const sessionId = SessionEnv.extractSessionId(dir);
- *   console.log(`Session: ${sessionId}`);
- * }
- * ```
- *
- * @public
- */
-
 import { dirname } from "node:path";
 import { OtelConfig } from "./OtelConfig.js";
 

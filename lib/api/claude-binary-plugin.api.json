@@ -3811,7 +3811,7 @@
               "text": ";"
             }
           ],
-          "fileUrlPath": "src/otel/client.ts",
+          "fileUrlPath": "src/otel/classes/SidecarClient.ts",
           "releaseTag": "Public",
           "name": "ClientState",
           "typeTokenRange": {
@@ -4126,7 +4126,7 @@
               "text": "> "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -4216,7 +4216,7 @@
               "text": "export interface CommandContextParams "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "CommandContextParams",
           "preserveMemberOrder": false,
@@ -4329,7 +4329,7 @@
               "text": "> "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -6823,7 +6823,7 @@
               "text": "export interface EnvCodecMetadata "
             }
           ],
-          "fileUrlPath": "src/state/codecs.ts",
+          "fileUrlPath": "src/state/classes/EnvCodecs.ts",
           "releaseTag": "Public",
           "name": "EnvCodecMetadata",
           "preserveMemberOrder": false,
@@ -6895,7 +6895,7 @@
               "text": "export declare class EnvCodecs "
             }
           ],
-          "fileUrlPath": "src/state/codecs.ts",
+          "fileUrlPath": "src/state/classes/EnvCodecs.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "EnvCodecs",
@@ -7646,7 +7646,7 @@
               "text": ";"
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "EnvContext",
           "typeTokenRange": {
@@ -7673,7 +7673,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "EnvFileLoadError",
@@ -9309,7 +9309,7 @@
               "text": "export interface FormattedValidationError "
             }
           ],
-          "fileUrlPath": "src/events/validation.ts",
+          "fileUrlPath": "src/events/classes/SchemaValidator.ts",
           "releaseTag": "Public",
           "name": "FormattedValidationError",
           "preserveMemberOrder": false,
@@ -10902,7 +10902,7 @@
               "text": "export interface HookContextParams "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "HookContextParams",
           "preserveMemberOrder": false,
@@ -11251,7 +11251,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/base.ts",
+          "fileUrlPath": "src/events/classes/HookEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -19724,7 +19724,7 @@
               "text": "export declare class HookResponse "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "HookResponse",
@@ -21723,7 +21723,7 @@
         {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!InMemoryShellExecutor:type",
-          "docComment": "/**\n * Function type for in-memory shell command execution. Accepts an array of command arguments and optional options.\n *\n * @example\n * ```typescript\n * async function runLinter(\n *   shell: InMemoryShellExecutor = defaultInMemoryShellExecutor\n * ): Promise<LintResult> {\n *   const result = await shell([\"biome\", \"check\", \"--write\", \"file.ts\"]);\n *   return result.exitCode === 0 ? { success: true } : { success: false };\n * }\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Function type for in-memory shell command execution. Accepts an array of command arguments and optional options.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -23175,7 +23175,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!MockExitError:class",
-          "docComment": "/**\n * Error thrown when mocked process.exit is called. Catch this in tests to verify exit behavior.\n *\n * @error @public\n */\n",
+          "docComment": "/**\n * Error thrown when mocked process.exit is called. Catch this in tests to verify exit behavior.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -23715,7 +23715,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/NotificationEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -27233,7 +27233,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/PermissionRequestEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -28895,7 +28895,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "PermissionRequestResponse",
@@ -29411,7 +29411,7 @@
               "text": "export interface PersistResult "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "PersistResult",
           "preserveMemberOrder": false,
@@ -34236,7 +34236,7 @@
               "text": "> "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -36869,7 +36869,7 @@
               "text": "export interface PluginEnvFileSystem "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "PluginEnvFileSystem",
           "preserveMemberOrder": false,
@@ -38792,7 +38792,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/PostToolUseEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -40740,7 +40740,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "PostToolUseResponse",
@@ -41090,7 +41090,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/PreCompactEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -42624,7 +42624,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/PreToolUseEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -44641,7 +44641,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "PreToolUseResponse",
@@ -46129,7 +46129,7 @@
               "text": "export declare class SchemaValidator "
             }
           ],
-          "fileUrlPath": "src/events/validation.ts",
+          "fileUrlPath": "src/events/classes/SchemaValidator.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "SchemaValidator",
@@ -46353,7 +46353,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/SessionEndEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -47929,7 +47929,7 @@
               "text": "export interface SessionRecord "
             }
           ],
-          "fileUrlPath": "src/state/session-registry.ts",
+          "fileUrlPath": "src/state/classes/SessionRegistry.ts",
           "releaseTag": "Public",
           "name": "SessionRecord",
           "preserveMemberOrder": false,
@@ -48082,7 +48082,7 @@
               "text": "export interface SessionRegistration "
             }
           ],
-          "fileUrlPath": "src/state/session-registry.ts",
+          "fileUrlPath": "src/state/classes/SessionRegistry.ts",
           "releaseTag": "Public",
           "name": "SessionRegistration",
           "preserveMemberOrder": false,
@@ -48181,7 +48181,7 @@
               "text": "export declare class SessionRegistry "
             }
           ],
-          "fileUrlPath": "src/state/session-registry.ts",
+          "fileUrlPath": "src/state/classes/SessionRegistry.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "SessionRegistry",
@@ -48592,7 +48592,7 @@
               "text": "export interface SessionStartContextParams "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "SessionStartContextParams",
           "preserveMemberOrder": false,
@@ -48781,7 +48781,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/SessionStartEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -50306,7 +50306,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "SessionStartResponse",
@@ -51129,7 +51129,7 @@
               "text": "export declare class SidecarClient "
             }
           ],
-          "fileUrlPath": "src/otel/client.ts",
+          "fileUrlPath": "src/otel/classes/SidecarClient.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "SidecarClient",
@@ -52699,7 +52699,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/StopEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -54159,7 +54159,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "StopResponse",
@@ -54391,7 +54391,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/SubagentStopEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -57707,7 +57707,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!TestFixtures:class",
-          "docComment": "/**\n * Low-level testing utilities for Claude Code plugins.\n *\n * @remarks\n *\n * **For plugin testing, prefer the fluent API via `plugin.test()`** - see {@link PluginTester} for type-safe hook and command testing with full type inference from your plugin schema.\n *\n * The `TestFixtures` class provides lower-level utilities for SDK development or edge cases where the fluent API is insufficient.\n *\n * **Method Categories:** - I/O: `createIO`, `resetIO` - Environment: `createEnv`, `envPresets` - Command: `createCommand`, `runCommand`, `testFatalError` - Hook: `runHook` - Shell: `shellResult`, `shellExecutor`, `bufferShellResult`, `bufferShellExecutor`\n *\n * @example\n * ```typescript\n * import { TestFixtures } from \"claude-binary-plugin\";\n *\n * // Mock environment\n * const env = TestFixtures.createEnv({ CLAUDE_PROJECT_DIR: \"/test\" });\n * afterEach(() => env.restore());\n *\n * // Mock I/O for hook testing\n * const io = TestFixtures.createIO({ tool_name: \"Bash\", tool_input: { command: \"ls\" } });\n * const exitCode = await TestFixtures.runHook(main);\n *\n * // Mock shell executor\n * const shell = TestFixtures.shellExecutor({\n *   \"git status\": TestFixtures.shellResult(0, \"On branch main\"),\n * });\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Low-level testing utilities for Claude Code plugins.\n *\n * @remarks\n *\n * **For plugin testing, prefer the fluent API via `plugin.test()`** - see {@link PluginTester} for type-safe hook and command testing with full type inference from your plugin schema.\n *\n * The `TestFixtures` class provides lower-level utilities for SDK development or edge cases where the fluent API is insufficient.\n *\n * **Method Categories:** - I/O: `createIO`, `resetIO` - Environment: `createEnv`, `envPresets` - Command: `createCommand`, `runCommand`, `testFatalError` - Hook: `runHook` - Shell: `shellResult`, `shellExecutor`, `bufferShellResult`, `inMemoryShellExecutor`\n *\n * @example\n * ```typescript\n * import { TestFixtures } from \"claude-binary-plugin\";\n *\n * // Mock environment\n * const env = TestFixtures.createEnv({ CLAUDE_PROJECT_DIR: \"/test\" });\n * afterEach(() => env.restore());\n *\n * // Mock I/O for hook testing\n * const io = TestFixtures.createIO({ tool_name: \"Bash\", tool_input: { command: \"ls\" } });\n * const exitCode = await TestFixtures.runHook(main);\n *\n * // Mock shell executor\n * const shell = TestFixtures.shellExecutor({\n *   \"git status\": TestFixtures.shellResult(0, \"On branch main\"),\n * });\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -57863,7 +57863,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TestFixtures.createEnv:member(1)",
-              "docComment": "/**\n * Create an isolated mock environment.\n *\n * @remarks\n *\n * Provides complete isolation for environment variables in tests. All existing env vars are hidden during the test.\n *\n * @param vars - Environment variables to set\n *\n * @param options - Configuration options\n *\n * @returns MockEnvContext for managing the mock\n *\n * @public\n */\n",
+              "docComment": "/**\n * Create an isolated mock environment.\n *\n * @remarks\n *\n * Provides complete isolation for environment variables in tests. All existing env vars are hidden during the test.\n *\n * @param vars - Environment variables to set\n *\n * @returns MockEnvContext for managing the mock\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -57877,14 +57877,6 @@
                 {
                   "kind": "Content",
                   "text": "<string, string | undefined>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ", options?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "{\n        clearPrefix?: string;\n        clearSuffix?: string;\n    }"
                 },
                 {
                   "kind": "Content",
@@ -57902,8 +57894,8 @@
               ],
               "isStatic": true,
               "returnTypeTokenRange": {
-                "startIndex": 6,
-                "endIndex": 7
+                "startIndex": 4,
+                "endIndex": 5
               },
               "releaseTag": "Public",
               "isProtected": false,
@@ -57914,14 +57906,6 @@
                   "parameterTypeTokenRange": {
                     "startIndex": 1,
                     "endIndex": 3
-                  },
-                  "isOptional": true
-                },
-                {
-                  "parameterName": "options",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 4,
-                    "endIndex": 5
                   },
                   "isOptional": true
                 }
@@ -58004,7 +57988,7 @@
             {
               "kind": "Property",
               "canonicalReference": "claude-binary-plugin!TestFixtures.defaultInMemoryShellExecutor:member",
-              "docComment": "/**\n * Default in-memory shell executor using Bun.$.\n *\n * @public\n */\n",
+              "docComment": "/**\n * Default in-memory shell executor using Bun.$. Executes commands quietly with nothrow to capture all output. Supports timeout option to prevent hanging.\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -58035,7 +58019,7 @@
             {
               "kind": "Property",
               "canonicalReference": "claude-binary-plugin!TestFixtures.defaultShellExecutor:member",
-              "docComment": "/**\n * Default shell executor using Bun.$.\n *\n * @public\n */\n",
+              "docComment": "/**\n * Default shell executor using Bun.$. Executes commands quietly with nothrow to capture all output.\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -58066,7 +58050,7 @@
             {
               "kind": "Property",
               "canonicalReference": "claude-binary-plugin!TestFixtures.envPresets:member",
-              "docComment": "/**\n * Preset environment configurations.\n *\n * @public\n */\n",
+              "docComment": "/**\n * Preset environment configurations for common test scenarios.\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -61743,7 +61727,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/subclasses.ts",
+          "fileUrlPath": "src/events/classes/UserPromptSubmitEvent.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -63275,7 +63259,7 @@
               "text": " "
             }
           ],
-          "fileUrlPath": "src/events/response-builders.ts",
+          "fileUrlPath": "src/events/classes/ResponseBuilders.ts",
           "releaseTag": "Public",
           "isAbstract": false,
           "name": "UserPromptSubmitResponse",
@@ -63521,7 +63505,7 @@
               "text": ";"
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "ValidationResult",
           "typeParameters": [
@@ -63823,7 +63807,7 @@
               "text": "export interface ZodErrorMinimal "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "ZodErrorMinimal",
           "preserveMemberOrder": false,
@@ -63873,7 +63857,7 @@
               "text": "export interface ZodIssueMinimal "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "name": "ZodIssueMinimal",
           "preserveMemberOrder": false,
@@ -64066,7 +64050,7 @@
               "text": "> "
             }
           ],
-          "fileUrlPath": "src/state/plugin-state.ts",
+          "fileUrlPath": "src/state/classes/PluginEnv.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {

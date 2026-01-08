@@ -1,11 +1,3 @@
-/**
- * OTEL Resource creation for the sidecar.
- *
- * Resources are immutable collections of attributes that describe the entity
- * producing telemetry (in this case, Claude Code plugin hooks).
- *
- */
-
 import type { Resource } from "@opentelemetry/resources";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";

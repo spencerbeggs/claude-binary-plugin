@@ -1,28 +1,3 @@
-/**
- * Type utility re-exports from type-fest.
- *
- * @remarks
- * This module re-exports commonly useful type utilities from `type-fest`
- * so users don't need to add it as a separate dependency. These utilities
- * complement the SDK's type system.
- *
- * @example
- * ```typescript
- * import type { ReadonlyDeep, PartialDeep, Tagged } from "claude-binary-plugin";
- *
- * // Make your own types immutable
- * type ImmutableConfig = ReadonlyDeep<MyConfig>;
- *
- * // Create deeply partial types for testing
- * type TestConfig = PartialDeep<MyConfig>;
- *
- * // Create your own branded types
- * type UserId = Tagged<string, "UserId">;
- * ```
- *
- * @see {@link https://github.com/sindresorhus/type-fest | type-fest}
- */
-
 export type {
 	/**
 	 * Create a type that represents the JSON-serialized version of `T`.

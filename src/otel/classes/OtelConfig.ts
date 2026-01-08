@@ -1,26 +1,3 @@
-/**
- * OTEL configuration for telemetry export.
- *
- * @remarks
- * Parses OTEL configuration from environment variables and provides
- * utilities for checking if telemetry is enabled.
- *
- * @example
- * ```typescript
- * import { OtelConfig } from "claude-binary-plugin";
- *
- * if (OtelConfig.isEnabled()) {
- *   const config = OtelConfig.fromEnv();
- *   console.log(`Exporting to: ${config.endpoint}`);
- * }
- * ```
- *
- * @see {@link TelemetryEmitter} - Emit telemetry events
- * @see {@link TelemetryMetrics} - Record telemetry metrics
- * @see {@link TelemetrySpan} - Instrument spans for tracing
- * @public
- */
-
 import { ClaudeAccountInfo } from "./ClaudeAccountInfo.js";
 import { Platform } from "./Platform.js";
 

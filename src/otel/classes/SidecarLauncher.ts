@@ -1,28 +1,3 @@
-/**
- * Sidecar process spawning utilities.
- *
- * @remarks
- * Handles spawning the OTEL sidecar as a detached background process.
- * The sidecar runs independently and auto-terminates after idle timeout.
- *
- * @example
- * ```typescript
- * import { SidecarLauncher, OtelConfig } from "claude-binary-plugin";
- *
- * const config = OtelConfig.fromEnv();
- * const result = await SidecarLauncher.spawn(sessionId, config);
- *
- * if (result.success) {
- *   console.log(`Sidecar listening on: ${result.socketPath}`);
- * }
- * ```
- *
- * @see {@link SidecarClient} - Client for sidecar communication
- * @see {@link SidecarClientPool} - Pool management for clients
- * @see {@link Platform} - Platform detection utilities
- * @public
- */
-
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { OtelConfigData } from "./OtelConfig.js";

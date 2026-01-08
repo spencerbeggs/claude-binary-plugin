@@ -1,18 +1,3 @@
-/**
- * Tests for IPC protocol types.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - OtelProtocolConfig interface
- * - SidecarProtocolMessage union types
- * - PingMessage structure
- * - EventMessage structure
- * - MetricMessage structure
- * - SpanMessage structure
- * - ShutdownMessage structure
- * - SidecarResponse types
- */
-
 import { describe, expect, test } from "bun:test";
 import type { OtelProtocolConfig, SidecarProtocolMessage } from "./protocol.js";
 

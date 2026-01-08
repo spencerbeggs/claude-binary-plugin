@@ -1,17 +1,3 @@
-/**
- * Tests for SidecarProviders.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - SidecarProviders.init() initialization
- * - SidecarProviders.getTracer() tracer access
- * - SidecarProviders.getMeter() meter access
- * - SidecarProviders.getLogger() logger access
- * - SidecarProviders.shutdown() cleanup
- * - Singleton behavior
- * - Config change detection
- */
-
 import { describe, expect, test } from "bun:test";
 import { SidecarProviders } from "./SidecarProviders.js";
 

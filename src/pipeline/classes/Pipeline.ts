@@ -1,26 +1,3 @@
-/**
- * Pipeline utilities for type guards and metrics.
- *
- * @remarks
- * The `Pipeline` class provides utility functions for working with pipeline
- * outputs, including type guards and token/metric utilities. For execution,
- * use {@link PipelineRuntime} instead.
- *
- * @example
- * ```typescript
- * import { Pipeline } from "claude-binary-plugin";
- *
- * // Check if output is valid pipeline format
- * if (Pipeline.isOutput(result)) {
- *   console.log(result.status, result.summary);
- * }
- *
- * // Estimate tokens for context
- * const tokens = Pipeline.Metrics.estimateTokens(content, "code");
- * ```
- *
- */
-
 import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "../config.js";
 import { TokenMetrics } from "../metrics.js";
 import type { AnyPipelineOutput } from "../types.js";

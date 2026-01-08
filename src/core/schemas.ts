@@ -1,36 +1,3 @@
-/**
- * Zod schemas for Claude Code hook events.
- *
- * @remarks
- * This module provides runtime validation for hook event data received from
- * Claude Code. All schemas match the TypeScript interfaces defined in the
- * events module.
- *
- * **Using HookEventSchemas (Recommended):**
- *
- * The `HookEventSchemas` class provides all schemas with registry metadata:
- *
- * ```typescript
- * import { HookEventSchemas } from "claude-binary-plugin";
- *
- * // Parse any hook event (discriminated union)
- * const event = HookEventSchemas.parse(jsonString);
- *
- * // Parse specific event type
- * const preToolUse = HookEventSchemas.parsePreToolUse(jsonString);
- *
- * // Access schema directly
- * const validated = HookEventSchemas.PreToolUse.parse(data);
- *
- * // Access registry metadata
- * const meta = HookEventSchemas.registry.get(HookEventSchemas.PreToolUse);
- * console.log(meta.description); // "Fired before a tool executes..."
- * ```
- *
- * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
- * @see {@link https://zod.dev/metadata | Zod Registries}
- */
-
 import { z } from "zod";
 import type { SessionId, ToolUseId, TranscriptPath } from "../types/branded.js";
 import { JsonObjectSchema } from "../types/json.js";

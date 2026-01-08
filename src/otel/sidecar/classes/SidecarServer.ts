@@ -1,11 +1,3 @@
-/**
- * Unix socket server for OTEL sidecar.
- *
- * Uses Bun's native `Bun.listen()` with Unix socket support for high-performance
- * IPC between hooks and the sidecar process.
- *
- */
-
 import type { Socket, SocketHandler } from "bun";
 import { SidecarMessage } from "../../classes/SidecarMessage.js";
 import type { SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";

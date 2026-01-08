@@ -1,13 +1,3 @@
-/**
- * Tests for pipeline output processing.
- *
- * These tests verify:
- * - Pipeline output detection (isPipelineOutput)
- * - Status/action to outcome mapping
- * - Pipeline output to response conversion for each hook type
- * - Token metrics extraction from pipeline outputs
- */
-
 import { describe, expect, test } from "bun:test";
 import { TokenMetrics } from "./metrics.js";
 import type {

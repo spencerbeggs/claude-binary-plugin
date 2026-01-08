@@ -1,7 +1,3 @@
-/**
- * Tests for Zod hook event schemas.
- */
-
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { HookEventSchemas } from "./schemas.js";

@@ -1,34 +1,3 @@
-/**
- * Telemetry event emission for OTEL sidecar.
- *
- * @remarks
- * Provides a class-based API for emitting telemetry events from hooks.
- * Events are serialized and sent to the sidecar process via IPC.
- *
- * @example
- * ```typescript
- * import { TelemetryEmitter, OtelConfig } from "claude-binary-plugin";
- *
- * if (OtelConfig.isEnabled()) {
- *   await TelemetryEmitter.preconnect(sessionId);
- *
- *   TelemetryEmitter.emitHookExecution(event, "pre-bash", {
- *     hookType: "PreToolUse",
- *     pluginName: "workflow",
- *     pluginVersion: "1.0.0",
- *     durationMs: 42,
- *     success: true,
- *     outcome: "allowed",
- *   });
- * }
- * ```
- *
- * @see {@link OtelConfig} - Check if telemetry is enabled
- * @see {@link TelemetryMetrics} - Record telemetry metrics
- * @see {@link TelemetrySpan} - Instrument spans for tracing
- * @public
- */
-
 import type { HookEventBase } from "../../events/types.js";
 import type { EventData } from "../protocol.js";
 import { getSdkVersion } from "../version.macro.js";

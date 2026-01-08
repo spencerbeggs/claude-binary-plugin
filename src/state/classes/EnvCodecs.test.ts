@@ -1,7 +1,3 @@
-/**
- * Tests for Zod v4 environment variable codecs.
- */
-
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { EnvCodecs, envCodecRegistry } from "./EnvCodecs.js";

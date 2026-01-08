@@ -1,12 +1,3 @@
-/**
- * Tests for CLI version utilities.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - getPackageVersion() returns valid semver
- * - Version matches package.json at runtime
- */
-
 import { describe, expect, test } from "bun:test";
 import { getPackageVersion } from "./macros.js";
 

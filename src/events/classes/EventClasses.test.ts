@@ -1,19 +1,3 @@
-/**
- * Tests for HookEvent subclasses.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - PreToolUseEvent creation and properties
- * - PostToolUseEvent creation and properties
- * - SessionStartEvent creation and properties
- * - SessionEndEvent creation and properties
- * - StopEvent and SubagentStopEvent
- * - UserPromptSubmitEvent
- * - PermissionRequestEvent
- * - NotificationEvent
- * - PreCompactEvent
- */
-
 import { describe, expect, test } from "bun:test";
 import { NotificationEvent } from "./NotificationEvent.js";
 import { PermissionRequestEvent } from "./PermissionRequestEvent.js";

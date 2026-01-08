@@ -1,23 +1,3 @@
-/**
- * Claude account information for telemetry attribution.
- *
- * @remarks
- * Reads account info from ~/.claude.json for use in OTEL resource attributes.
- * This enables filtering telemetry by user and organization.
- *
- * @example
- * ```typescript
- * import { ClaudeAccountInfo } from "claude-binary-plugin";
- *
- * const info = ClaudeAccountInfo.detect();
- * if (info.accountUuid) {
- *   console.log(`User: ${info.accountUuid}`);
- * }
- * ```
- *
- * @public
- */
-
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";

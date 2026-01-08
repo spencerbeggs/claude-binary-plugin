@@ -1,12 +1,4 @@
 /**
- * IPC Protocol types for communication between hooks and OTEL sidecar.
- *
- * Messages are sent as JSON Lines (newline-delimited JSON) over Unix sockets.
- * This format is simple, debuggable, and efficient for the expected message sizes.
- *
- */
-
-/**
  * OTEL exporter configuration sent from hooks to sidecar.
  * The sidecar uses this to configure its OTEL providers.
  * @public

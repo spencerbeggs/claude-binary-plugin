@@ -1,17 +1,3 @@
-/**
- * Tests for SidecarServer.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - SidecarServer constructor and initialization
- * - stop() graceful shutdown
- * - Unix socket creation and cleanup
- * - Message routing to handlers
- * - Activity callbacks for idle timeout
- * - Client connection handling
- * - Partial message buffering
- */
-
 import { describe, expect, test } from "bun:test";
 import { SidecarServer } from "./SidecarServer.js";
 

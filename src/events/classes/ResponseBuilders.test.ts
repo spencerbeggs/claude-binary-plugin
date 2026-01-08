@@ -1,19 +1,3 @@
-/**
- * Tests for hook response builders.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - HookResponse base class fluent API
- * - PreToolUseResponse (allow, deny, ask, modify)
- * - PostToolUseResponse (additionalContext, block)
- * - SessionStartResponse (additionalContext)
- * - StopResponse (block, continue)
- * - UserPromptSubmitResponse (block, continue, additionalContext)
- * - PermissionRequestResponse (allow, deny)
- * - Chaining patterns
- * - toJSON() serialization
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	HookResponse,

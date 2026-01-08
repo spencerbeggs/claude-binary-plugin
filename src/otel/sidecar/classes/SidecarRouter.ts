@@ -1,10 +1,3 @@
-/**
- * Message router for OTEL sidecar.
- *
- * Routes incoming IPC messages to appropriate handlers.
- *
- */
-
 import type { OtelProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";
 import { EventHandler } from "./EventHandler.js";
 import { MetricHandler } from "./MetricHandler.js";

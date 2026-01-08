@@ -1,26 +1,4 @@
 /**
- * Plugin metadata for telemetry attribution.
- *
- * @remarks
- * Stores plugin identification used in all telemetry events and metrics.
- * This enables filtering and grouping telemetry by plugin name and version.
- *
- * @example
- * ```typescript
- * import { PluginInfo } from "claude-binary-plugin";
- *
- * // Set at plugin startup
- * PluginInfo.set({ name: "my-plugin", version: "1.0.0" });
- *
- * // Retrieve for telemetry
- * const info = PluginInfo.get();
- * console.log(`Plugin: ${info.name} v${info.version}`);
- * ```
- *
- * @public
- */
-
-/**
  * Plugin info data structure.
  * @public
  */

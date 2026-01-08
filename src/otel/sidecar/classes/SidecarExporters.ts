@@ -1,11 +1,3 @@
-/**
- * OTEL Exporter factory class.
- *
- * Creates exporters for traces, metrics, and logs based on configuration.
- * HTTP exporters are preferred over gRPC for Bun compatibility.
- *
- */
-
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
