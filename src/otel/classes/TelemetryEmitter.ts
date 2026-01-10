@@ -193,18 +193,25 @@ export interface HookExecutionDirectResult {
  *
  * @example
  * ```typescript
- * // Pre-connect for faster emission
- * await TelemetryEmitter.preconnect(sessionId);
+ * import { TelemetryEmitter, OtelConfig } from "claude-binary-plugin";
+ * import type { HookEventBase } from "claude-binary-plugin";
  *
- * // Emit hook execution event
- * TelemetryEmitter.emitHookExecution(event, "my-hook", {
- *   hookType: "PreToolUse",
- *   pluginName: "workflow",
- *   pluginVersion: "1.0.0",
- *   durationMs: 42,
- *   success: true,
- *   outcome: "allowed",
- * });
+ * async function emitTelemetry(event: HookEventBase): Promise<void> {
+ *   if (!OtelConfig.isEnabled()) return;
+ *
+ *   // Pre-connect for faster emission
+ *   await TelemetryEmitter.preconnect(event.session_id);
+ *
+ *   // Emit hook execution event
+ *   TelemetryEmitter.emitHookExecution(event, "my-hook", {
+ *     hookType: "PreToolUse",
+ *     pluginName: "workflow",
+ *     pluginVersion: "1.0.0",
+ *     durationMs: 42,
+ *     success: true,
+ *     outcome: "allowed",
+ *   });
+ * }
  * ```
  *
  * @public
@@ -321,8 +328,12 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * if (OtelConfig.isEnabled()) {
-	 *   await TelemetryEmitter.preconnect(sessionId);
+	 * import { TelemetryEmitter, OtelConfig } from "claude-binary-plugin";
+	 *
+	 * async function initTelemetry(sessionId: string): Promise<void> {
+	 *   if (OtelConfig.isEnabled()) {
+	 *     await TelemetryEmitter.preconnect(sessionId);
+	 *   }
 	 * }
 	 * ```
 	 *
@@ -347,15 +358,20 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitHookExecution(event, "pre-bash", {
-	 *   hookType: "PreToolUse",
-	 *   pluginName: "workflow",
-	 *   pluginVersion: "1.0.0",
-	 *   durationMs: 42,
-	 *   success: true,
-	 *   outcome: "allowed",
-	 *   summary: "auto-allowed: git status",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 * import type { HookEventBase } from "claude-binary-plugin";
+	 *
+	 * function emitExecution(event: HookEventBase): void {
+	 *   TelemetryEmitter.emitHookExecution(event, "pre-bash", {
+	 *     hookType: "PreToolUse",
+	 *     pluginName: "workflow",
+	 *     pluginVersion: "1.0.0",
+	 *     durationMs: 42,
+	 *     success: true,
+	 *     outcome: "allowed",
+	 *     summary: "auto-allowed: git status",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
@@ -473,15 +489,19 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitHookExecutionDirect({
-	 *   sessionId: "abc-123",
-	 *   hookName: "PreToolUse/unknown",
-	 *   hookType: "PreToolUse",
-	 *   durationMs: 1,
-	 *   success: false,
-	 *   outcome: "error",
-	 *   error: "Unknown hook: unknown",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function emitUnknownHookError(): void {
+	 *   TelemetryEmitter.emitHookExecutionDirect({
+	 *     sessionId: "abc-123",
+	 *     hookName: "PreToolUse/unknown",
+	 *     hookType: "PreToolUse",
+	 *     durationMs: 1,
+	 *     success: false,
+	 *     outcome: "error",
+	 *     error: "Unknown hook: unknown",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
@@ -555,12 +575,16 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitSchemaValidationError(sessionId, "pre-bash", {
-	 *   hookName: "pre-bash",
-	 *   issueCount: 2,
-	 *   validationPath: "tool_input.command",
-	 *   errorMessage: "Required field missing",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function emitValidationError(sessionId: string): void {
+	 *   TelemetryEmitter.emitSchemaValidationError(sessionId, "pre-bash", {
+	 *     hookName: "pre-bash",
+	 *     issueCount: 2,
+	 *     validationPath: "tool_input.command",
+	 *     errorMessage: "Required field missing",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
@@ -621,13 +645,17 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitEnvValidationError(sessionId, "pre-bash", {
-	 *   hookName: "pre-bash",
-	 *   issueCount: 1,
-	 *   validationPath: "API_KEY",
-	 *   errorMessage: "Required environment variable missing",
-	 *   envClassName: "WorkflowEnv",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function emitEnvError(sessionId: string): void {
+	 *   TelemetryEmitter.emitEnvValidationError(sessionId, "pre-bash", {
+	 *     hookName: "pre-bash",
+	 *     issueCount: 1,
+	 *     validationPath: "API_KEY",
+	 *     errorMessage: "Required environment variable missing",
+	 *     envClassName: "WorkflowEnv",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
@@ -694,15 +722,19 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * process.on("uncaughtException", async (error) => {
-	 *   await TelemetryEmitter.emitFatalError(sessionId, {
-	 *     hookName: "pre-bash",
-	 *     errorType: "uncaughtException",
-	 *     errorMessage: error.message,
-	 *     errorStack: error.stack,
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function setupErrorHandler(sessionId: string): void {
+	 *   process.on("uncaughtException", async (error) => {
+	 *     await TelemetryEmitter.emitFatalError(sessionId, {
+	 *       hookName: "pre-bash",
+	 *       errorType: "uncaughtException",
+	 *       errorMessage: error.message,
+	 *       errorStack: error.stack,
+	 *     });
+	 *     process.exit(1);
 	 *   });
-	 *   process.exit(1);
-	 * });
+	 * }
 	 * ```
 	 *
 	 * @public

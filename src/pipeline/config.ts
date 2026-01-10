@@ -673,6 +673,8 @@ export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
  *
  * @example
  * ```ts
+ * import type { Commands } from "./plugin.config.js";
+ *
  * const handler: Commands["lint"] = async ({ args, options, state }) => {
  *   // args: { path: string, fix: boolean } - validated from CLI
  *   // options: { AUTO_ALLOW_ENABLED: boolean, ... } - from schema

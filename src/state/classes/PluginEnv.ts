@@ -130,9 +130,11 @@ export function formatZodError(error: ZodErrorMinimal, maxErrors = 10): string {
  *
  * @example
  * ```typescript
- * escapeForBashDoubleQuotes('Hello "world"') // 'Hello \\"world\\"'
- * escapeForBashDoubleQuotes('Run `cmd`') // 'Run \\`cmd\\`'
- * escapeForBashDoubleQuotes('Cost: $50') // 'Cost: \\$50'
+ * import { escapeForBashDoubleQuotes } from "claude-binary-plugin";
+ *
+ * const escaped1 = escapeForBashDoubleQuotes('Hello "world"'); // 'Hello \\"world\\"'
+ * const escaped2 = escapeForBashDoubleQuotes('Run `cmd`'); // 'Run \\`cmd\\`'
+ * const escaped3 = escapeForBashDoubleQuotes('Cost: $50'); // 'Cost: \\$50'
  * ```
  * @public
  */
@@ -221,6 +223,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  * @example Advanced usage with command argument validation
  * ```typescript
  * import { z } from "zod";
+ * import { PluginEnv } from "claude-binary-plugin";
  *
  * const lintArgsSchema = z.object({
  *   path: z.string().default("."),
@@ -1107,8 +1110,13 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * const sessionEnvDir = PluginEnv.getSessionEnvDir(event.session_id);
-	 * // "/Users/user/.claude/session-env/abc-123-def"
+	 * import { PluginEnv } from "claude-binary-plugin";
+	 *
+	 * function getEnvDir(sessionId: string): string | undefined {
+	 *   const sessionEnvDir = PluginEnv.getSessionEnvDir(sessionId);
+	 *   // Returns: "/Users/user/.claude/session-env/abc-123-def"
+	 *   return sessionEnvDir;
+	 * }
 	 * ```
 	 */
 	static getSessionEnvDir(sessionId: string | undefined): string | undefined {
@@ -1241,13 +1249,17 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * const vars = {
-	 *   MY_PLUGIN_ENABLED: "true",
-	 *   MY_PLUGIN_API_KEY: apiKey,
-	 * };
-	 * const result = await PluginEnv.persistVars(sessionId, vars);
-	 * if (result.persisted) {
-	 *   console.log(`Persisted to: ${result.path}`);
+	 * import { PluginEnv } from "claude-binary-plugin";
+	 *
+	 * async function persistEnvVars(sessionId: string, apiKey: string): Promise<void> {
+	 *   const vars = {
+	 *     MY_PLUGIN_ENABLED: "true",
+	 *     MY_PLUGIN_API_KEY: apiKey,
+	 *   };
+	 *   const result = await PluginEnv.persistVars(sessionId, vars);
+	 *   if (result.persisted) {
+	 *     console.log(`Persisted to: ${result.path}`);
+	 *   }
 	 * }
 	 * ```
 	 */
@@ -1617,9 +1629,14 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * const result = env.validateWithContext();
-	 * if (!result.success) {
-	 *   console.log(result.message); // Formatted error for LLM
+	 * import { PluginEnv } from "claude-binary-plugin";
+	 *
+	 * async function validateEnv(MyPluginEnv: typeof PluginEnv): Promise<void> {
+	 *   const env = await MyPluginEnv.forSessionStart({ hookName: "init" });
+	 *   const result = env.validateWithContext();
+	 *   if (!result.success) {
+	 *     console.log(result.message); // Formatted error for LLM
+	 *   }
 	 * }
 	 * ```
 	 */
@@ -1672,9 +1689,15 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * // At the start of a hook
-	 * env.validateOrThrow(event.session_id, "my-hook");
-	 * // If we get here, env is valid
+	 * import { PluginEnv } from "claude-binary-plugin";
+	 * import type { HookEventBase } from "claude-binary-plugin";
+	 *
+	 * async function handleHook(event: HookEventBase, MyPluginEnv: typeof PluginEnv): Promise<void> {
+	 *   const env = await MyPluginEnv.forHook({ sessionId: event.session_id });
+	 *   // At the start of a hook, validate and throw if invalid
+	 *   env.validateOrThrow(event.session_id, "my-hook");
+	 *   // If we get here, env is valid
+	 * }
 	 * ```
 	 */
 	validateOrThrow(sessionId: string, hookName: string): void {
@@ -1734,9 +1757,11 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * PluginEnv.escapeForBash('Hello "world"') // 'Hello \\"world\\"'
-	 * PluginEnv.escapeForBash('Run `cmd`') // 'Run \\`cmd\\`'
-	 * PluginEnv.escapeForBash('Cost: $50') // 'Cost: \\$50'
+	 * import { PluginEnv } from "claude-binary-plugin";
+	 *
+	 * const escaped1 = PluginEnv.escapeForBash('Hello "world"'); // 'Hello \\"world\\"'
+	 * const escaped2 = PluginEnv.escapeForBash('Run `cmd`'); // 'Run \\`cmd\\`'
+	 * const escaped3 = PluginEnv.escapeForBash('Cost: $50'); // 'Cost: \\$50'
 	 * ```
 	 * @public
 	 */
@@ -1753,7 +1778,11 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 *
 	 * @example
 	 * ```typescript
-	 * const result = schema.safeParse(data);
+	 * import { PluginEnv } from "claude-binary-plugin";
+	 * import { z } from "zod";
+	 *
+	 * const schema = z.object({ name: z.string() });
+	 * const result = schema.safeParse({ name: 123 });
 	 * if (!result.success) {
 	 *   console.log(PluginEnv.formatZodError(result.error));
 	 * }

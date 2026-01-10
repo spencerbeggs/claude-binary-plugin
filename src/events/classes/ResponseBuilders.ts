@@ -21,6 +21,8 @@ import type { PermissionRequestDecision, ToolInput } from "../types.js";
  *
  * @example
  * ```typescript
+ * import { HookResponse } from "claude-binary-plugin";
+ *
  * // Chain multiple methods
  * const response = new HookResponse()
  *   .summary("processed tool call")
@@ -292,17 +294,21 @@ export class HookResponse {
  *
  * @example
  * ```typescript
- * // Allow a tool call
- * event.end(event.response().allow());
+ * import type { PreToolUseEvent } from "claude-binary-plugin";
  *
- * // Deny with explanation
- * event.end(event.response().deny("rm -rf is not permitted"));
+ * async function handlePreToolUse(event: PreToolUseEvent): Promise<void> {
+ *   // Allow a tool call
+ *   event.end(event.response().allow());
  *
- * // Modify input before allowing
- * event.end(event.response().updateInput({
- *   ...input.tool_input,
- *   timeout: 30000  // Add timeout
- * }).allow());
+ *   // Deny with explanation
+ *   event.end(event.response().deny("rm -rf is not permitted"));
+ *
+ *   // Modify input before allowing
+ *   event.end(event.response().updateInput({
+ *     ...event.tool_input,
+ *     timeout: 30000  // Add timeout
+ *   }).allow());
+ * }
  * ```
  *
  * @see {@link PreToolUseEvent} - The event type this builder is used with
@@ -381,11 +387,17 @@ export class PreToolUseResponse extends HookResponse {
 	 *
 	 * @example
 	 * ```typescript
-	 * // Add a timeout to Bash commands
-	 * builder.updateInput({
-	 *   ...event.tool_input,
-	 *   timeout: 30000
-	 * });
+	 * import type { PreToolUseEvent } from "claude-binary-plugin";
+	 *
+	 * function addTimeout(event: PreToolUseEvent): void {
+	 *   // Add a timeout to Bash commands
+	 *   const builder = event.response();
+	 *   builder.updateInput({
+	 *     ...event.tool_input,
+	 *     timeout: 30000
+	 *   });
+	 *   event.end(builder.allow());
+	 * }
 	 * ```
 	 * @public
 	 */
@@ -409,11 +421,15 @@ export class PreToolUseResponse extends HookResponse {
  *
  * @example
  * ```typescript
- * // Add context about the tool result
- * event.end(
- *   event.response()
- *     .additionalContext("Note: This file was auto-formatted by Prettier")
- * );
+ * import type { PostToolUseEvent } from "claude-binary-plugin";
+ *
+ * function handlePostToolUse(event: PostToolUseEvent): void {
+ *   // Add context about the tool result
+ *   event.end(
+ *     event.response()
+ *       .additionalContext("Note: This file was auto-formatted by Prettier")
+ *   );
+ * }
  * ```
  *
  * @see {@link PostToolUseEvent} - The event type this builder is used with
@@ -452,11 +468,15 @@ export class PostToolUseResponse extends HookResponse {
  *
  * @example
  * ```typescript
- * // Auto-allow git operations
- * event.end(event.response().allow());
+ * import type { PermissionRequestEvent } from "claude-binary-plugin";
  *
- * // Deny with message
- * event.end(event.response().deny("Operation not permitted").interrupt());
+ * function handlePermissionRequest(event: PermissionRequestEvent): void {
+ *   // Auto-allow git operations
+ *   event.end(event.response().allow());
+ *
+ *   // Or deny with message
+ *   event.end(event.response().deny("Operation not permitted").interrupt());
+ * }
  * ```
  *
  * @see {@link PermissionRequestEvent} - The event type this builder is used with
@@ -521,11 +541,15 @@ export class PermissionRequestResponse extends HookResponse {
  *
  * @example
  * ```typescript
- * // Add project context when user mentions deploy
- * event.end(
- *   event.response()
- *     .additionalContext("Current branch: main\nLast deploy: 2 hours ago")
- * );
+ * import type { UserPromptSubmitEvent } from "claude-binary-plugin";
+ *
+ * function handleUserPromptSubmit(event: UserPromptSubmitEvent): void {
+ *   // Add project context when user mentions deploy
+ *   event.end(
+ *     event.response()
+ *       .additionalContext("Current branch: main\nLast deploy: 2 hours ago")
+ *   );
+ * }
  * ```
  *
  * @see {@link UserPromptSubmitEvent} - The event type this builder is used with
@@ -562,15 +586,19 @@ export class UserPromptSubmitResponse extends HookResponse {
  *
  * @example
  * ```typescript
- * // Block stopping until tests pass
- * event.end(
- *   event.response()
- *     .block("Tests must pass before stopping")
- *     .additionalContext("3 tests are still failing")
- * );
+ * import type { StopEvent } from "claude-binary-plugin";
  *
- * // Allow stopping
- * event.end(event.response().continue());
+ * function handleStop(event: StopEvent): void {
+ *   // Block stopping until tests pass
+ *   event.end(
+ *     event.response()
+ *       .block("Tests must pass before stopping")
+ *       .additionalContext("3 tests are still failing")
+ *   );
+ *
+ *   // Or allow stopping
+ *   event.end(event.response().continue());
+ * }
  * ```
  *
  * @see {@link StopEvent} - Main agent stop event
@@ -609,16 +637,20 @@ export class StopResponse extends HookResponse {
  *
  * @example
  * ```typescript
- * // Inject project context at session start
- * event.end(
- *   event.response()
- *     .additionalContext([
- *       "# Project: my-app",
- *       "Package manager: bun",
- *       "Testing: bun:test",
- *       "Linting: biome"
- *     ].join("\n"))
- * );
+ * import type { SessionStartEvent } from "claude-binary-plugin";
+ *
+ * function handleSessionStart(event: SessionStartEvent): void {
+ *   // Inject project context at session start
+ *   event.end(
+ *     event.response()
+ *       .additionalContext([
+ *         "# Project: my-app",
+ *         "Package manager: bun",
+ *         "Testing: bun:test",
+ *         "Linting: biome"
+ *       ].join("\n"))
+ *   );
+ * }
  * ```
  *
  * @see {@link SessionStartEvent} - The event type this builder is used with

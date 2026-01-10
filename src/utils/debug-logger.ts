@@ -573,6 +573,8 @@ export class DebugLogger {
 	 *
 	 * @example
 	 * ```ts
+	 * import { DebugLogger } from "claude-binary-plugin";
+	 *
 	 * const log = DebugLogger.create("workflow-context", { pluginName: "workflow" });
 	 * log.info("Session started");
 	 * ```

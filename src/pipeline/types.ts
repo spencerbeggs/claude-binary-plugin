@@ -790,9 +790,13 @@ export type NotificationPipelineOutput = PassthroughPipelineOutput;
  *
  * @example
  * ```typescript
- * const hookType = "PreToolUse";
- * const schema = OutputSchemas[hookType];
- * const validatedOutput = schema.parse(output);
+ * import { OutputSchemas } from "claude-binary-plugin";
+ *
+ * function validateOutput(hookType: "PreToolUse", output: unknown): void {
+ *   const schema = OutputSchemas[hookType];
+ *   const validatedOutput = schema.parse(output);
+ *   console.log(validatedOutput.action);
+ * }
  * ```
  *
  * @public
