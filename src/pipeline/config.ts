@@ -942,7 +942,8 @@ export interface PluginConfig<
  * @example
  * ```ts
  * // plugin.config.ts
- * import { ClaudeBinaryPlugin, InferPluginPipeline } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginPipeline } from "claude-binary-plugin";
  * import { z } from "zod";
  *
  * const plugin = ClaudeBinaryPlugin.create({
@@ -1271,7 +1272,8 @@ export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TC
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin, InferPluginOptions } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginOptions } from "claude-binary-plugin";
  *
  * const plugin = ClaudeBinaryPlugin.create({ ... });
  * type Options = InferPluginOptions<typeof plugin>;
@@ -1289,7 +1291,8 @@ export type InferPluginOptions<T> = z.infer<ExtractOptionsSchema<T>>;
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin, InferPluginState } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginState } from "claude-binary-plugin";
  *
  * const plugin = ClaudeBinaryPlugin.create({ ... });
  * type State = InferPluginState<typeof plugin>;
@@ -1315,7 +1318,8 @@ export type InferPluginState<T> =
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin, InferPluginPipeline } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginPipeline } from "claude-binary-plugin";
  *
  * const plugin = ClaudeBinaryPlugin.create({ ... });
  * export type Pipeline = InferPluginPipeline<typeof plugin>;
@@ -1367,7 +1371,8 @@ export interface InferPluginPipeline<T> {
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin, InferPluginCommands } from "claude-binary-plugin";
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginCommands } from "claude-binary-plugin";
  *
  * const plugin = ClaudeBinaryPlugin.create({ ... });
  * export type Commands = InferPluginCommands<typeof plugin>;

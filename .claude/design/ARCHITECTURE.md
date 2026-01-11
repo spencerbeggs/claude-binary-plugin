@@ -31,7 +31,7 @@ Plugins are defined using `ClaudeBinaryPlugin.create()` which returns a
 configuration object used by the build system:
 
 ```typescript
-import { ClaudeBinaryPlugin } from "claude-binary-plugin/pipeline";
+import { ClaudeBinaryPlugin } from "claude-binary-plugin";
 import { z } from "zod";
 
 const plugin = ClaudeBinaryPlugin.create({
@@ -975,6 +975,10 @@ skill markdown files.
 Commands are defined in the plugin configuration alongside hooks:
 
 ```typescript
+import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+import type { InferPluginCommands } from "claude-binary-plugin";
+import { z } from "zod";
+
 const plugin = ClaudeBinaryPlugin.create({
   prefix: "MY_PLUGIN",
   options: optionsSchema,
@@ -1003,7 +1007,7 @@ const plugin = ClaudeBinaryPlugin.create({
 });
 
 // Export types for command handlers
-export type Commands = ClaudeBinaryPlugin.InferCommands<typeof plugin>;
+export type Commands = InferPluginCommands<typeof plugin>;
 ```
 
 ### Command Handler
