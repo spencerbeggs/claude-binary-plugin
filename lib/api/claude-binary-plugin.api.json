@@ -1830,7 +1830,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class",
-          "docComment": "/**\n * Claude Code plugin with declarative hook definitions.\n *\n * @remarks\n *\n * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins. Use the static `create()` factory to instantiate plugins with full type inference.\n *\n * **Three-Layer Model:** 1. **Input** - Hook event data from Claude Code (stdin JSON) 2. **Options** - User-configurable settings validated by Zod schema 3. **State** - Computed values from `setup()` function at SessionStart\n *\n * **Static Methods:** - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)\n *\n * **Type Inference:** Use the namespace utilities to extract types from plugin instances: - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup() - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands\n *\n * The constructor for this class is marked as internal. Third-party code should not call the constructor directly or create subclasses that extend the `ClaudeBinaryPlugin` class.\n *\n * @typeParam TOptionsSchema - Zod schema for plugin options validation\n *\n * @typeParam TSetup - Setup function type (used to infer state)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @example\n * ```ts\n * // plugin.config.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({\n *     TIMEOUT_MS: z.number().default(30000),\n *   }),\n *   hooks: {\n *     SessionStart: [{\n *       name: \"project-context\",\n *       pipeline: async ({ input, state }) => {\n *         return {\n *           status: \"executed\",\n *           action: \"context\",\n *           summary: \"added context\",\n *           claudeContext: \"Hello from plugin!\",\n *         };\n *       }\n *     }],\n *   }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n * ```\n *\n * @example\n *\n * Building a plugin programmatically\n * ```ts\n * import plugin from \"./plugin.config.ts\";\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n *\n * await ClaudeBinaryPlugin.build(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
+          "docComment": "/**\n * Claude Code plugin with declarative hook definitions.\n *\n * @remarks\n *\n * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins. Use the static `create()` factory to instantiate plugins with full type inference.\n *\n * **Three-Layer Model:** 1. **Input** - Hook event data from Claude Code (stdin JSON) 2. **Options** - User-configurable settings validated by Zod schema 3. **State** - Computed values from `setup()` function at SessionStart\n *\n * **Static Methods:** - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)\n *\n * **Type Inference:** Use the standalone utility types to extract types from plugin instances: - `InferPluginOptions<typeof plugin>` - Options type from schema - `InferPluginState<typeof plugin>` - State type from setup() - `InferPluginPipeline<typeof plugin>` - Handler types for hooks - `InferPluginCommands<typeof plugin>` - Handler types for commands\n *\n * The constructor for this class is marked as internal. Third-party code should not call the constructor directly or create subclasses that extend the `ClaudeBinaryPlugin` class.\n *\n * @typeParam TOptionsSchema - Zod schema for plugin options validation\n *\n * @typeParam TSetup - Setup function type (used to infer state)\n *\n * @typeParam TCommands - Map of command names to their definitions\n *\n * @example\n * ```ts\n * // plugin.config.ts\n * import { ClaudeBinaryPlugin, InferPluginPipeline } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({\n *     TIMEOUT_MS: z.number().default(30000),\n *   }),\n *   hooks: {\n *     SessionStart: [{\n *       name: \"project-context\",\n *       pipeline: async ({ input, state }) => {\n *         return {\n *           status: \"executed\",\n *           action: \"context\",\n *           summary: \"added context\",\n *           claudeContext: \"Hello from plugin!\",\n *         };\n *       }\n *     }],\n *   }\n * });\n *\n * export type Pipeline = InferPluginPipeline<typeof plugin>;\n * export default plugin;\n * ```\n *\n * @example\n *\n * Building a plugin programmatically\n * ```ts\n * import plugin from \"./plugin.config.ts\";\n * import { ClaudeBinaryPlugin } from \"claude-binary-plugin\";\n *\n * await ClaudeBinaryPlugin.build(plugin, {\n *   rootDir: import.meta.dir,\n *   compile: true,\n * });\n * ```\n *\n * @see\n *\n * {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -2331,1469 +2331,6 @@
           "implementsTokenRanges": []
         },
         {
-          "kind": "Namespace",
-          "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:namespace",
-          "docComment": "/**\n * Namespace for type inference utilities. Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.\n *\n * @example\n * ```ts\n * // In plugin.config.ts\n * const plugin = ClaudeBinaryPlugin.create({\n *   prefix: \"MY_PLUGIN\",\n *   options: z.object({ DEBUG: z.boolean().default(false) }),\n *   hooks: { ... }\n * });\n *\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n * export default plugin;\n *\n * // In hooks/my-hook.hook.ts\n * import type { Pipeline } from \"../plugin.config.js\";\n *\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, state }) => {\n *   // input, options, and state are fully typed!\n *   return { permissionDecision: \"allow\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare namespace ClaudeBinaryPlugin "
-            }
-          ],
-          "fileUrlPath": "src/pipeline/config.ts",
-          "releaseTag": "Public",
-          "name": "ClaudeBinaryPlugin",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractCommands:type",
-              "docComment": "/**\n * Helper type to extract commands map from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type ExtractCommands<T> = "
-                },
-                {
-                  "kind": "Content",
-                  "text": "T extends "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ClaudeBinaryPlugin",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<any, any, infer TCommands> ? TCommands : never"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "ExtractCommands",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 4
-              }
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractOptionsSchema:type",
-              "docComment": "/**\n * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type ExtractOptionsSchema<T> = "
-                },
-                {
-                  "kind": "Content",
-                  "text": "T extends "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ClaudeBinaryPlugin",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<infer TSchema, any, any> ? TSchema : never"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "ExtractOptionsSchema",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 4
-              }
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSetup:type",
-              "docComment": "/**\n * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type ExtractSetup<T> = "
-                },
-                {
-                  "kind": "Content",
-                  "text": "T extends "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ClaudeBinaryPlugin",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<any, infer TSetup, any> ? TSetup : undefined"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "ExtractSetup",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 4
-              }
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferCommands:type",
-              "docComment": "/**\n * Infer command handler types from a plugin. Returns an interface with typed handlers for each command.\n *\n * @example\n * ```ts\n * export type Commands = ClaudeBinaryPlugin.InferCommands<typeof plugin>;\n *\n * // In commands/lint.cmd.ts\n * const handler: Commands[\"lint\"] = async ({ args, options, state }) => {\n *   // args, options, and state are fully typed!\n *   return { exitCode: 0, output: \"# Results\\n\\n✅ Passed\" };\n * };\n * ```\n *\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type InferCommands<T> = "
-                },
-                {
-                  "kind": "Content",
-                  "text": "{\n        [K in keyof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "InferCommandsMap",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferCommandsMap:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>]: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "InferCommandsMap",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferCommandsMap:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>[K] extends "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "CommandDefinition",
-                  "canonicalReference": "claude-binary-plugin!CommandDefinition:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<infer TArgs> ? "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "CommandHandler",
-                  "canonicalReference": "claude-binary-plugin!CommandHandler:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<"
-                },
-                {
-                  "kind": "Reference",
-                  "text": "z.infer",
-                  "canonicalReference": "zod!output:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<TArgs>, "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "InferOptions",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>, "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "InferState",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>> : never;\n    }"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "InferCommands",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 16
-              }
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferCommandsMap:type",
-              "docComment": "/**\n * Extract the commands map from a plugin.\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type InferCommandsMap<T> = "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ExtractCommands",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractCommands:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "InferCommandsMap",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              }
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type",
-              "docComment": "/**\n * Extract the inferred Options type from a plugin.\n *\n * @example\n * ```ts\n * type Options = ClaudeBinaryPlugin.InferOptions<typeof plugin>;\n * ```\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type InferOptions<T> = "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "z.infer",
-                  "canonicalReference": "zod!output:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<"
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ExtractOptionsSchema",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractOptionsSchema:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "InferOptions",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 5
-              }
-            },
-            {
-              "kind": "Interface",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline:interface",
-              "docComment": "/**\n * Infer all pipeline and handler types from a plugin. Returns an interface with typed handlers for each hook event.\n *\n * @example\n * ```ts\n * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;\n *\n * // Pipeline handlers (pure transformation)\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, state }) => { ... };\n *\n * // Raw handlers (full event access)\n * const handler: Pipeline[\"PreToolUseRaw\"] = ({ event, options, state }) => { ... };\n * ```\n *\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "interface InferPipeline<T> "
-                }
-              ],
-              "releaseTag": "Public",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "name": "InferPipeline",
-              "preserveMemberOrder": false,
-              "members": [
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#Notification:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "Notification: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "NotificationPipeline",
-                      "canonicalReference": "claude-binary-plugin!NotificationPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "Notification",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#NotificationRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "NotificationRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "NotificationRawHandler",
-                      "canonicalReference": "claude-binary-plugin!NotificationRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "NotificationRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PermissionRequest:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PermissionRequest: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PermissionRequestPipeline",
-                      "canonicalReference": "claude-binary-plugin!PermissionRequestPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PermissionRequest",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PermissionRequestRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PermissionRequestRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PermissionRequestRawHandler",
-                      "canonicalReference": "claude-binary-plugin!PermissionRequestRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PermissionRequestRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PostToolUse:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PostToolUse: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PostToolUsePipeline",
-                      "canonicalReference": "claude-binary-plugin!PostToolUsePipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PostToolUse",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PostToolUseRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PostToolUseRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PostToolUseRawHandler",
-                      "canonicalReference": "claude-binary-plugin!PostToolUseRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PostToolUseRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PreCompact:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PreCompact: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PreCompactPipeline",
-                      "canonicalReference": "claude-binary-plugin!PreCompactPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PreCompact",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PreCompactRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PreCompactRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PreCompactRawHandler",
-                      "canonicalReference": "claude-binary-plugin!PreCompactRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PreCompactRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PreToolUse:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PreToolUse: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PreToolUsePipeline",
-                      "canonicalReference": "claude-binary-plugin!PreToolUsePipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PreToolUse",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#PreToolUseRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "PreToolUseRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "PreToolUseRawHandler",
-                      "canonicalReference": "claude-binary-plugin!PreToolUseRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "PreToolUseRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#SessionEnd:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "SessionEnd: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "SessionEndPipeline",
-                      "canonicalReference": "claude-binary-plugin!SessionEndPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "SessionEnd",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#SessionEndRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "SessionEndRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "SessionEndRawHandler",
-                      "canonicalReference": "claude-binary-plugin!SessionEndRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "SessionEndRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#SessionStart:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "SessionStart: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "SessionStartPipeline",
-                      "canonicalReference": "claude-binary-plugin!SessionStartPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "SessionStart",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#SessionStartRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "SessionStartRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "SessionStartRawHandler",
-                      "canonicalReference": "claude-binary-plugin!SessionStartRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "SessionStartRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#Stop:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "Stop: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "StopPipeline",
-                      "canonicalReference": "claude-binary-plugin!StopPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "Stop",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#StopRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "StopRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "StopRawHandler",
-                      "canonicalReference": "claude-binary-plugin!StopRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "StopRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#SubagentStop:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "SubagentStop: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "SubagentStopPipeline",
-                      "canonicalReference": "claude-binary-plugin!SubagentStopPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "SubagentStop",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#SubagentStopRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "SubagentStopRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "SubagentStopRawHandler",
-                      "canonicalReference": "claude-binary-plugin!SubagentStopRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "SubagentStopRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#UserPromptSubmit:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "UserPromptSubmit: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "UserPromptSubmitPipeline",
-                      "canonicalReference": "claude-binary-plugin!UserPromptSubmitPipeline:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "UserPromptSubmit",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                },
-                {
-                  "kind": "PropertySignature",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferPipeline#UserPromptSubmitRaw:member",
-                  "docComment": "",
-                  "excerptTokens": [
-                    {
-                      "kind": "Content",
-                      "text": "UserPromptSubmitRaw: "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "UserPromptSubmitRawHandler",
-                      "canonicalReference": "claude-binary-plugin!UserPromptSubmitRawHandler:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<"
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferOptions",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferOptions:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>, "
-                    },
-                    {
-                      "kind": "Reference",
-                      "text": "InferState",
-                      "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": "<T>>"
-                    },
-                    {
-                      "kind": "Content",
-                      "text": ";"
-                    }
-                  ],
-                  "isReadonly": false,
-                  "isOptional": false,
-                  "releaseTag": "Public",
-                  "name": "UserPromptSubmitRaw",
-                  "propertyTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 7
-                  }
-                }
-              ],
-              "extendsTokenRanges": []
-            },
-            {
-              "kind": "TypeAlias",
-              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.InferState:type",
-              "docComment": "/**\n * Extract the inferred State type from a plugin's setup function. State is merged with BaseState to form the full PluginState passed to handlers.\n *\n * @example\n * ```ts\n * type State = ClaudeBinaryPlugin.InferState<typeof plugin>;\n * // { packageManager: string; typeChecker: string; ... }\n * ```\n *\n * @public\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "type InferState<T> = "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ExtractSetup",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSetup:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T> extends undefined ? "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Record",
-                  "canonicalReference": "!Record:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<string, unknown> : "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ExtractSetupReturn",
-                  "canonicalReference": "claude-binary-plugin!ExtractSetupReturn:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<"
-                },
-                {
-                  "kind": "Reference",
-                  "text": "NonNullable",
-                  "canonicalReference": "!NonNullable:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<"
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ExtractSetup",
-                  "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin.ExtractSetup:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<T>>>"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "releaseTag": "Public",
-              "name": "InferState",
-              "typeParameters": [
-                {
-                  "typeParameterName": "T",
-                  "constraintTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  },
-                  "defaultTypeTokenRange": {
-                    "startIndex": 0,
-                    "endIndex": 0
-                  }
-                }
-              ],
-              "typeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 11
-              }
-            }
-          ]
-        },
-        {
           "kind": "TypeAlias",
           "canonicalReference": "claude-binary-plugin!ClientState:type",
           "docComment": "/**\n * Client state for tracking connection status.\n *\n * @public\n */\n",
@@ -3822,7 +2359,7 @@
         {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!CmdContext:interface",
-          "docComment": "/**\n * Context provided to command handlers.\n *\n * @typeParam TArgs - Validated argument type from Zod schema\n *\n * @typeParam TOptions - Validated options from plugin schema (Layer 2)\n *\n * @typeParam TState - Computed variables from setup function (Layer 3)\n *\n * @example\n * ```ts\n * const handler: Commands[\"lint\"] = async ({ args, options, state }) => {\n *   // args: { path: string, fix: boolean } - validated from CLI\n *   // options: { AUTO_ALLOW_ENABLED: boolean, ... } - from schema\n *   // state: { projectDir, pluginDir, packageManager, ... } - base + computed\n *   return { exitCode: 0, output: \"# Results\\n\\n✅ Passed\" };\n * };\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Context provided to command handlers.\n *\n * @typeParam TArgs - Validated argument type from Zod schema\n *\n * @typeParam TOptions - Validated options from plugin schema (Layer 2)\n *\n * @typeParam TState - Computed variables from setup function (Layer 3)\n *\n * @example\n * ```ts\n * import type { Commands } from \"./plugin.config.js\";\n *\n * const handler: Commands[\"lint\"] = async ({ args, options, state }) => {\n *   // args: { path: string, fix: boolean } - validated from CLI\n *   // options: { AUTO_ALLOW_ENABLED: boolean, ... } - from schema\n *   // state: { projectDir, pluginDir, packageManager, ... } - base + computed\n *   return { exitCode: 0, output: \"# Results\\n\\n✅ Passed\" };\n * };\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -5653,7 +4190,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!DebugLogger.create:member(1)",
-              "docComment": "/**\n * Create a debug logger with the given prefix.\n *\n * @example\n * ```ts\n * const log = DebugLogger.create(\"workflow-context\", { pluginName: \"workflow\" });\n * log.info(\"Session started\");\n * ```\n *\n */\n",
+              "docComment": "/**\n * Create a debug logger with the given prefix.\n *\n * @example\n * ```ts\n * import { DebugLogger } from \"claude-binary-plugin\";\n *\n * const log = DebugLogger.create(\"workflow-context\", { pluginName: \"workflow\" });\n * log.info(\"Session started\");\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -8766,6 +7303,54 @@
           "extendsTokenRanges": []
         },
         {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!ExtractCommands:type",
+          "docComment": "/**\n * Helper type to extract commands map from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ExtractCommands<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "T extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "ClaudeBinaryPlugin",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<any, any, infer TCommands> ? TCommands : never"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "ExtractCommands",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
           "kind": "Interface",
           "canonicalReference": "claude-binary-plugin!ExtractedPassthroughHooks:interface",
           "docComment": "/**\n * Extracted passthrough entries grouped by hook type.\n *\n * @public\n */\n",
@@ -8831,6 +7416,102 @@
             }
           ],
           "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!ExtractOptionsSchema:type",
+          "docComment": "/**\n * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ExtractOptionsSchema<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "T extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "ClaudeBinaryPlugin",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<infer TSchema, any, any> ? TSchema : never"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "ExtractOptionsSchema",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!ExtractSetup:type",
+          "docComment": "/**\n * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type ExtractSetup<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "T extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "ClaudeBinaryPlugin",
+              "canonicalReference": "claude-binary-plugin!ClaudeBinaryPlugin:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<any, infer TSetup, any> ? TSetup : undefined"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "ExtractSetup",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
         },
         {
           "kind": "TypeAlias",
@@ -19717,7 +18398,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!HookResponse:class",
-          "docComment": "/**\n * Base builder for constructing hook responses with a fluent API.\n *\n * @remarks\n *\n * HookResponse provides the core response construction functionality that all specialized builders inherit. It includes:\n *\n * - **Response data**: The actual response sent to Claude Code - **Summary**: Human-readable description for logs - **Outcome**: Semantic classification for telemetry - **Metrics**: Operational metrics for observability - **Context**: Key-value pairs for telemetry attributes\n *\n * Methods return `this` to enable fluent chaining. Call `toJSON()` or `build()` to get the final response.\n *\n * @example\n * ```typescript\n * // Chain multiple methods\n * const response = new HookResponse()\n *   .summary(\"processed tool call\")\n *   .outcome(\"allowed\")\n *   .metrics({ durationMs: 15 })\n *   .context({ toolName: \"Bash\" })\n *   .continue(true);\n *\n * // Get JSON for stdout\n * const json = response.toJSON();\n * ```\n *\n * @see\n *\n * {@link PreToolUseResponse} - Specialized for PreToolUse hooks\n *\n * @see\n *\n * {@link PostToolUseResponse} - Specialized for PostToolUse hooks\n *\n * @see\n *\n * {@link SessionStartResponse} - Specialized for SessionStart hooks\n *\n * @public\n */\n",
+          "docComment": "/**\n * Base builder for constructing hook responses with a fluent API.\n *\n * @remarks\n *\n * HookResponse provides the core response construction functionality that all specialized builders inherit. It includes:\n *\n * - **Response data**: The actual response sent to Claude Code - **Summary**: Human-readable description for logs - **Outcome**: Semantic classification for telemetry - **Metrics**: Operational metrics for observability - **Context**: Key-value pairs for telemetry attributes\n *\n * Methods return `this` to enable fluent chaining. Call `toJSON()` or `build()` to get the final response.\n *\n * @example\n * ```typescript\n * import { HookResponse } from \"claude-binary-plugin\";\n *\n * // Chain multiple methods\n * const response = new HookResponse()\n *   .summary(\"processed tool call\")\n *   .outcome(\"allowed\")\n *   .metrics({ durationMs: 15 })\n *   .context({ toolName: \"Bash\" })\n *   .continue(true);\n *\n * // Get JSON for stdout\n * const json = response.toJSON();\n * ```\n *\n * @see\n *\n * {@link PreToolUseResponse} - Specialized for PreToolUse hooks\n *\n * @see\n *\n * {@link PostToolUseResponse} - Specialized for PostToolUse hooks\n *\n * @see\n *\n * {@link SessionStartResponse} - Specialized for SessionStart hooks\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -21719,6 +20400,1272 @@
               "name": "UserPromptSubmit"
             }
           ]
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!InferPluginCommands:type",
+          "docComment": "/**\n * Infer command handler types from a plugin configuration.\n *\n * @remarks\n *\n * Returns an interface with typed handlers for each command defined in the plugin. Use this to define command handlers with full type safety for args, options, and state.\n *\n * @example\n * ```ts\n * import { ClaudeBinaryPlugin, InferPluginCommands } from \"claude-binary-plugin\";\n *\n * const plugin = ClaudeBinaryPlugin.create({ ... });\n * export type Commands = InferPluginCommands<typeof plugin>;\n *\n * // In commands/lint.cmd.ts\n * import type { Commands } from \"../plugin.config.js\";\n *\n * const handler: Commands[\"lint\"] = async ({ args, options, state }) => {\n *   // args, options, and state are fully typed!\n *   return { exitCode: 0, output: \"# Results\\n\\n✅ Passed\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type InferPluginCommands<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    [K in keyof "
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractCommands",
+              "canonicalReference": "claude-binary-plugin!ExtractCommands:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>]: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractCommands",
+              "canonicalReference": "claude-binary-plugin!ExtractCommands:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>[K] extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "CommandDefinition",
+              "canonicalReference": "claude-binary-plugin!CommandDefinition:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<infer TArgs> ? "
+            },
+            {
+              "kind": "Reference",
+              "text": "CommandHandler",
+              "canonicalReference": "claude-binary-plugin!CommandHandler:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TArgs>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "InferPluginOptions",
+              "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "InferPluginState",
+              "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>> : never;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "InferPluginCommands",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 16
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!InferPluginOptions:type",
+          "docComment": "/**\n * Extract the inferred Options type from a plugin configuration.\n *\n * @remarks\n *\n * Extracts the TypeScript type from the plugin's Zod options schema. Use this to get typed access to plugin options in handlers.\n *\n * @example\n * ```ts\n * import { ClaudeBinaryPlugin, InferPluginOptions } from \"claude-binary-plugin\";\n *\n * const plugin = ClaudeBinaryPlugin.create({ ... });\n * type Options = InferPluginOptions<typeof plugin>;\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type InferPluginOptions<T> = "
+            },
+            {
+              "kind": "Reference",
+              "text": "z.infer",
+              "canonicalReference": "zod!output:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractOptionsSchema",
+              "canonicalReference": "claude-binary-plugin!ExtractOptionsSchema:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "InferPluginOptions",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 5
+          }
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "claude-binary-plugin!InferPluginPipeline:interface",
+          "docComment": "/**\n * Infer all pipeline and handler types from a plugin configuration.\n *\n * @remarks\n *\n * Returns an interface with typed handlers for each hook event. This is the primary type for defining hook handlers in plugin projects.\n *\n * The interface includes both pipeline handlers (pure transformation functions) and raw handlers (full event access):\n *\n * - `Pipeline[\"PreToolUse\"]` - Pipeline handler receiving `{ input, options, state }` - `Pipeline[\"PreToolUseRaw\"]` - Raw handler receiving `{ event, options, state }`\n *\n * @example\n * ```ts\n * import { ClaudeBinaryPlugin, InferPluginPipeline } from \"claude-binary-plugin\";\n *\n * const plugin = ClaudeBinaryPlugin.create({ ... });\n * export type Pipeline = InferPluginPipeline<typeof plugin>;\n * export default plugin;\n *\n * // In hooks/my-hook.hook.ts\n * import type { Pipeline } from \"../plugin.config.js\";\n *\n * const handler: Pipeline[\"PreToolUse\"] = ({ input, options, state }) => {\n *   // input, options, and state are fully typed!\n *   return { status: \"executed\", action: \"allow\", summary: \"allowed\" };\n * };\n * export default handler;\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface InferPluginPipeline<T> "
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "name": "InferPluginPipeline",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#Notification:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Notification: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "NotificationPipeline",
+                  "canonicalReference": "claude-binary-plugin!NotificationPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "Notification",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#NotificationRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "NotificationRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "NotificationRawHandler",
+                  "canonicalReference": "claude-binary-plugin!NotificationRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "NotificationRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PermissionRequest:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PermissionRequest: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PermissionRequestPipeline",
+                  "canonicalReference": "claude-binary-plugin!PermissionRequestPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PermissionRequest",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PermissionRequestRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PermissionRequestRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PermissionRequestRawHandler",
+                  "canonicalReference": "claude-binary-plugin!PermissionRequestRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PermissionRequestRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PostToolUse:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PostToolUse: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PostToolUsePipeline",
+                  "canonicalReference": "claude-binary-plugin!PostToolUsePipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PostToolUse",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PostToolUseRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PostToolUseRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PostToolUseRawHandler",
+                  "canonicalReference": "claude-binary-plugin!PostToolUseRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PostToolUseRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PreCompact:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PreCompact: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PreCompactPipeline",
+                  "canonicalReference": "claude-binary-plugin!PreCompactPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PreCompact",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PreCompactRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PreCompactRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PreCompactRawHandler",
+                  "canonicalReference": "claude-binary-plugin!PreCompactRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PreCompactRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PreToolUse:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PreToolUse: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PreToolUsePipeline",
+                  "canonicalReference": "claude-binary-plugin!PreToolUsePipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PreToolUse",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#PreToolUseRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "PreToolUseRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PreToolUseRawHandler",
+                  "canonicalReference": "claude-binary-plugin!PreToolUseRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "PreToolUseRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#SessionEnd:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "SessionEnd: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SessionEndPipeline",
+                  "canonicalReference": "claude-binary-plugin!SessionEndPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "SessionEnd",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#SessionEndRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "SessionEndRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SessionEndRawHandler",
+                  "canonicalReference": "claude-binary-plugin!SessionEndRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "SessionEndRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#SessionStart:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "SessionStart: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SessionStartPipeline",
+                  "canonicalReference": "claude-binary-plugin!SessionStartPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "SessionStart",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#SessionStartRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "SessionStartRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SessionStartRawHandler",
+                  "canonicalReference": "claude-binary-plugin!SessionStartRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "SessionStartRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#Stop:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "Stop: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "StopPipeline",
+                  "canonicalReference": "claude-binary-plugin!StopPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "Stop",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#StopRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "StopRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "StopRawHandler",
+                  "canonicalReference": "claude-binary-plugin!StopRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "StopRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#SubagentStop:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "SubagentStop: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SubagentStopPipeline",
+                  "canonicalReference": "claude-binary-plugin!SubagentStopPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "SubagentStop",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#SubagentStopRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "SubagentStopRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "SubagentStopRawHandler",
+                  "canonicalReference": "claude-binary-plugin!SubagentStopRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "SubagentStopRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#UserPromptSubmit:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "UserPromptSubmit: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "UserPromptSubmitPipeline",
+                  "canonicalReference": "claude-binary-plugin!UserPromptSubmitPipeline:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "UserPromptSubmit",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "claude-binary-plugin!InferPluginPipeline#UserPromptSubmitRaw:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "UserPromptSubmitRaw: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "UserPromptSubmitRawHandler",
+                  "canonicalReference": "claude-binary-plugin!UserPromptSubmitRawHandler:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<"
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginOptions",
+                  "canonicalReference": "claude-binary-plugin!InferPluginOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>, "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "InferPluginState",
+                  "canonicalReference": "claude-binary-plugin!InferPluginState:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<T>>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "UserPromptSubmitRaw",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 7
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "claude-binary-plugin!InferPluginState:type",
+          "docComment": "/**\n * Extract the inferred State type from a plugin's setup function.\n *\n * @remarks\n *\n * State is merged with BaseState to form the full PluginState passed to handlers. If no setup function is defined, returns `Record<string, unknown>`.\n *\n * @example\n * ```ts\n * import { ClaudeBinaryPlugin, InferPluginState } from \"claude-binary-plugin\";\n *\n * const plugin = ClaudeBinaryPlugin.create({ ... });\n * type State = InferPluginState<typeof plugin>;\n * // { packageManager: string; typeChecker: string; ... }\n * ```\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export type InferPluginState<T> = "
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractSetup",
+              "canonicalReference": "claude-binary-plugin!ExtractSetup:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T> extends undefined ? "
+            },
+            {
+              "kind": "Reference",
+              "text": "Record",
+              "canonicalReference": "!Record:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<string, unknown> : "
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractSetupReturn",
+              "canonicalReference": "claude-binary-plugin!ExtractSetupReturn:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "NonNullable",
+              "canonicalReference": "!NonNullable:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ExtractSetup",
+              "canonicalReference": "claude-binary-plugin!ExtractSetup:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<T>>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/pipeline/config.ts",
+          "releaseTag": "Public",
+          "name": "InferPluginState",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 11
+          }
         },
         {
           "kind": "TypeAlias",
@@ -28879,7 +28826,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!PermissionRequestResponse:class",
-          "docComment": "/**\n * Response builder for PermissionRequest hooks with permission automation.\n *\n * @remarks\n *\n * PermissionRequestResponse handles responses to Claude Code's permission dialogs. It can automatically allow or deny permissions, optionally with a custom message or modified input.\n *\n * @example\n * ```typescript\n * // Auto-allow git operations\n * event.end(event.response().allow());\n *\n * // Deny with message\n * event.end(event.response().deny(\"Operation not permitted\").interrupt());\n * ```\n *\n * @see\n *\n * {@link PermissionRequestEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link PermissionRequestPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
+          "docComment": "/**\n * Response builder for PermissionRequest hooks with permission automation.\n *\n * @remarks\n *\n * PermissionRequestResponse handles responses to Claude Code's permission dialogs. It can automatically allow or deny permissions, optionally with a custom message or modified input.\n *\n * @example\n * ```typescript\n * import type { PermissionRequestEvent } from \"claude-binary-plugin\";\n *\n * function handlePermissionRequest(event: PermissionRequestEvent): void {\n *   // Auto-allow git operations\n *   event.end(event.response().allow());\n *\n *   // Or deny with message\n *   event.end(event.response().deny(\"Operation not permitted\").interrupt());\n * }\n * ```\n *\n * @see\n *\n * {@link PermissionRequestEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link PermissionRequestPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -34473,7 +34420,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginEnv.escapeForBash:member(1)",
-              "docComment": "/**\n * Escape a string value for safe use in bash double-quoted strings.\n *\n * @remarks\n *\n * In bash double quotes, these characters have special meaning and must be escaped: - `\"` (double quote) - terminates the string - backtick - command substitution - `$` (dollar sign) - variable expansion - `\\` (backslash) - escape character (only when followed by special chars)\n *\n * @param value - The string to escape\n *\n * @returns The escaped string safe for bash double quotes\n *\n * @example\n * ```typescript\n * PluginEnv.escapeForBash('Hello \"world\"') // 'Hello \\\\\"world\\\\\"'\n * PluginEnv.escapeForBash('Run `cmd`') // 'Run \\\\`cmd\\\\`'\n * PluginEnv.escapeForBash('Cost: $50') // 'Cost: \\\\$50'\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Escape a string value for safe use in bash double-quoted strings.\n *\n * @remarks\n *\n * In bash double quotes, these characters have special meaning and must be escaped: - `\"` (double quote) - terminates the string - backtick - command substitution - `$` (dollar sign) - variable expansion - `\\` (backslash) - escape character (only when followed by special chars)\n *\n * @param value - The string to escape\n *\n * @returns The escaped string safe for bash double quotes\n *\n * @example\n * ```typescript\n * import { PluginEnv } from \"claude-binary-plugin\";\n *\n * const escaped1 = PluginEnv.escapeForBash('Hello \"world\"'); // 'Hello \\\\\"world\\\\\"'\n * const escaped2 = PluginEnv.escapeForBash('Run `cmd`'); // 'Run \\\\`cmd\\\\`'\n * const escaped3 = PluginEnv.escapeForBash('Cost: $50'); // 'Cost: \\\\$50'\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -35095,7 +35042,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginEnv.formatZodError:member(1)",
-              "docComment": "/**\n * Format a Zod validation error for LLM consumption.\n *\n * @param error - The Zod error to format\n *\n * @param maxErrors - Maximum number of errors to show (default 10)\n *\n * @returns Formatted markdown string\n *\n * @example\n * ```typescript\n * const result = schema.safeParse(data);\n * if (!result.success) {\n *   console.log(PluginEnv.formatZodError(result.error));\n * }\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Format a Zod validation error for LLM consumption.\n *\n * @param error - The Zod error to format\n *\n * @param maxErrors - Maximum number of errors to show (default 10)\n *\n * @returns Formatted markdown string\n *\n * @example\n * ```typescript\n * import { PluginEnv } from \"claude-binary-plugin\";\n * import { z } from \"zod\";\n *\n * const schema = z.object({ name: z.string() });\n * const result = schema.safeParse({ name: 123 });\n * if (!result.success) {\n *   console.log(PluginEnv.formatZodError(result.error));\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -35441,7 +35388,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginEnv.getSessionEnvDir:member(1)",
-              "docComment": "/**\n * Gets the session-env directory for a session ID.\n *\n * @remarks\n *\n * Looks up the session in the SQLite registry (created during SessionStart). The session-env directory contains hook output files like `hook-0.sh`.\n *\n * @param sessionId - Session ID from the hook event\n *\n * @returns Path to session-env directory, or undefined if not found\n *\n * @example\n * ```typescript\n * const sessionEnvDir = PluginEnv.getSessionEnvDir(event.session_id);\n * // \"/Users/user/.claude/session-env/abc-123-def\"\n * ```\n *\n */\n",
+              "docComment": "/**\n * Gets the session-env directory for a session ID.\n *\n * @remarks\n *\n * Looks up the session in the SQLite registry (created during SessionStart). The session-env directory contains hook output files like `hook-0.sh`.\n *\n * @param sessionId - Session ID from the hook event\n *\n * @returns Path to session-env directory, or undefined if not found\n *\n * @example\n * ```typescript\n * import { PluginEnv } from \"claude-binary-plugin\";\n *\n * function getEnvDir(sessionId: string): string | undefined {\n *   const sessionEnvDir = PluginEnv.getSessionEnvDir(sessionId);\n *   // Returns: \"/Users/user/.claude/session-env/abc-123-def\"\n *   return sessionEnvDir;\n * }\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -36234,7 +36181,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginEnv.persistVars:member(1)",
-              "docComment": "/**\n * Persists environment variables to the shared session env file (hook-0.sh).\n *\n * @remarks\n *\n * This method writes environment variables to CLAUDE_ENV_FILE, which Claude Code provides in SessionStart hooks. Claude Code: 1. Creates the session-env directory structure 2. Sources the file before Bash commands 3. Makes variables available to subsequent hooks via Bun.env\n *\n * The file is written in shell-compatible format (export VAR=\"value\") and made executable for bash to source.\n *\n * @param _sessionId - Unused (kept for API compatibility). CLAUDE_ENV_FILE is used directly.\n *\n * @param vars - Environment variables to persist (name to value mapping)\n *\n * @param fs - File system implementation (defaults to real file system)\n *\n * @returns Object indicating success/failure with path or reason\n *\n * @example\n * ```typescript\n * const vars = {\n *   MY_PLUGIN_ENABLED: \"true\",\n *   MY_PLUGIN_API_KEY: apiKey,\n * };\n * const result = await PluginEnv.persistVars(sessionId, vars);\n * if (result.persisted) {\n *   console.log(`Persisted to: ${result.path}`);\n * }\n * ```\n *\n */\n",
+              "docComment": "/**\n * Persists environment variables to the shared session env file (hook-0.sh).\n *\n * @remarks\n *\n * This method writes environment variables to CLAUDE_ENV_FILE, which Claude Code provides in SessionStart hooks. Claude Code: 1. Creates the session-env directory structure 2. Sources the file before Bash commands 3. Makes variables available to subsequent hooks via Bun.env\n *\n * The file is written in shell-compatible format (export VAR=\"value\") and made executable for bash to source.\n *\n * @param _sessionId - Unused (kept for API compatibility). CLAUDE_ENV_FILE is used directly.\n *\n * @param vars - Environment variables to persist (name to value mapping)\n *\n * @param fs - File system implementation (defaults to real file system)\n *\n * @returns Object indicating success/failure with path or reason\n *\n * @example\n * ```typescript\n * import { PluginEnv } from \"claude-binary-plugin\";\n *\n * async function persistEnvVars(sessionId: string, apiKey: string): Promise<void> {\n *   const vars = {\n *     MY_PLUGIN_ENABLED: \"true\",\n *     MY_PLUGIN_API_KEY: apiKey,\n *   };\n *   const result = await PluginEnv.persistVars(sessionId, vars);\n *   if (result.persisted) {\n *     console.log(`Persisted to: ${result.path}`);\n *   }\n * }\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -36699,7 +36646,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginEnv#validateOrThrow:member(1)",
-              "docComment": "/**\n * Validate environment and throw if invalid, emitting to OTEL.\n *\n * @remarks\n *\n * This is the strict validation method that should be called at the start of hooks that depend on environment variables being correctly configured. It: 1. Validates the environment against the schema 2. If invalid, emits an error event to OTEL (if enabled) 3. Throws an error with a formatted message\n *\n * @param sessionId - The session ID for OTEL attribution\n *\n * @param hookName - The hook name for OTEL attribution\n *\n * @throws\n *\n * Error if validation fails (after emitting to OTEL)\n *\n * @example\n * ```typescript\n * // At the start of a hook\n * env.validateOrThrow(event.session_id, \"my-hook\");\n * // If we get here, env is valid\n * ```\n *\n */\n",
+              "docComment": "/**\n * Validate environment and throw if invalid, emitting to OTEL.\n *\n * @remarks\n *\n * This is the strict validation method that should be called at the start of hooks that depend on environment variables being correctly configured. It: 1. Validates the environment against the schema 2. If invalid, emits an error event to OTEL (if enabled) 3. Throws an error with a formatted message\n *\n * @param sessionId - The session ID for OTEL attribution\n *\n * @param hookName - The hook name for OTEL attribution\n *\n * @throws\n *\n * Error if validation fails (after emitting to OTEL)\n *\n * @example\n * ```typescript\n * import { PluginEnv } from \"claude-binary-plugin\";\n * import type { HookEventBase } from \"claude-binary-plugin\";\n *\n * async function handleHook(event: HookEventBase, MyPluginEnv: typeof PluginEnv): Promise<void> {\n *   const env = await MyPluginEnv.forHook({ sessionId: event.session_id });\n *   // At the start of a hook, validate and throw if invalid\n *   env.validateOrThrow(event.session_id, \"my-hook\");\n *   // If we get here, env is valid\n * }\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -36763,7 +36710,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginEnv#validateWithContext:member(1)",
-              "docComment": "/**\n * Validate environment with formatted error messages for LLM consumption.\n *\n * @remarks\n *\n * This method provides a safe validation that returns a result object instead of throwing. The error message is formatted as markdown suitable for display to users or LLMs.\n *\n * @returns Validation result with human-readable error messages\n *\n * @example\n * ```typescript\n * const result = env.validateWithContext();\n * if (!result.success) {\n *   console.log(result.message); // Formatted error for LLM\n * }\n * ```\n *\n */\n",
+              "docComment": "/**\n * Validate environment with formatted error messages for LLM consumption.\n *\n * @remarks\n *\n * This method provides a safe validation that returns a result object instead of throwing. The error message is formatted as markdown suitable for display to users or LLMs.\n *\n * @returns Validation result with human-readable error messages\n *\n * @example\n * ```typescript\n * import { PluginEnv } from \"claude-binary-plugin\";\n *\n * async function validateEnv(MyPluginEnv: typeof PluginEnv): Promise<void> {\n *   const env = await MyPluginEnv.forSessionStart({ hookName: \"init\" });\n *   const result = env.validateWithContext();\n *   if (!result.success) {\n *     console.log(result.message); // Formatted error for LLM\n *   }\n * }\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -40724,7 +40671,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!PostToolUseResponse:class",
-          "docComment": "/**\n * Response builder for PostToolUse hooks with context injection methods.\n *\n * @remarks\n *\n * PostToolUseResponse allows hooks to add context to Claude after a tool has completed. This is useful for providing additional information about the tool result, such as explanations, warnings, or related context.\n *\n * @example\n * ```typescript\n * // Add context about the tool result\n * event.end(\n *   event.response()\n *     .additionalContext(\"Note: This file was auto-formatted by Prettier\")\n * );\n * ```\n *\n * @see\n *\n * {@link PostToolUseEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link PostToolUsePipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
+          "docComment": "/**\n * Response builder for PostToolUse hooks with context injection methods.\n *\n * @remarks\n *\n * PostToolUseResponse allows hooks to add context to Claude after a tool has completed. This is useful for providing additional information about the tool result, such as explanations, warnings, or related context.\n *\n * @example\n * ```typescript\n * import type { PostToolUseEvent } from \"claude-binary-plugin\";\n *\n * function handlePostToolUse(event: PostToolUseEvent): void {\n *   // Add context about the tool result\n *   event.end(\n *     event.response()\n *       .additionalContext(\"Note: This file was auto-formatted by Prettier\")\n *   );\n * }\n * ```\n *\n * @see\n *\n * {@link PostToolUseEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link PostToolUsePipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -44625,7 +44572,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!PreToolUseResponse:class",
-          "docComment": "/**\n * Response builder for PreToolUse hooks with permission control methods.\n *\n * @remarks\n *\n * PreToolUseResponse provides methods for the three permission decisions available in PreToolUse hooks:\n *\n * - `allow()` - Permit the tool call to proceed - `deny()` - Block the tool call with a reason - `ask()` - Defer to the user for interactive permission\n *\n * Additionally, `updateInput()` allows modifying the tool input before execution (useful for sanitizing or augmenting parameters).\n *\n * @example\n * ```typescript\n * // Allow a tool call\n * event.end(event.response().allow());\n *\n * // Deny with explanation\n * event.end(event.response().deny(\"rm -rf is not permitted\"));\n *\n * // Modify input before allowing\n * event.end(event.response().updateInput({\n *   ...input.tool_input,\n *   timeout: 30000  // Add timeout\n * }).allow());\n * ```\n *\n * @see\n *\n * {@link PreToolUseEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link PreToolUsePipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
+          "docComment": "/**\n * Response builder for PreToolUse hooks with permission control methods.\n *\n * @remarks\n *\n * PreToolUseResponse provides methods for the three permission decisions available in PreToolUse hooks:\n *\n * - `allow()` - Permit the tool call to proceed - `deny()` - Block the tool call with a reason - `ask()` - Defer to the user for interactive permission\n *\n * Additionally, `updateInput()` allows modifying the tool input before execution (useful for sanitizing or augmenting parameters).\n *\n * @example\n * ```typescript\n * import type { PreToolUseEvent } from \"claude-binary-plugin\";\n *\n * async function handlePreToolUse(event: PreToolUseEvent): Promise<void> {\n *   // Allow a tool call\n *   event.end(event.response().allow());\n *\n *   // Deny with explanation\n *   event.end(event.response().deny(\"rm -rf is not permitted\"));\n *\n *   // Modify input before allowing\n *   event.end(event.response().updateInput({\n *     ...event.tool_input,\n *     timeout: 30000  // Add timeout\n *   }).allow());\n * }\n * ```\n *\n * @see\n *\n * {@link PreToolUseEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link PreToolUsePipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -44760,7 +44707,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PreToolUseResponse#updateInput:member(1)",
-              "docComment": "/**\n * Modifies the tool input before execution.\n *\n * @remarks\n *\n * Use this to sanitize, augment, or modify tool parameters before the tool executes. The modified input replaces the original.\n *\n * @param input - The modified tool input to use instead of the original\n *\n * @returns `this` for method chaining\n *\n * @example\n * ```typescript\n * // Add a timeout to Bash commands\n * builder.updateInput({\n *   ...event.tool_input,\n *   timeout: 30000\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Modifies the tool input before execution.\n *\n * @remarks\n *\n * Use this to sanitize, augment, or modify tool parameters before the tool executes. The modified input replaces the original.\n *\n * @param input - The modified tool input to use instead of the original\n *\n * @returns `this` for method chaining\n *\n * @example\n * ```typescript\n * import type { PreToolUseEvent } from \"claude-binary-plugin\";\n *\n * function addTimeout(event: PreToolUseEvent): void {\n *   // Add a timeout to Bash commands\n *   const builder = event.response();\n *   builder.updateInput({\n *     ...event.tool_input,\n *     timeout: 30000\n *   });\n *   event.end(builder.allow());\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -50290,7 +50237,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!SessionStartResponse:class",
-          "docComment": "/**\n * Response builder for SessionStart hooks with context injection.\n *\n * @remarks\n *\n * SessionStartResponse allows hooks to inject context at the start of a Claude Code session. This context is shown to Claude before it begins processing any user requests.\n *\n * This is the primary mechanism for providing project-specific information like coding standards, available tools, or environment details.\n *\n * @example\n * ```typescript\n * // Inject project context at session start\n * event.end(\n *   event.response()\n *     .additionalContext([\n *       \"# Project: my-app\",\n *       \"Package manager: bun\",\n *       \"Testing: bun:test\",\n *       \"Linting: biome\"\n *     ].join(\"\\n\"))\n * );\n * ```\n *\n * @see\n *\n * {@link SessionStartEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link SessionStartPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
+          "docComment": "/**\n * Response builder for SessionStart hooks with context injection.\n *\n * @remarks\n *\n * SessionStartResponse allows hooks to inject context at the start of a Claude Code session. This context is shown to Claude before it begins processing any user requests.\n *\n * This is the primary mechanism for providing project-specific information like coding standards, available tools, or environment details.\n *\n * @example\n * ```typescript\n * import type { SessionStartEvent } from \"claude-binary-plugin\";\n *\n * function handleSessionStart(event: SessionStartEvent): void {\n *   // Inject project context at session start\n *   event.end(\n *     event.response()\n *       .additionalContext([\n *         \"# Project: my-app\",\n *         \"Package manager: bun\",\n *         \"Testing: bun:test\",\n *         \"Linting: biome\"\n *       ].join(\"\\n\"))\n *   );\n * }\n * ```\n *\n * @see\n *\n * {@link SessionStartEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link SessionStartPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -54143,7 +54090,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!StopResponse:class",
-          "docComment": "/**\n * Response builder for Stop and SubagentStop hooks with blocking control.\n *\n * @remarks\n *\n * StopResponse is used for both {@link StopEvent} (main agent) and {@link SubagentStopEvent} (subagents). It allows hooks to block Claude from stopping and provide context about why.\n *\n * Use the inherited `block()` method to prevent stopping.\n *\n * @example\n * ```typescript\n * // Block stopping until tests pass\n * event.end(\n *   event.response()\n *     .block(\"Tests must pass before stopping\")\n *     .additionalContext(\"3 tests are still failing\")\n * );\n *\n * // Allow stopping\n * event.end(event.response().continue());\n * ```\n *\n * @see\n *\n * {@link StopEvent} - Main agent stop event\n *\n * @see\n *\n * {@link SubagentStopEvent} - Subagent stop event\n *\n * @see\n *\n * {@link StopPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
+          "docComment": "/**\n * Response builder for Stop and SubagentStop hooks with blocking control.\n *\n * @remarks\n *\n * StopResponse is used for both {@link StopEvent} (main agent) and {@link SubagentStopEvent} (subagents). It allows hooks to block Claude from stopping and provide context about why.\n *\n * Use the inherited `block()` method to prevent stopping.\n *\n * @example\n * ```typescript\n * import type { StopEvent } from \"claude-binary-plugin\";\n *\n * function handleStop(event: StopEvent): void {\n *   // Block stopping until tests pass\n *   event.end(\n *     event.response()\n *       .block(\"Tests must pass before stopping\")\n *       .additionalContext(\"3 tests are still failing\")\n *   );\n *\n *   // Or allow stopping\n *   event.end(event.response().continue());\n * }\n * ```\n *\n * @see\n *\n * {@link StopEvent} - Main agent stop event\n *\n * @see\n *\n * {@link SubagentStopEvent} - Subagent stop event\n *\n * @see\n *\n * {@link StopPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -56060,7 +56007,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!TelemetryEmitter:class",
-          "docComment": "/**\n * Telemetry event emitter.\n *\n * @remarks\n *\n * Provides static methods for emitting telemetry events. All methods are fire-and-forget by default to avoid blocking hook execution.\n *\n * @example\n * ```typescript\n * // Pre-connect for faster emission\n * await TelemetryEmitter.preconnect(sessionId);\n *\n * // Emit hook execution event\n * TelemetryEmitter.emitHookExecution(event, \"my-hook\", {\n *   hookType: \"PreToolUse\",\n *   pluginName: \"workflow\",\n *   pluginVersion: \"1.0.0\",\n *   durationMs: 42,\n *   success: true,\n *   outcome: \"allowed\",\n * });\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Telemetry event emitter.\n *\n * @remarks\n *\n * Provides static methods for emitting telemetry events. All methods are fire-and-forget by default to avoid blocking hook execution.\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter, OtelConfig } from \"claude-binary-plugin\";\n * import type { HookEventBase } from \"claude-binary-plugin\";\n *\n * async function emitTelemetry(event: HookEventBase): Promise<void> {\n *   if (!OtelConfig.isEnabled()) return;\n *\n *   // Pre-connect for faster emission\n *   await TelemetryEmitter.preconnect(event.session_id);\n *\n *   // Emit hook execution event\n *   TelemetryEmitter.emitHookExecution(event, \"my-hook\", {\n *     hookType: \"PreToolUse\",\n *     pluginName: \"workflow\",\n *     pluginVersion: \"1.0.0\",\n *     durationMs: 42,\n *     success: true,\n *     outcome: \"allowed\",\n *   });\n * }\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -56106,7 +56053,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.emitEnvValidationError:member(1)",
-              "docComment": "/**\n * Emit an environment validation error event.\n *\n * @remarks\n *\n * Emitted when hook environment variables don't match the expected schema. Useful for debugging misconfigured environments or missing env vars.\n *\n * @param sessionId - The session ID\n *\n * @param hookName - The custom hook name\n *\n * @param result - The validation error details\n *\n * @example\n * ```typescript\n * TelemetryEmitter.emitEnvValidationError(sessionId, \"pre-bash\", {\n *   hookName: \"pre-bash\",\n *   issueCount: 1,\n *   validationPath: \"API_KEY\",\n *   errorMessage: \"Required environment variable missing\",\n *   envClassName: \"WorkflowEnv\",\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Emit an environment validation error event.\n *\n * @remarks\n *\n * Emitted when hook environment variables don't match the expected schema. Useful for debugging misconfigured environments or missing env vars.\n *\n * @param sessionId - The session ID\n *\n * @param hookName - The custom hook name\n *\n * @param result - The validation error details\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter } from \"claude-binary-plugin\";\n *\n * function emitEnvError(sessionId: string): void {\n *   TelemetryEmitter.emitEnvValidationError(sessionId, \"pre-bash\", {\n *     hookName: \"pre-bash\",\n *     issueCount: 1,\n *     validationPath: \"API_KEY\",\n *     errorMessage: \"Required environment variable missing\",\n *     envClassName: \"WorkflowEnv\",\n *   });\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -56187,7 +56134,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.emitFatalError:member(1)",
-              "docComment": "/**\n * Emit a fatal error event.\n *\n * @remarks\n *\n * Emitted from global error handlers when an uncaught exception or unhandled rejection occurs. Unlike other emit methods, this waits for the message to be flushed before returning.\n *\n * @param sessionId - The session ID (may be \"unknown\" if not yet parsed)\n *\n * @param result - The fatal error details\n *\n * @param flushTimeoutMs - Maximum time to wait for flush (default: 500ms)\n *\n * @returns Promise that resolves when message is sent (or timeout)\n *\n * @example\n * ```typescript\n * process.on(\"uncaughtException\", async (error) => {\n *   await TelemetryEmitter.emitFatalError(sessionId, {\n *     hookName: \"pre-bash\",\n *     errorType: \"uncaughtException\",\n *     errorMessage: error.message,\n *     errorStack: error.stack,\n *   });\n *   process.exit(1);\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Emit a fatal error event.\n *\n * @remarks\n *\n * Emitted from global error handlers when an uncaught exception or unhandled rejection occurs. Unlike other emit methods, this waits for the message to be flushed before returning.\n *\n * @param sessionId - The session ID (may be \"unknown\" if not yet parsed)\n *\n * @param result - The fatal error details\n *\n * @param flushTimeoutMs - Maximum time to wait for flush (default: 500ms)\n *\n * @returns Promise that resolves when message is sent (or timeout)\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter } from \"claude-binary-plugin\";\n *\n * function setupErrorHandler(sessionId: string): void {\n *   process.on(\"uncaughtException\", async (error) => {\n *     await TelemetryEmitter.emitFatalError(sessionId, {\n *       hookName: \"pre-bash\",\n *       errorType: \"uncaughtException\",\n *       errorMessage: error.message,\n *       errorStack: error.stack,\n *     });\n *     process.exit(1);\n *   });\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -56273,7 +56220,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.emitHookExecution:member(1)",
-              "docComment": "/**\n * Emit a hook execution event.\n *\n * @remarks\n *\n * This is the primary event emitter for hook telemetry. It emits a single `claude_code.hook.execution` event containing all hook execution details.\n *\n * @param event - The hook event base containing session info\n *\n * @param hookName - The custom hook name (e.g., \"pre-bash\", \"docs-access\")\n *\n * @param result - The hook execution result data\n *\n * @example\n * ```typescript\n * TelemetryEmitter.emitHookExecution(event, \"pre-bash\", {\n *   hookType: \"PreToolUse\",\n *   pluginName: \"workflow\",\n *   pluginVersion: \"1.0.0\",\n *   durationMs: 42,\n *   success: true,\n *   outcome: \"allowed\",\n *   summary: \"auto-allowed: git status\",\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Emit a hook execution event.\n *\n * @remarks\n *\n * This is the primary event emitter for hook telemetry. It emits a single `claude_code.hook.execution` event containing all hook execution details.\n *\n * @param event - The hook event base containing session info\n *\n * @param hookName - The custom hook name (e.g., \"pre-bash\", \"docs-access\")\n *\n * @param result - The hook execution result data\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter } from \"claude-binary-plugin\";\n * import type { HookEventBase } from \"claude-binary-plugin\";\n *\n * function emitExecution(event: HookEventBase): void {\n *   TelemetryEmitter.emitHookExecution(event, \"pre-bash\", {\n *     hookType: \"PreToolUse\",\n *     pluginName: \"workflow\",\n *     pluginVersion: \"1.0.0\",\n *     durationMs: 42,\n *     success: true,\n *     outcome: \"allowed\",\n *     summary: \"auto-allowed: git status\",\n *   });\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -56355,7 +56302,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.emitHookExecutionDirect:member(1)",
-              "docComment": "/**\n * Emit a hook execution event without requiring an event object.\n *\n * @remarks\n *\n * Used for errors that occur before the event object is created, such as when a plugin receives an unknown hook name.\n *\n * @param result - The hook execution result data including sessionId\n *\n * @example\n * ```typescript\n * TelemetryEmitter.emitHookExecutionDirect({\n *   sessionId: \"abc-123\",\n *   hookName: \"PreToolUse/unknown\",\n *   hookType: \"PreToolUse\",\n *   durationMs: 1,\n *   success: false,\n *   outcome: \"error\",\n *   error: \"Unknown hook: unknown\",\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Emit a hook execution event without requiring an event object.\n *\n * @remarks\n *\n * Used for errors that occur before the event object is created, such as when a plugin receives an unknown hook name.\n *\n * @param result - The hook execution result data including sessionId\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter } from \"claude-binary-plugin\";\n *\n * function emitUnknownHookError(): void {\n *   TelemetryEmitter.emitHookExecutionDirect({\n *     sessionId: \"abc-123\",\n *     hookName: \"PreToolUse/unknown\",\n *     hookType: \"PreToolUse\",\n *     durationMs: 1,\n *     success: false,\n *     outcome: \"error\",\n *     error: \"Unknown hook: unknown\",\n *   });\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -56404,7 +56351,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.emitSchemaValidationError:member(1)",
-              "docComment": "/**\n * Emit a schema validation error event.\n *\n * @remarks\n *\n * Emitted when Claude Code sends malformed event data that doesn't match the expected Zod schema. Useful for debugging protocol issues.\n *\n * @param sessionId - The session ID\n *\n * @param hookName - The custom hook name\n *\n * @param result - The validation error details\n *\n * @example\n * ```typescript\n * TelemetryEmitter.emitSchemaValidationError(sessionId, \"pre-bash\", {\n *   hookName: \"pre-bash\",\n *   issueCount: 2,\n *   validationPath: \"tool_input.command\",\n *   errorMessage: \"Required field missing\",\n * });\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Emit a schema validation error event.\n *\n * @remarks\n *\n * Emitted when Claude Code sends malformed event data that doesn't match the expected Zod schema. Useful for debugging protocol issues.\n *\n * @param sessionId - The session ID\n *\n * @param hookName - The custom hook name\n *\n * @param result - The validation error details\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter } from \"claude-binary-plugin\";\n *\n * function emitValidationError(sessionId: string): void {\n *   TelemetryEmitter.emitSchemaValidationError(sessionId, \"pre-bash\", {\n *     hookName: \"pre-bash\",\n *     issueCount: 2,\n *     validationPath: \"tool_input.command\",\n *     errorMessage: \"Required field missing\",\n *   });\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -56515,7 +56462,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!TelemetryEmitter.preconnect:member(1)",
-              "docComment": "/**\n * Pre-connect to the OTEL sidecar for faster emission.\n *\n * @remarks\n *\n * Should be called during hook initialization to ensure the socket is ready when telemetry is emitted. The sidecar is spawned on-demand if not already running.\n *\n * @param sessionId - The Claude Code session ID\n *\n * @example\n * ```typescript\n * if (OtelConfig.isEnabled()) {\n *   await TelemetryEmitter.preconnect(sessionId);\n * }\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Pre-connect to the OTEL sidecar for faster emission.\n *\n * @remarks\n *\n * Should be called during hook initialization to ensure the socket is ready when telemetry is emitted. The sidecar is spawned on-demand if not already running.\n *\n * @param sessionId - The Claude Code session ID\n *\n * @example\n * ```typescript\n * import { TelemetryEmitter, OtelConfig } from \"claude-binary-plugin\";\n *\n * async function initTelemetry(sessionId: string): Promise<void> {\n *   if (OtelConfig.isEnabled()) {\n *     await TelemetryEmitter.preconnect(sessionId);\n *   }\n * }\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -63243,7 +63190,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!UserPromptSubmitResponse:class",
-          "docComment": "/**\n * Response builder for UserPromptSubmit hooks with context injection.\n *\n * @remarks\n *\n * UserPromptSubmitResponse allows hooks to add context for Claude when a user submits a prompt. This context is shown to Claude before it begins processing the user's request.\n *\n * @example\n * ```typescript\n * // Add project context when user mentions deploy\n * event.end(\n *   event.response()\n *     .additionalContext(\"Current branch: main\\nLast deploy: 2 hours ago\")\n * );\n * ```\n *\n * @see\n *\n * {@link UserPromptSubmitEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link UserPromptSubmitPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
+          "docComment": "/**\n * Response builder for UserPromptSubmit hooks with context injection.\n *\n * @remarks\n *\n * UserPromptSubmitResponse allows hooks to add context for Claude when a user submits a prompt. This context is shown to Claude before it begins processing the user's request.\n *\n * @example\n * ```typescript\n * import type { UserPromptSubmitEvent } from \"claude-binary-plugin\";\n *\n * function handleUserPromptSubmit(event: UserPromptSubmitEvent): void {\n *   // Add project context when user mentions deploy\n *   event.end(\n *     event.response()\n *       .additionalContext(\"Current branch: main\\nLast deploy: 2 hours ago\")\n *   );\n * }\n * ```\n *\n * @see\n *\n * {@link UserPromptSubmitEvent} - The event type this builder is used with\n *\n * @see\n *\n * {@link UserPromptSubmitPipelineOutput} - Pipeline output equivalent\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",

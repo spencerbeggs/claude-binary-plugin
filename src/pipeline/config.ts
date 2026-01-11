@@ -933,15 +933,18 @@ export interface PluginConfig<
  * - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)
  *
  * **Type Inference:**
- * Use the namespace utilities to extract types from plugin instances:
- * - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema
- * - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup()
- * - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks
- * - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands
+ * Use the standalone utility types to extract types from plugin instances:
+ * - `InferPluginOptions<typeof plugin>` - Options type from schema
+ * - `InferPluginState<typeof plugin>` - State type from setup()
+ * - `InferPluginPipeline<typeof plugin>` - Handler types for hooks
+ * - `InferPluginCommands<typeof plugin>` - Handler types for commands
  *
  * @example
  * ```ts
  * // plugin.config.ts
+ * import { ClaudeBinaryPlugin, InferPluginPipeline } from "claude-binary-plugin";
+ * import { z } from "zod";
+ *
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   options: z.object({
@@ -962,7 +965,7 @@ export interface PluginConfig<
  *   }
  * });
  *
- * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
+ * export type Pipeline = InferPluginPipeline<typeof plugin>;
  * export default plugin;
  * ```
  *
@@ -1235,23 +1238,87 @@ export interface PluginBuildOptions {
 }
 
 // =============================================================================
-// TYPE INFERENCE UTILITIES (Zod-like pattern)
+// TYPE INFERENCE UTILITIES
 // =============================================================================
 
 /**
- * Namespace for type inference utilities.
- * Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.
+ * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+
+/**
+ * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, infer TSetup, any> ? TSetup : undefined;
+
+/**
+ * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TCommands> ? TCommands : never;
+
+/**
+ * Extract the inferred Options type from a plugin configuration.
+ *
+ * @remarks
+ * Extracts the TypeScript type from the plugin's Zod options schema.
+ * Use this to get typed access to plugin options in handlers.
  *
  * @example
  * ```ts
- * // In plugin.config.ts
- * const plugin = ClaudeBinaryPlugin.create({
- *   prefix: "MY_PLUGIN",
- *   options: z.object({ DEBUG: z.boolean().default(false) }),
- *   hooks: { ... }
- * });
+ * import { ClaudeBinaryPlugin, InferPluginOptions } from "claude-binary-plugin";
  *
- * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * type Options = InferPluginOptions<typeof plugin>;
+ * ```
+ * @public
+ */
+export type InferPluginOptions<T> = z.infer<ExtractOptionsSchema<T>>;
+
+/**
+ * Extract the inferred State type from a plugin's setup function.
+ *
+ * @remarks
+ * State is merged with BaseState to form the full PluginState passed to handlers.
+ * If no setup function is defined, returns `Record<string, unknown>`.
+ *
+ * @example
+ * ```ts
+ * import { ClaudeBinaryPlugin, InferPluginState } from "claude-binary-plugin";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * type State = InferPluginState<typeof plugin>;
+ * // { packageManager: string; typeChecker: string; ... }
+ * ```
+ * @public
+ */
+export type InferPluginState<T> =
+	ExtractSetup<T> extends undefined ? Record<string, unknown> : ExtractSetupReturn<NonNullable<ExtractSetup<T>>>;
+
+/**
+ * Infer all pipeline and handler types from a plugin configuration.
+ *
+ * @remarks
+ * Returns an interface with typed handlers for each hook event.
+ * This is the primary type for defining hook handlers in plugin projects.
+ *
+ * The interface includes both pipeline handlers (pure transformation functions)
+ * and raw handlers (full event access):
+ *
+ * - `Pipeline["PreToolUse"]` - Pipeline handler receiving `{ input, options, state }`
+ * - `Pipeline["PreToolUseRaw"]` - Raw handler receiving `{ event, options, state }`
+ *
+ * @example
+ * ```ts
+ * import { ClaudeBinaryPlugin, InferPluginPipeline } from "claude-binary-plugin";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * export type Pipeline = InferPluginPipeline<typeof plugin>;
  * export default plugin;
  *
  * // In hooks/my-hook.hook.ts
@@ -1259,124 +1326,65 @@ export interface PluginBuildOptions {
  *
  * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
  *   // input, options, and state are fully typed!
- *   return { permissionDecision: "allow" };
+ *   return { status: "executed", action: "allow", summary: "allowed" };
  * };
  * export default handler;
  * ```
  * @public
  */
-export namespace ClaudeBinaryPlugin {
-	/**
-	 * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.
-	 * @public
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+export interface InferPluginPipeline<T> {
+	// Pipeline handlers (pure transformation functions)
+	SessionStart: SessionStartPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	SessionEnd: SessionEndPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PreToolUse: PreToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PostToolUse: PostToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	Stop: StopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	SubagentStop: SubagentStopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	UserPromptSubmit: UserPromptSubmitPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PreCompact: PreCompactPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	Notification: NotificationPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PermissionRequest: PermissionRequestPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
-	/**
-	 * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
-	 * @public
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, infer TSetup, any> ? TSetup : undefined;
-
-	/**
-	 * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
-	 * @public
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TCommands> ? TCommands : never;
-
-	/**
-	 * Extract the inferred Options type from a plugin.
-	 *
-	 * @example
-	 * ```ts
-	 * type Options = ClaudeBinaryPlugin.InferOptions<typeof plugin>;
-	 * ```
-	 * @public
-	 */
-	export type InferOptions<T> = z.infer<ExtractOptionsSchema<T>>;
-
-	/**
-	 * Extract the inferred State type from a plugin's setup function.
-	 * State is merged with BaseState to form the full PluginState passed to handlers.
-	 *
-	 * @example
-	 * ```ts
-	 * type State = ClaudeBinaryPlugin.InferState<typeof plugin>;
-	 * // { packageManager: string; typeChecker: string; ... }
-	 * ```
-	 * @public
-	 */
-	export type InferState<T> =
-		ExtractSetup<T> extends undefined ? Record<string, unknown> : ExtractSetupReturn<NonNullable<ExtractSetup<T>>>;
-
-	/**
-	 * Infer all pipeline and handler types from a plugin.
-	 * Returns an interface with typed handlers for each hook event.
-	 *
-	 * @example
-	 * ```ts
-	 * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
-	 *
-	 * // Pipeline handlers (pure transformation)
-	 * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => { ... };
-	 *
-	 * // Raw handlers (full event access)
-	 * const handler: Pipeline["PreToolUseRaw"] = ({ event, options, state }) => { ... };
-	 * ```
-	 */
-	export interface InferPipeline<T> {
-		// Pipeline handlers (pure transformation functions)
-		SessionStart: SessionStartPipeline<InferOptions<T>, InferState<T>>;
-		SessionEnd: SessionEndPipeline<InferOptions<T>, InferState<T>>;
-		PreToolUse: PreToolUsePipeline<InferOptions<T>, InferState<T>>;
-		PostToolUse: PostToolUsePipeline<InferOptions<T>, InferState<T>>;
-		Stop: StopPipeline<InferOptions<T>, InferState<T>>;
-		SubagentStop: SubagentStopPipeline<InferOptions<T>, InferState<T>>;
-		UserPromptSubmit: UserPromptSubmitPipeline<InferOptions<T>, InferState<T>>;
-		PreCompact: PreCompactPipeline<InferOptions<T>, InferState<T>>;
-		Notification: NotificationPipeline<InferOptions<T>, InferState<T>>;
-		PermissionRequest: PermissionRequestPipeline<InferOptions<T>, InferState<T>>;
-
-		// Raw handlers (full event access)
-		SessionStartRaw: SessionStartRawHandler<InferOptions<T>, InferState<T>>;
-		SessionEndRaw: SessionEndRawHandler<InferOptions<T>, InferState<T>>;
-		PreToolUseRaw: PreToolUseRawHandler<InferOptions<T>, InferState<T>>;
-		PostToolUseRaw: PostToolUseRawHandler<InferOptions<T>, InferState<T>>;
-		StopRaw: StopRawHandler<InferOptions<T>, InferState<T>>;
-		SubagentStopRaw: SubagentStopRawHandler<InferOptions<T>, InferState<T>>;
-		UserPromptSubmitRaw: UserPromptSubmitRawHandler<InferOptions<T>, InferState<T>>;
-		PreCompactRaw: PreCompactRawHandler<InferOptions<T>, InferState<T>>;
-		NotificationRaw: NotificationRawHandler<InferOptions<T>, InferState<T>>;
-		PermissionRequestRaw: PermissionRequestRawHandler<InferOptions<T>, InferState<T>>;
-	}
-
-	/**
-	 * Extract the commands map from a plugin.
-	 * @public
-	 */
-	export type InferCommandsMap<T> = ExtractCommands<T>;
-
-	/**
-	 * Infer command handler types from a plugin.
-	 * Returns an interface with typed handlers for each command.
-	 *
-	 * @example
-	 * ```ts
-	 * export type Commands = ClaudeBinaryPlugin.InferCommands<typeof plugin>;
-	 *
-	 * // In commands/lint.cmd.ts
-	 * const handler: Commands["lint"] = async ({ args, options, state }) => {
-	 *   // args, options, and state are fully typed!
-	 *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
-	 * };
-	 * ```
-	 */
-	export type InferCommands<T> = {
-		[K in keyof InferCommandsMap<T>]: InferCommandsMap<T>[K] extends CommandDefinition<infer TArgs>
-			? CommandHandler<z.infer<TArgs>, InferOptions<T>, InferState<T>>
-			: never;
-	};
+	// Raw handlers (full event access)
+	SessionStartRaw: SessionStartRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	SessionEndRaw: SessionEndRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	PreToolUseRaw: PreToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	PostToolUseRaw: PostToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	StopRaw: StopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	SubagentStopRaw: SubagentStopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	UserPromptSubmitRaw: UserPromptSubmitRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	PreCompactRaw: PreCompactRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	NotificationRaw: NotificationRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+	PermissionRequestRaw: PermissionRequestRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
 }
+
+/**
+ * Infer command handler types from a plugin configuration.
+ *
+ * @remarks
+ * Returns an interface with typed handlers for each command defined in the plugin.
+ * Use this to define command handlers with full type safety for args, options, and state.
+ *
+ * @example
+ * ```ts
+ * import { ClaudeBinaryPlugin, InferPluginCommands } from "claude-binary-plugin";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * export type Commands = InferPluginCommands<typeof plugin>;
+ *
+ * // In commands/lint.cmd.ts
+ * import type { Commands } from "../plugin.config.js";
+ *
+ * const handler: Commands["lint"] = async ({ args, options, state }) => {
+ *   // args, options, and state are fully typed!
+ *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
+ * };
+ * export default handler;
+ * ```
+ * @public
+ */
+export type InferPluginCommands<T> = {
+	[K in keyof ExtractCommands<T>]: ExtractCommands<T>[K] extends CommandDefinition<infer TArgs>
+		? CommandHandler<z.infer<TArgs>, InferPluginOptions<T>, InferPluginState<T>>
+		: never;
+};
