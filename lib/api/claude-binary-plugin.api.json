@@ -8350,7 +8350,7 @@
         {
           "kind": "Class",
           "canonicalReference": "claude-binary-plugin!GitInfo:class",
-          "docComment": "/**\n * Git repository information.\n *\n * @remarks\n *\n * Represents git metadata for a repository. Use the static `detect()` method to automatically discover repository information from a directory.\n *\n * @example\n * ```typescript\n * // Detect from current directory\n * const info = await GitInfo.detect();\n *\n * // Detect from specific directory\n * const info = await GitInfo.detect(\"/path/to/repo\");\n *\n * // Parse a remote URL\n * const parsed = GitInfo.parseRemoteUrl(\"git@github.com:owner/repo.git\");\n * // { provider: \"github\", owner: \"owner\", repo: \"repo\" }\n *\n * // Convert to OTEL attributes\n * const attrs = info.toAttributes();\n * ```\n *\n * @public\n */\n",
+          "docComment": "/**\n * Git repository information.\n *\n * @remarks\n *\n * Represents git metadata for a repository. Use the static `detect()` method to automatically discover repository information from a directory.\n *\n * @example\n * ```typescript\n * import { GitInfo } from \"claude-binary-plugin\";\n *\n * // Detect from specific directory\n * const info = await GitInfo.detect(\"/path/to/repo\");\n *\n * // Parse a remote URL\n * const parsed = GitInfo.parseRemoteUrl(\"git@github.com:owner/repo.git\");\n * // { provider: \"github\", owner: \"owner\", repo: \"repo\" }\n *\n * // Convert to OTEL attributes\n * const attrs = info.toAttributes();\n * ```\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -8429,7 +8429,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!GitInfo.detect:member(1)",
-              "docComment": "/**\n * Detect git information for a directory.\n *\n * @remarks\n *\n * Runs git commands to detect the current branch and parses the remote URL to extract provider, owner, and repo information.\n *\n * @param cwd - Working directory (defaults to CLAUDE_PROJECT_DIR or process.cwd())\n *\n * @returns GitInfo instance\n *\n * @example\n * ```typescript\n * // Detect from current directory\n * const info = await GitInfo.detect();\n *\n * // Detect from specific path\n * const info = await GitInfo.detect(\"/path/to/repo\");\n * ```\n *\n * @public\n */\n",
+              "docComment": "/**\n * Detect git information for a directory.\n *\n * @remarks\n *\n * Runs git commands to detect the current branch and parses the remote URL to extract provider, owner, and repo information.\n *\n * @param cwd - Working directory (defaults to CLAUDE_PROJECT_DIR or process.cwd())\n *\n * @returns GitInfo instance\n *\n * @example\n * ```typescript\n * import { GitInfo } from \"claude-binary-plugin\";\n * // Detect from current directory\n * const info = await GitInfo.detect();\n *\n * // Detect from specific path\n * const info = await GitInfo.detect(\"/path/to/repo\");\n * ```\n *\n * @public\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",

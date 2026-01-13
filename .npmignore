@@ -13,6 +13,7 @@
 .turbo
 .vscode
 CLAUDE.md
+CLAUDE.local.md
 biome.json*
 biome.jsonc
 bun.lock
@@ -26,4 +27,5 @@ src/**/*.test.ts
 src/cli
 tsconfig.json
 turbo.json
+tsdoc.json
 types
