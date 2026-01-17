@@ -1337,28 +1337,148 @@ export type InferPluginState<T> =
  * @public
  */
 export interface InferPluginPipeline<T> {
-	// Pipeline handlers (pure transformation functions)
+	/**
+	 * Handler for session initialization. Runs when Claude Code starts a new session.
+	 * Use to add system context, run detection logic, or initialize state.
+	 * @see {@link SessionStartPipeline}
+	 */
 	SessionStart: SessionStartPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for session cleanup. Runs when a Claude Code session ends.
+	 * Use for cleanup tasks or final logging.
+	 * @see {@link SessionEndPipeline}
+	 */
 	SessionEnd: SessionEndPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for tool pre-execution. Runs before Claude executes a tool.
+	 * Can allow, deny, or modify the tool input before execution.
+	 * @see {@link PreToolUsePipeline}
+	 */
 	PreToolUse: PreToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for tool post-execution. Runs after Claude executes a tool.
+	 * Can add context based on tool results or block continuation.
+	 * @see {@link PostToolUsePipeline}
+	 */
 	PostToolUse: PostToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for agent stop events. Runs when Claude is about to stop.
+	 * Can block the stop with a reason to continue the conversation.
+	 * @see {@link StopPipeline}
+	 */
 	Stop: StopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for subagent stop events. Runs when a subagent is about to stop.
+	 * Can block the subagent stop with a reason.
+	 * @see {@link SubagentStopPipeline}
+	 */
 	SubagentStop: SubagentStopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for user prompt submission. Runs when the user submits a prompt.
+	 * Can add context or block the submission.
+	 * @see {@link UserPromptSubmitPipeline}
+	 */
 	UserPromptSubmit: UserPromptSubmitPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for context compaction. Runs before Claude compacts conversation history.
+	 * Passthrough-only hook for observability.
+	 * @see {@link PreCompactPipeline}
+	 */
 	PreCompact: PreCompactPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for notification events. Runs when Claude sends a notification.
+	 * Passthrough-only hook for observability.
+	 * @see {@link NotificationPipeline}
+	 */
 	Notification: NotificationPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for permission requests. Runs when Claude requests user permission.
+	 * Can auto-allow or auto-deny permission requests.
+	 * @see {@link PermissionRequestPipeline}
+	 */
 	PermissionRequest: PermissionRequestPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
+	// =========================================================================
 	// Raw handlers (full event access)
+	// =========================================================================
+
+	/**
+	 * Raw handler for session initialization with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link SessionStartRawHandler}
+	 */
 	SessionStartRaw: SessionStartRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for session cleanup with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link SessionEndRawHandler}
+	 */
 	SessionEndRaw: SessionEndRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for tool pre-execution with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PreToolUseRawHandler}
+	 */
 	PreToolUseRaw: PreToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for tool post-execution with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PostToolUseRawHandler}
+	 */
 	PostToolUseRaw: PostToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for agent stop events with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link StopRawHandler}
+	 */
 	StopRaw: StopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for subagent stop events with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link SubagentStopRawHandler}
+	 */
 	SubagentStopRaw: SubagentStopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for user prompt submission with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link UserPromptSubmitRawHandler}
+	 */
 	UserPromptSubmitRaw: UserPromptSubmitRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for context compaction with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PreCompactRawHandler}
+	 */
 	PreCompactRaw: PreCompactRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for notification events with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link NotificationRawHandler}
+	 */
 	NotificationRaw: NotificationRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for permission requests with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PermissionRequestRawHandler}
+	 */
 	PermissionRequestRaw: PermissionRequestRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
 }
 

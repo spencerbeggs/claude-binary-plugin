@@ -66,25 +66,25 @@ export interface IODependencies {
  * @public
  */
 export interface PipelineConfig<TOptions = unknown, TState = Record<string, string>> {
-	/** Hook event type */
+	/** Hook event type (e.g., "PreToolUse", "SessionStart") */
 	hookType: HookEventType;
-	/** Hook name for logging/telemetry */
+	/** Custom hook name for logging and telemetry identification */
 	hookName: string;
-	/** Plugin name for telemetry (passed explicitly to avoid env var cross-contamination) */
+	/** Plugin name for telemetry attribution (passed explicitly to avoid env var cross-contamination) */
 	pluginName: string;
-	/** Plugin version for telemetry */
+	/** Plugin version for telemetry attribution (from package.json) */
 	pluginVersion: string;
-	/** The pipeline handler function */
+	/** Pipeline handler function that processes the hook event and returns a pipeline output */
 	pipeline: PipelineHandler<unknown, unknown, TOptions, TState>;
-	/** State class for loading env vars */
+	/** State class constructor for loading and validating environment variables */
 	stateClass: new () => PluginEnv<TOptions>;
-	/** Tool filter (for PreToolUse/PostToolUse) */
+	/** Tool name filter for PreToolUse/PostToolUse hooks (hook skips if tool not in list) */
 	tools?: string[];
-	/** Zod schema for validating plugin options (used for SessionStart persistence) */
+	/** Zod schema for validating and persisting plugin options at SessionStart */
 	optionsSchema?: z.ZodType<TOptions>;
-	/** Setup function for computing derived variables (used for SessionStart persistence) */
+	/** Setup function for computing derived state at SessionStart */
 	setup?: SetupFunction<TOptions>;
-	/** I/O dependencies (defaults to process.*) - for testing */
+	/** I/O dependencies for testing (defaults to process.stdin/stdout/stderr) */
 	io?: IODependencies;
 }
 
@@ -93,17 +93,17 @@ export interface PipelineConfig<TOptions = unknown, TState = Record<string, stri
  * @public
  */
 export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>> {
-	/** Hook event type */
+	/** Hook event type (e.g., "PreToolUse", "SessionStart") */
 	hookType: HookEventType;
-	/** Hook name for logging */
+	/** Custom hook name for logging and telemetry identification */
 	hookName: string;
-	/** Plugin name for telemetry (passed explicitly to avoid env var cross-contamination) */
+	/** Plugin name for telemetry attribution (passed explicitly to avoid env var cross-contamination) */
 	pluginName: string;
-	/** Plugin version for telemetry */
+	/** Plugin version for telemetry attribution (from package.json) */
 	pluginVersion: string;
-	/** The raw handler function */
+	/** Raw handler function with direct access to the HookEvent object */
 	handler: (ctx: { event: unknown; options: TOptions; state: TState }) => void | Promise<void>;
-	/** State class */
+	/** State class constructor for loading and validating environment variables */
 	stateClass: new () => PluginEnv<TOptions>;
 }
 
@@ -116,8 +116,11 @@ export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>>
  * @public
  */
 export interface PreToolUseResponseData {
+	/** Permission decision: allow tool execution, deny with reason, or defer to user */
 	permissionDecision: "allow" | "deny" | "ask";
+	/** Reason for denial (shown to Claude when decision is "deny") */
 	reason?: string;
+	/** Modified tool input to use instead of original (allows input transformation) */
 	updatedInput?: Record<string, unknown>;
 }
 
@@ -126,8 +129,11 @@ export interface PreToolUseResponseData {
  * @public
  */
 export interface PostToolUseResponseData {
+	/** Context to add for Claude based on tool execution results */
 	additionalContext?: string;
+	/** Block continuation of the conversation after tool execution */
 	decision?: "block";
+	/** Reason for blocking (shown to Claude when decision is "block") */
 	reason?: string;
 }
 
@@ -136,6 +142,7 @@ export interface PostToolUseResponseData {
  * @public
  */
 export interface SessionStartResponseData {
+	/** System context to add for Claude at session initialization */
 	additionalContext?: string;
 }
 
@@ -144,7 +151,9 @@ export interface SessionStartResponseData {
  * @public
  */
 export interface StopResponseData {
+	/** Block the agent from stopping to continue the conversation */
 	decision?: "block";
+	/** Reason for blocking the stop (shown to Claude) */
 	reason?: string;
 }
 
@@ -153,8 +162,11 @@ export interface StopResponseData {
  * @public
  */
 export interface UserPromptSubmitResponseData {
+	/** Context to add for Claude based on the user's prompt */
 	additionalContext?: string;
+	/** Block the prompt submission from being processed */
 	decision?: "block";
+	/** Reason for blocking the prompt (shown to user) */
 	reason?: string;
 }
 
@@ -163,9 +175,13 @@ export interface UserPromptSubmitResponseData {
  * @public
  */
 export interface PermissionRequestResponseData {
+	/** Auto-allow or auto-deny the permission request */
 	behavior: "allow" | "deny";
+	/** Message to display explaining the permission decision */
 	message?: string;
+	/** Whether to interrupt the current operation when denying */
 	interrupt?: boolean;
+	/** Modified input to use if allowing with changes */
 	updatedInput?: Record<string, unknown>;
 }
 
@@ -182,12 +198,15 @@ type ResolvedIODependencies = Required<Omit<IODependencies, "inputText">> & Pick
  * Options for persisting session environment variables.
  */
 interface PersistSessionEnvOptions {
+	/** The SessionStart event containing session_id and other metadata */
 	event: SessionStartEvent;
+	/** Plugin environment instance for accessing prefix and persisting variables */
 	stateInstance: PluginEnv<unknown>;
+	/** Zod schema for validating and transforming options before persistence */
 	schema?: z.ZodType<unknown>;
-	/** State from setup() - will be JSON-stringified */
+	/** Computed state from setup() function (will be JSON-stringified and base64-encoded) */
 	state?: Record<string, unknown>;
-	/** Base state (projectDir, pluginDir, pluginEnvFile) */
+	/** Base state containing projectDir, pluginDir, and pluginEnvFile paths */
 	baseState: BaseState;
 }
 

@@ -147,7 +147,7 @@ export type OtelAttributes = Record<string, OtelAttributeValue>;
 export type OtelHeaders = Record<string, string>;
 
 // =============================================================================
-// ZOD SCHEMAS FOR JSON TYPES
+// ZOD SCHEMAS FOR JSON TYPES (INTERNAL)
 // =============================================================================
 
 import { z } from "zod";
@@ -159,8 +159,7 @@ import { z } from "zod";
  * Matches: `string`, `number`, `boolean`, `null`.
  * Does not match: `undefined`, `bigint`, `symbol`, `function`.
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
@@ -172,8 +171,7 @@ export const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(),
  * lazy evaluation to handle recursive structures (arrays and objects
  * containing other JSON values).
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonValueSchema: z.ZodType<import("type-fest").JsonValue> = z.lazy(() =>
 	z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), z.record(z.string(), JsonValueSchema)]),
@@ -183,11 +181,10 @@ export const JsonValueSchema: z.ZodType<import("type-fest").JsonValue> = z.lazy(
  * Zod schema for JSON objects.
  *
  * @remarks
- * A JSON object has string keys and JsonValue values. Use this for
+ * A JSON object has string keys and JsonValue values. Used internally for
  * `tool_input` and `tool_response` fields which are always JSON objects.
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonObjectSchema: z.ZodType<import("type-fest").JsonObject> = z.record(z.string(), JsonValueSchema);
 
@@ -197,7 +194,6 @@ export const JsonObjectSchema: z.ZodType<import("type-fest").JsonObject> = z.rec
  * @remarks
  * A JSON array contains only JsonValue elements.
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonArraySchema: z.ZodType<import("type-fest").JsonArray> = z.array(JsonValueSchema);

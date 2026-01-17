@@ -55,9 +55,6 @@ export type {
 	PluginEnvFileSystem,
 	SessionStartContextParams,
 	ValidationResult,
-	ZodErrorMinimal,
-	ZodIssueMinimal,
-	ZodSchema,
 } from "./state/classes/PluginEnv.js";
 export { EnvFileLoadError, PluginEnv } from "./state/classes/PluginEnv.js";
 export type { SessionRecord, SessionRegistration } from "./state/classes/SessionRegistry.js";
@@ -65,7 +62,7 @@ export type { SessionRecord, SessionRegistration } from "./state/classes/Session
 export { SessionRegistry } from "./state/classes/SessionRegistry.js";
 // Branded types for type-safe identifiers
 export type { HookName, SessionId, ToolUseId, TranscriptPath } from "./types/branded.js";
-// JSON type utilities (re-exported from type-fest with Zod schemas)
+// JSON type utilities (re-exported from type-fest)
 export type {
 	JsonArray,
 	JsonObject,
@@ -79,7 +76,6 @@ export type {
 	OtelHeaders,
 	ParsedJson,
 } from "./types/json.js";
-export { JsonArraySchema, JsonObjectSchema, JsonPrimitiveSchema, JsonValueSchema } from "./types/json.js";
 // Type utilities re-exported from type-fest for user convenience
 export type { PartialDeep, ReadonlyDeep, RequiredDeep, Tagged, WritableDeep } from "./types/utility.js";
 export type {

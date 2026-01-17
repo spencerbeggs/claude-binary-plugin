@@ -778,43 +778,6 @@ export const NotificationOutputSchema = PassthroughOutputSchema;
 export type NotificationPipelineOutput = PassthroughPipelineOutput;
 
 // =============================================================================
-// OUTPUT SCHEMA MAP
-// =============================================================================
-
-/**
- * Map of hook event names to their Zod output schemas.
- *
- * @remarks
- * This map enables runtime validation of pipeline outputs based on hook type.
- * Use with `OutputSchemas[hookType].parse(output)` to validate outputs.
- *
- * @example
- * ```typescript
- * import { OutputSchemas } from "claude-binary-plugin";
- *
- * function validateOutput(hookType: "PreToolUse", output: unknown): void {
- *   const schema = OutputSchemas[hookType];
- *   const validatedOutput = schema.parse(output);
- *   console.log(validatedOutput.action);
- * }
- * ```
- *
- * @public
- */
-export const OutputSchemas = {
-	SessionStart: SessionStartOutputSchema,
-	SessionEnd: SessionEndOutputSchema,
-	PreToolUse: PreToolUseOutputSchema,
-	PostToolUse: PostToolUseOutputSchema,
-	Stop: StopOutputSchema,
-	SubagentStop: SubagentStopOutputSchema,
-	UserPromptSubmit: UserPromptSubmitOutputSchema,
-	PreCompact: PreCompactOutputSchema,
-	Notification: NotificationOutputSchema,
-	PermissionRequest: PermissionRequestOutputSchema,
-} as const;
-
-// =============================================================================
 // HELPER TYPES
 // =============================================================================
 

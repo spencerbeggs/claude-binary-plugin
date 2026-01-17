@@ -7,7 +7,7 @@ import { DebugLogger } from "../../utils/debug-logger.js";
  * Zod issue type for error formatting.
  * Minimal interface matching what we need from ZodError.issues.
  * Uses PropertyKey[] for path to be compatible with Zod v4.
- * @public
+ * @internal
  */
 export interface ZodIssueMinimal {
 	path: PropertyKey[];
@@ -24,7 +24,7 @@ export interface ZodIssueMinimal {
 /**
  * Zod error type for validation results.
  * Minimal interface matching what we need from ZodError.
- * @public
+ * @internal
  */
 export interface ZodErrorMinimal {
 	issues: ZodIssueMinimal[];
@@ -255,7 +255,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  * Plugins that want validation should install zod as a peer dependency.
  *
  * Supports both Zod v3 (shape as function) and Zod v4 (shape as object).
- * @public
+ * @internal
  */
 export interface ZodSchema<T = unknown> {
 	parse(data: unknown): T;

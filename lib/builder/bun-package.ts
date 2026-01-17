@@ -196,6 +196,12 @@ interface ApiModelOptions {
 	 * Defaults to checking process.env.CI
 	 */
 	ci?: boolean;
+	/**
+	 * Whether to copy package.json to the same directory as the API model.
+	 * Useful for documentation generators that need package metadata.
+	 * Defaults to true.
+	 */
+	packageJson?: boolean;
 }
 
 /**
@@ -669,12 +675,21 @@ export class BunPackage {
 		if (options.path) {
 			const sourcePath = join(this.root, "lib/api/claude-binary-plugin.api.json");
 			const destPath = resolve(this.root, options.path);
+			const destDir = dirname(destPath);
 
 			// Ensure destination directory exists
-			await mkdir(dirname(destPath), { recursive: true });
+			await mkdir(destDir, { recursive: true });
 
 			await copyFile(sourcePath, destPath);
 			console.log(`   ✓ Copied API model to ${options.path}`);
+
+			// Copy package.json to the same directory if enabled (default: true)
+			if (options.packageJson !== false) {
+				const pkgSourcePath = join(this.root, "package.json");
+				const pkgDestPath = join(destDir, "package.json");
+				await copyFile(pkgSourcePath, pkgDestPath);
+				console.log(`   ✓ Copied package.json to ${destDir}`);
+			}
 		}
 	}
 
