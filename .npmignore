@@ -28,4 +28,4 @@ src/cli
 tsconfig.json
 turbo.json
 tsdoc.json
-types
+/types
