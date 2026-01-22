@@ -1,9 +1,18 @@
 import { mock, spyOn } from "bun:test";
 import type { PartialDeep } from "type-fest";
-import type { z } from "zod";
+import { z } from "zod";
 import type { ShellResult } from "../build/builder.js";
-import type { CommandDefinition, PluginConfig } from "../pipeline/config.js";
-import type { HookAction } from "../pipeline/types.js";
+import type {
+	BaseState,
+	CommandDefinition,
+	CommandHandler,
+	CommandOutput,
+	PipelineHandler,
+	PluginConfig,
+	PluginState,
+} from "../pipeline/config.js";
+import type { AnyPipelineOutput, HookAction } from "../pipeline/types.js";
+import { isPipelineOutput } from "../pipeline/types.js";
 import { MockExitError } from "./mocks.js";
 
 // =============================================================================
@@ -150,16 +159,18 @@ export interface HookTestResult {
  * @public
  */
 export interface CommandTestResult {
-	/** Exit code from the command */
+	/** Exit code from the command (0 = success, 1 = issues found, 2 = fatal error) */
 	exitCode: number;
-	/** Raw stdout output */
+	/** Command output (markdown content) */
 	stdout: string;
-	/** Raw stderr output */
+	/** Error output */
 	stderr: string;
 	/** Captured console.log calls */
 	logs: string[];
 	/** Captured console.error calls */
 	errors: string[];
+	/** Optional structured data returned by the command */
+	data?: Record<string, unknown>;
 }
 
 // =============================================================================
@@ -473,110 +484,161 @@ export class PluginTester<
 	 * expect(result.action).toBe("allow");
 	 * ```
 	 */
-	async runHook<K extends keyof THooks>(hookType: K, _hookName: string): Promise<HookTestResult> {
+	async runHook<K extends keyof THooks>(hookType: K, hookName: string): Promise<HookTestResult> {
 		this.validateState();
 		this.setupMocks();
 
-		let exitCode = 0;
-
 		try {
-			// Import and run the hook dynamically
-			// For now, we'll create a mock handler context
-			// The actual implementation will integrate with the pipeline runtime
-			const hookInput = this.buildHookInput(hookType as string);
-
-			// Mock stdin with the hook input
-			spyOn(Bun.stdin, "text").mockResolvedValue(JSON.stringify(hookInput));
-
-			// Mock process.exit
-			const originalExit = process.exit;
-			process.exit = mock((code?: number) => {
-				exitCode = code ?? 0;
-				throw new MockExitError(code ?? 0);
-			}) as typeof process.exit;
-
-			try {
-				// The hook would be run here - for now we simulate
-				// In the full implementation, this would call the actual hook handler
-				// through the pipeline runtime
-				throw new MockExitError(0); // Simulate successful exit
-			} catch (error) {
-				if (!(error instanceof MockExitError)) {
-					process.exit = originalExit;
-					throw error;
-				}
-			} finally {
-				process.exit = originalExit;
+			// Find the hook definition
+			// biome-ignore lint/suspicious/noExplicitAny: Dynamic hook type access requires runtime type checking
+			const hookDefinitions = (this.pluginConfig.hooks as any)[hookType as string];
+			if (!hookDefinitions || !Array.isArray(hookDefinitions)) {
+				throw new Error(`No hooks defined for type "${String(hookType)}"`);
 			}
-		} finally {
-			// Don't restore mocks here - dispose() handles that
-		}
 
-		return this.buildHookResult(exitCode);
+			// Find the specific hook by name
+			const hookDef = hookDefinitions.find(
+				(h: { name?: string }) => h.name === hookName,
+			);
+			if (!hookDef) {
+				const availableHooks = hookDefinitions
+					.filter((h: { name?: string }) => h.name)
+					.map((h: { name?: string }) => h.name)
+					.join(", ");
+				throw new Error(
+					`Hook "${hookName}" not found in "${String(hookType)}". Available: ${availableHooks || "none"}`,
+				);
+			}
+
+			// Check for passthrough hooks (no pipeline or handler)
+			if (!hookDef.pipeline && !hookDef.handler) {
+				throw new Error(
+					`Hook "${hookName}" is a passthrough hook and cannot be tested with runHook()`,
+				);
+			}
+
+			// Resolve the handler
+			const handler = await this.resolveHandler(hookDef);
+			if (!handler) {
+				throw new Error(`Could not resolve handler for hook "${hookName}"`);
+			}
+
+			// Build the handler context
+			const hookInput = this.buildHookInput(hookType as string);
+			const context = this.buildHandlerContext(hookInput);
+
+			// Call the handler - cast context to match handler signature
+			// biome-ignore lint/suspicious/noExplicitAny: Handler context types are verified at runtime
+			const output = await handler(context as any);
+
+			// Build and return the result
+			return this.buildHookResultFromOutput(output);
+		} catch (error) {
+			// Return error result
+			return {
+				exitCode: 1,
+				stdout: this.stdoutBuffer,
+				stderr: error instanceof Error ? error.message : String(error),
+				output: {},
+				action: undefined,
+				context: undefined,
+				reason: error instanceof Error ? error.message : String(error),
+			};
+		}
 	}
 
 	/**
 	 * Run a command handler with the configured test context.
 	 *
 	 * @param command - The command name to run
-	 * @param args - Optional command arguments
+	 * @param args - Optional command arguments (raw values, will be validated against schema)
 	 * @returns Promise resolving to the command test result
 	 *
 	 * @example
 	 * ```typescript
-	 * const result = await ctx.runCommand("lint", { fix: true });
+	 * const result = await ctx.runCommand("lint", { fix: true, path: "src/" });
 	 * expect(result.exitCode).toBe(0);
+	 * expect(result.stdout).toContain("All checks passed");
 	 * ```
 	 */
 	async runCommand<K extends keyof TCommands>(
-		_command: K,
-		_args?: TCommands[K] extends CommandDefinition ? z.infer<TCommands[K]["args"]> : never,
+		command: K,
+		args?: TCommands[K] extends CommandDefinition ? Partial<z.infer<TCommands[K]["args"]>> : never,
 	): Promise<CommandTestResult> {
 		this.validateState();
 		this.setupMocks();
 
 		const logs: string[] = [];
 		const errors: string[] = [];
-		let exitCode = 0;
 
 		const originalLog = console.log;
 		const originalError = console.error;
-		const originalExit = process.exit;
 
-		console.log = mock((...args: unknown[]) => {
-			logs.push(args.map(String).join(" "));
+		console.log = mock((...logArgs: unknown[]) => {
+			logs.push(logArgs.map(String).join(" "));
 		}) as typeof console.log;
 
-		console.error = mock((...args: unknown[]) => {
-			errors.push(args.map(String).join(" "));
+		console.error = mock((...logArgs: unknown[]) => {
+			errors.push(logArgs.map(String).join(" "));
 		}) as typeof console.error;
 
-		process.exit = mock((code?: number) => {
-			exitCode = code ?? 0;
-			throw new MockExitError(code ?? 0);
-		}) as typeof process.exit;
-
 		try {
-			// The command would be run here
-			// In the full implementation, this would call the actual command handler
-			throw new MockExitError(0); // Simulate successful exit
-		} catch (error) {
-			if (!(error instanceof MockExitError)) {
-				throw error;
+			// Find the command definition
+			// biome-ignore lint/suspicious/noExplicitAny: Dynamic command access requires runtime type checking
+			const commands = this.pluginConfig.commands as Record<string, CommandDefinition> | undefined;
+			if (!commands) {
+				throw new Error("No commands defined in plugin configuration");
 			}
+
+			const commandDef = commands[command as string];
+			if (!commandDef) {
+				const availableCommands = Object.keys(commands).join(", ");
+				throw new Error(
+					`Command "${String(command)}" not found. Available: ${availableCommands || "none"}`,
+				);
+			}
+
+			// Resolve the handler
+			const handler = await this.resolveCommandHandler(commandDef);
+			if (!handler) {
+				throw new Error(`Could not resolve handler for command "${String(command)}"`);
+			}
+
+			// Validate args against the command's schema
+			const validatedArgs = await this.validateCommandArgs(commandDef, args ?? {});
+
+			// Build the command context
+			const context = this.buildCommandContext(validatedArgs);
+
+			// Call the handler
+			// biome-ignore lint/suspicious/noExplicitAny: Command context types are verified at runtime
+			const output = await handler(context as any);
+
+			// Validate output structure
+			this.validateCommandOutput(output, command as string);
+
+			// Return success result
+			return {
+				exitCode: output.exitCode,
+				stdout: output.output,
+				stderr: this.stderrBuffer,
+				logs,
+				errors,
+				data: output.data,
+			};
+		} catch (error) {
+			// Return error result
+			return {
+				exitCode: 2,
+				stdout: "",
+				stderr: error instanceof Error ? error.message : String(error),
+				logs,
+				errors,
+			};
 		} finally {
 			console.log = originalLog;
 			console.error = originalError;
-			process.exit = originalExit;
 		}
-
-		return {
-			exitCode,
-			stdout: this.stdoutBuffer,
-			stderr: this.stderrBuffer,
-			logs,
-			errors,
-		};
 	}
 
 	// =========================================================================
@@ -767,6 +829,302 @@ export class PluginTester<
 			context,
 			reason,
 		};
+	}
+
+	/**
+	 * Resolve a handler from a hook definition.
+	 * Supports inline functions and file paths.
+	 * @internal
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Hook definitions have varied shapes
+	private async resolveHandler(hookDef: any): Promise<PipelineHandler<unknown, unknown, TOptions, TState> | null> {
+		// Check for inline pipeline function
+		if (typeof hookDef.pipeline === "function") {
+			return hookDef.pipeline;
+		}
+
+		// Check for inline handler function (raw handler)
+		if (typeof hookDef.handler === "function") {
+			// Wrap raw handler in pipeline interface
+			// Raw handlers call event.end() directly, so we need to adapt
+			throw new Error(
+				"Raw handlers (handler property) are not supported in runHook(). " +
+					"Use pipeline handlers or test raw handlers separately.",
+			);
+		}
+
+		// Check for file path
+		if (typeof hookDef.pipeline === "string") {
+			return this.importHandler(hookDef.pipeline);
+		}
+
+		if (typeof hookDef.handler === "string") {
+			throw new Error(
+				"Raw handler file paths (handler property) are not supported in runHook(). " +
+					"Use pipeline handlers or test raw handlers separately.",
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Import a handler from a file path.
+	 * @internal
+	 */
+	private async importHandler(filePath: string): Promise<PipelineHandler<unknown, unknown, TOptions, TState>> {
+		// Try to resolve the path
+		let resolvedPath = filePath;
+
+		// If it's a relative path, try to resolve from cwd
+		if (filePath.startsWith("./") || filePath.startsWith("../")) {
+			const cwd = process.cwd();
+			resolvedPath = `${cwd}/${filePath}`;
+		}
+
+		try {
+			// Dynamic import
+			const module = await import(resolvedPath);
+			const handler = module.default || module;
+
+			if (typeof handler !== "function") {
+				throw new Error(`Handler file "${filePath}" does not export a function`);
+			}
+
+			return handler;
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Cannot find module")) {
+				throw new Error(
+					`Could not import handler from "${filePath}". ` +
+						`Make sure the file exists and the path is correct relative to cwd (${process.cwd()}).`,
+				);
+			}
+			throw error;
+		}
+	}
+
+	/**
+	 * Build the handler context from configured state.
+	 * @internal
+	 */
+	private buildHandlerContext(input: Record<string, unknown>): {
+		input: unknown;
+		options: TOptions;
+		state: PluginState<TState>;
+	} {
+		// Create base state
+		const baseState: BaseState = {
+			projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? "/test/project",
+			pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "/test/plugin",
+			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
+			// Provide no-op logger methods for testing
+			log: () => {},
+			info: () => {},
+			debug: () => {},
+		};
+
+		// Merge base state with user-provided state
+		const pluginState: PluginState<TState> = {
+			...baseState,
+			...(this.state.state as TState),
+		};
+
+		return {
+			input,
+			options: this.state.options as TOptions,
+			state: pluginState,
+		};
+	}
+
+	/**
+	 * Build a HookTestResult from pipeline output.
+	 * @internal
+	 */
+	private buildHookResultFromOutput(output: unknown): HookTestResult {
+		// Check if it's a valid pipeline output
+		if (!isPipelineOutput(output)) {
+			return {
+				exitCode: 1,
+				stdout: "",
+				stderr: "Handler returned non-pipeline output",
+				output: typeof output === "object" && output !== null ? (output as Record<string, unknown>) : {},
+				action: undefined,
+				context: undefined,
+				reason: "Handler returned non-pipeline output",
+			};
+		}
+
+		const pipelineOutput = output as AnyPipelineOutput;
+
+		// Extract convenience fields
+		let action: HookAction | undefined;
+		if ("action" in pipelineOutput) {
+			action = pipelineOutput.action;
+		}
+
+		let context: string | undefined;
+		if ("claudeContext" in pipelineOutput && pipelineOutput.claudeContext) {
+			context = pipelineOutput.claudeContext;
+		}
+
+		let reason: string | undefined;
+		if ("reason" in pipelineOutput && pipelineOutput.reason) {
+			reason = pipelineOutput.reason;
+		}
+
+		// Determine exit code based on status
+		const exitCode = pipelineOutput.status === "error" || pipelineOutput.status === "timeout" ? 1 : 0;
+
+		return {
+			exitCode,
+			stdout: JSON.stringify(pipelineOutput),
+			stderr: this.stderrBuffer,
+			output: pipelineOutput as Record<string, unknown>,
+			action,
+			context,
+			reason,
+		};
+	}
+
+	// =========================================================================
+	// COMMAND HELPERS
+	// =========================================================================
+
+	/**
+	 * Resolve a command handler from a command definition.
+	 * Supports inline functions and file paths.
+	 * @internal
+	 */
+	private async resolveCommandHandler(
+		commandDef: CommandDefinition,
+	): Promise<CommandHandler<unknown, TOptions, TState> | null> {
+		// Check for inline pipeline function
+		if (typeof commandDef.pipeline === "function") {
+			return commandDef.pipeline as CommandHandler<unknown, TOptions, TState>;
+		}
+
+		// Check for file path
+		if (typeof commandDef.pipeline === "string") {
+			return this.importCommandHandler(commandDef.pipeline);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Import a command handler from a file path.
+	 * @internal
+	 */
+	private async importCommandHandler(filePath: string): Promise<CommandHandler<unknown, TOptions, TState>> {
+		// Try to resolve the path
+		let resolvedPath = filePath;
+
+		// If it's a relative path, try to resolve from cwd
+		if (filePath.startsWith("./") || filePath.startsWith("../")) {
+			const cwd = process.cwd();
+			resolvedPath = `${cwd}/${filePath}`;
+		}
+
+		try {
+			// Dynamic import
+			const module = await import(resolvedPath);
+			const handler = module.default || module;
+
+			if (typeof handler !== "function") {
+				throw new Error(`Command handler file "${filePath}" does not export a function`);
+			}
+
+			return handler;
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Cannot find module")) {
+				throw new Error(
+					`Could not import command handler from "${filePath}". ` +
+						`Make sure the file exists and the path is correct relative to cwd (${process.cwd()}).`,
+				);
+			}
+			throw error;
+		}
+	}
+
+	/**
+	 * Validate command arguments against the command's schema.
+	 * @internal
+	 */
+	private async validateCommandArgs(
+		commandDef: CommandDefinition,
+		args: Record<string, unknown>,
+	): Promise<unknown> {
+		const schema = commandDef.args;
+
+		// If no schema defined, return args as-is (empty object for no-arg commands)
+		if (!schema) {
+			return args;
+		}
+
+		// Cast to z.ZodType for proper method access
+		const zodSchema = schema as z.ZodType<unknown>;
+
+		// Use safeParseAsync for async validation
+		const result = await zodSchema.safeParseAsync(args);
+
+		if (!result.success) {
+			const issues = result.error.issues
+				// biome-ignore lint/suspicious/noExplicitAny: Zod issue type varies between versions
+				.map((issue: any) => `${(issue.path || []).join(".")}: ${issue.message}`)
+				.join(", ");
+			throw new Error(`Argument validation failed: ${issues}`);
+		}
+
+		return result.data;
+	}
+
+	/**
+	 * Build the command context from configured state and args.
+	 * @internal
+	 */
+	private buildCommandContext(args: unknown): {
+		args: unknown;
+		options: TOptions;
+		state: PluginState<TState>;
+	} {
+		// Create base state
+		const baseState: BaseState = {
+			projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? "/test/project",
+			pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "/test/plugin",
+			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
+			// Provide no-op logger methods for testing
+			log: () => {},
+			info: () => {},
+			debug: () => {},
+		};
+
+		// Merge base state with user-provided state
+		const pluginState: PluginState<TState> = {
+			...baseState,
+			...(this.state.state as TState),
+		};
+
+		return {
+			args,
+			options: this.state.options as TOptions,
+			state: pluginState,
+		};
+	}
+
+	/**
+	 * Validate command output structure.
+	 * @internal
+	 */
+	private validateCommandOutput(output: CommandOutput, commandName: string): void {
+		if (typeof output.exitCode !== "number") {
+			throw new Error(`Command "${commandName}" returned invalid exitCode: ${output.exitCode}`);
+		}
+		if (typeof output.output !== "string") {
+			throw new Error(`Command "${commandName}" returned invalid output: expected string`);
+		}
+		if (output.exitCode < 0 || output.exitCode > 255) {
+			throw new Error(`Command "${commandName}" returned invalid exitCode: must be 0-255`);
+		}
 	}
 }
 
