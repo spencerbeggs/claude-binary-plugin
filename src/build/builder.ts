@@ -284,7 +284,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 			const importName = commandImportMap.get(c.name);
 			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Commands.emptySchema";
 			return `    case "${c.name}": {
-      return runCommandPipeline({
+      return Commands.run({
         commandName: "${c.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
@@ -307,9 +307,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
-	const commandRuntimeImport = hasPipelineCmds
-		? `import { runCommand as runCommandPipeline, Commands } from "claude-binary-plugin";`
-		: "";
+	const commandRuntimeImport = hasPipelineCmds ? `import { Commands } from "claude-binary-plugin";` : "";
 
 	return `#!/usr/bin/env bun
 /**
