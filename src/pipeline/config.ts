@@ -636,7 +636,7 @@ export interface HooksMap<TOptions> {
 // =============================================================================
 
 /**
- * Command definition with Zod argument schema for declarative command definitions.
+ * Command definition with file path for the handler.
  *
  * @typeParam TArgs - Zod schema type for command arguments
  *
@@ -655,7 +655,7 @@ export interface HooksMap<TOptions> {
  * ```
  * @public
  */
-export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
+export interface CommandFileDefinition<TArgs extends $ZodType = $ZodType> {
 	/** Description shown in help text and to LLM */
 	description: string;
 	/** Zod schema for validating CLI arguments */
@@ -663,6 +663,74 @@ export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
 	/** Path to handler file (relative to plugin root) */
 	pipeline: string;
 }
+
+/**
+ * Command definition with inline handler function.
+ *
+ * @typeParam TArgs - Zod schema type for command arguments
+ * @typeParam TOptions - Validated options from plugin schema
+ * @typeParam TState - Computed state from setup function
+ *
+ * @example
+ * ```ts
+ * commands: {
+ *   status: {
+ *     description: "Show project status",
+ *     args: z.object({}),
+ *     pipeline: async ({ state }) => ({
+ *       exitCode: 0,
+ *       output: `# Status\n\nProject: ${state.projectDir}`,
+ *     }),
+ *   },
+ * }
+ * ```
+ * @public
+ */
+export interface CommandInlineDefinition<
+	TArgs extends $ZodType = $ZodType,
+	TOptions = unknown,
+	TState = Record<string, unknown>,
+> {
+	/** Description shown in help text and to LLM */
+	description: string;
+	/** Zod schema for validating CLI arguments */
+	args?: TArgs;
+	/** Inline handler function */
+	pipeline: CommandHandler<z.infer<TArgs>, TOptions, TState>;
+}
+
+/**
+ * Command definition - either file path or inline handler.
+ *
+ * @typeParam TArgs - Zod schema type for command arguments
+ * @typeParam TOptions - Validated options from plugin schema
+ * @typeParam TState - Computed state from setup function
+ *
+ * @example File path (production)
+ * ```ts
+ * {
+ *   description: "Fix lint errors",
+ *   args: z.object({ path: z.string().default(".") }),
+ *   pipeline: "./commands/lint.cmd.ts",
+ * }
+ * ```
+ *
+ * @example Inline handler (testing or simple commands)
+ * ```ts
+ * {
+ *   description: "Show status",
+ *   args: z.object({}),
+ *   pipeline: async ({ state }) => ({
+ *     exitCode: 0,
+ *     output: `Project: ${state.projectDir}`,
+ *   }),
+ * }
+ * ```
+ * @public
+ */
+export type CommandDefinition<TArgs extends $ZodType = $ZodType, TOptions = unknown, TState = Record<string, unknown>> =
+	| CommandFileDefinition<TArgs>
+	| CommandInlineDefinition<TArgs, TOptions, TState>;
 
 /**
  * Context provided to command handlers.
@@ -720,10 +788,29 @@ export interface CommandOutput {
 }
 
 /**
+ * Base command definition structure (for type constraints).
+ * Uses union types to allow both file paths and inline handlers.
+ * @internal
+ */
+export interface CommandDefinitionBase {
+	description: string;
+	args?: $ZodType;
+	/** File path (string) or inline handler function */
+	pipeline: string | CommandHandlerFn;
+}
+
+/**
+ * Generic command handler function type for base constraints.
+ * Uses `never` in parameters to allow any specific handler signature via contravariance.
+ * @internal
+ */
+type CommandHandlerFn = (ctx: never) => CommandOutput | Promise<CommandOutput>;
+
+/**
  * Map of command names to their definitions.
  * @public
  */
-export type CommandsMap = Record<string, CommandDefinition>;
+export type CommandsMap = Record<string, CommandDefinitionBase>;
 
 /**
  * Base state values provided to setup and handlers.
@@ -817,7 +904,7 @@ export interface PluginConfig<
 	TOptionsSchema extends $ZodType,
 	// Use function type constraint directly to avoid default type parameter issues
 	TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
-	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 > {
 	/**
 	 * Environment variable prefix for this plugin.
@@ -991,7 +1078,7 @@ export interface PluginConfig<
 export class ClaudeBinaryPlugin<
 	TOptionsSchema extends $ZodType,
 	TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
-	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 > {
 	/**
 	 * The plugin configuration.
@@ -1042,7 +1129,7 @@ export class ClaudeBinaryPlugin<
 	static create<
 		TOptionsSchema extends $ZodType,
 		TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
-		TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+		TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 	>(config: PluginConfig<TOptionsSchema, TSetup, TCommands>): ClaudeBinaryPlugin<TOptionsSchema, TSetup, TCommands> {
 		return new ClaudeBinaryPlugin(config);
 	}

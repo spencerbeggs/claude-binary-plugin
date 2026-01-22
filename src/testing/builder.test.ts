@@ -38,7 +38,7 @@ const testPlugin = ClaudeBinaryPlugin.create({
 			{
 				name: "security",
 				tools: ["Bash"],
-				pipeline: async ({ input, options, state }) => {
+				pipeline: async ({ input, options: _options, state: _state }) => {
 					const toolInput = input.tool_input as { command?: string };
 					const command = toolInput.command ?? "";
 
@@ -69,7 +69,7 @@ const testPlugin = ClaudeBinaryPlugin.create({
 		SessionStart: [
 			{
 				name: "context",
-				pipeline: async ({ input, options, state }) => {
+				pipeline: async ({ input: _input, options: _options, state }) => {
 					return {
 						status: "executed" as const,
 						action: "context" as const,
@@ -83,7 +83,7 @@ const testPlugin = ClaudeBinaryPlugin.create({
 			{
 				name: "post-bash",
 				tools: ["Bash"],
-				pipeline: async ({ input }) => {
+				pipeline: async ({ input: _input }) => {
 					return {
 						status: "executed" as const,
 						action: "context" as const,
@@ -101,11 +101,18 @@ const testPlugin = ClaudeBinaryPlugin.create({
 				path: z.string().default("."),
 				fix: z.boolean().default(true),
 			}),
-			pipeline: async ({ args, options, state }) => {
-				const typedArgs = args as { path: string; fix: boolean };
+			pipeline: async ({
+				args,
+				options: _options,
+				state,
+			}: {
+				args: { path: string; fix: boolean };
+				options: TestOptions;
+				state: TestState;
+			}) => {
 				return {
 					exitCode: 0,
-					output: `# Lint Results\n\nPath: ${typedArgs.path}\nFix: ${typedArgs.fix}\nPackage Manager: ${state.packageManager}`,
+					output: `# Lint Results\n\nPath: ${args.path}\nFix: ${args.fix}\nPackage Manager: ${state.packageManager}`,
 				};
 			},
 		},
@@ -115,9 +122,8 @@ const testPlugin = ClaudeBinaryPlugin.create({
 				pattern: z.string().optional(),
 				verbose: z.boolean().default(false),
 			}),
-			pipeline: async ({ args }) => {
-				const typedArgs = args as { pattern?: string; verbose: boolean };
-				if (typedArgs.pattern === "failing") {
+			pipeline: async ({ args }: { args: { pattern?: string; verbose: boolean } }) => {
+				if (args.pattern === "failing") {
 					return {
 						exitCode: 1,
 						output: "# Test Results\n\n1 test failed",
@@ -134,7 +140,7 @@ const testPlugin = ClaudeBinaryPlugin.create({
 		status: {
 			description: "Show status",
 			args: z.object({}),
-			pipeline: async ({ state }) => {
+			pipeline: async ({ state }: { state: { projectDir: string } }) => {
 				return {
 					exitCode: 0,
 					output: `# Status\n\nProject: ${state.projectDir}`,
@@ -606,8 +612,8 @@ describe("PluginTester", () => {
 				.withOptions({ VERBOSE: "false" })
 				.withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" });
 
-			// @ts-expect-error - Testing invalid command
-			const result = await ctx.runCommand("non-existent");
+			// Testing invalid command - runtime error expected
+			const result = await ctx.runCommand("non-existent" as "lint");
 
 			expect(result.exitCode).toBe(2);
 			expect(result.stderr).toContain("not found");

@@ -1,6 +1,6 @@
 import { mock, spyOn } from "bun:test";
 import type { PartialDeep } from "type-fest";
-import { z } from "zod";
+import type { z } from "zod";
 import type { ShellResult } from "../build/builder.js";
 import type {
 	BaseState,
@@ -13,7 +13,6 @@ import type {
 } from "../pipeline/config.js";
 import type { AnyPipelineOutput, HookAction } from "../pipeline/types.js";
 import { isPipelineOutput } from "../pipeline/types.js";
-import { MockExitError } from "./mocks.js";
 
 // =============================================================================
 // HOOK INPUT TYPES
@@ -209,7 +208,8 @@ export class PluginTester<
 	TState,
 	// biome-ignore lint/suspicious/noExplicitAny: Hooks map has optional properties that don't satisfy Record constraint
 	THooks extends Record<string, any>,
-	TCommands extends Record<string, CommandDefinition>,
+	// biome-ignore lint/suspicious/noExplicitAny: CommandDefinitionBase allows string | function for pipeline
+	TCommands extends Record<string, any>,
 > {
 	private state: BuilderState<TOptions, TState> = {
 		shellResponses: new Map(),
@@ -497,9 +497,7 @@ export class PluginTester<
 			}
 
 			// Find the specific hook by name
-			const hookDef = hookDefinitions.find(
-				(h: { name?: string }) => h.name === hookName,
-			);
+			const hookDef = hookDefinitions.find((h: { name?: string }) => h.name === hookName);
 			if (!hookDef) {
 				const availableHooks = hookDefinitions
 					.filter((h: { name?: string }) => h.name)
@@ -512,9 +510,7 @@ export class PluginTester<
 
 			// Check for passthrough hooks (no pipeline or handler)
 			if (!hookDef.pipeline && !hookDef.handler) {
-				throw new Error(
-					`Hook "${hookName}" is a passthrough hook and cannot be tested with runHook()`,
-				);
+				throw new Error(`Hook "${hookName}" is a passthrough hook and cannot be tested with runHook()`);
 			}
 
 			// Resolve the handler
@@ -563,7 +559,11 @@ export class PluginTester<
 	 */
 	async runCommand<K extends keyof TCommands>(
 		command: K,
-		args?: TCommands[K] extends CommandDefinition ? Partial<z.infer<TCommands[K]["args"]>> : never,
+		args?: TCommands[K] extends { args?: infer TArgs }
+			? TArgs extends z.ZodType
+				? Partial<z.infer<TArgs>>
+				: unknown
+			: unknown,
 	): Promise<CommandTestResult> {
 		this.validateState();
 		this.setupMocks();
@@ -584,7 +584,6 @@ export class PluginTester<
 
 		try {
 			// Find the command definition
-			// biome-ignore lint/suspicious/noExplicitAny: Dynamic command access requires runtime type checking
 			const commands = this.pluginConfig.commands as Record<string, CommandDefinition> | undefined;
 			if (!commands) {
 				throw new Error("No commands defined in plugin configuration");
@@ -593,9 +592,7 @@ export class PluginTester<
 			const commandDef = commands[command as string];
 			if (!commandDef) {
 				const availableCommands = Object.keys(commands).join(", ");
-				throw new Error(
-					`Command "${String(command)}" not found. Available: ${availableCommands || "none"}`,
-				);
+				throw new Error(`Command "${String(command)}" not found. Available: ${availableCommands || "none"}`);
 			}
 
 			// Resolve the handler
@@ -782,52 +779,6 @@ export class PluginTester<
 		return {
 			...base,
 			...this.state.hookInput,
-		};
-	}
-
-	/**
-	 * Build the hook test result from captured output.
-	 * @internal
-	 */
-	private buildHookResult(exitCode: number): HookTestResult {
-		let output: Record<string, unknown> = {};
-		let action: HookAction | undefined;
-		let context: string | undefined;
-		let reason: string | undefined;
-
-		try {
-			if (this.stdoutBuffer) {
-				output = JSON.parse(this.stdoutBuffer);
-
-				// Extract convenience fields
-				const hookOutput = output.hookSpecificOutput as Record<string, unknown> | undefined;
-				if (hookOutput) {
-					if (hookOutput.permissionDecision) {
-						action = hookOutput.permissionDecision as HookAction;
-					}
-					if (hookOutput.decision) {
-						action = hookOutput.decision as HookAction;
-					}
-					if (hookOutput.additionalContext) {
-						context = hookOutput.additionalContext as string;
-					}
-					if (hookOutput.reason) {
-						reason = hookOutput.reason as string;
-					}
-				}
-			}
-		} catch {
-			// Output wasn't valid JSON
-		}
-
-		return {
-			exitCode,
-			stdout: this.stdoutBuffer,
-			stderr: this.stderrBuffer,
-			output,
-			action,
-			context,
-			reason,
 		};
 	}
 
@@ -1050,10 +1001,7 @@ export class PluginTester<
 	 * Validate command arguments against the command's schema.
 	 * @internal
 	 */
-	private async validateCommandArgs(
-		commandDef: CommandDefinition,
-		args: Record<string, unknown>,
-	): Promise<unknown> {
+	private async validateCommandArgs(commandDef: CommandDefinition, args: Record<string, unknown>): Promise<unknown> {
 		const schema = commandDef.args;
 
 		// If no schema defined, return args as-is (empty object for no-arg commands)
