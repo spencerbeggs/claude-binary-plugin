@@ -38809,6 +38809,37 @@
             },
             {
               "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#getTempProjectDir:member(1)",
+              "docComment": "/**\n * Get the temp project directory path.\n *\n * @remarks\n *\n * Returns the path after tests have run (setupMocks creates the directory). Returns undefined if withTempProject() wasn't called or tests haven't run yet.\n *\n * @returns The temp project directory path, or undefined\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "getTempProjectDir(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string | undefined"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "getTempProjectDir"
+            },
+            {
+              "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginTester#mockBufferShellOnce:member(1)",
               "docComment": "/**\n * Add a one-time buffer shell mock response for a command pattern.\n *\n * @remarks\n *\n * The result will only be returned once. Subsequent calls to the same pattern will return the next queued result or the default response.\n *\n * @param pattern - Command string pattern to match\n *\n * @param result - BufferShellResult to return once\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * ctx.mockBufferShellOnce(\"npm install\", {\n *   exitCode: 0,\n *   stdout: Buffer.from(\"installed\"),\n *   stderr: Buffer.from(\"\"),\n * });\n * ```\n *\n */\n",
               "excerptTokens": [
@@ -39574,6 +39605,75 @@
               "isOptional": false,
               "isAbstract": false,
               "name": "withBufferShell"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#withFile:member(1)",
+              "docComment": "/**\n * Add a file to the temp project directory.\n *\n * @remarks\n *\n * Files are created when tests run. Requires `withTempProject()` to be called first. Directories are created automatically as needed.\n *\n * @param relativePath - Path relative to project root (e.g., \"src/index.ts\")\n *\n * @param content - File content as string or binary data\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * ctx.withTempProject()\n *   .withFile(\"package.json\", JSON.stringify({ name: \"test\", type: \"module\" }))\n *   .withFile(\"src/index.ts\", \"export const foo = 1;\")\n *   .withFile(\"tsconfig.json\", JSON.stringify({\n *     compilerOptions: { strict: true }\n *   }));\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withFile(relativePath: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", content: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string | "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Uint8Array",
+                  "canonicalReference": "!Uint8Array:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "this"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 6,
+                "endIndex": 7
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "relativePath",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "content",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 5
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withFile"
             },
             {
               "kind": "Method",
@@ -40429,6 +40529,37 @@
               "isOptional": false,
               "isAbstract": false,
               "name": "withSubagentStopInput"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#withTempProject:member(1)",
+              "docComment": "/**\n * Use a temporary project directory for isolated file system tests.\n *\n * @remarks\n *\n * Creates an isolated temp directory that acts as the project root. The directory is automatically created before tests run and cleaned up when `dispose()` is called.\n *\n * Use `withFile()` to add files to the temp project before running tests.\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * const result = await plugin.test()\n *   .withTempProject()\n *   .withFile(\"package.json\", JSON.stringify({ name: \"test\" }))\n *   .withFile(\"tsconfig.json\", JSON.stringify({ compilerOptions: {} }))\n *   .withOptions({ DEBUG: \"false\" })\n *   .withState({ enabled: true })\n *   .runCommand(\"typecheck\", {});\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withTempProject(): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "this"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withTempProject"
             },
             {
               "kind": "Method",

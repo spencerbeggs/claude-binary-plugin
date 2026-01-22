@@ -445,6 +445,12 @@ interface BuilderState<TOptions, TState> {
 	pluginRoot?: string;
 	/** Project directory (cwd) for tests */
 	projectDir?: string;
+	/** Whether to use a temp project directory */
+	useTempProject?: boolean;
+	/** Temp project directory path (created on demand) */
+	tempProjectDir?: string;
+	/** Files to create in temp project: path -> content */
+	tempProjectFiles: Map<string, string | Uint8Array>;
 	shellResponses: Map<string, ShellResult>;
 	shellMocks: Map<string, ShellMockConfig>;
 	bufferShellResponses: Map<string, BufferShellResult>;
@@ -477,6 +483,7 @@ export class PluginTester<
 	TCommands extends Record<string, any>,
 > {
 	private state: BuilderState<TOptions, TState> = {
+		tempProjectFiles: new Map(),
 		shellResponses: new Map(),
 		shellMocks: new Map(),
 		bufferShellResponses: new Map(),
@@ -607,6 +614,76 @@ export class PluginTester<
 	withProjectDir(path: string): this {
 		this.state.projectDir = path;
 		return this;
+	}
+
+	/**
+	 * Use a temporary project directory for isolated file system tests.
+	 *
+	 * @remarks
+	 * Creates an isolated temp directory that acts as the project root.
+	 * The directory is automatically created before tests run and cleaned
+	 * up when `dispose()` is called.
+	 *
+	 * Use `withFile()` to add files to the temp project before running tests.
+	 *
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * const result = await plugin.test()
+	 *   .withTempProject()
+	 *   .withFile("package.json", JSON.stringify({ name: "test" }))
+	 *   .withFile("tsconfig.json", JSON.stringify({ compilerOptions: {} }))
+	 *   .withOptions({ DEBUG: "false" })
+	 *   .withState({ enabled: true })
+	 *   .runCommand("typecheck", {});
+	 * ```
+	 */
+	withTempProject(): this {
+		this.state.useTempProject = true;
+		return this;
+	}
+
+	/**
+	 * Add a file to the temp project directory.
+	 *
+	 * @remarks
+	 * Files are created when tests run. Requires `withTempProject()` to be called first.
+	 * Directories are created automatically as needed.
+	 *
+	 * @param relativePath - Path relative to project root (e.g., "src/index.ts")
+	 * @param content - File content as string or binary data
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.withTempProject()
+	 *   .withFile("package.json", JSON.stringify({ name: "test", type: "module" }))
+	 *   .withFile("src/index.ts", "export const foo = 1;")
+	 *   .withFile("tsconfig.json", JSON.stringify({
+	 *     compilerOptions: { strict: true }
+	 *   }));
+	 * ```
+	 */
+	withFile(relativePath: string, content: string | Uint8Array): this {
+		if (!this.state.useTempProject) {
+			throw new Error("PluginTester: withTempProject() must be called before withFile()");
+		}
+		this.state.tempProjectFiles.set(relativePath, content);
+		return this;
+	}
+
+	/**
+	 * Get the temp project directory path.
+	 *
+	 * @remarks
+	 * Returns the path after tests have run (setupMocks creates the directory).
+	 * Returns undefined if withTempProject() wasn't called or tests haven't run yet.
+	 *
+	 * @returns The temp project directory path, or undefined
+	 */
+	getTempProjectDir(): string | undefined {
+		return this.state.tempProjectDir;
 	}
 
 	// =========================================================================
@@ -1375,7 +1452,7 @@ export class PluginTester<
 	 */
 	async runHook<K extends keyof THooks>(hookType: K, hookName: string): Promise<HookTestResult> {
 		this.validateState();
-		this.setupMocks();
+		await this.setupMocks();
 
 		try {
 			// Find the hook definition
@@ -1455,7 +1532,7 @@ export class PluginTester<
 			: unknown,
 	): Promise<CommandTestResult> {
 		this.validateState();
-		this.setupMocks();
+		await this.setupMocks();
 
 		const logs: string[] = [];
 		const errors: string[] = [];
@@ -1575,8 +1652,20 @@ export class PluginTester<
 		// Restore Bun.$ if mocked
 		this.restoreBunShell();
 
+		// Clean up temp project directory
+		if (this.state.tempProjectDir) {
+			try {
+				// Use synchronous fs for cleanup in dispose()
+				const fs = require("node:fs");
+				fs.rmSync(this.state.tempProjectDir, { recursive: true, force: true });
+			} catch {
+				// Ignore cleanup errors
+			}
+		}
+
 		// Clear state
 		this.state = {
+			tempProjectFiles: new Map(),
 			shellResponses: new Map(),
 			shellMocks: new Map(),
 			bufferShellResponses: new Map(),
@@ -1610,9 +1699,33 @@ export class PluginTester<
 	 * Set up mocks for the test run.
 	 * @internal
 	 */
-	private setupMocks(): void {
+	private async setupMocks(): Promise<void> {
 		// Save and set environment variables
 		const prefix = this.pluginConfig.prefix;
+
+		// Create temp project directory if requested
+		if (this.state.useTempProject && !this.state.tempProjectDir) {
+			const { mkdtemp, mkdir } = await import("node:fs/promises");
+			const { tmpdir } = await import("node:os");
+			const { join, dirname } = await import("node:path");
+
+			// Create temp directory
+			this.state.tempProjectDir = await mkdtemp(join(tmpdir(), "plugin-test-"));
+
+			// Write queued files
+			for (const [relativePath, content] of this.state.tempProjectFiles) {
+				const fullPath = join(this.state.tempProjectDir, relativePath);
+				// Ensure parent directory exists
+				const parentDir = dirname(fullPath);
+				if (parentDir !== this.state.tempProjectDir) {
+					await mkdir(parentDir, { recursive: true });
+				}
+				await Bun.write(fullPath, content);
+			}
+
+			// Use temp dir as project dir
+			this.state.projectDir = this.state.tempProjectDir;
+		}
 
 		// Set up base env vars - use configured paths or defaults
 		this.setEnvVar("CLAUDE_SESSION_ID", crypto.randomUUID());

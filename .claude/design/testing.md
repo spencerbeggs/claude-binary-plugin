@@ -158,6 +158,44 @@ const tempDir = await mkdtemp(join(tmpdir(), "test-"));
 ctx.withProjectDir(tempDir);
 ```
 
+#### withTempProject() and withFile()
+
+For testing commands that interact with the file system, use the virtual
+test directory pattern. This creates an isolated temp directory with test
+files that is automatically cleaned up:
+
+```typescript
+const result = await plugin.test()
+  .withTempProject()  // Creates isolated temp directory
+  .withFile("package.json", JSON.stringify({ name: "test", type: "module" }))
+  .withFile("tsconfig.json", JSON.stringify({
+    compilerOptions: { strict: true, noEmit: true }
+  }))
+  .withFile("src/index.ts", "export const foo = 1;")
+  .withOptions({ DEBUG: "false" })
+  .withState({ enabled: true })
+  .mockBunShell()
+  .withShellMatching(/bunx\s+tsc/, { exitCode: 0, stdout: "", stderr: "" })
+  .runCommand("typecheck", {});
+
+expect(result.exitCode).toBe(0);
+```
+
+Key points:
+
+- `withTempProject()` must be called before `withFile()`
+- File paths are relative to the temp project root
+- Parent directories are created automatically
+- Temp directory is cleaned up when `dispose()` is called
+- Use `getTempProjectDir()` to access the actual path after tests run
+
+This pattern is cleaner than manually creating temp directories because:
+
+1. No need to manage temp directory lifecycle manually
+2. Files are created just before tests run
+3. Cleanup happens automatically via `dispose()`
+4. The project directory is set automatically
+
 ## Mocking System
 
 The `PluginTester` provides a comprehensive mocking system with four
