@@ -790,7 +790,7 @@ export interface CommandOutput {
 /**
  * Base command definition structure (for type constraints).
  * Uses union types to allow both file paths and inline handlers.
- * @internal
+ * @public
  */
 export interface CommandDefinitionBase {
 	description: string;
@@ -802,9 +802,9 @@ export interface CommandDefinitionBase {
 /**
  * Generic command handler function type for base constraints.
  * Uses `never` in parameters to allow any specific handler signature via contravariance.
- * @internal
+ * @public
  */
-type CommandHandlerFn = (ctx: never) => CommandOutput | Promise<CommandOutput>;
+export type CommandHandlerFn = (ctx: never) => CommandOutput | Promise<CommandOutput>;
 
 /**
  * Map of command names to their definitions.

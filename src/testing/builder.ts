@@ -13,6 +13,7 @@ import type {
 } from "../pipeline/config.js";
 import type { AnyPipelineOutput, HookAction } from "../pipeline/types.js";
 import { isPipelineOutput } from "../pipeline/types.js";
+import type { BufferShellResult } from "./mocks.js";
 
 // =============================================================================
 // HOOK INPUT TYPES
@@ -173,6 +174,261 @@ export interface CommandTestResult {
 }
 
 // =============================================================================
+// MOCK TYPES
+// =============================================================================
+
+/**
+ * A tracked mock function that records calls and can be configured.
+ * Inspired by Jest's mock function API.
+ * @public
+ */
+export interface MockFn<TArgs extends unknown[] = unknown[], TReturn = unknown> {
+	/** The mock function to use in tests */
+	(...args: TArgs): TReturn;
+	/** Array of all calls made to the mock */
+	calls: TArgs[];
+	/** Array of all return values */
+	results: Array<{ type: "return" | "throw"; value: TReturn | Error }>;
+	/** Configure the mock to return a specific value */
+	mockReturnValue(value: TReturn): MockFn<TArgs, TReturn>;
+	/** Configure the mock to return a value only once */
+	mockReturnValueOnce(value: TReturn): MockFn<TArgs, TReturn>;
+	/** Configure the mock with a custom implementation */
+	mockImplementation(fn: (...args: TArgs) => TReturn): MockFn<TArgs, TReturn>;
+	/** Configure the mock to throw an error */
+	mockRejectedValue(error: Error): MockFn<TArgs, TReturn>;
+	/** Clear all recorded calls and results */
+	mockClear(): MockFn<TArgs, TReturn>;
+	/** Reset the mock to its initial state */
+	mockReset(): MockFn<TArgs, TReturn>;
+	/** Get the number of times the mock was called */
+	readonly callCount: number;
+	/** Check if the mock was called */
+	readonly called: boolean;
+	/** Get the last call arguments */
+	readonly lastCall: TArgs | undefined;
+}
+
+/**
+ * Result from a mock shell command execution.
+ * Mimics the structure returned by awaiting Bun.$.
+ * @internal
+ */
+interface MockShellResult {
+	exitCode: number;
+	stdout: Buffer;
+	stderr: Buffer;
+}
+
+/**
+ * Mock shell promise that mimics Bun.$ return value.
+ * Supports chaining methods like .quiet(), .nothrow(), .text(), etc.
+ * @internal
+ */
+interface MockShellPromise extends PromiseLike<MockShellResult> {
+	/** Suppress stdout/stderr output (no-op in mock) */
+	quiet(): MockShellPromise;
+	/** Don't throw on non-zero exit code */
+	nothrow(): MockShellPromise;
+	/** Set environment variables (no-op in mock) */
+	env(env: Record<string, string>): MockShellPromise;
+	/** Set working directory (no-op in mock) */
+	cwd(path: string): MockShellPromise;
+	/** Get stdout as trimmed string */
+	text(): Promise<string>;
+	/** Parse stdout as JSON */
+	json(): Promise<unknown>;
+	/** Get stdout as Blob */
+	blob(): Promise<Blob>;
+	/** Get stdout as array of non-empty lines */
+	lines(): Promise<string[]>;
+	/** Promise catch handler */
+	catch<TResult = never>(
+		onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+	): Promise<MockShellResult | TResult>;
+	/** Promise finally handler */
+	finally(onfinally?: (() => void) | null): Promise<MockShellResult>;
+	/** String tag for proper Promise detection */
+	readonly [Symbol.toStringTag]: string;
+}
+
+/**
+ * Configuration for shell mock with sequencing support.
+ * @internal
+ */
+interface ShellMockConfig {
+	/** Default result to return */
+	default?: ShellResult;
+	/** Queue of results to return in sequence */
+	sequence: ShellResult[];
+	/** Matcher function for pattern matching */
+	matcher?: (command: string) => boolean;
+}
+
+/**
+ * Configuration for buffer shell mock with sequencing support.
+ * Used for InMemoryShellExecutor mocking (command arrays, Buffer results).
+ * @internal
+ */
+interface BufferShellMockConfig {
+	/** Default result to return */
+	default?: BufferShellResult;
+	/** Queue of results to return in sequence */
+	sequence: BufferShellResult[];
+	/** Matcher function for pattern matching against command array */
+	matcher?: (cmd: string[]) => boolean;
+}
+
+// =============================================================================
+// MOCK FUNCTION FACTORY
+// =============================================================================
+
+/**
+ * Internal state for a mock function.
+ * @internal
+ */
+interface MockFnState<TArgs extends unknown[], TReturn> {
+	calls: TArgs[];
+	results: Array<{ type: "return" | "throw"; value: TReturn | Error }>;
+	defaultReturn?: TReturn;
+	returnQueue: TReturn[];
+	implementation?: (...args: TArgs) => TReturn;
+	rejectedError?: Error;
+}
+
+/**
+ * Create a tracked mock function with Jest-like API.
+ *
+ * @param initialImpl - Optional initial implementation
+ * @returns A MockFn instance
+ *
+ * @example
+ * ```typescript
+ * const mockFetch = createMockFn<[string], Response>();
+ * mockFetch.mockReturnValue({ ok: true, json: () => ({}) });
+ *
+ * await someFunction(mockFetch);
+ *
+ * expect(mockFetch.called).toBe(true);
+ * expect(mockFetch.callCount).toBe(1);
+ * expect(mockFetch.lastCall).toEqual(["https://api.example.com"]);
+ * ```
+ *
+ * @public
+ */
+export function createMockFn<TArgs extends unknown[] = unknown[], TReturn = unknown>(
+	initialImpl?: (...args: TArgs) => TReturn,
+): MockFn<TArgs, TReturn> {
+	const state: MockFnState<TArgs, TReturn> = {
+		calls: [],
+		results: [],
+		returnQueue: [],
+		implementation: initialImpl,
+	};
+
+	// The actual mock function
+	const mockFn = ((...args: TArgs): TReturn => {
+		state.calls.push(args);
+
+		// Check for rejected error
+		if (state.rejectedError) {
+			const error = state.rejectedError;
+			state.results.push({ type: "throw", value: error });
+			throw error;
+		}
+
+		// Check for custom implementation
+		if (state.implementation) {
+			try {
+				const result = state.implementation(...args);
+				state.results.push({ type: "return", value: result });
+				return result;
+			} catch (error) {
+				state.results.push({ type: "throw", value: error as Error });
+				throw error;
+			}
+		}
+
+		// Check for queued return values
+		if (state.returnQueue.length > 0) {
+			const result = state.returnQueue.shift() as TReturn;
+			state.results.push({ type: "return", value: result });
+			return result;
+		}
+
+		// Return default value
+		const result = state.defaultReturn as TReturn;
+		state.results.push({ type: "return", value: result });
+		return result;
+	}) as MockFn<TArgs, TReturn>;
+
+	// Attach properties
+	Object.defineProperty(mockFn, "calls", {
+		get: () => state.calls,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "results", {
+		get: () => state.results,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "callCount", {
+		get: () => state.calls.length,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "called", {
+		get: () => state.calls.length > 0,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "lastCall", {
+		get: () => (state.calls.length > 0 ? state.calls[state.calls.length - 1] : undefined),
+		enumerable: true,
+	});
+
+	// Attach methods
+	mockFn.mockReturnValue = (value: TReturn): MockFn<TArgs, TReturn> => {
+		state.defaultReturn = value;
+		return mockFn;
+	};
+
+	mockFn.mockReturnValueOnce = (value: TReturn): MockFn<TArgs, TReturn> => {
+		state.returnQueue.push(value);
+		return mockFn;
+	};
+
+	mockFn.mockImplementation = (fn: (...args: TArgs) => TReturn): MockFn<TArgs, TReturn> => {
+		state.implementation = fn;
+		return mockFn;
+	};
+
+	mockFn.mockRejectedValue = (error: Error): MockFn<TArgs, TReturn> => {
+		state.rejectedError = error;
+		return mockFn;
+	};
+
+	mockFn.mockClear = (): MockFn<TArgs, TReturn> => {
+		state.calls = [];
+		state.results = [];
+		return mockFn;
+	};
+
+	mockFn.mockReset = (): MockFn<TArgs, TReturn> => {
+		state.calls = [];
+		state.results = [];
+		state.defaultReturn = undefined;
+		state.returnQueue = [];
+		state.implementation = initialImpl;
+		state.rejectedError = undefined;
+		return mockFn;
+	};
+
+	return mockFn;
+}
+
+// =============================================================================
 // BUILDER CONFIGURATION
 // =============================================================================
 
@@ -186,7 +442,12 @@ interface BuilderState<TOptions, TState> {
 	hookInput?: Record<string, unknown>;
 	hookEventName?: string;
 	shellResponses: Map<string, ShellResult>;
+	shellMocks: Map<string, ShellMockConfig>;
+	bufferShellResponses: Map<string, BufferShellResult>;
+	bufferShellMocks: Map<string, BufferShellMockConfig>;
 	envVars: Map<string, string>;
+	// Use unknown to allow storing any MockFn<TArgs, TReturn> variant
+	mockFunctions: Map<string, unknown>;
 }
 
 // =============================================================================
@@ -213,13 +474,20 @@ export class PluginTester<
 > {
 	private state: BuilderState<TOptions, TState> = {
 		shellResponses: new Map(),
+		shellMocks: new Map(),
+		bufferShellResponses: new Map(),
+		bufferShellMocks: new Map(),
 		envVars: new Map(),
+		mockFunctions: new Map(),
 	};
 
 	private savedEnv: Map<string, string | undefined> = new Map();
 	private stdoutBuffer = "";
 	private stderrBuffer = "";
 	private isDisposed = false;
+	private isBunShellMocked = false;
+	// biome-ignore lint/suspicious/noExplicitAny: Bun.$ type is complex tagged template literal
+	private originalBunShell: any = null;
 
 	/**
 	 * Plugin configuration reference for type inference.
@@ -468,6 +736,494 @@ export class PluginTester<
 	}
 
 	// =========================================================================
+	// MOCK UTILITIES (Jest-like API)
+	// =========================================================================
+
+	/**
+	 * Create a tracked mock function.
+	 *
+	 * @remarks
+	 * Creates a mock function that tracks calls, return values, and provides
+	 * Jest-like configuration methods. The mock is registered with the test
+	 * context and will be cleaned up on dispose().
+	 *
+	 * @param name - Unique name for the mock (used for cleanup)
+	 * @param initialImpl - Optional initial implementation
+	 * @returns A MockFn instance
+	 *
+	 * @example
+	 * ```typescript
+	 * const fetchMock = ctx.mockFn<[string], Response>("fetch");
+	 * fetchMock.mockReturnValue({ ok: true, json: () => ({}) });
+	 *
+	 * // Use in test...
+	 *
+	 * expect(fetchMock.called).toBe(true);
+	 * expect(fetchMock.callCount).toBe(1);
+	 * ```
+	 */
+	mockFn<TArgs extends unknown[] = unknown[], TReturn = unknown>(
+		name: string,
+		initialImpl?: (...args: TArgs) => TReturn,
+	): MockFn<TArgs, TReturn> {
+		const fn = createMockFn<TArgs, TReturn>(initialImpl);
+		this.state.mockFunctions.set(name, fn);
+		return fn;
+	}
+
+	/**
+	 * Add a one-time shell mock response for a command pattern.
+	 *
+	 * @remarks
+	 * The result will only be returned once. Subsequent calls to the same
+	 * pattern will return the next queued result or the default response.
+	 *
+	 * @param pattern - Command string or pattern to match
+	 * @param result - ShellResult to return once
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // First call returns success, subsequent calls return error
+	 * ctx.mockShellOnce("npm install", { exitCode: 0, stdout: "installed", stderr: "" });
+	 * ctx.withShell("npm install", { exitCode: 1, stdout: "", stderr: "failed" });
+	 * ```
+	 */
+	mockShellOnce(pattern: string, result: ShellResult): this {
+		const existing = this.state.shellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(result);
+		} else {
+			this.state.shellMocks.set(pattern, {
+				sequence: [result],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Add a sequence of shell mock responses for a command pattern.
+	 *
+	 * @remarks
+	 * Results will be returned in order. After the sequence is exhausted,
+	 * subsequent calls return the default shell response if set.
+	 *
+	 * @param pattern - Command string or pattern to match
+	 * @param results - Array of ShellResults to return in sequence
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Simulate retry behavior
+	 * ctx.mockShellSequence("curl https://api.example.com", [
+	 *   { exitCode: 1, stdout: "", stderr: "timeout" },
+	 *   { exitCode: 1, stdout: "", stderr: "timeout" },
+	 *   { exitCode: 0, stdout: '{"success": true}', stderr: "" },
+	 * ]);
+	 * ```
+	 */
+	mockShellSequence(pattern: string, results: ShellResult[]): this {
+		const existing = this.state.shellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(...results);
+		} else {
+			this.state.shellMocks.set(pattern, {
+				sequence: [...results],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Get a shell mock result for a command, consuming from sequence if available.
+	 *
+	 * @param command - The command being executed
+	 * @returns ShellResult or undefined if no mock matches
+	 *
+	 * @internal
+	 */
+	getShellMock(command: string): ShellResult | undefined {
+		// First check sequenced mocks
+		for (const [pattern, config] of this.state.shellMocks) {
+			const matches = config.matcher ? config.matcher(command) : command.includes(pattern);
+			if (matches) {
+				// Return from sequence if available
+				if (config.sequence.length > 0) {
+					return config.sequence.shift();
+				}
+				// Return default if set
+				if (config.default) {
+					return config.default;
+				}
+			}
+		}
+
+		// Fall back to static shell responses
+		for (const [pattern, result] of this.state.shellResponses) {
+			if (command.includes(pattern)) {
+				return result;
+			}
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Clear all call history from registered mock functions.
+	 *
+	 * @remarks
+	 * This clears the calls and results arrays but preserves configured
+	 * return values and implementations. Useful between test assertions.
+	 *
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // After first test phase
+	 * expect(myMock.callCount).toBe(3);
+	 *
+	 * ctx.clearMockCalls();
+	 *
+	 * // Start fresh for next phase
+	 * expect(myMock.callCount).toBe(0);
+	 * ```
+	 */
+	clearMockCalls(): this {
+		for (const fn of this.state.mockFunctions.values()) {
+			(fn as MockFn).mockClear();
+		}
+		return this;
+	}
+
+	/**
+	 * Reset all registered mock functions to their initial state.
+	 *
+	 * @remarks
+	 * This clears calls, results, and all configured return values/implementations.
+	 *
+	 * @returns this for chaining
+	 */
+	resetMocks(): this {
+		for (const fn of this.state.mockFunctions.values()) {
+			(fn as MockFn).mockReset();
+		}
+		// Also reset shell mocks sequences
+		for (const config of this.state.shellMocks.values()) {
+			config.sequence = [];
+		}
+		for (const config of this.state.bufferShellMocks.values()) {
+			config.sequence = [];
+		}
+		return this;
+	}
+
+	// =========================================================================
+	// BUFFER SHELL MOCKING (For InMemoryShellExecutor)
+	// =========================================================================
+
+	/**
+	 * Add a mock buffer shell response for a command pattern.
+	 *
+	 * @remarks
+	 * Buffer shell mocks are for InMemoryShellExecutor which takes command
+	 * arrays and returns BufferShellResult with Buffer stdout/stderr.
+	 *
+	 * @param pattern - Command string pattern to match (matched against joined command array)
+	 * @param result - BufferShellResult to return for matching commands
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.withBufferShell("git status", {
+	 *   exitCode: 0,
+	 *   stdout: Buffer.from("clean"),
+	 *   stderr: Buffer.from(""),
+	 * });
+	 * ```
+	 */
+	withBufferShell(pattern: string, result: BufferShellResult): this {
+		this.state.bufferShellResponses.set(pattern, result);
+		return this;
+	}
+
+	/**
+	 * Add a one-time buffer shell mock response for a command pattern.
+	 *
+	 * @remarks
+	 * The result will only be returned once. Subsequent calls to the same
+	 * pattern will return the next queued result or the default response.
+	 *
+	 * @param pattern - Command string pattern to match
+	 * @param result - BufferShellResult to return once
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.mockBufferShellOnce("npm install", {
+	 *   exitCode: 0,
+	 *   stdout: Buffer.from("installed"),
+	 *   stderr: Buffer.from(""),
+	 * });
+	 * ```
+	 */
+	mockBufferShellOnce(pattern: string, result: BufferShellResult): this {
+		const existing = this.state.bufferShellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(result);
+		} else {
+			this.state.bufferShellMocks.set(pattern, {
+				sequence: [result],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Add a sequence of buffer shell mock responses for a command pattern.
+	 *
+	 * @remarks
+	 * Results will be returned in order. After the sequence is exhausted,
+	 * subsequent calls return the default buffer shell response if set.
+	 *
+	 * @param pattern - Command string pattern to match
+	 * @param results - Array of BufferShellResults to return in sequence
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.mockBufferShellSequence("curl https://api.example.com", [
+	 *   { exitCode: 1, stdout: Buffer.from(""), stderr: Buffer.from("timeout") },
+	 *   { exitCode: 0, stdout: Buffer.from('{"ok":true}'), stderr: Buffer.from("") },
+	 * ]);
+	 * ```
+	 */
+	mockBufferShellSequence(pattern: string, results: BufferShellResult[]): this {
+		const existing = this.state.bufferShellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(...results);
+		} else {
+			this.state.bufferShellMocks.set(pattern, {
+				sequence: [...results],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Get a buffer shell mock result for a command, consuming from sequence if available.
+	 *
+	 * @param cmd - The command array being executed
+	 * @returns BufferShellResult or undefined if no mock matches
+	 *
+	 * @internal
+	 */
+	getBufferShellMock(cmd: string[]): BufferShellResult | undefined {
+		const command = cmd.join(" ");
+
+		// First check sequenced mocks
+		for (const [pattern, config] of this.state.bufferShellMocks) {
+			const matches = config.matcher ? config.matcher(cmd) : command.includes(pattern);
+			if (matches) {
+				// Return from sequence if available
+				if (config.sequence.length > 0) {
+					return config.sequence.shift();
+				}
+				// Return default if set
+				if (config.default) {
+					return config.default;
+				}
+			}
+		}
+
+		// Fall back to static buffer shell responses
+		for (const [pattern, result] of this.state.bufferShellResponses) {
+			if (command.includes(pattern)) {
+				return result;
+			}
+		}
+
+		return undefined;
+	}
+
+	// =========================================================================
+	// BUN.$ INTERCEPTION
+	// =========================================================================
+
+	/**
+	 * Activate Bun.$ interception to route shell calls through mock configuration.
+	 *
+	 * @remarks
+	 * After calling this method, all `Bun.$` template literal calls will be
+	 * intercepted and routed through the configured shell mocks (withShell,
+	 * mockShellOnce, mockShellSequence). The original `Bun.$` is restored
+	 * when `dispose()` is called.
+	 *
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" })
+	 *    .mockBunShell();
+	 *
+	 * // Now Bun.$ calls are intercepted
+	 * const result = await Bun.$`git status`.text();
+	 * expect(result).toBe("clean");
+	 * ```
+	 */
+	mockBunShell(): this {
+		if (this.isBunShellMocked) {
+			return this;
+		}
+
+		// Save original Bun.$
+		this.originalBunShell = Bun.$;
+		this.isBunShellMocked = true;
+		const mockShell = (strings: TemplateStringsArray, ...values: unknown[]) => {
+			// Reconstruct command from template literal
+			let command = strings[0] ?? "";
+			for (let i = 0; i < values.length; i++) {
+				const value = values[i];
+				// Handle { raw: string } pattern used for interpolation
+				if (typeof value === "object" && value !== null && "raw" in value) {
+					command += String((value as { raw: string }).raw);
+				} else {
+					command += String(value);
+				}
+				command += strings[i + 1] ?? "";
+			}
+
+			return this.createMockShellPromise(command.trim());
+		};
+
+		// Replace Bun.$
+		// @ts-expect-error - Replacing Bun.$ with mock
+		Bun.$ = mockShell;
+
+		return this;
+	}
+
+	/**
+	 * Restore original Bun.$ if it was mocked.
+	 *
+	 * @remarks
+	 * This is automatically called by `dispose()`, but can be called manually
+	 * if you need to restore Bun.$ before the test ends.
+	 *
+	 * @returns this for chaining
+	 */
+	restoreBunShell(): this {
+		if (this.isBunShellMocked && this.originalBunShell) {
+			Bun.$ = this.originalBunShell;
+			this.originalBunShell = null;
+			this.isBunShellMocked = false;
+		}
+		return this;
+	}
+
+	/**
+	 * Create a mock ShellPromise-like object for a command.
+	 *
+	 * @param command - The shell command string
+	 * @returns A mock object that mimics Bun.$ return value
+	 *
+	 * @internal
+	 */
+	private createMockShellPromise(command: string): MockShellPromise {
+		let shouldThrow = true; // By default, throw on non-zero exit
+
+		// Get mock result or create default "command not found"
+		const getMockResult = (): ShellResult => {
+			const result = this.getShellMock(command);
+			if (result) {
+				return result;
+			}
+			// Default: command not found
+			return { exitCode: 127, stdout: "", stderr: `command not found: ${command.split(" ")[0]}` };
+		};
+
+		// Create the base result object
+		const createResult = () => {
+			const mock = getMockResult();
+			return {
+				exitCode: mock.exitCode,
+				stdout: Buffer.from(mock.stdout),
+				stderr: Buffer.from(mock.stderr),
+			};
+		};
+
+		// The mock shell promise object
+		const shellPromise: MockShellPromise = {
+			// biome-ignore lint/suspicious/noThenProperty: Required to implement PromiseLike interface
+			then<TResult1 = MockShellResult, TResult2 = never>(
+				onfulfilled?: ((value: MockShellResult) => TResult1 | PromiseLike<TResult1>) | null,
+				onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+			): Promise<TResult1 | TResult2> {
+				const result = createResult();
+				if (shouldThrow && result.exitCode !== 0) {
+					const error = new Error(`Command failed: ${command}`);
+					(error as NodeJS.ErrnoException).code = String(result.exitCode);
+					return Promise.reject(error).then(onfulfilled, onrejected);
+				}
+				return Promise.resolve(result).then(onfulfilled, onrejected);
+			},
+
+			catch<TResult = never>(
+				onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+			): Promise<MockShellResult | TResult> {
+				return Promise.resolve(shellPromise).catch(onrejected);
+			},
+
+			finally(onfinally?: (() => void) | null): Promise<MockShellResult> {
+				return Promise.resolve(shellPromise).finally(onfinally);
+			},
+
+			// Chainable methods that return the same promise
+			quiet(): MockShellPromise {
+				return shellPromise;
+			},
+
+			nothrow(): MockShellPromise {
+				shouldThrow = false;
+				return shellPromise;
+			},
+
+			env(_env: Record<string, string>): MockShellPromise {
+				return shellPromise;
+			},
+
+			cwd(_path: string): MockShellPromise {
+				return shellPromise;
+			},
+
+			// Terminal methods that return different promises
+			async text(): Promise<string> {
+				const result = await shellPromise.nothrow();
+				return result.stdout.toString().trim();
+			},
+
+			async json(): Promise<unknown> {
+				const text = await shellPromise.text();
+				return JSON.parse(text);
+			},
+
+			async blob(): Promise<Blob> {
+				const result = await shellPromise.nothrow();
+				return new Blob([result.stdout]);
+			},
+
+			async lines(): Promise<string[]> {
+				const text = await shellPromise.text();
+				return text.split("\n").filter((line) => line.length > 0);
+			},
+
+			// Symbol for proper Promise behavior
+			[Symbol.toStringTag]: "MockShellPromise",
+		};
+
+		return shellPromise;
+	}
+
+	// =========================================================================
 	// EXECUTION METHODS (Terminal operations)
 	// =========================================================================
 
@@ -683,10 +1439,17 @@ export class PluginTester<
 			process.stderr.write.mockRestore();
 		}
 
+		// Restore Bun.$ if mocked
+		this.restoreBunShell();
+
 		// Clear state
 		this.state = {
 			shellResponses: new Map(),
+			shellMocks: new Map(),
+			bufferShellResponses: new Map(),
+			bufferShellMocks: new Map(),
 			envVars: new Map(),
+			mockFunctions: new Map(),
 		};
 		this.savedEnv.clear();
 		this.stdoutBuffer = "";

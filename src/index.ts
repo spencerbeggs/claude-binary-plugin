@@ -55,6 +55,8 @@ export type {
 	PluginEnvFileSystem,
 	SessionStartContextParams,
 	ValidationResult,
+	ZodErrorMinimal,
+	ZodIssueMinimal,
 } from "./state/classes/PluginEnv.js";
 export { EnvFileLoadError, PluginEnv } from "./state/classes/PluginEnv.js";
 export type { SessionRecord, SessionRegistration } from "./state/classes/SessionRegistry.js";
@@ -307,7 +309,11 @@ export type {
 	BaseState,
 	CmdContext,
 	CommandDefinition,
+	CommandDefinitionBase,
+	CommandFileDefinition,
 	CommandHandler,
+	CommandHandlerFn,
+	CommandInlineDefinition,
 	CommandOutput,
 	CommandsMap,
 	ExtractCommands,
@@ -449,6 +455,7 @@ export type {
 	CommandTestResult,
 	HookInputBase,
 	HookTestResult,
+	MockFn,
 	NotificationTestInput,
 	PermissionRequestTestInput,
 	PostToolUseTestInput,
@@ -460,7 +467,7 @@ export type {
 	SubagentStopTestInput,
 	UserPromptSubmitTestInput,
 } from "./testing/builder.js";
-export { PluginTester } from "./testing/builder.js";
+export { PluginTester, createMockFn } from "./testing/builder.js";
 export type {
 	BufferShellResult,
 	InMemoryShellExecutor,

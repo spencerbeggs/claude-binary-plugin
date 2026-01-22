@@ -39,7 +39,7 @@ const PROVIDER_HOSTS: Record<string, GitProvider> = {
  * @example
  * ```typescript
  * import { GitInfo } from "claude-binary-plugin";
- * 
+ *
  * // Detect from specific directory
  * const info = await GitInfo.detect("/path/to/repo");
  *

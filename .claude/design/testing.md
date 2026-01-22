@@ -125,23 +125,527 @@ ctx.withState({
 });
 ```
 
-#### withShell(pattern, result)
+## Mocking System
 
-Mock shell command responses for testing detection or command execution:
+The `PluginTester` provides a comprehensive mocking system with four
+integrated layers:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 4: Bun.$ Interception                                    │
+│  ─────────────────────────────────────────────────────────────  │
+│  Automatically intercepts Bun.$`...` template literal calls     │
+│  and routes them through shell mock configuration               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 3: Shell Mocking                                         │
+│  ─────────────────────────────────────────────────────────────  │
+│  String-based ShellResult mocks for ShellExecutor               │
+│  Buffer-based BufferShellResult mocks for InMemoryShellExecutor │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 2: Mock Functions                                        │
+│  ─────────────────────────────────────────────────────────────  │
+│  Jest-like tracked functions with call history and return       │
+│  value configuration                                            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 1: Environment & I/O Mocking                             │
+│  ─────────────────────────────────────────────────────────────  │
+│  Automatic env var setup, stdout/stderr capture,                │
+│  state serialization                                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+All mocking state is cleaned up automatically when `dispose()` is called.
+
+---
+
+### Mock Functions
+
+The fluent API provides Jest-like mock utilities for tracking function
+calls and configuring return values. These are useful for mocking
+dependencies passed to your handlers.
+
+#### How Mock Functions Work
+
+Mock functions track every call made to them and allow you to configure
+what they return. Internally, they maintain:
+
+- **Call history** - Arguments from every invocation
+- **Result history** - Return values or thrown errors
+- **Return queue** - Values to return once then discard
+- **Default return** - Fallback value after queue is exhausted
+- **Implementation** - Custom function to execute
+
+```text
+mockFn("arg1", "arg2")
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  1. Record call in calls[]          │
+│  2. Check for rejectedError → throw │
+│  3. Check for implementation → run  │
+│  4. Check returnQueue → shift       │
+│  5. Return defaultReturn            │
+│  6. Record result in results[]      │
+└─────────────────────────────────────┘
+```
+
+#### Creating Mock Functions
+
+**Via PluginTester (recommended):**
 
 ```typescript
-ctx.withShell("node --version", {
+const fetchMock = ctx.mockFn<[string], Response>("fetch");
+```
+
+Mocks created this way are registered with the context and cleaned up
+on `dispose()`.
+
+**Standalone (for use outside fluent API):**
+
+```typescript
+import { createMockFn } from "claude-binary-plugin";
+
+const mock = createMockFn<[number, number], number>();
+```
+
+#### Configuring Return Values
+
+```typescript
+const mock = ctx.mockFn<[string], number>("parser");
+
+// Default return value (used after queue exhausted)
+mock.mockReturnValue(42);
+
+// Queue values returned in order, then fall through to default
+mock.mockReturnValueOnce(100);
+mock.mockReturnValueOnce(200);
+
+mock("a");  // → 100 (from queue)
+mock("b");  // → 200 (from queue)
+mock("c");  // → 42  (default)
+mock("d");  // → 42  (default)
+```
+
+#### Custom Implementation
+
+```typescript
+const mock = ctx.mockFn<[number, number], number>("add");
+
+mock.mockImplementation((a, b) => a + b);
+
+mock(2, 3);  // → 5
+mock(10, 20);  // → 30
+```
+
+Implementation takes precedence over return values:
+
+```typescript
+mock.mockReturnValue(999);  // Ignored when implementation exists
+mock.mockImplementation((a, b) => a * b);
+mock(3, 4);  // → 12 (not 999)
+```
+
+#### Error Simulation
+
+```typescript
+const mock = ctx.mockFn<[string], Response>("fetch");
+
+mock.mockRejectedValue(new Error("Network error"));
+
+await mock("url");  // throws Error("Network error")
+```
+
+#### Inspecting Calls
+
+```typescript
+const mock = ctx.mockFn<[string, number], void>("log");
+
+mock("hello", 1);
+mock("world", 2);
+
+// Properties
+mock.calls;      // [["hello", 1], ["world", 2]]
+mock.callCount;  // 2
+mock.called;     // true
+mock.lastCall;   // ["world", 2]
+
+// Results tracking
+mock.results;    // [{ type: "return", value: undefined }, ...]
+```
+
+#### Clearing and Resetting
+
+```typescript
+// Clear call history but keep configuration
+mock.mockClear();
+mock.callCount;  // 0
+// Return values still configured
+
+// Reset to initial state (clear everything)
+mock.mockReset();
+// All configuration removed
+```
+
+#### Mock Function API Reference
+
+| Method | Description |
+| ------ | ----------- |
+| `mockReturnValue(value)` | Set default return value |
+| `mockReturnValueOnce(value)` | Queue a one-time return value |
+| `mockImplementation(fn)` | Set custom implementation |
+| `mockRejectedValue(error)` | Throw error on every call |
+| `mockClear()` | Clear calls/results, keep config |
+| `mockReset()` | Reset to initial state |
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `calls` | `TArgs[]` | All call argument arrays |
+| `results` | `Array<{type, value}>` | Return/throw results |
+| `callCount` | `number` | Total invocation count |
+| `called` | `boolean` | True if called at least once |
+| `lastCall` | `TArgs \| undefined` | Most recent call args |
+
+---
+
+### Shell Mocking
+
+Shell mocking provides deterministic responses for shell command execution
+without actually running commands. There are two variants:
+
+| Type | Input | Output | Use Case |
+| ---- | ----- | ------ | -------- |
+| `ShellResult` | String command | String stdout/stderr | `ShellExecutor` |
+| `BufferShellResult` | Command array | Buffer stdout/stderr | `InMemoryShellExecutor` |
+
+#### How Shell Mocking Works
+
+Shell mocks are stored in two maps:
+
+1. **Static responses** - Pattern → result (always returns same result)
+2. **Sequenced responses** - Pattern → queue of results (returns in order)
+
+Resolution order:
+
+```text
+getShellMock("git status")
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  1. Check sequenced mocks           │
+│     - Find matching pattern         │
+│     - If sequence has items, shift  │
+│     - Else return default           │
+│  2. Check static responses          │
+│     - Find matching pattern         │
+│     - Return result                 │
+│  3. Return undefined (no match)     │
+└─────────────────────────────────────┘
+```
+
+Pattern matching uses `command.includes(pattern)`, so patterns can be
+substrings of the full command.
+
+#### String-Based Shell Mocking (ShellResult)
+
+For code using `ShellExecutor` (string commands, string output):
+
+```typescript
+// Static response (always returns this)
+ctx.withShell("git status", {
   exitCode: 0,
-  stdout: "v22.0.0",
+  stdout: "On branch main\nnothing to commit",
   stderr: "",
 });
 
-ctx.withShell("bun --version", {
+// One-time response (first call only)
+ctx.mockShellOnce("npm install", {
   exitCode: 0,
-  stdout: "1.3.5",
+  stdout: "added 42 packages",
   stderr: "",
 });
+
+// Sequential responses (returned in order)
+ctx.mockShellSequence("curl https://api.example.com", [
+  { exitCode: 1, stdout: "", stderr: "Connection refused" },
+  { exitCode: 1, stdout: "", stderr: "Connection refused" },
+  { exitCode: 0, stdout: '{"status":"ok"}', stderr: "" },
+]);
 ```
+
+**Combining static and sequenced:**
+
+```typescript
+// Queue takes priority, then falls through to static
+ctx.withShell("npm test", { exitCode: 1, stdout: "", stderr: "1 failing" });
+ctx.mockShellOnce("npm test", { exitCode: 0, stdout: "all passing", stderr: "" });
+
+// First call → all passing (from queue)
+// Second call → 1 failing (from static)
+// Third call → 1 failing (from static)
+```
+
+#### Buffer-Based Shell Mocking (BufferShellResult)
+
+For code using `InMemoryShellExecutor` (command arrays, Buffer output):
+
+```typescript
+// Static response
+ctx.withBufferShell("git status", {
+  exitCode: 0,
+  stdout: Buffer.from("On branch main"),
+  stderr: Buffer.from(""),
+});
+
+// One-time response
+ctx.mockBufferShellOnce("npm install", {
+  exitCode: 0,
+  stdout: Buffer.from("installed"),
+  stderr: Buffer.from(""),
+});
+
+// Sequential responses
+ctx.mockBufferShellSequence("curl", [
+  { exitCode: 1, stdout: Buffer.from(""), stderr: Buffer.from("timeout") },
+  { exitCode: 0, stdout: Buffer.from("success"), stderr: Buffer.from("") },
+]);
+```
+
+Buffer shell patterns match against the joined command array:
+
+```typescript
+// Command array: ["git", "status", "--short"]
+// Matched against: "git status --short"
+ctx.withBufferShell("git status", result);  // matches
+ctx.withBufferShell("status --short", result);  // also matches
+```
+
+#### Shell Mock API Reference
+
+**String-based (ShellResult):**
+
+| Method | Description |
+| ------ | ----------- |
+| `withShell(pattern, result)` | Set static response |
+| `mockShellOnce(pattern, result)` | Queue one-time response |
+| `mockShellSequence(pattern, results)` | Queue multiple responses |
+| `getShellMock(command)` | Resolve mock (internal) |
+
+**Buffer-based (BufferShellResult):**
+
+| Method | Description |
+| ------ | ----------- |
+| `withBufferShell(pattern, result)` | Set static response |
+| `mockBufferShellOnce(pattern, result)` | Queue one-time response |
+| `mockBufferShellSequence(pattern, results)` | Queue multiple responses |
+| `getBufferShellMock(cmd)` | Resolve mock (internal) |
+
+---
+
+### Bun.$ Interception
+
+The most powerful mocking feature: automatic interception of `Bun.$`
+template literal calls. This eliminates the need for dependency injection
+when testing code that uses `Bun.$` directly.
+
+#### How Bun.$ Interception Works
+
+When `mockBunShell()` is called:
+
+```text
+1. Save original Bun.$ reference
+2. Replace Bun.$ with mock tagged template function
+3. Mock function:
+   a. Reconstructs command string from template parts
+   b. Looks up result via getShellMock()
+   c. Returns MockShellPromise (mimics real Bun.$ return)
+```
+
+The `MockShellPromise` implements the full `Bun.$` API:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  MockShellPromise                                               │
+│  ─────────────────────────────────────────────────────────────  │
+│  Implements PromiseLike<MockShellResult>                        │
+│                                                                 │
+│  Chainable (return this):     Terminal (return Promise):        │
+│  • .quiet()                   • await (resolves to result)      │
+│  • .nothrow()                 • .text() → stdout string         │
+│  • .env(vars)                 • .json() → parsed stdout         │
+│  • .cwd(path)                 • .blob() → stdout Blob           │
+│                               • .lines() → stdout array         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Activating Interception
+
+```typescript
+ctx.withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" })
+   .mockBunShell();
+
+// Now ALL Bun.$ calls are intercepted
+const result = await Bun.$`git status`.text();
+expect(result).toBe("clean");
+```
+
+#### Template Literal Reconstruction
+
+The mock correctly handles template interpolation:
+
+```typescript
+const branch = "main";
+ctx.withShell("git checkout main", { exitCode: 0, stdout: "", stderr: "" })
+   .mockBunShell();
+
+// Template literal is reconstructed to "git checkout main"
+await Bun.$`git checkout ${branch}`;  // matches!
+```
+
+Also handles the `{ raw: string }` pattern used for escaping:
+
+```typescript
+const cmd = "echo 'hello'";
+ctx.withShell("echo 'hello'", { exitCode: 0, stdout: "hello", stderr: "" })
+   .mockBunShell();
+
+await Bun.$`${{ raw: cmd }}`;  // matches!
+```
+
+#### Error Behavior
+
+By default, throws on non-zero exit (matching real `Bun.$`):
+
+```typescript
+ctx.withShell("false", { exitCode: 1, stdout: "", stderr: "error" })
+   .mockBunShell();
+
+await Bun.$`false`;  // throws Error("Command failed: false")
+```
+
+Use `.nothrow()` to suppress:
+
+```typescript
+const result = await Bun.$`false`.nothrow();
+expect(result.exitCode).toBe(1);  // No throw
+```
+
+#### Complete Integration Example
+
+```typescript
+describe("Build script", () => {
+  let ctx: ReturnType<typeof plugin.test>;
+
+  beforeEach(() => {
+    ctx = plugin.test()
+      .withOptions({ DEBUG: "false" })
+      .withState({ projectRoot: "/app" })
+      // Configure all shell mocks
+      .withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" })
+      .withShell("bun install", { exitCode: 0, stdout: "done", stderr: "" })
+      .mockShellSequence("bun test", [
+        { exitCode: 1, stdout: "", stderr: "1 failing" },  // First run
+        { exitCode: 0, stdout: "all pass", stderr: "" },   // After fix
+      ])
+      // Activate Bun.$ interception
+      .mockBunShell();
+  });
+
+  afterEach(() => ctx.dispose());
+
+  test("retries failing tests", async () => {
+    // Your code under test uses Bun.$ directly
+    const status = await Bun.$`git status`.text();
+    expect(status).toBe("clean");
+
+    // First test run fails
+    const run1 = await Bun.$`bun test`.nothrow();
+    expect(run1.exitCode).toBe(1);
+
+    // Second test run passes
+    const run2 = await Bun.$`bun test`.nothrow();
+    expect(run2.exitCode).toBe(0);
+  });
+});
+```
+
+#### Restoration
+
+Original `Bun.$` is automatically restored on `dispose()`:
+
+```typescript
+afterEach(() => ctx.dispose());  // Restores Bun.$
+```
+
+Manual restoration if needed mid-test:
+
+```typescript
+ctx.restoreBunShell();  // Restores immediately
+```
+
+#### Bun.$ Mock API Reference
+
+| Method | Description |
+| ------ | ----------- |
+| `mockBunShell()` | Activate Bun.$ interception |
+| `restoreBunShell()` | Restore original Bun.$ |
+
+**MockShellPromise methods:**
+
+| Method | Return Type | Description |
+| ------ | ----------- | ----------- |
+| `.quiet()` | `MockShellPromise` | No-op, returns self |
+| `.nothrow()` | `MockShellPromise` | Suppress error throws |
+| `.env(vars)` | `MockShellPromise` | No-op, returns self |
+| `.cwd(path)` | `MockShellPromise` | No-op, returns self |
+| `.text()` | `Promise<string>` | Stdout as trimmed string |
+| `.json()` | `Promise<unknown>` | Parse stdout as JSON |
+| `.blob()` | `Promise<Blob>` | Stdout as Blob |
+| `.lines()` | `Promise<string[]>` | Stdout split by newlines |
+| `await` | `MockShellResult` | `{ exitCode, stdout, stderr }` |
+
+---
+
+### Global Mock Utilities
+
+These methods affect all registered mocks:
+
+#### clearMockCalls()
+
+Clear call history from all registered mock functions without resetting
+their configuration:
+
+```typescript
+// After first test phase
+expect(myMock.callCount).toBe(3);
+
+ctx.clearMockCalls();
+
+// Start fresh for next phase
+expect(myMock.callCount).toBe(0);
+// Return values still configured
+```
+
+#### resetMocks()
+
+Reset all mock functions and shell mock sequences to initial state:
+
+```typescript
+ctx.resetMocks();
+// All mock functions reset
+// All shell sequence queues cleared
+// Static shell responses preserved
+```
+
+---
 
 ### Hook Input Methods
 

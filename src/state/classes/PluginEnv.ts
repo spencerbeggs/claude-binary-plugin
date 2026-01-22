@@ -1,3 +1,4 @@
+import type { ZodType } from "zod";
 import { OtelConfig } from "../../otel/classes/OtelConfig.js";
 import type { EnvValidationErrorResult } from "../../otel/classes/TelemetryEmitter.js";
 import { TelemetryEmitter } from "../../otel/classes/TelemetryEmitter.js";
@@ -7,7 +8,7 @@ import { DebugLogger } from "../../utils/debug-logger.js";
  * Zod issue type for error formatting.
  * Minimal interface matching what we need from ZodError.issues.
  * Uses PropertyKey[] for path to be compatible with Zod v4.
- * @internal
+ * @public
  */
 export interface ZodIssueMinimal {
 	path: PropertyKey[];
@@ -24,7 +25,7 @@ export interface ZodIssueMinimal {
 /**
  * Zod error type for validation results.
  * Minimal interface matching what we need from ZodError.
- * @internal
+ * @public
  */
 export interface ZodErrorMinimal {
 	issues: ZodIssueMinimal[];
@@ -162,7 +163,7 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
 	/** Command name (e.g., "lint", "test") */
 	name: string;
 	/** Optional Zod schema for validating command arguments */
-	argsSchema?: ZodSchema<TArgs>;
+	argsSchema?: ZodType<TArgs>;
 }
 
 /**
@@ -251,18 +252,13 @@ export interface CommandConfig<TArgs = Record<string, unknown>> {
  */
 
 /**
- * Zod schema type - imported as type-only to avoid requiring zod as a dependency.
- * Plugins that want validation should install zod as a peer dependency.
- *
- * Supports both Zod v3 (shape as function) and Zod v4 (shape as object).
+ * Internal interface for accessing Zod schema shape.
+ * Used to extract schema keys for environment variable collection.
  * @internal
  */
-export interface ZodSchema<T = unknown> {
-	parse(data: unknown): T;
-	safeParse(data: unknown): { success: true; data: T } | { success: false; error: ZodErrorMinimal };
+interface ZodSchemaWithShape {
 	_def?: {
-		// Zod v3: shape is a function, Zod v4: shape is an object
-		shape?: (() => Record<string, unknown>) | Record<string, unknown>;
+		shape?: Record<string, unknown>;
 	};
 }
 
@@ -458,7 +454,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 * Optional Zod schema for validating environment variables.
 	 * Subclasses should override this to provide type-safe validation.
 	 */
-	protected schema?: ZodSchema<TOptions>;
+	protected schema?: ZodType<TOptions>;
 
 	/**
 	 * Internal storage for validated environment variables.
@@ -555,13 +551,9 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 
 		// Collect all env vars that match the schema keys
 		const envVars: Record<string, unknown> = {};
-		if (this.schema._def && "shape" in this.schema._def && this.schema._def.shape) {
-			// Zod v3: shape is a function, Zod v4: shape is an object
-			const shapeOrFn = this.schema._def.shape;
-			const shape =
-				typeof shapeOrFn === "function"
-					? (shapeOrFn() as Record<string, unknown>)
-					: (shapeOrFn as Record<string, unknown>);
+		const schemaWithShape = this.schema as ZodSchemaWithShape;
+		if (schemaWithShape._def && "shape" in schemaWithShape._def && schemaWithShape._def.shape) {
+			const shape = schemaWithShape._def.shape;
 			for (const key of Object.keys(shape)) {
 				envVars[key] = Bun.env[key];
 			}
@@ -639,7 +631,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static create<T>(
 		prefix: string,
-		schema: ZodSchema<T>,
+		schema: ZodType<T>,
 		pluginName?: string,
 	): new () => PluginEnv<T> & { validated: T } {
 		return class extends PluginEnv<T> {
@@ -1584,13 +1576,9 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 
 		// Collect all env vars that match the schema keys
 		const envVars: Record<string, unknown> = {};
-		if (this.schema._def && "shape" in this.schema._def && this.schema._def.shape) {
-			// Zod v3: shape is a function, Zod v4: shape is an object
-			const shapeOrFn = this.schema._def.shape;
-			const shape =
-				typeof shapeOrFn === "function"
-					? (shapeOrFn() as Record<string, unknown>)
-					: (shapeOrFn as Record<string, unknown>);
+		const schemaWithShape = this.schema as ZodSchemaWithShape;
+		if (schemaWithShape._def && "shape" in schemaWithShape._def && schemaWithShape._def.shape) {
+			const shape = schemaWithShape._def.shape;
 			for (const key of Object.keys(shape)) {
 				envVars[key] = Bun.env[key];
 			}
@@ -1647,13 +1635,9 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 
 		// Collect all env vars that match the schema keys
 		const envVars: Record<string, unknown> = {};
-		if (this.schema._def && "shape" in this.schema._def && this.schema._def.shape) {
-			// Zod v3: shape is a function, Zod v4: shape is an object
-			const shapeOrFn = this.schema._def.shape;
-			const shape =
-				typeof shapeOrFn === "function"
-					? (shapeOrFn() as Record<string, unknown>)
-					: (shapeOrFn as Record<string, unknown>);
+		const schemaWithShape = this.schema as ZodSchemaWithShape;
+		if (schemaWithShape._def && "shape" in schemaWithShape._def && schemaWithShape._def.shape) {
+			const shape = schemaWithShape._def.shape;
 			for (const key of Object.keys(shape)) {
 				envVars[key] = Bun.env[key];
 			}
