@@ -1,7 +1,27 @@
+---
+status: current
+module: claude-binary-plugin
+category: documentation
+created: 2026-01-22
+updated: 2026-01-22
+last-synced: 2026-01-22
+completeness: 80
+related:
+  - .claude/design/architecture.md
+  - .claude/design/testing.md
+dependencies: []
+---
+
 # CLI
 
 The `claude-binary-plugin` package includes a CLI binary for building
 plugins with zero configuration.
+
+## Overview
+
+The CLI provides a zero-configuration build tool for compiling Claude Code
+plugins into single-file Bun executables. It handles entrypoint generation,
+bundling, bytecode compilation, and manifest generation automatically.
 
 ## Installation
 
@@ -96,5 +116,5 @@ Before 1.0.0 release:
 
 ## Related Documentation
 
-- `ARCHITECTURE.md` - Build system internals
-- `TESTING.md` - Testing utilities
+- `architecture.md` - Build system internals
+- `testing.md` - Testing utilities

@@ -29,11 +29,11 @@ shims. Remove old code entirely rather than maintaining aliases.
 
 For detailed architecture and schema information, reference these docs:
 
-- @.claude/design/ARCHITECTURE.md - System architecture, data flow, build
+- @.claude/design/architecture.md - System architecture, data flow, build
   system, command runtime, OTEL sidecar spawning and handshake
-- @.claude/design/CLI.md - CLI binary usage, zero-config builds
-- @.claude/design/SCHEMA.md - OTEL telemetry schema, event types, metrics
-- @.claude/design/TESTING.md - Testing utilities and fluent API
+- @.claude/design/cli.md - CLI binary usage, zero-config builds
+- @.claude/design/schema.md - OTEL telemetry schema, event types, metrics
+- @.claude/design/testing.md - Testing utilities and fluent API
 
 ## Development Commands
 
@@ -75,7 +75,7 @@ bun run build
 
 ### Type Safety Utilities
 
-The SDK uses `type-fest` for enhanced type safety. See @docs/ARCHITECTURE.md
+The SDK uses `type-fest` for enhanced type safety. See @.claude/design/architecture.md
 for detailed examples.
 
 - **JSON Types** - `JsonObject`, `JsonValue` for tool inputs/outputs
@@ -117,12 +117,12 @@ Load these files as needed for deeper context:
 | File | Purpose |
 | ---- | ------- |
 | `src/pipeline/config.ts` | `ClaudeBinaryPlugin.create()` factory |
-| `src/pipeline/classes/PipelineRuntime.ts` | `PipelineRuntime.run()` execution |
-| `src/pipeline/classes/Pipeline.ts` | `Pipeline` utilities (type guards, metrics) |
+| `src/pipeline/classes/PipelineRuntime.ts` | `PipelineRuntime.run()` |
+| `src/pipeline/classes/Pipeline.ts` | `Pipeline` utilities |
 | `src/pipeline/types.ts` | Output schemas per hook type |
 | `src/build/builder.ts` | `PluginBuilder` class |
-| `src/state/plugin-state.ts` | `PluginEnv` base class |
-| `src/state/session-registry.ts` | SQLite session lookup |
+| `src/state/classes/PluginEnv.ts` | `PluginEnv` base class |
+| `src/state/classes/SessionRegistry.ts` | SQLite session lookup |
 | `src/commands/runtime.ts` | `Commands` class |
 | `src/core/schemas.ts` | Input Zod schemas |
 | `src/core/tool-inputs.ts` | Typed tool inputs |
@@ -144,7 +144,7 @@ Located in `src/otel/classes/` unless noted:
 | `PluginInfo` | Plugin metadata |
 | `SidecarLauncher` | Sidecar spawning |
 | `SidecarClientPool` | Client lifecycle |
-| `SidecarClient` | IPC client (`src/otel/client.ts`) |
+| `SidecarClient` | IPC client (`src/otel/classes/SidecarClient.ts`) |
 
 ## Environment Variables
 

@@ -1,3 +1,16 @@
+---
+status: current
+module: claude-binary-plugin
+category: testing
+created: 2026-01-22
+updated: 2026-01-22
+last-synced: 2026-01-22
+completeness: 95
+related:
+  - .claude/design/architecture.md
+dependencies: []
+---
+
 # Testing
 
 This document describes the testing utilities provided by the
@@ -14,7 +27,7 @@ on your plugin's schema.
 import plugin from "../plugin.js";
 
 const ctx = plugin.test()
-  .withOptions({ DEBUG: false })
+  .withOptions({ DEBUG: "false" })
   .withState({ packageManager: "bun" });
 
 const result = await ctx
@@ -28,12 +41,12 @@ ctx.dispose();
 All testing utilities are exported from the main entry point:
 
 ```typescript
-import { PluginTestBuilder, Mocks } from "claude-binary-plugin";
+import { PluginTester, TestFixtures } from "claude-binary-plugin";
 ```
 
 ## Fluent Testing API
 
-### Basic Usage
+### Basic Setup Pattern
 
 The recommended pattern uses `beforeEach`/`afterEach` for setup and cleanup:
 
@@ -46,12 +59,12 @@ describe("Security hook", () => {
 
   beforeEach(() => {
     ctx = plugin.test()
-      .withOptions({ DEBUG: false, ALLOW_SUDO: false })
-      .withState({ packageManager: "bun", gitRepo: true });
+      .withOptions({ DEBUG: "false", ALLOW_SUDO: "false" })
+      .withState({ packageManager: "bun", gitRepo: true, projectRoot: "/test" });
   });
 
   afterEach(() => {
-    ctx.dispose();
+    ctx.dispose();  // REQUIRED - prevents test pollution
   });
 
   test("blocks dangerous commands", async () => {
@@ -85,13 +98,14 @@ All configuration methods are fluent (return `this` for chaining).
 
 #### withOptions(options)
 
-Set the plugin options matching your schema definition:
+Set the plugin options matching your schema definition. These correspond
+to the environment variables your plugin accepts:
 
 ```typescript
 ctx.withOptions({
-  DEBUG: true,
+  DEBUG: "true",
   API_KEY: "test-key",
-  MAX_RETRIES: 3,
+  TIMEOUT_MS: "30000",
 });
 ```
 
@@ -99,17 +113,17 @@ The options parameter is fully typed based on your plugin's Zod schema.
 
 #### withState(state)
 
-Set the computed state that would normally come from the `setup()` function:
+Set the computed state that would normally come from the `setup()` function.
+This bypasses actual detection logic for isolated testing:
 
 ```typescript
 ctx.withState({
   packageManager: "bun",
   gitRepo: true,
   projectRoot: "/test/project",
+  // ... any fields your setup() returns
 });
 ```
-
-This allows testing hooks without running the actual setup detection logic.
 
 #### withShell(pattern, result)
 
@@ -233,9 +247,9 @@ All hook inputs extend `HookInputBase` with these optional fields:
 | `cwd` | `string` | Current working directory |
 | `permission_mode` | `string` | Permission mode for the session |
 
-### Execution Methods
+## Running Hooks
 
-#### runHook(hookType, hookName)
+### runHook(hookType, hookName)
 
 Execute a hook handler with the configured context:
 
@@ -245,42 +259,245 @@ const result = await ctx
   .runHook("PreToolUse", "security");
 ```
 
-Returns a `HookTestResult` with:
+**How it works:**
+
+1. Finds the hook definition by `hookType` and `hookName` in plugin config
+2. Resolves the handler (inline function or dynamic import for file paths)
+3. Builds handler context with `{ input, options, state }`
+4. Calls the pipeline handler
+5. Converts output to `HookTestResult`
+
+### HookTestResult
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `exitCode` | `number` | Exit code (0 = success) |
-| `stdout` | `string` | Raw stdout output |
-| `stderr` | `string` | Raw stderr output |
-| `output` | `Record<string, unknown>` | Parsed JSON response |
-| `action` | `HookAction` | Convenience: "allow" \| "deny" \| "block" \| etc. |
-| `context` | `string` | Convenience: `additionalContext` field |
-| `reason` | `string` | Convenience: `reason` field |
+| `exitCode` | `number` | 0 = success, 1 = error |
+| `stdout` | `string` | JSON-stringified pipeline output |
+| `stderr` | `string` | Error output |
+| `output` | `Record<string, unknown>` | Parsed pipeline output object |
+| `action` | `HookAction` | Convenience: "allow" \| "deny" \| "block" \| "context" \| etc. |
+| `context` | `string` | Convenience: `claudeContext` field value |
+| `reason` | `string` | Convenience: `reason` field value |
 
-#### runCommand(commandName, args)
+### Hook Testing Patterns
 
-Execute a command handler:
+**Testing PreToolUse allow/deny:**
+
+```typescript
+test("allows safe commands", async () => {
+  const result = await ctx
+    .withPreToolUseInput({
+      tool_name: "Bash",
+      tool_input: { command: "git status" },
+    })
+    .runHook("PreToolUse", "security");
+
+  expect(result.exitCode).toBe(0);
+  expect(result.action).toBe("allow");
+});
+
+test("denies dangerous commands", async () => {
+  const result = await ctx
+    .withPreToolUseInput({
+      tool_name: "Bash",
+      tool_input: { command: "rm -rf /" },
+    })
+    .runHook("PreToolUse", "security");
+
+  expect(result.action).toBe("deny");
+  expect(result.reason).toContain("dangerous");
+});
+```
+
+**Testing SessionStart context injection:**
+
+```typescript
+test("adds project context", async () => {
+  const result = await ctx
+    .withSessionStartInput({ source: "startup" })
+    .runHook("SessionStart", "context");
+
+  expect(result.action).toBe("context");
+  expect(result.context).toContain("Project uses bun");
+});
+```
+
+**Testing PostToolUse:**
+
+```typescript
+test("adds context after tool execution", async () => {
+  const result = await ctx
+    .withPostToolUseInput({
+      tool_name: "Bash",
+      tool_input: { command: "npm test" },
+      tool_response: { output: "All tests passed" },
+    })
+    .runHook("PostToolUse", "test-reporter");
+
+  expect(result.action).toBe("context");
+  expect(result.context).toContain("tests passed");
+});
+```
+
+**Testing Stop hooks:**
+
+```typescript
+test("blocks premature stops", async () => {
+  const result = await ctx
+    .withStopInput({ stop_hook_active: true })
+    .runHook("Stop", "guard");
+
+  expect(result.action).toBe("block");
+  expect(result.reason).toBeDefined();
+});
+```
+
+**Verifying handler receives correct context:**
+
+```typescript
+test("handler receives options from withOptions()", async () => {
+  let receivedOptions: unknown;
+
+  // Plugin with inline handler that captures options
+  const testPlugin = ClaudeBinaryPlugin.create({
+    prefix: "TEST",
+    options: z.object({ API_KEY: z.string().optional() }),
+    setup: async () => ({}),
+    hooks: {
+      PreToolUse: [{
+        name: "capture",
+        pipeline: async ({ options }) => {
+          receivedOptions = options;
+          return { status: "executed", action: "allow", summary: "ok" };
+        },
+      }],
+    },
+  });
+
+  const ctx = testPlugin.test()
+    .withOptions({ API_KEY: "secret" })
+    .withState({})
+    .withPreToolUseInput({ tool_name: "Bash", tool_input: {} });
+
+  await ctx.runHook("PreToolUse", "capture");
+
+  expect(receivedOptions).toEqual({ API_KEY: "secret" });
+  ctx.dispose();
+});
+```
+
+## Running Commands
+
+### runCommand(commandName, args?)
+
+Execute a command handler with optional arguments:
 
 ```typescript
 const result = await ctx.runCommand("lint", {
-  _positionals: ["src/"],
+  path: "src/",
   fix: true,
 });
 ```
 
-Returns a `CommandTestResult` with:
+Arguments are validated against the command's Zod schema. Schema defaults
+are applied automatically for omitted fields.
+
+**How it works:**
+
+1. Finds the command definition by name in plugin config
+2. Resolves the handler (inline function or dynamic import)
+3. Validates args against the command's Zod schema
+4. Builds command context with `{ args, options, state }`
+5. Calls the command handler
+6. Returns `CommandTestResult`
+
+### CommandTestResult
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `exitCode` | `number` | Exit code (0 = success, 1 = issues, 2 = fatal) |
-| `stdout` | `string` | Raw stdout output |
-| `stderr` | `string` | Raw stderr output |
-| `logs` | `string[]` | Captured console.log calls |
-| `errors` | `string[]` | Captured console.error calls |
+| `exitCode` | `number` | 0 = success, 1 = issues found, 2 = fatal error |
+| `stdout` | `string` | Markdown output from the command |
+| `stderr` | `string` | Error output |
+| `logs` | `string[]` | Captured `console.log` calls |
+| `errors` | `string[]` | Captured `console.error` calls |
+| `data` | `Record<string, unknown>` | Optional structured data from handler |
 
-### Cleanup
+### Command Testing Patterns
 
-#### dispose()
+**Testing successful execution:**
+
+```typescript
+test("lint command runs successfully", async () => {
+  const result = await ctx.runCommand("lint", { path: "src/", fix: true });
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout).toContain("# Lint Results");
+  expect(result.stdout).toContain("All checks passed");
+});
+```
+
+**Testing with default arguments:**
+
+```typescript
+test("uses schema defaults when args omitted", async () => {
+  const result = await ctx.runCommand("lint");
+
+  // Schema defaults are applied (e.g., path: ".", fix: true)
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout).toContain("Path: .");
+});
+```
+
+**Testing exit codes:**
+
+```typescript
+test("returns exit code 1 when issues found", async () => {
+  const result = await ctx.runCommand("test", { pattern: "failing" });
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toContain("tests failed");
+});
+
+test("returns exit code 2 for fatal errors", async () => {
+  // @ts-expect-error - Testing invalid command
+  const result = await ctx.runCommand("nonexistent");
+
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain("not found");
+});
+```
+
+**Testing structured data:**
+
+```typescript
+test("returns structured data", async () => {
+  const result = await ctx.runCommand("test");
+
+  expect(result.exitCode).toBe(0);
+  expect(result.data).toEqual({ passed: 10, failed: 0 });
+});
+```
+
+**Testing state access in commands:**
+
+```typescript
+test("command receives state from withState()", async () => {
+  ctx.withState({
+    packageManager: "pnpm",
+    gitRepo: true,
+    projectRoot: "/my-project",
+  });
+
+  const result = await ctx.runCommand("status");
+
+  expect(result.stdout).toContain("pnpm");
+  expect(result.stdout).toContain("/my-project");
+});
+```
+
+## Cleanup
+
+### dispose()
 
 Clean up all mocks and restore the original environment. Call this in
 `afterEach()`:
@@ -291,7 +508,7 @@ afterEach(() => {
 });
 ```
 
-Safe to call multiple times. Required to prevent test pollution.
+Safe to call multiple times. **Required to prevent test pollution.**
 
 ## Validation
 
@@ -305,9 +522,55 @@ await plugin.test()
 
 // Throws: "withState() must be called before running tests"
 await plugin.test()
-  .withOptions({ DEBUG: false })
+  .withOptions({ DEBUG: "false" })
   .runHook("PreToolUse", "security");
 ```
+
+## Handler Resolution
+
+### Inline Handlers
+
+Inline handlers defined directly in the plugin config work seamlessly:
+
+```typescript
+const plugin = ClaudeBinaryPlugin.create({
+  // ...
+  hooks: {
+    PreToolUse: [{
+      name: "security",
+      pipeline: async ({ input, options, state }) => {
+        // This handler is called directly
+        return { status: "executed", action: "allow", summary: "ok" };
+      },
+    }],
+  },
+});
+```
+
+### File Path Handlers
+
+File-based handlers are dynamically imported:
+
+```typescript
+const plugin = ClaudeBinaryPlugin.create({
+  // ...
+  hooks: {
+    PreToolUse: [{
+      name: "security",
+      pipeline: "./hooks/security.hook.ts",  // Resolved from cwd
+    }],
+  },
+});
+```
+
+For file paths to resolve correctly, run tests from the plugin root
+directory where the paths are relative to.
+
+### Raw Handlers Not Supported
+
+Raw handlers (using `handler` instead of `pipeline`) are not supported
+in the fluent testing API. They require direct access to the event object
+and should be tested separately using low-level utilities.
 
 ## Advanced: Low-Level Utilities
 
@@ -398,7 +661,7 @@ const env2 = TestFixtures.envPresets.withEnvFile("/path/to/env.sh", {
 | `TestFixtures.runCommand(args, mainFn)` | Run command with mocks |
 | `TestFixtures.runHook(mainFn)` | Run hook with mocked exit |
 | `TestFixtures.shellExecutor(responses)` | Create shell executor mock |
-| `TestFixtures.inMemoryShellExecutor(handler)` | Create in-memory shell executor |
+| `TestFixtures.inMemoryShellExecutor(handler)` | In-memory shell executor |
 | `TestFixtures.envPresets` | Pre-configured environment setups |
 | `TestFixtures.ExitError` | Error thrown by mocked process.exit |
 
@@ -409,3 +672,142 @@ const env2 = TestFixtures.envPresets.withEnvFile("/path/to/env.sh", {
 3. **Test both paths** - Test allow and deny cases for security hooks
 4. **Use realistic inputs** - Mirror actual Claude Code event structures
 5. **Mock external calls** - Use `withShell()` for subprocess isolation
+6. **Use inline handlers for testability** - Easier to test than file paths
+7. **Verify context passing** - Test that options and state reach handlers
+8. **Test edge cases** - Invalid inputs, missing args, error conditions
+
+## Complete Example
+
+```typescript
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { z } from "zod";
+import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+
+const plugin = ClaudeBinaryPlugin.create({
+  prefix: "MY_PLUGIN",
+  options: z.object({
+    DEBUG: z.string().default("false"),
+    ALLOW_DANGEROUS: z.string().default("false"),
+  }),
+  setup: async ({ cwd }) => ({
+    projectRoot: cwd,
+    hasGit: true,
+  }),
+  hooks: {
+    PreToolUse: [{
+      name: "security",
+      tools: ["Bash"],
+      pipeline: async ({ input, options, state }) => {
+        const cmd = (input.tool_input as { command?: string }).command ?? "";
+
+        if (cmd.includes("rm -rf") && options.ALLOW_DANGEROUS !== "true") {
+          return {
+            status: "executed",
+            action: "deny",
+            summary: "blocked dangerous command",
+            reason: "rm -rf is not allowed",
+          };
+        }
+
+        return {
+          status: "executed",
+          action: "allow",
+          summary: "allowed command",
+        };
+      },
+    }],
+  },
+  commands: {
+    greet: {
+      description: "Say hello",
+      args: z.object({
+        name: z.string().default("World"),
+      }),
+      pipeline: async ({ args, state }) => ({
+        exitCode: 0,
+        output: `# Hello\n\nHello, ${args.name}! Project: ${state.projectRoot}`,
+      }),
+    },
+  },
+});
+
+describe("Security hook", () => {
+  let ctx: ReturnType<typeof plugin.test>;
+
+  beforeEach(() => {
+    ctx = plugin.test()
+      .withOptions({ DEBUG: "false", ALLOW_DANGEROUS: "false" })
+      .withState({ projectRoot: "/test", hasGit: true });
+  });
+
+  afterEach(() => ctx.dispose());
+
+  test("allows safe commands", async () => {
+    const result = await ctx
+      .withPreToolUseInput({
+        tool_name: "Bash",
+        tool_input: { command: "git status" },
+      })
+      .runHook("PreToolUse", "security");
+
+    expect(result.action).toBe("allow");
+  });
+
+  test("blocks rm -rf by default", async () => {
+    const result = await ctx
+      .withPreToolUseInput({
+        tool_name: "Bash",
+        tool_input: { command: "rm -rf /tmp/test" },
+      })
+      .runHook("PreToolUse", "security");
+
+    expect(result.action).toBe("deny");
+    expect(result.reason).toBe("rm -rf is not allowed");
+  });
+
+  test("allows rm -rf when ALLOW_DANGEROUS is true", async () => {
+    ctx.withOptions({ DEBUG: "false", ALLOW_DANGEROUS: "true" });
+
+    const result = await ctx
+      .withPreToolUseInput({
+        tool_name: "Bash",
+        tool_input: { command: "rm -rf /tmp/test" },
+      })
+      .runHook("PreToolUse", "security");
+
+    expect(result.action).toBe("allow");
+  });
+});
+
+describe("Greet command", () => {
+  let ctx: ReturnType<typeof plugin.test>;
+
+  beforeEach(() => {
+    ctx = plugin.test()
+      .withOptions({ DEBUG: "false", ALLOW_DANGEROUS: "false" })
+      .withState({ projectRoot: "/my-project", hasGit: true });
+  });
+
+  afterEach(() => ctx.dispose());
+
+  test("greets with default name", async () => {
+    const result = await ctx.runCommand("greet");
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Hello, World!");
+  });
+
+  test("greets with custom name", async () => {
+    const result = await ctx.runCommand("greet", { name: "Claude" });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Hello, Claude!");
+  });
+
+  test("includes project root from state", async () => {
+    const result = await ctx.runCommand("greet");
+
+    expect(result.stdout).toContain("/my-project");
+  });
+});
+```

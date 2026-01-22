@@ -1,3 +1,18 @@
+---
+status: current
+module: claude-binary-plugin
+category: architecture
+created: 2026-01-22
+updated: 2026-01-22
+last-synced: 2026-01-22
+completeness: 95
+related:
+  - .claude/design/schema.md
+  - .claude/design/testing.md
+  - .claude/design/cli.md
+dependencies: []
+---
+
 # Architecture
 
 This document describes the internal architecture of the
@@ -1188,17 +1203,28 @@ src/
 │   ├── schemas.ts        # Input Zod schemas
 │   └── tool-inputs.ts    # Tool input types
 ├── state/
-│   ├── plugin-state.ts   # PluginEnv base class
-│   ├── session-registry.ts # SQLite session lookup
-│   └── codecs.ts         # Zod codecs for env vars
+│   └── classes/
+│       ├── PluginEnv.ts  # PluginEnv base class
+│       ├── SessionRegistry.ts # SQLite session lookup
+│       └── EnvCodecs.ts  # Zod codecs for env vars
 ├── events/
-│   ├── base.ts           # HookEvent base class
-│   ├── subclasses.ts     # Hook event subclasses
+│   ├── classes/          # HookEvent classes
+│   │   ├── HookEvent.ts  # Base class
+│   │   ├── PreToolUseEvent.ts  # Tool use hooks
+│   │   ├── PostToolUseEvent.ts
+│   │   ├── SessionStartEvent.ts
+│   │   ├── SessionEndEvent.ts
+│   │   ├── StopEvent.ts
+│   │   ├── SubagentStopEvent.ts
+│   │   ├── UserPromptSubmitEvent.ts
+│   │   ├── PreCompactEvent.ts
+│   │   ├── NotificationEvent.ts
+│   │   ├── PermissionRequestEvent.ts
+│   │   ├── ResponseBuilders.ts # Response builder functions
+│   │   └── SchemaValidator.ts  # Input validation
 │   ├── types.ts          # Event types
-│   ├── enums.ts          # HookEventName enum
-│   ├── response-builders.ts # Response builder functions
-│   ├── response-types.ts # Response types
-│   └── validation.ts     # Input validation
+│   ├── enums.ts          # HookType enum
+│   └── response-types.ts # Response types
 ├── pipeline/
 │   ├── config.ts         # ClaudeBinaryPlugin.create()
 │   ├── types.ts          # Output types, Zod schemas
@@ -1208,7 +1234,7 @@ src/
 │       └── Pipeline.ts   # Pipeline utilities (type guards, metrics)
 ├── testing/
 │   ├── mocks.ts          # Low-level test utilities
-│   └── builder.ts        # PluginTester (see TESTING.md)
+│   └── builder.ts        # PluginTester (see testing.md)
 ├── types/
 │   ├── json.ts           # JSON types from type-fest, Zod schemas
 │   └── branded.ts        # Branded types (SessionId, ToolUseId, etc.)
@@ -1229,7 +1255,8 @@ src/
     │   ├── SidecarLauncher.ts # Sidecar spawning
     │   ├── TelemetryEmitter.ts # Event emission
     │   ├── TelemetryMetrics.ts # Metric recording
-    │   └── TelemetrySpan.ts # Span instrumentation
+    │   ├── TelemetrySpan.ts # Span instrumentation
+    │   └── SidecarClient.ts # IPC client
     ├── sidecar/          # Sidecar process
     │   └── classes/      # Sidecar implementation
     │       ├── SidecarServer.ts # Unix socket server
@@ -1242,12 +1269,11 @@ src/
     │       ├── EventHandler.ts # Event message handler
     │       ├── MetricHandler.ts # Metric message handler
     │       └── SpanHandler.ts # Span message handler
-    ├── client.ts         # SidecarClient class
     ├── protocol.ts       # Message types
     └── version.macro.ts  # Build-time version injection
 ```
 
 ## Related Documentation
 
-- `TESTING.md` - Testing utilities and fluent API
-- `SCHEMA.md` - OTEL telemetry schema specification
+- `testing.md` - Testing utilities and fluent API
+- `schema.md` - OTEL telemetry schema specification

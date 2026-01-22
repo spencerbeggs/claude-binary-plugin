@@ -1,3 +1,16 @@
+---
+status: current
+module: claude-binary-plugin
+category: observability
+created: 2026-01-22
+updated: 2026-01-22
+last-synced: 2026-01-22
+completeness: 95
+related:
+  - .claude/design/architecture.md
+dependencies: []
+---
+
 # OTEL Schema Documentation
 
 This document describes the OpenTelemetry schema used by the
