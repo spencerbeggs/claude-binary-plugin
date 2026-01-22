@@ -125,6 +125,39 @@ ctx.withState({
 });
 ```
 
+#### withPluginRoot(path)
+
+Set the plugin root directory for resolving relative paths in command and
+hook definitions. **Required** when testing commands defined with relative
+paths like `./commands/test.cmd.ts`:
+
+```typescript
+// Set to the directory containing your plugin config
+ctx.withPluginRoot(import.meta.dir);
+
+// Or resolve from test file location
+import { resolve } from "node:path";
+ctx.withPluginRoot(resolve(import.meta.dir, ".."));
+```
+
+Without this, relative paths resolve from `process.cwd()` which may not be
+your plugin directory.
+
+#### withProjectDir(path)
+
+Set the project directory (`CLAUDE_PROJECT_DIR`) for tests. Useful when
+testing commands that operate on project files:
+
+```typescript
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+// Use a temp directory for isolated tests
+const tempDir = await mkdtemp(join(tmpdir(), "test-"));
+ctx.withProjectDir(tempDir);
+```
+
 ## Mocking System
 
 The `PluginTester` provides a comprehensive mocking system with four
@@ -393,6 +426,55 @@ ctx.mockShellOnce("npm test", { exitCode: 0, stdout: "all passing", stderr: "" }
 // Third call → 1 failing (from static)
 ```
 
+#### Advanced Pattern Matching
+
+For commands with dynamic arguments or complex patterns, use regex or
+custom matchers:
+
+**Regex matching with `withShellMatching()`:**
+
+```typescript
+// Match "bunx tsc" with any arguments (handles dynamic paths)
+ctx.withShellMatching(/bunx\s+tsc/, { exitCode: 0, stdout: "", stderr: "" });
+
+// Match "npm test" or "bun test"
+ctx.withShellMatching(/(?:npm|bun)\s+test/, { exitCode: 0, stdout: "pass", stderr: "" });
+
+// Match any TypeScript compilation command
+ctx.withShellMatching(/tsc\s+--noEmit/, { exitCode: 0, stdout: "", stderr: "" });
+```
+
+**Custom matcher with `withShellMatcher()`:**
+
+```typescript
+// Match commands that start with "npm" or "yarn"
+ctx.withShellMatcher(
+  "package-manager",
+  (cmd) => cmd.startsWith("npm ") || cmd.startsWith("yarn "),
+  { exitCode: 0, stdout: "done", stderr: "" }
+);
+
+// Match tsc with a project flag (any path)
+ctx.withShellMatcher(
+  "tsc-with-project",
+  (cmd) => cmd.includes("tsc") && cmd.includes("-p"),
+  { exitCode: 0, stdout: "", stderr: "" }
+);
+```
+
+**Array command interpolation:**
+
+When commands use array interpolation like `Bun.$`${cmd}`` where
+`cmd = ["bunx", "tsc", "--noEmit"]`, the mock automatically joins the
+array with spaces for pattern matching:
+
+```typescript
+// This matches both:
+// - Bun.$`bunx tsc --noEmit`  (string template)
+// - Bun.$`${["bunx", "tsc", "--noEmit"]}`  (array interpolation)
+ctx.withShell("bunx tsc", { exitCode: 0, stdout: "", stderr: "" });
+```
+
 #### Buffer-Based Shell Mocking (BufferShellResult)
 
 For code using `InMemoryShellExecutor` (command arrays, Buffer output):
@@ -434,7 +516,9 @@ ctx.withBufferShell("status --short", result);  // also matches
 
 | Method | Description |
 | ------ | ----------- |
-| `withShell(pattern, result)` | Set static response |
+| `withShell(pattern, result)` | Set static response (substring match) |
+| `withShellMatching(regex, result)` | Set static response (regex match) |
+| `withShellMatcher(name, fn, result)` | Set static response (custom matcher) |
 | `mockShellOnce(pattern, result)` | Queue one-time response |
 | `mockShellSequence(pattern, results)` | Queue multiple responses |
 | `getShellMock(command)` | Resolve mock (internal) |
@@ -906,10 +990,22 @@ const result = await ctx.runCommand("lint", {
 Arguments are validated against the command's Zod schema. Schema defaults
 are applied automatically for omitted fields.
 
+**Important:** For commands defined with file paths (e.g., `./commands/lint.cmd.ts`),
+you must call `withPluginRoot()` first so paths resolve correctly:
+
+```typescript
+ctx = plugin.test()
+  .withPluginRoot(import.meta.dir)  // Required for file-based commands
+  .withOptions({ DEBUG: "false" })
+  .withState({ projectRoot: "/test" });
+
+const result = await ctx.runCommand("lint");
+```
+
 **How it works:**
 
 1. Finds the command definition by name in plugin config
-2. Resolves the handler (inline function or dynamic import)
+2. Resolves the handler (inline function or dynamic import from plugin root)
 3. Validates args against the command's Zod schema
 4. Builds command context with `{ args, options, state }`
 5. Calls the command handler

@@ -441,6 +441,10 @@ interface BuilderState<TOptions, TState> {
 	state?: TState;
 	hookInput?: Record<string, unknown>;
 	hookEventName?: string;
+	/** Plugin root directory for resolving relative paths */
+	pluginRoot?: string;
+	/** Project directory (cwd) for tests */
+	projectDir?: string;
 	shellResponses: Map<string, ShellResult>;
 	shellMocks: Map<string, ShellMockConfig>;
 	bufferShellResponses: Map<string, BufferShellResult>;
@@ -554,6 +558,54 @@ export class PluginTester<
 	 */
 	withState(state: PartialDeep<TState>): this {
 		this.state.state = state as TState;
+		return this;
+	}
+
+	/**
+	 * Set the plugin root directory for resolving relative paths.
+	 *
+	 * @remarks
+	 * This is essential for command testing when commands are defined
+	 * with relative paths like `./commands/test.cmd.ts`. The plugin root
+	 * is used to resolve these paths to absolute paths.
+	 *
+	 * @param path - Absolute path to the plugin root directory
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Set to the directory containing your plugin config
+	 * ctx.withPluginRoot(import.meta.dir);
+	 *
+	 * // Or resolve from test file location
+	 * ctx.withPluginRoot(resolve(import.meta.dir, ".."));
+	 * ```
+	 */
+	withPluginRoot(path: string): this {
+		this.state.pluginRoot = path;
+		return this;
+	}
+
+	/**
+	 * Set the project directory (cwd) for tests.
+	 *
+	 * @remarks
+	 * This sets `CLAUDE_PROJECT_DIR` which represents the user's project
+	 * directory where Claude Code is running. Useful for testing commands
+	 * that operate on project files.
+	 *
+	 * @param path - Absolute path to the project directory
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Use a temp directory for isolated tests
+	 * const tempDir = await mkdtemp(join(tmpdir(), "test-"));
+	 * ctx.withProjectDir(tempDir);
+	 * ```
+	 */
+	withProjectDir(path: string): this {
+		this.state.projectDir = path;
 		return this;
 	}
 
@@ -721,17 +773,94 @@ export class PluginTester<
 	/**
 	 * Add a mock shell response for a command pattern.
 	 *
-	 * @param pattern - Command string or pattern to match
+	 * @remarks
+	 * Uses substring matching - the pattern must appear anywhere in the command.
+	 * For more flexible matching, use `withShellMatching()` (regex) or
+	 * `withShellMatcher()` (custom function).
+	 *
+	 * @param pattern - Command substring to match (uses `command.includes(pattern)`)
 	 * @param result - ShellResult to return for matching commands
 	 * @returns this for chaining
 	 *
 	 * @example
 	 * ```typescript
+	 * // Matches any command containing "git status"
 	 * ctx.withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" });
+	 *
+	 * // Also matches "git status --short", "cd /foo && git status", etc.
 	 * ```
 	 */
 	withShell(pattern: string, result: ShellResult): this {
 		this.state.shellResponses.set(pattern, result);
+		return this;
+	}
+
+	/**
+	 * Add a mock shell response with regex pattern matching.
+	 *
+	 * @remarks
+	 * Use this for complex patterns where substring matching isn't sufficient.
+	 * The regex is tested against the full reconstructed command string.
+	 *
+	 * @param pattern - RegExp to test against command
+	 * @param result - ShellResult to return for matching commands
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Match "bunx tsc" with any arguments
+	 * ctx.withShellMatching(/bunx\s+tsc/, { exitCode: 0, stdout: "", stderr: "" });
+	 *
+	 * // Match "npm test" or "bun test"
+	 * ctx.withShellMatching(/(?:npm|bun)\s+test/, { exitCode: 0, stdout: "pass", stderr: "" });
+	 * ```
+	 */
+	withShellMatching(pattern: RegExp, result: ShellResult): this {
+		// Store as a mock with a matcher function
+		const patternKey = `__regex__${pattern.source}__${pattern.flags}`;
+		this.state.shellMocks.set(patternKey, {
+			default: result,
+			sequence: [],
+			matcher: (command: string) => pattern.test(command),
+		});
+		return this;
+	}
+
+	/**
+	 * Add a mock shell response with a custom matcher function.
+	 *
+	 * @remarks
+	 * Use this for complex matching logic that can't be expressed as a
+	 * substring or regex. The matcher receives the full command string.
+	 *
+	 * @param name - Unique name for the matcher (for internal tracking)
+	 * @param matcher - Function that returns true if command matches
+	 * @param result - ShellResult to return for matching commands
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Match commands that start with "npm" or "yarn"
+	 * ctx.withShellMatcher(
+	 *   "package-manager",
+	 *   (cmd) => cmd.startsWith("npm ") || cmd.startsWith("yarn "),
+	 *   { exitCode: 0, stdout: "done", stderr: "" }
+	 * );
+	 *
+	 * // Match based on parsed command structure
+	 * ctx.withShellMatcher(
+	 *   "tsc-with-project",
+	 *   (cmd) => cmd.includes("tsc") && cmd.includes("-p"),
+	 *   { exitCode: 0, stdout: "", stderr: "" }
+	 * );
+	 * ```
+	 */
+	withShellMatcher(name: string, matcher: (command: string) => boolean, result: ShellResult): this {
+		this.state.shellMocks.set(`__matcher__${name}`, {
+			default: result,
+			sequence: [],
+			matcher,
+		});
 		return this;
 	}
 
@@ -1083,8 +1212,12 @@ export class PluginTester<
 			let command = strings[0] ?? "";
 			for (let i = 0; i < values.length; i++) {
 				const value = values[i];
+				// Handle arrays (e.g., Bun.$`${["bunx", "tsc"]}`) - join with spaces
+				if (Array.isArray(value)) {
+					command += value.join(" ");
+				}
 				// Handle { raw: string } pattern used for interpolation
-				if (typeof value === "object" && value !== null && "raw" in value) {
+				else if (typeof value === "object" && value !== null && "raw" in value) {
 					command += String((value as { raw: string }).raw);
 				} else {
 					command += String(value);
@@ -1481,10 +1614,10 @@ export class PluginTester<
 		// Save and set environment variables
 		const prefix = this.pluginConfig.prefix;
 
-		// Set up base env vars
+		// Set up base env vars - use configured paths or defaults
 		this.setEnvVar("CLAUDE_SESSION_ID", crypto.randomUUID());
-		this.setEnvVar("CLAUDE_PROJECT_DIR", "/test/project");
-		this.setEnvVar("CLAUDE_PLUGIN_ROOT", "/test/plugin");
+		this.setEnvVar("CLAUDE_PROJECT_DIR", this.state.projectDir ?? "/test/project");
+		this.setEnvVar("CLAUDE_PLUGIN_ROOT", this.state.pluginRoot ?? "/test/plugin");
 		this.setEnvVar("CLAUDE_ENV_FILE", "/tmp/test-env.sh");
 
 		// Set up options as env vars
@@ -1590,10 +1723,11 @@ export class PluginTester<
 		// Try to resolve the path
 		let resolvedPath = filePath;
 
-		// If it's a relative path, try to resolve from cwd
+		// If it's a relative path, resolve from plugin root (preferred) or cwd
 		if (filePath.startsWith("./") || filePath.startsWith("../")) {
-			const cwd = process.cwd();
-			resolvedPath = `${cwd}/${filePath}`;
+			// Use configured plugin root if available, otherwise fall back to cwd
+			const baseDir = this.state.pluginRoot ?? process.cwd();
+			resolvedPath = `${baseDir}/${filePath}`;
 		}
 
 		try {
@@ -1608,9 +1742,11 @@ export class PluginTester<
 			return handler;
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("Cannot find module")) {
+				const baseDir = this.state.pluginRoot ?? process.cwd();
 				throw new Error(
 					`Could not import handler from "${filePath}". ` +
-						`Make sure the file exists and the path is correct relative to cwd (${process.cwd()}).`,
+						`Make sure the file exists and the path is correct relative to plugin root (${baseDir}). ` +
+						`Use withPluginRoot() to set the plugin directory.`,
 				);
 			}
 			throw error;
@@ -1733,10 +1869,11 @@ export class PluginTester<
 		// Try to resolve the path
 		let resolvedPath = filePath;
 
-		// If it's a relative path, try to resolve from cwd
+		// If it's a relative path, resolve from plugin root (preferred) or cwd
 		if (filePath.startsWith("./") || filePath.startsWith("../")) {
-			const cwd = process.cwd();
-			resolvedPath = `${cwd}/${filePath}`;
+			// Use configured plugin root if available, otherwise fall back to cwd
+			const baseDir = this.state.pluginRoot ?? process.cwd();
+			resolvedPath = `${baseDir}/${filePath}`;
 		}
 
 		try {
@@ -1751,9 +1888,11 @@ export class PluginTester<
 			return handler;
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("Cannot find module")) {
+				const baseDir = this.state.pluginRoot ?? process.cwd();
 				throw new Error(
 					`Could not import command handler from "${filePath}". ` +
-						`Make sure the file exists and the path is correct relative to cwd (${process.cwd()}).`,
+						`Make sure the file exists and the path is correct relative to plugin root (${baseDir}). ` +
+						`Use withPluginRoot() to set the plugin directory.`,
 				);
 			}
 			throw error;

@@ -629,11 +629,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 * @see `forContext()` - Loading environment by context
 	 * @public
 	 */
-	static create<T>(
-		prefix: string,
-		schema: ZodType<T>,
-		pluginName?: string,
-	): new () => PluginEnv<T> & { validated: T } {
+	static create<T>(prefix: string, schema: ZodType<T>, pluginName?: string): new () => PluginEnv<T> & { validated: T } {
 		return class extends PluginEnv<T> {
 			protected readonly prefix = prefix;
 			protected override readonly pluginName = pluginName ?? "";

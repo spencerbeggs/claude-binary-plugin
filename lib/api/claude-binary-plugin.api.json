@@ -39728,6 +39728,54 @@
             },
             {
               "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#withPluginRoot:member(1)",
+              "docComment": "/**\n * Set the plugin root directory for resolving relative paths.\n *\n * @remarks\n *\n * This is essential for command testing when commands are defined with relative paths like `./commands/test.cmd.ts`. The plugin root is used to resolve these paths to absolute paths.\n *\n * @param path - Absolute path to the plugin root directory\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * // Set to the directory containing your plugin config\n * ctx.withPluginRoot(import.meta.dir);\n *\n * // Or resolve from test file location\n * ctx.withPluginRoot(resolve(import.meta.dir, \"..\"));\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withPluginRoot(path: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "this"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "path",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withPluginRoot"
+            },
+            {
+              "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginTester#withPostToolUseInput:member(1)",
               "docComment": "/**\n * Set input for a PostToolUse hook test.\n *\n * @param input - PostToolUse-specific input fields\n *\n * @returns this for chaining\n */\n",
               "excerptTokens": [
@@ -39875,6 +39923,54 @@
             },
             {
               "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#withProjectDir:member(1)",
+              "docComment": "/**\n * Set the project directory (cwd) for tests.\n *\n * @remarks\n *\n * This sets `CLAUDE_PROJECT_DIR` which represents the user's project directory where Claude Code is running. Useful for testing commands that operate on project files.\n *\n * @param path - Absolute path to the project directory\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * // Use a temp directory for isolated tests\n * const tempDir = await mkdtemp(join(tmpdir(), \"test-\"));\n * ctx.withProjectDir(tempDir);\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withProjectDir(path: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "this"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "path",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withProjectDir"
+            },
+            {
+              "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginTester#withSessionEndInput:member(1)",
               "docComment": "/**\n * Set input for a SessionEnd hook test.\n *\n * @param input - SessionEnd-specific input fields\n *\n * @returns this for chaining\n */\n",
               "excerptTokens": [
@@ -39974,7 +40070,7 @@
             {
               "kind": "Method",
               "canonicalReference": "claude-binary-plugin!PluginTester#withShell:member(1)",
-              "docComment": "/**\n * Add a mock shell response for a command pattern.\n *\n * @param pattern - Command string or pattern to match\n *\n * @param result - ShellResult to return for matching commands\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * ctx.withShell(\"git status\", { exitCode: 0, stdout: \"clean\", stderr: \"\" });\n * ```\n *\n */\n",
+              "docComment": "/**\n * Add a mock shell response for a command pattern.\n *\n * @remarks\n *\n * Uses substring matching - the pattern must appear anywhere in the command. For more flexible matching, use `withShellMatching()` (regex) or `withShellMatcher()` (custom function).\n *\n * @param pattern - Command substring to match (uses `command.includes(pattern)`)\n *\n * @param result - ShellResult to return for matching commands\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * // Matches any command containing \"git status\"\n * ctx.withShell(\"git status\", { exitCode: 0, stdout: \"clean\", stderr: \"\" });\n *\n * // Also matches \"git status --short\", \"cd /foo && git status\", etc.\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -40035,6 +40131,153 @@
               "isOptional": false,
               "isAbstract": false,
               "name": "withShell"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#withShellMatcher:member(1)",
+              "docComment": "/**\n * Add a mock shell response with a custom matcher function.\n *\n * @remarks\n *\n * Use this for complex matching logic that can't be expressed as a substring or regex. The matcher receives the full command string.\n *\n * @param name - Unique name for the matcher (for internal tracking)\n *\n * @param matcher - Function that returns true if command matches\n *\n * @param result - ShellResult to return for matching commands\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * // Match commands that start with \"npm\" or \"yarn\"\n * ctx.withShellMatcher(\n *   \"package-manager\",\n *   (cmd) => cmd.startsWith(\"npm \") || cmd.startsWith(\"yarn \"),\n *   { exitCode: 0, stdout: \"done\", stderr: \"\" }\n * );\n *\n * // Match based on parsed command structure\n * ctx.withShellMatcher(\n *   \"tsc-with-project\",\n *   (cmd) => cmd.includes(\"tsc\") && cmd.includes(\"-p\"),\n *   { exitCode: 0, stdout: \"\", stderr: \"\" }\n * );\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withShellMatcher(name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", matcher: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(command: string) => boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", result: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellResult",
+                  "canonicalReference": "claude-binary-plugin!ShellResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "this"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 8
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "name",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "matcher",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "result",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 5,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withShellMatcher"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "claude-binary-plugin!PluginTester#withShellMatching:member(1)",
+              "docComment": "/**\n * Add a mock shell response with regex pattern matching.\n *\n * @remarks\n *\n * Use this for complex patterns where substring matching isn't sufficient. The regex is tested against the full reconstructed command string.\n *\n * @param pattern - RegExp to test against command\n *\n * @param result - ShellResult to return for matching commands\n *\n * @returns this for chaining\n *\n * @example\n * ```typescript\n * // Match \"bunx tsc\" with any arguments\n * ctx.withShellMatching(/bunx\\s+tsc/, { exitCode: 0, stdout: \"\", stderr: \"\" });\n *\n * // Match \"npm test\" or \"bun test\"\n * ctx.withShellMatching(/(?:npm|bun)\\s+test/, { exitCode: 0, stdout: \"pass\", stderr: \"\" });\n * ```\n *\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withShellMatching(pattern: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "RegExp",
+                  "canonicalReference": "!RegExp:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ", result: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "ShellResult",
+                  "canonicalReference": "claude-binary-plugin!ShellResult:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Content",
+                  "text": "this"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 6
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "pattern",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                },
+                {
+                  "parameterName": "result",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 3,
+                    "endIndex": 4
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withShellMatching"
             },
             {
               "kind": "Method",
