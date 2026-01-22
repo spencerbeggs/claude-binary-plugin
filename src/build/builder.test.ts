@@ -837,7 +837,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 		expect(entrypoint).toContain("Sidecar.main()");
 	});
 
-	test("calls setPluginInfo with plugin name and version", () => {
+	test("calls PluginInfo.set with plugin name and version", () => {
 		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "test", isPipeline: true }];
 
 		const options: GeneratePipelinePluginOptions = {
@@ -851,7 +851,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		expect(entrypoint).toContain('const PLUGIN_NAME = "my-plugin"');
 		expect(entrypoint).toContain('const PLUGIN_VERSION = "2.5.0"');
-		expect(entrypoint).toContain("setPluginInfo({ name: PLUGIN_NAME, version: PLUGIN_VERSION })");
+		expect(entrypoint).toContain("PluginInfo.set({ name: PLUGIN_NAME, version: PLUGIN_VERSION })");
 	});
 });
 

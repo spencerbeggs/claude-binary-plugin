@@ -321,7 +321,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { Pipeline, PluginEnv, setPluginInfo } from "claude-binary-plugin";
+import { Pipeline, PluginEnv, PluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -383,7 +383,7 @@ Examples:
 
 async function main(): Promise<void> {
   // Set plugin info for telemetry (module-level, not env vars)
-  setPluginInfo({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
+  PluginInfo.set({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
 
   const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
