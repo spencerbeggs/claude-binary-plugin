@@ -222,7 +222,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         pipeline: ${fileHookImport},
-        envClass: EnvClass,
+        stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
         setup: pluginConfig.setup,
@@ -239,7 +239,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         pipeline: hookDef.pipeline,
-        envClass: EnvClass,
+        stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
         setup: pluginConfig.setup,
@@ -256,7 +256,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         handler: ${fileHookImport},
-        envClass: EnvClass,
+        stateClass: EnvClass,
       });
     }`);
 				} else {
@@ -270,7 +270,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         handler: hookDef.handler,
-        envClass: EnvClass,
+        stateClass: EnvClass,
       });
     }`);
 				}
@@ -291,7 +291,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         handler: ${importName},
         rawArgs: cmdArgs,
         argsSchema: ${argsSchemaAccess},
-        envClass: EnvClass,
+        stateClass: EnvClass,
       });
     }`;
 		})
