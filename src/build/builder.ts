@@ -216,7 +216,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 				if (fileHookImport) {
 					// File-based pipeline hook
 					hookCases.push(`    case "${hookKey}": {
-      return Pipeline.run({
+      return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -233,7 +233,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("pipeline" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return Pipeline.run({
+      return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -250,7 +250,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 				if (fileHookImport) {
 					// File-based handler hook
 					hookCases.push(`    case "${hookKey}": {
-      return Pipeline.runRaw({
+      return PipelineRuntime.runRaw({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -264,7 +264,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return Pipeline.runRaw({
+      return PipelineRuntime.runRaw({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
@@ -319,7 +319,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { Pipeline, PluginEnv, PluginInfo } from "claude-binary-plugin";
+import { PipelineRuntime, PluginEnv, PluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -410,7 +410,7 @@ async function main(): Promise<void> {
     const hookKey = values.hook;
 
     if (!validHooks.includes(hookKey)) {
-      await Pipeline.handleUnknown(hookKey, validHooks);
+      await PipelineRuntime.handleUnknown(hookKey, validHooks);
     }
 
     await runHook(hookKey);
