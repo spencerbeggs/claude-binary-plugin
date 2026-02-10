@@ -441,8 +441,6 @@ export type {
 	PipelineHookEventType,
 	PluginBuildResult,
 	PluginManifest,
-	PrepareDistributionOptions,
-	PrepareDistributionResult,
 	ShellExecutor,
 	ShellResult,
 } from "./build/builder.js";

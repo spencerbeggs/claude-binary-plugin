@@ -10,8 +10,6 @@
  *   claude-binary-plugin build
  *   claude-binary-plugin build plugin.config.ts
  *   claude-binary-plugin build ./src/plugin.config.ts --no-persist
- *   claude-binary-plugin prepare
- *   claude-binary-plugin prepare plugin.config.ts
  *
  * Options:
  *   --no-persist    Don't persist to local cache (overrides config)
@@ -159,13 +157,36 @@ const buildCommand = Command.make(
 				return yield* Effect.fail(new Error("Build failed"));
 			}
 
-			// Generate hooks.json
+			// Generate proxy script for cross-platform distribution
+			const scriptsDir = "scripts";
+			const proxyScriptRelPath = `${scriptsDir}/setup-proxy.sh`;
+			const proxyScriptAbsPath = resolve(rootDir, proxyScriptRelPath);
+			const proxyScriptDir = dirname(proxyScriptAbsPath);
+
+			yield* Effect.promise(() => Bun.$`mkdir -p ${proxyScriptDir}`.quiet());
+
+			const proxyScriptContent = PluginBuilder.generateProxyScript({
+				binaryName: result.output,
+				configFile: pluginFile,
+				pluginName,
+			});
+
+			yield* Effect.promise(() => Bun.write(proxyScriptAbsPath, proxyScriptContent));
+			yield* Effect.promise(() => Bun.$`chmod +x ${proxyScriptAbsPath}`.quiet());
+
+			const hasSessionStart = hookEntries.some((h) => h.hookType === "SessionStart");
+			if (!hasSessionStart) {
+				yield* Console.log("⚠ No SessionStart hooks - proxy will not trigger on-demand builds");
+			}
+
+			// Generate hooks.json with proxy routing for SessionStart
 			const hooksOutputPath = config.hooksOutputPath ?? "hooks/hooks.json";
 			const passthroughHooks = PluginBuilder.extractPassthroughEntries(config);
 			const hooksJson = PluginBuilder.generateHooksJson({
 				pluginBinaryName: result.output,
 				hooks: hookEntries,
 				passthroughHooks,
+				proxyScript: proxyScriptRelPath,
 			});
 
 			// Write hooks.json
@@ -177,74 +198,15 @@ const buildCommand = Command.make(
 			yield* Effect.promise(() => Bun.write(hooksJsonPath, `${JSON.stringify(hooksJson, null, "\t")}\n`));
 
 			yield* Console.log(`\nBuild complete: ${result.output}`);
+			yield* Console.log(`Proxy script: ${proxyScriptRelPath}`);
 			yield* Console.log(`Hooks config: ${hooksOutputPath}`);
 		}),
 );
 
-// Prepare command arguments
-const prepareConfigPath = Args.file({ name: "plugin-config-path", exists: "yes" }).pipe(
-	Args.withDefault("plugin.config.ts"),
-);
-
-// Prepare command implementation
-const prepareCommand = Command.make("prepare", { pluginConfigPath: prepareConfigPath }, ({ pluginConfigPath }) =>
-	Effect.gen(function* () {
-		const pluginFile = pluginConfigPath;
-
-		// Resolve plugin file path
-		const absolutePluginFile = resolve(process.cwd(), pluginFile);
-		const rootDir = dirname(absolutePluginFile);
-
-		// Check if file exists
-		const file = Bun.file(absolutePluginFile);
-		if (!(yield* Effect.promise(() => file.exists()))) {
-			yield* Console.error(`Error: Plugin file not found: ${absolutePluginFile}`);
-			return yield* Effect.fail(new Error("Plugin file not found"));
-		}
-
-		yield* Console.log(`Preparing plugin from: ${pluginFile}`);
-
-		// Import plugin definition
-		const pluginDefinition = yield* Effect.tryPromise({
-			try: async () => {
-				const module = await import(absolutePluginFile);
-				const definition = module.default as ClaudeBinaryPlugin<z.ZodTypeAny>;
-				if (!definition?.config) {
-					throw new Error("Plugin file must export a default ClaudeBinaryPlugin.create() result");
-				}
-				return definition;
-			},
-			catch: (error) => error as Error,
-		});
-
-		// Run prepare
-		const result = yield* Effect.promise(() =>
-			PluginBuilder.prepare(pluginDefinition, {
-				rootDir,
-				configFile: pluginFile,
-			}),
-		);
-
-		if (!result.success) {
-			yield* Console.error("\nPrepare failed");
-			return yield* Effect.fail(new Error("Prepare failed"));
-		}
-
-		if (result.proxyScript) {
-			yield* Console.log(`\nProxy script: ${result.proxyScript}`);
-		}
-		if (result.hooksJson) {
-			yield* Console.log(`Hooks config: ${result.hooksJson}`);
-		}
-	}),
-);
-
 // Root command (just shows help when called without subcommand)
 const rootCommand = Command.make("claude-binary-plugin", {}, () =>
-	Console.log(
-		"Use 'claude-binary-plugin build' or 'claude-binary-plugin prepare' to manage plugins. Run with --help for more information.",
-	),
-).pipe(Command.withSubcommands([buildCommand, prepareCommand]));
+	Console.log("Use 'claude-binary-plugin build' to build plugins. Run with --help for more information."),
+).pipe(Command.withSubcommands([buildCommand]));
 
 // Create and run the CLI
 const cli = Command.run(rootCommand, {
