@@ -2,31 +2,57 @@
 	"$schema": "https://turborepo.com/schema.v2.json",
 	"globalPassThroughEnv": ["HOME", "XDG_CONFIG_HOME"],
 	"tasks": {
-		"compile": {
-			"dependsOn": ["typecheck"],
+		"build": {
+			"cache": true,
+			"outputs": ["dist/**"]
+		},
+		"build:dev": {
+			"dependsOn": ["types:check"],
 			"inputs": [
-				"$TURBO_DEFAULTS$",
-				"bun.lock",
-				"package.json",
-				"src/**/*",
-				"lib/scripts/build.mts",
-				"lib/builder/**/*",
-				"bunfig.toml",
-				"tsconfig.json",
-				".npmignore"
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/package.json",
+				"$TURBO_ROOT$/bun.lock",
+				"$TURBO_ROOT$/tsconfig.json",
+				"*.ts",
+				"src/**/*"
 			],
-			"outputs": ["bin/**", "dist/**"]
+			"outputs": ["dist/dev/**"]
+		},
+		"build:npm": {
+			"dependsOn": ["types:check"],
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/package.json",
+				"$TURBO_ROOT$/bun.lock",
+				"$TURBO_ROOT$/tsconfig.json",
+				"*.ts",
+				"src/**/*"
+			],
+			"outputs": ["dist/npm/**"]
 		},
 		"test": {
 			"cache": false,
-			"dependsOn": ["build"]
+			"dependsOn": ["typecheck"]
 		},
-		"test:ai": {
-			"cache": false,
-			"dependsOn": ["build"]
-		},
-		"typecheck": {
-			"inputs": ["src/**", "tsconfig.json"]
+		"types:check": {
+			"cache": true,
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/package.json",
+				"$TURBO_ROOT$/bun.lock",
+				"$TURBO_ROOT$/tsconfig.json",
+				"*.ts",
+				"*.mts",
+				"*.cts",
+				"src/**/*.ts",
+				"src/**/*.tsx",
+				"src/**/*.mts",
+				"src/**/*.cts",
+				"lib/**/*.ts",
+				"lib/**/*.mts",
+				"lib/**/*.cts"
+			],
+			"outputLogs": "errors-only"
 		}
 	}
 }

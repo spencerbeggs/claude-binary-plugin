@@ -42,5 +42,5 @@ pkgs/generators/test.ts
 CLAUDE.local.md
 **/coverage-debug
 .playwright-mcp
-bin
+.bun-builder
 .mcp.json

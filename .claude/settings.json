@@ -51,7 +51,6 @@
 			"Bash(pnpm config:*)",
 			"Bash(yarn config:*)"
 		],
-		"defaultMode": "acceptEdits",
 		"additionalDirectories": ["../website"]
 	},
 	"enableAllProjectMcpServers": false,
