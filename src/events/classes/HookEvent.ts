@@ -283,31 +283,12 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		if (this.telemetryEmitted) return;
 
 		try {
-			const { isOTELEnabled } = require("../../otel/config.js") as { isOTELEnabled: () => boolean };
-			if (!isOTELEnabled()) return;
+			const { OtelConfig } =
+				require("../../otel/classes/OtelConfig.js") as typeof import("../../otel/classes/OtelConfig.js");
+			if (!OtelConfig.isEnabled()) return;
 
-			const { emitHookExecution } = require("../../otel/events.js") as {
-				emitHookExecution: (
-					event: HookEventBase,
-					hookName: string,
-					result: {
-						hookType: string;
-						durationMs: number;
-						success: boolean;
-						outcome?: HookOutcome;
-						summary?: string;
-						toolName?: string;
-						toolUseId?: string;
-						permissionDecision?: "allow" | "deny" | "ask";
-						permissionDecisionReason?: string;
-						hasUpdatedInput?: boolean;
-						decision?: "block";
-						reason?: string;
-						metrics?: HookMetrics;
-						context?: Record<string, string | number | boolean>;
-					},
-				) => void;
-			};
+			const { TelemetryEmitter } =
+				require("../../otel/classes/TelemetryEmitter.js") as typeof import("../../otel/classes/TelemetryEmitter.js");
 
 			const result: {
 				hookType: string;
@@ -356,7 +337,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 				if (telemetryData.context) result.context = telemetryData.context;
 			}
 
-			emitHookExecution(this, this.name, result);
+			TelemetryEmitter.emitHookExecution(this, this.name, result);
 		} catch {
 			// Silently ignore telemetry errors
 		}
@@ -397,22 +378,12 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 */
 	private emitTelemetryError(durationMs: number, errorMessage: string): void {
 		try {
-			const { isOTELEnabled } = require("../../otel/config.js") as { isOTELEnabled: () => boolean };
-			if (!isOTELEnabled()) return;
+			const { OtelConfig } =
+				require("../../otel/classes/OtelConfig.js") as typeof import("../../otel/classes/OtelConfig.js");
+			if (!OtelConfig.isEnabled()) return;
 
-			const { emitHookExecution } = require("../../otel/events.js") as {
-				emitHookExecution: (
-					event: HookEventBase,
-					hookName: string,
-					result: {
-						hookType: string;
-						durationMs: number;
-						success: boolean;
-						error?: string;
-						toolName?: string;
-					},
-				) => void;
-			};
+			const { TelemetryEmitter } =
+				require("../../otel/classes/TelemetryEmitter.js") as typeof import("../../otel/classes/TelemetryEmitter.js");
 
 			const result: {
 				hookType: string;
@@ -435,7 +406,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 				result.toolName = (this as unknown as { tool_name: string }).tool_name;
 			}
 
-			emitHookExecution(this, this.name, result);
+			TelemetryEmitter.emitHookExecution(this, this.name, result);
 		} catch {
 			// Silently ignore telemetry errors
 		}

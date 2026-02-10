@@ -1,6 +1,7 @@
 import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "../config.js";
 import { TokenMetrics } from "../metrics.js";
 import type { AnyPipelineOutput } from "../types.js";
+import { isPipelineOutput } from "../types.js";
 
 /**
  * Pipeline utilities for type guards and metrics.
@@ -67,7 +68,7 @@ export class Pipeline {
 	 * @public
 	 */
 	static isOutput(output: unknown): output is AnyPipelineOutput {
-		return typeof output === "object" && output !== null && "status" in output && "summary" in output;
+		return isPipelineOutput(output);
 	}
 
 	/**

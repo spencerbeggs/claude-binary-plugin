@@ -152,15 +152,14 @@ export class SchemaValidator {
 		if (!sessionId) return;
 
 		try {
-			const { isOTELEnabled } = require("../../otel/config.js") as { isOTELEnabled: () => boolean };
-			if (!isOTELEnabled()) return;
+			const { OtelConfig } =
+				require("../../otel/classes/OtelConfig.js") as typeof import("../../otel/classes/OtelConfig.js");
+			if (!OtelConfig.isEnabled()) return;
 
-			const { TelemetryEmitter } = require("../../otel/classes/TelemetryEmitter.js") as {
-				TelemetryEmitter: typeof import("../../otel/classes/TelemetryEmitter.js").TelemetryEmitter;
-			};
-			const { getSidecarClient } = require("../../otel/classes/SidecarClient.js") as {
-				getSidecarClient: typeof import("../../otel/classes/SidecarClient.js").getSidecarClient;
-			};
+			const { TelemetryEmitter } =
+				require("../../otel/classes/TelemetryEmitter.js") as typeof import("../../otel/classes/TelemetryEmitter.js");
+			const { getSidecarClient } =
+				require("../../otel/classes/SidecarClient.js") as typeof import("../../otel/classes/SidecarClient.js");
 
 			const formatted = SchemaValidator.formatError(error);
 			TelemetryEmitter.emitSchemaValidationError(sessionId, hookName, {

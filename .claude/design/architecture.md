@@ -3,8 +3,8 @@ status: current
 module: claude-binary-plugin
 category: architecture
 created: 2026-01-22
-updated: 2026-01-22
-last-synced: 2026-01-22
+updated: 2026-02-10
+last-synced: 2026-02-10
 completeness: 95
 related:
   - .claude/design/schema.md
@@ -562,7 +562,7 @@ Claude Code's expected response:
 
 ### PluginEnv Class
 
-The `PluginEnv` class in `src/state/plugin-state.ts` provides:
+The `PluginEnv` class in `src/state/classes/PluginEnv.ts` provides:
 
 1. **Schema validation** - Validates env vars against Zod schema
 2. **Context-aware loading** - Different loading strategies per context
@@ -1197,6 +1197,9 @@ src/
 ├── index.ts              # Hook events, response builders
 ├── build/
 │   └── builder.ts        # PluginBuilder class, entrypoint gen
+├── cli/
+│   ├── index.ts          # CLI binary, @effect/cli commands
+│   └── macros.ts         # Build-time package version resolution
 ├── commands/
 │   └── runtime.ts        # Commands class, arg parsing
 ├── core/
@@ -1237,13 +1240,12 @@ src/
 │   └── builder.ts        # PluginTester (see testing.md)
 ├── types/
 │   ├── json.ts           # JSON types from type-fest, Zod schemas
-│   └── branded.ts        # Branded types (SessionId, ToolUseId, etc.)
+│   ├── branded.ts        # Branded types (SessionId, ToolUseId, etc.)
+│   └── utility.ts        # Type-fest re-exports (Jsonify, PartialDeep, etc.)
 ├── utils/
 │   └── debug-logger.ts   # File-based debug logging
 └── otel/
-    ├── index.ts          # OTEL module exports
     ├── classes/          # Class-based API (primary)
-    │   ├── index.ts      # Barrel export
     │   ├── OtelConfig.ts # Configuration parsing
     │   ├── Platform.ts   # Platform detection
     │   ├── GitInfo.ts    # Git repo detection
@@ -1256,7 +1258,8 @@ src/
     │   ├── TelemetryEmitter.ts # Event emission
     │   ├── TelemetryMetrics.ts # Metric recording
     │   ├── TelemetrySpan.ts # Span instrumentation
-    │   └── SidecarClient.ts # IPC client
+    │   ├── SidecarClient.ts # IPC client
+    │   └── Sidecar.ts    # Sidecar process entry point
     ├── sidecar/          # Sidecar process
     │   └── classes/      # Sidecar implementation
     │       ├── SidecarServer.ts # Unix socket server

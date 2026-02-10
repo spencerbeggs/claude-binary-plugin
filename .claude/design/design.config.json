@@ -81,7 +81,7 @@
 	"quality": {
 		"designDocs": {
 			"maxLineLength": 120,
-			"requireFrontmatter": false,
+			"requireFrontmatter": true,
 			"requireTOC": true,
 			"minSections": ["Overview"]
 		},
