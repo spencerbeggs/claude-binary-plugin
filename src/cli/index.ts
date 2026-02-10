@@ -10,6 +10,8 @@
  *   claude-binary-plugin build
  *   claude-binary-plugin build plugin.config.ts
  *   claude-binary-plugin build ./src/plugin.config.ts --no-persist
+ *   claude-binary-plugin prepare
+ *   claude-binary-plugin prepare plugin.config.ts
  *
  * Options:
  *   --no-persist    Don't persist to local cache (overrides config)
@@ -179,10 +181,70 @@ const buildCommand = Command.make(
 		}),
 );
 
+// Prepare command arguments
+const prepareConfigPath = Args.file({ name: "plugin-config-path", exists: "yes" }).pipe(
+	Args.withDefault("plugin.config.ts"),
+);
+
+// Prepare command implementation
+const prepareCommand = Command.make("prepare", { pluginConfigPath: prepareConfigPath }, ({ pluginConfigPath }) =>
+	Effect.gen(function* () {
+		const pluginFile = pluginConfigPath;
+
+		// Resolve plugin file path
+		const absolutePluginFile = resolve(process.cwd(), pluginFile);
+		const rootDir = dirname(absolutePluginFile);
+
+		// Check if file exists
+		const file = Bun.file(absolutePluginFile);
+		if (!(yield* Effect.promise(() => file.exists()))) {
+			yield* Console.error(`Error: Plugin file not found: ${absolutePluginFile}`);
+			return yield* Effect.fail(new Error("Plugin file not found"));
+		}
+
+		yield* Console.log(`Preparing plugin from: ${pluginFile}`);
+
+		// Import plugin definition
+		const pluginDefinition = yield* Effect.tryPromise({
+			try: async () => {
+				const module = await import(absolutePluginFile);
+				const definition = module.default as ClaudeBinaryPlugin<z.ZodTypeAny>;
+				if (!definition?.config) {
+					throw new Error("Plugin file must export a default ClaudeBinaryPlugin.create() result");
+				}
+				return definition;
+			},
+			catch: (error) => error as Error,
+		});
+
+		// Run prepare
+		const result = yield* Effect.promise(() =>
+			PluginBuilder.prepare(pluginDefinition, {
+				rootDir,
+				configFile: pluginFile,
+			}),
+		);
+
+		if (!result.success) {
+			yield* Console.error("\nPrepare failed");
+			return yield* Effect.fail(new Error("Prepare failed"));
+		}
+
+		if (result.proxyScript) {
+			yield* Console.log(`\nProxy script: ${result.proxyScript}`);
+		}
+		if (result.hooksJson) {
+			yield* Console.log(`Hooks config: ${result.hooksJson}`);
+		}
+	}),
+);
+
 // Root command (just shows help when called without subcommand)
 const rootCommand = Command.make("claude-binary-plugin", {}, () =>
-	Console.log("Use 'claude-binary-plugin build' to build a plugin. Run with --help for more information."),
-).pipe(Command.withSubcommands([buildCommand]));
+	Console.log(
+		"Use 'claude-binary-plugin build' or 'claude-binary-plugin prepare' to manage plugins. Run with --help for more information.",
+	),
+).pipe(Command.withSubcommands([buildCommand, prepareCommand]));
 
 // Create and run the CLI
 const cli = Command.run(rootCommand, {

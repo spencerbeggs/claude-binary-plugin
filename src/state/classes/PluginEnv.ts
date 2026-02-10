@@ -549,7 +549,17 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 			return null;
 		}
 
-		// Collect all env vars that match the schema keys
+		this._vars = this.schema.parse(this.collectEnvVars());
+		return this._vars;
+	}
+
+	/**
+	 * Collects environment variable values matching the schema keys.
+	 *
+	 * @returns Record of schema key names to their current Bun.env values
+	 * @internal
+	 */
+	private collectEnvVars(): Record<string, unknown> {
 		const envVars: Record<string, unknown> = {};
 		const schemaWithShape = this.schema as ZodSchemaWithShape;
 		if (schemaWithShape._def && "shape" in schemaWithShape._def && schemaWithShape._def.shape) {
@@ -558,9 +568,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 				envVars[key] = Bun.env[key];
 			}
 		}
-
-		this._vars = this.schema.parse(envVars);
-		return this._vars;
+		return envVars;
 	}
 
 	/**
@@ -696,117 +704,20 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 		context: EnvContext,
 		params: SessionStartContextParams | HookContextParams | CommandContextParams,
 	): Promise<T | CommandContextResult<T, TArgs>> {
+		// Cast `this` to access both the constructor and static methods.
+		// The `this` parameter is typed as `new () => T` for overload resolution,
+		// but the actual runtime value is the subclass itself (e.g., TestPluginEnv)
+		// with all inherited static methods. We must use `this` (not `PluginEnv`)
+		// so that the delegated factory methods construct the correct subclass.
+		// biome-ignore lint/complexity/noThisInStatic: polymorphic static method pattern — `this` is the subclass
+		const cls = this as unknown as typeof PluginEnv & (new () => T);
 		switch (context) {
-			case "sessionStart": {
-				const p = params as SessionStartContextParams;
-				const projectRoot = p.projectRoot || Bun.env.CLAUDE_PROJECT_DIR;
-				if (projectRoot) {
-					await PluginEnv.loadUserEnvFiles(projectRoot, p.fs);
-				}
-				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
-				const instance = new this();
-				instance.loadVarsFromEnv();
-				// Initialize logger for SessionStart context
-				if (p.hookName) {
-					instance.initLogger(p.hookName, p.sessionId);
-				}
-				return instance;
-			}
-
-			case "hook": {
-				const p = params as HookContextParams;
-				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
-				const instance = new this();
-
-				// Load env vars from session-env directory
-				// Claude Code does NOT source hook files, so we must load them manually
-				if (p.sessionEnvDir) {
-					await PluginEnv.loadAllHookFiles(p.sessionEnvDir, p.fs);
-				} else {
-					// Fallback to prefixed env file check (won't work in practice, but keep for API compat)
-					await PluginEnv.loadFromSessionEnvFile(instance.prefix, p.fs);
-				}
-
-				instance.loadVarsFromEnv();
-
-				// Validate environment and throw if invalid (with OTEL emission)
-				// This ensures all hooks have valid env before business logic runs
-				if (instance.schema && p.hookName) {
-					instance.validateOrThrow(p.sessionId, p.hookName);
-				}
-
-				// Initialize logger for hook context
-				if (p.hookName) {
-					instance.initLogger(p.hookName, p.sessionId);
-				}
-
-				return instance;
-			}
-
-			case "command": {
-				const p = params as CommandContextParams;
-				const remainingArgs: string[] = [];
-				let varsPath: string | undefined;
-
-				// Parse --vars argument
-				for (const arg of p.args) {
-					if (arg.startsWith("--vars=")) {
-						varsPath = arg.slice("--vars=".length);
-					} else {
-						remainingArgs.push(arg);
-					}
-				}
-
-				// Load from --vars file if provided
-				if (varsPath) {
-					const fs = p.fs || defaultPluginEnvFileSystem;
-					if (!(await fs.exists(varsPath))) {
-						throw new EnvFileLoadError(varsPath, "file not found");
-					}
-					// Read and parse the file content
-					const content = await fs.readFile(varsPath);
-					if (content === null) {
-						throw new EnvFileLoadError(varsPath, "failed to read file");
-					}
-					PluginEnv.parseEnvFileContent(content);
-				}
-
-				// biome-ignore lint/complexity/noThisInStatic: this is a static method on a class
-				const env = new this();
-				env.loadVarsFromEnv();
-
-				// Parse and validate command args if command config exists
-				let parsedArgs: TArgs | undefined;
-				if (p.commandName && (PluginEnv as typeof PluginEnv).commands) {
-					const commandConfig = (PluginEnv as typeof PluginEnv).commands?.[p.commandName];
-					if (commandConfig?.argsSchema) {
-						// Convert args array to object for validation
-						const argsObj: Record<string, unknown> = {};
-						for (const arg of remainingArgs) {
-							if (arg.startsWith("--")) {
-								const eqIndex = arg.indexOf("=");
-								if (eqIndex > 0) {
-									const key = arg.slice(2, eqIndex);
-									const value = arg.slice(eqIndex + 1);
-									argsObj[key] = value;
-								} else {
-									const key = arg.slice(2);
-									argsObj[key] = true;
-								}
-							}
-						}
-						parsedArgs = commandConfig.argsSchema.parse(argsObj) as TArgs;
-					}
-				}
-
-				// Initialize logger for command context
-				if (p.commandName) {
-					env.initLogger(p.commandName);
-				}
-
-				return { env, remainingArgs, args: parsedArgs } as CommandContextResult<T, TArgs>;
-			}
-
+			case "sessionStart":
+				return cls.forSessionStart(params as SessionStartContextParams) as Promise<T>;
+			case "hook":
+				return cls.forHook(params as HookContextParams) as Promise<T>;
+			case "command":
+				return cls.forCommand<T, TArgs>(params as CommandContextParams);
 			default:
 				throw new Error(`Unknown context: ${context}`);
 		}
@@ -1570,17 +1481,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 			throw new Error("No schema defined for validation");
 		}
 
-		// Collect all env vars that match the schema keys
-		const envVars: Record<string, unknown> = {};
-		const schemaWithShape = this.schema as ZodSchemaWithShape;
-		if (schemaWithShape._def && "shape" in schemaWithShape._def && schemaWithShape._def.shape) {
-			const shape = schemaWithShape._def.shape;
-			for (const key of Object.keys(shape)) {
-				envVars[key] = Bun.env[key];
-			}
-		}
-
-		return this.schema.parse(envVars);
+		return this.schema.parse(this.collectEnvVars());
 	}
 
 	/**
@@ -1629,18 +1530,7 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 			throw new Error("No schema defined for validation");
 		}
 
-		// Collect all env vars that match the schema keys
-		const envVars: Record<string, unknown> = {};
-		const schemaWithShape = this.schema as ZodSchemaWithShape;
-		if (schemaWithShape._def && "shape" in schemaWithShape._def && schemaWithShape._def.shape) {
-			const shape = schemaWithShape._def.shape;
-			for (const key of Object.keys(shape)) {
-				envVars[key] = Bun.env[key];
-			}
-		}
-
-		// Use safeParse to avoid throwing
-		const result = this.schema.safeParse(envVars);
+		const result = this.schema.safeParse(this.collectEnvVars());
 
 		if (result.success) {
 			return { success: true, data: result.data };
@@ -1706,16 +1596,6 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 			// Throw with the formatted message
 			throw new Error(`[${hookName}] Environment validation failed:\n${validation.message}`);
 		}
-	}
-
-	/**
-	 * Lists all environment variable names with a given prefix.
-	 *
-	 * @param prefix - The prefix to filter by
-	 * @returns Array of environment variable names
-	 */
-	listVarNames(prefix: string): string[] {
-		return Object.keys(Bun.env).filter((key) => key.startsWith(prefix));
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────

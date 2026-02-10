@@ -441,10 +441,13 @@ export type {
 	PipelineHookEventType,
 	PluginBuildResult,
 	PluginManifest,
+	PrepareDistributionOptions,
+	PrepareDistributionResult,
 	ShellExecutor,
 	ShellResult,
 } from "./build/builder.js";
 export { PluginBuilder } from "./build/builder.js";
+export type { GenerateProxyScriptOptions } from "./build/proxy-template.js";
 
 // =============================================================================
 // TESTING UTILITIES

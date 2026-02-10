@@ -958,4 +958,246 @@ describe("generateHooksJson", () => {
 
 		expect(Object.keys(result.hooks)).toHaveLength(0);
 	});
+
+	test("routes SessionStart hooks through proxy when proxyScript is set", () => {
+		const hooks: PipelineHookEntry[] = [
+			{ hookType: "SessionStart", name: "context", isPipeline: true },
+			{ hookType: "PreToolUse", name: "filter", isPipeline: true, tools: ["Bash"] },
+		];
+
+		const result = PluginBuilder.generateHooksJson({
+			pluginBinaryName: "my.plugin",
+			hooks,
+			proxyScript: "scripts/setup-proxy.sh",
+		});
+
+		// SessionStart should use proxy script
+		const sessionCmd = result.hooks.SessionStart?.[0]?.hooks[0]?.command;
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Template literal is intentional - Claude Code variable
+		expect(sessionCmd).toBe("${CLAUDE_PLUGIN_ROOT}/scripts/setup-proxy.sh --hook=SessionStart/context");
+
+		// PreToolUse should still use binary directly
+		const preToolCmd = result.hooks.PreToolUse?.[0]?.hooks[0]?.command;
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Template literal is intentional - Claude Code variable
+		expect(preToolCmd).toBe("${CLAUDE_PLUGIN_ROOT}/my.plugin --hook=PreToolUse/filter");
+	});
+
+	test("non-SessionStart hooks use binary directly even when proxyScript is set", () => {
+		const hooks: PipelineHookEntry[] = [
+			{ hookType: "PostToolUse", name: "reporter", isPipeline: true },
+			{ hookType: "Stop", name: "guard", isPipeline: true },
+			{ hookType: "UserPromptSubmit", name: "handler", isPipeline: true },
+		];
+
+		const result = PluginBuilder.generateHooksJson({
+			pluginBinaryName: "my.plugin",
+			hooks,
+			proxyScript: "scripts/setup-proxy.sh",
+		});
+
+		for (const hookType of ["PostToolUse", "Stop", "UserPromptSubmit"]) {
+			const cmd = result.hooks[hookType]?.[0]?.hooks[0]?.command;
+			expect(cmd).toContain("my.plugin");
+			expect(cmd).not.toContain("setup-proxy.sh");
+		}
+	});
+
+	test("all entries use binary when proxyScript is not set (backward compat)", () => {
+		const hooks: PipelineHookEntry[] = [
+			{ hookType: "SessionStart", name: "context", isPipeline: true },
+			{ hookType: "PreToolUse", name: "filter", isPipeline: true },
+		];
+
+		const result = PluginBuilder.generateHooksJson({
+			pluginBinaryName: "my.plugin",
+			hooks,
+		});
+
+		const sessionCmd = result.hooks.SessionStart?.[0]?.hooks[0]?.command;
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Template literal is intentional - Claude Code variable
+		expect(sessionCmd).toBe("${CLAUDE_PLUGIN_ROOT}/my.plugin --hook=SessionStart/context");
+
+		const preToolCmd = result.hooks.PreToolUse?.[0]?.hooks[0]?.command;
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Template literal is intentional - Claude Code variable
+		expect(preToolCmd).toBe("${CLAUDE_PLUGIN_ROOT}/my.plugin --hook=PreToolUse/filter");
+	});
+
+	test("multiple SessionStart hooks all route through proxy", () => {
+		const hooks: PipelineHookEntry[] = [
+			{ hookType: "SessionStart", name: "context", isPipeline: true },
+			{ hookType: "SessionStart", name: "init", isPipeline: true },
+		];
+
+		const result = PluginBuilder.generateHooksJson({
+			pluginBinaryName: "my.plugin",
+			hooks,
+			proxyScript: "scripts/setup-proxy.sh",
+		});
+
+		expect(result.hooks.SessionStart).toHaveLength(2);
+		for (const entry of result.hooks.SessionStart ?? []) {
+			expect(entry.hooks[0]?.command).toContain("scripts/setup-proxy.sh");
+		}
+	});
+});
+
+describe("prepareForDistribution", () => {
+	const PREPARE_DIR = join(TEST_DIR, "prepare-test");
+
+	beforeEach(async () => {
+		await mkdir(join(PREPARE_DIR, ".claude-plugin"), { recursive: true });
+	});
+
+	afterEach(async () => {
+		try {
+			await rm(TEST_DIR, { recursive: true, force: true });
+		} catch {
+			// Ignore cleanup errors
+		}
+	});
+
+	test("generates proxy script file", async () => {
+		const originalLog = console.log;
+		console.log = mock(() => {});
+
+		await Bun.write(
+			join(PREPARE_DIR, ".claude-plugin/plugin.json"),
+			JSON.stringify({ name: "test-plugin", version: "1.0.0" }),
+		);
+
+		const plugin = {
+			config: {
+				hooks: {
+					SessionStart: [{ name: "context", pipeline: async () => ({}) }],
+				},
+			},
+		};
+
+		const result = await PluginBuilder.prepare(plugin, { rootDir: PREPARE_DIR });
+
+		expect(result.success).toBe(true);
+		expect(result.proxyScript).toBe("scripts/setup-proxy.sh");
+
+		// Verify the file was created
+		const proxyFile = Bun.file(join(PREPARE_DIR, "scripts/setup-proxy.sh"));
+		expect(await proxyFile.exists()).toBe(true);
+
+		const content = await proxyFile.text();
+		expect(content).toStartWith("#!/usr/bin/env bash");
+		expect(content).toContain("test-plugin.plugin");
+
+		console.log = originalLog;
+	});
+
+	test("generates hooks.json with proxy routing", async () => {
+		const originalLog = console.log;
+		console.log = mock(() => {});
+
+		await Bun.write(
+			join(PREPARE_DIR, ".claude-plugin/plugin.json"),
+			JSON.stringify({ name: "test-plugin", version: "1.0.0" }),
+		);
+
+		const plugin = {
+			config: {
+				hooks: {
+					SessionStart: [{ name: "context", pipeline: async () => ({}) }],
+					PreToolUse: [{ name: "security", tools: ["Bash"], pipeline: async () => ({}) }],
+				},
+			},
+		};
+
+		const result = await PluginBuilder.prepare(plugin, { rootDir: PREPARE_DIR });
+
+		expect(result.success).toBe(true);
+		expect(result.hooksJson).toBe("hooks/hooks.json");
+
+		// Verify hooks.json content
+		const hooksJsonFile = Bun.file(join(PREPARE_DIR, "hooks/hooks.json"));
+		expect(await hooksJsonFile.exists()).toBe(true);
+
+		const hooksJson = await hooksJsonFile.json();
+		const sessionCmd = hooksJson.hooks.SessionStart?.[0]?.hooks[0]?.command;
+		expect(sessionCmd).toContain("scripts/setup-proxy.sh");
+
+		const preToolCmd = hooksJson.hooks.PreToolUse?.[0]?.hooks[0]?.command;
+		expect(preToolCmd).toContain("test-plugin.plugin");
+		expect(preToolCmd).not.toContain("setup-proxy.sh");
+
+		console.log = originalLog;
+	});
+
+	test("warns when no SessionStart hooks defined", async () => {
+		const originalLog = console.log;
+		const originalWarn = console.warn;
+		const warnCalls: string[] = [];
+		console.log = mock(() => {});
+		console.warn = mock((msg: string) => warnCalls.push(msg));
+
+		await Bun.write(
+			join(PREPARE_DIR, ".claude-plugin/plugin.json"),
+			JSON.stringify({ name: "test-plugin", version: "1.0.0" }),
+		);
+
+		const plugin = {
+			config: {
+				hooks: {
+					PreToolUse: [{ name: "security", pipeline: async () => ({}) }],
+				},
+			},
+		};
+
+		const result = await PluginBuilder.prepare(plugin, { rootDir: PREPARE_DIR });
+
+		expect(result.success).toBe(true);
+		expect(warnCalls.some((msg) => msg.includes("No SessionStart hooks"))).toBe(true);
+
+		console.log = originalLog;
+		console.warn = originalWarn;
+	});
+
+	test("uses custom scriptsDir and proxyScriptName", async () => {
+		const originalLog = console.log;
+		console.log = mock(() => {});
+
+		await Bun.write(
+			join(PREPARE_DIR, ".claude-plugin/plugin.json"),
+			JSON.stringify({ name: "test-plugin", version: "1.0.0" }),
+		);
+
+		const plugin = {
+			config: {
+				hooks: {
+					SessionStart: [{ name: "context", pipeline: async () => ({}) }],
+				},
+			},
+		};
+
+		const result = await PluginBuilder.prepare(plugin, {
+			rootDir: PREPARE_DIR,
+			scriptsDir: "bin",
+			proxyScriptName: "proxy.sh",
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.proxyScript).toBe("bin/proxy.sh");
+
+		const proxyFile = Bun.file(join(PREPARE_DIR, "bin/proxy.sh"));
+		expect(await proxyFile.exists()).toBe(true);
+
+		console.log = originalLog;
+	});
+});
+
+describe("PluginBuilder.generateProxyScript", () => {
+	test("delegates to generateProxyScript from proxy-template", () => {
+		const script = PluginBuilder.generateProxyScript({
+			binaryName: "workflow.plugin",
+			pluginName: "workflow",
+		});
+
+		expect(script).toStartWith("#!/usr/bin/env bash");
+		expect(script).toContain('BINARY_NAME="workflow.plugin"');
+		expect(script).toContain('PLUGIN_NAME="workflow"');
+	});
 });

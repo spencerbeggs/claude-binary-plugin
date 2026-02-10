@@ -42,6 +42,8 @@
  */
 import { relative, resolve } from "node:path";
 import type { PassthroughHookEntry } from "../pipeline/config.js";
+import type { GenerateProxyScriptOptions } from "./proxy-template.js";
+import { generateProxyScript } from "./proxy-template.js";
 
 /**
  * Result of a shell command execution.
@@ -1141,6 +1143,8 @@ export interface GenerateHooksJsonOptions {
 	hooks: PipelineHookEntry[];
 	/** Passthrough hooks to include directly in hooks.json */
 	passthroughHooks?: ExtractedPassthroughHooks;
+	/** Relative path to proxy script (e.g., "scripts/setup-proxy.sh"). When set, SessionStart hooks route through the proxy instead of the binary. */
+	proxyScript?: string;
 }
 
 /**
@@ -1199,7 +1203,7 @@ export interface HooksJsonFile {
  * @internal
  */
 function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
-	const { pluginBinaryName, hooks, passthroughHooks = {} } = options;
+	const { pluginBinaryName, hooks, passthroughHooks = {}, proxyScript } = options;
 
 	// Group hooks by type
 	const hooksByType = new Map<string, PipelineHookEntry[]>();
@@ -1222,7 +1226,9 @@ function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
 		const typeHooks = hooksByType.get(hookType) || [];
 		for (const hook of typeHooks) {
 			const hookId = `${hookType}/${hook.name}`;
-			const command = `\${CLAUDE_PLUGIN_ROOT}/${pluginBinaryName} --hook=${hookId}`;
+			const useProxy = proxyScript && hookType === "SessionStart";
+			const target = useProxy ? proxyScript : pluginBinaryName;
+			const command = `\${CLAUDE_PLUGIN_ROOT}/${target} --hook=${hookId}`;
 
 			const entry: HooksJsonEntry = {
 				hooks: [{ type: "command", command }],
@@ -1553,6 +1559,169 @@ async function buildPluginFromConfig(
 }
 
 // =============================================================================
+// PREPARE FOR DISTRIBUTION
+// =============================================================================
+
+/**
+ * Options for preparing a plugin for cross-platform distribution.
+ * @public
+ */
+export interface PrepareDistributionOptions {
+	/** Root directory containing the plugin (defaults to cwd) */
+	rootDir?: string;
+	/** Path to plugin.json manifest or directory containing .claude-plugin/plugin.json */
+	plugin?: string;
+	/** Path to marketplace.json manifest or directory containing .claude-plugin/marketplace.json */
+	marketplace?: string;
+	/** Plugin config file relative to rootDir (default: "plugin.config.ts") */
+	configFile?: string;
+	/** Directory for the proxy script relative to rootDir (default: "scripts") */
+	scriptsDir?: string;
+	/** Proxy script filename (default: "setup-proxy.sh") */
+	proxyScriptName?: string;
+}
+
+/**
+ * Result of preparing a plugin for distribution.
+ * @public
+ */
+export interface PrepareDistributionResult {
+	/** Whether the preparation succeeded */
+	success: boolean;
+	/** Relative path to the generated proxy script */
+	proxyScript?: string;
+	/** Relative path to the generated hooks.json */
+	hooksJson?: string;
+	/** Error if preparation failed */
+	error?: Error;
+	/** Duration in milliseconds */
+	duration: number;
+}
+
+/**
+ * Prepares a plugin for cross-platform distribution.
+ *
+ * Generates a proxy script and hooks.json that enable just-in-time
+ * compilation on the target machine. The proxy wraps SessionStart hooks
+ * and compiles the plugin binary on first run.
+ *
+ * @param plugin - The plugin instance from ClaudeBinaryPlugin.create()
+ * @param options - Preparation options
+ * @returns Result of the preparation
+ * @internal
+ */
+async function prepareForDistribution(
+	plugin: {
+		config: {
+			hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+			commands?: Record<string, { pipeline: unknown; description?: string; args?: unknown }>;
+			hooksOutputPath?: string;
+		};
+	},
+	options: PrepareDistributionOptions = {},
+): Promise<PrepareDistributionResult> {
+	const startTime = performance.now();
+
+	const rootDir = options.rootDir ?? process.cwd();
+	const absoluteRootDir = resolve(rootDir);
+	const shell = defaultShellExecutor;
+	const configFile = options.configFile ?? "plugin.config.ts";
+	const scriptsDir = options.scriptsDir ?? "scripts";
+	const proxyScriptName = options.proxyScriptName ?? "setup-proxy.sh";
+
+	try {
+		// Read plugin manifest
+		const pluginPath = options.plugin ?? rootDir;
+		const pluginManifest = await readPluginManifest(pluginPath);
+		const manifestPluginName = pluginManifest?.name;
+
+		// Read marketplace manifest
+		const defaultMarketplacePath = resolve(rootDir, "../../.claude-plugin/marketplace.json");
+		const marketplacePath = options.marketplace ?? defaultMarketplacePath;
+		const marketplaceManifest = await readMarketplaceManifest(marketplacePath);
+		const manifestMarketplaceName = marketplaceManifest?.name;
+
+		// Derive names
+		const pluginName = manifestPluginName ?? "plugin";
+		const pluginIdentifier = manifestPluginName
+			? manifestMarketplaceName
+				? `${manifestPluginName}@${manifestMarketplaceName}`
+				: manifestPluginName
+			: "plugin";
+		const binaryName = manifestPluginName ? `${manifestPluginName}.plugin` : "plugin.plugin";
+
+		console.log(`\nPreparing plugin for distribution: ${pluginIdentifier}`);
+
+		// Extract hook entries
+		const hookEntries = extractPipelineHookEntries(plugin.config);
+		const passthroughHooks = extractPassthroughHookEntries(plugin.config);
+
+		// Warn if no SessionStart hooks
+		const hasSessionStart = hookEntries.some((h) => h.hookType === "SessionStart");
+		if (!hasSessionStart) {
+			console.warn("  ! No SessionStart hooks defined - proxy will not trigger on-demand builds");
+		}
+
+		console.log(`  Hooks: ${hookEntries.length}`);
+		console.log(`  Passthrough hooks: ${Object.keys(passthroughHooks).length} types`);
+
+		// Generate proxy script
+		const proxyScriptContent = generateProxyScript({
+			binaryName,
+			configFile,
+			pluginName,
+		});
+
+		// Write proxy script
+		const proxyScriptRelPath = `${scriptsDir}/${proxyScriptName}`;
+		const proxyScriptAbsPath = resolve(absoluteRootDir, proxyScriptRelPath);
+		const proxyScriptDir = resolve(proxyScriptAbsPath, "..");
+		await shell(`mkdir -p "${proxyScriptDir}"`);
+		await Bun.write(proxyScriptAbsPath, proxyScriptContent);
+		await shell(`chmod +x "${proxyScriptAbsPath}"`);
+		console.log(`  Generated proxy script: ${proxyScriptRelPath}`);
+
+		// Generate hooks.json with proxy routing
+		const hooksJson = generateHooksJson({
+			pluginBinaryName: binaryName,
+			hooks: hookEntries,
+			passthroughHooks,
+			proxyScript: proxyScriptRelPath,
+		});
+
+		// Write hooks.json
+		const hooksOutputPath = plugin.config.hooksOutputPath ?? "hooks/hooks.json";
+		const hooksJsonAbsPath = resolve(absoluteRootDir, hooksOutputPath);
+		const hooksDir = resolve(hooksJsonAbsPath, "..");
+		await shell(`mkdir -p "${hooksDir}"`);
+		await Bun.write(hooksJsonAbsPath, `${JSON.stringify(hooksJson, null, "\t")}\n`);
+		console.log(`  Generated hooks.json: ${hooksOutputPath}`);
+
+		const duration = performance.now() - startTime;
+		console.log(`\nPrepared for distribution (${duration.toFixed(0)}ms)`);
+		console.log(`\nRemember to add to .gitignore:`);
+		console.log(`  *.plugin`);
+		console.log(`  .plugin-entrypoint.ts`);
+
+		return {
+			success: true,
+			proxyScript: proxyScriptRelPath,
+			hooksJson: hooksOutputPath,
+			duration,
+		};
+	} catch (error) {
+		const duration = performance.now() - startTime;
+		console.error(`\nFailed to prepare plugin for distribution`);
+		console.error(`  ${(error as Error).message}`);
+		return {
+			success: false,
+			error: error as Error,
+			duration,
+		};
+	}
+}
+
+// =============================================================================
 // PLUGIN BUILDER CLASS
 // =============================================================================
 
@@ -1568,8 +1737,8 @@ async function buildPluginFromConfig(
  *
  * | Category | Methods |
  * |----------|---------|
- * | Build | `build`, `fromConfig` |
- * | Code Generation | `generateEntrypoint`, `generateHooksJson` |
+ * | Build | `build`, `fromConfig`, `prepare` |
+ * | Code Generation | `generateEntrypoint`, `generateHooksJson`, `generateProxyScript` |
  * | Extraction | `extractHookEntries`, `extractCommandEntries`, `extractPassthroughEntries` |
  * | Cache | `getCachePath`, `syncToCache` |
  * | Manifests | `readPluginManifest`, `readMarketplaceManifest` |
@@ -1692,6 +1861,46 @@ export class PluginBuilder {
 		return buildPluginFromConfig(plugin, options);
 	}
 
+	/**
+	 * Prepare a plugin for cross-platform distribution.
+	 *
+	 * @remarks
+	 * Generates a proxy script and hooks.json that enable just-in-time
+	 * compilation on the target machine. The proxy wraps SessionStart hooks
+	 * so the binary is compiled on first run.
+	 *
+	 * This does NOT compile the binary. The proxy script calls
+	 * `bun x claude-binary-plugin build` at runtime on the target machine.
+	 *
+	 * @param plugin - The plugin instance from ClaudeBinaryPlugin.create()
+	 * @param options - Preparation options
+	 * @returns Result of the preparation
+	 *
+	 * @example
+	 * ```typescript
+	 * import plugin from "./plugin.ts";
+	 *
+	 * const result = await PluginBuilder.prepare(plugin, {
+	 *   rootDir: import.meta.dir,
+	 * });
+	 * ```
+	 *
+	 * @see {@link PrepareDistributionOptions}
+	 * @see {@link PrepareDistributionResult}
+	 */
+	static prepare(
+		plugin: {
+			config: {
+				hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+				commands?: Record<string, { pipeline: unknown; description?: string; args?: unknown }>;
+				hooksOutputPath?: string;
+			};
+		},
+		options: PrepareDistributionOptions = {},
+	): Promise<PrepareDistributionResult> {
+		return prepareForDistribution(plugin, options);
+	}
+
 	// =========================================================================
 	// CODE GENERATION
 	// =========================================================================
@@ -1724,6 +1933,33 @@ export class PluginBuilder {
 	 */
 	static generateEntrypoint(options: GeneratePipelinePluginOptions): string {
 		return generatePipelinePluginEntrypoint(options);
+	}
+
+	/**
+	 * Generate a proxy script for cross-platform distribution.
+	 *
+	 * @remarks
+	 * Creates a bash script that wraps SessionStart hooks with just-in-time
+	 * compilation. The script checks if the binary exists and builds it
+	 * on-demand if needed.
+	 *
+	 * @param options - Generation options
+	 * @returns Bash script string
+	 *
+	 * @example
+	 * ```typescript
+	 * const script = PluginBuilder.generateProxyScript({
+	 *   binaryName: "workflow.plugin",
+	 *   pluginName: "workflow",
+	 * });
+	 *
+	 * await Bun.write("scripts/setup-proxy.sh", script);
+	 * ```
+	 *
+	 * @see {@link GenerateProxyScriptOptions}
+	 */
+	static generateProxyScript(options: GenerateProxyScriptOptions): string {
+		return generateProxyScript(options);
 	}
 
 	/**
