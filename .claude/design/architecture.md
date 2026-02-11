@@ -271,7 +271,11 @@ When compiled, `tools` becomes the `matcher` field in hooks.json:
 
 The build system generates a `hooks.json` file that Claude Code uses
 to discover and invoke plugin hooks. This file maps hook types to
-command invocations:
+command invocations.
+
+When a proxy script path is provided (the default for `build`),
+SessionStart hooks route through the proxy for just-in-time compilation
+support, while all other hooks point directly at the binary:
 
 ```json
 {
@@ -280,7 +284,7 @@ command invocations:
       {
         "hooks": [{
           "type": "command",
-          "command": "${CLAUDE_PLUGIN_ROOT}/plugin.plugin --hook=SessionStart/context"
+          "command": "${CLAUDE_PLUGIN_ROOT}/scripts/setup-proxy.sh --hook=SessionStart/context"
         }]
       }
     ],
@@ -311,6 +315,8 @@ Key points:
 - `matcher` - Pipe-separated tool names for filtering
 - Multiple entries per hook type are supported
 - Passthrough hooks are included verbatim
+- SessionStart hooks route through the proxy script for on-demand builds
+- Non-SessionStart hooks bypass the proxy for zero overhead
 
 ### Mixing Plugin and Native Hooks
 
@@ -440,8 +446,16 @@ Subsequent Hooks (PreToolUse, etc.)
    - `bytecode: true` for faster startup (optional)
    - Single-file output with all dependencies bundled
 
-3. **Generates manifest** - Creates `hooks.json`:
+3. **Generates proxy script** - Creates `scripts/setup-proxy.sh`:
+   - Bash wrapper for just-in-time compilation on new machines
+   - Fast path: `exec` directly to binary when it exists
+   - Slow path: `bun install` + build with `--quiet` flag
+   - See "Cross-Platform Distribution" section for details
+
+4. **Generates manifest** - Creates `hooks.json`:
    - Lists all hook types and their handlers
+   - Routes SessionStart hooks through the proxy script
+   - Routes all other hooks directly to the binary
    - Used by Claude Code to discover available hooks
 
 ### Generated Entrypoint Structure
@@ -481,6 +495,194 @@ switch (hookKey) {
     PipelineRuntime.handleUnknown(hookKey, validHooks);
 }
 ```
+
+## Cross-Platform Distribution
+
+### The Distribution Problem
+
+Compiled Bun executables are platform-specific. A binary built on macOS
+ARM64 will not run on Linux x86_64. This creates a challenge for plugin
+distribution: plugins committed to a git repository need to work on
+any developer's machine regardless of their platform.
+
+The SDK solves this with a proxy script that performs just-in-time
+compilation on the target machine. Source code and lockfile are committed
+to the repository, while the platform-specific binary is `.gitignore`d.
+
+### Proxy Script Architecture
+
+The build system generates a bash proxy script (`scripts/setup-proxy.sh`)
+that wraps SessionStart hooks. Non-SessionStart hooks point directly at
+the binary, relying on the guarantee that Claude Code always fires
+SessionStart before any other hook type.
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  hooks.json Routing                                              │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  SessionStart hooks ──▶ scripts/setup-proxy.sh ──▶ binary       │
+│  All other hooks    ──▶ binary (directly)                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Proxy Script Execution Paths
+
+The proxy has three execution paths:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Fast Path (zero overhead)                                       │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  Binary exists + node_modules present?                           │
+│       │                                                          │
+│       ▼                                                          │
+│  exec to binary (replaces shell process, no subprocess)         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  Slow Path (first run on new machine)                            │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  1. Buffer stdin (hook event JSON from Claude Code)             │
+│  2. Acquire mkdir-based lock (.build-lock directory)            │
+│  3. bun install --silent                                         │
+│  4. bun x claude-binary-plugin build --no-persist --quiet       │
+│  5. Verify binary is executable                                  │
+│  6. Forward buffered stdin to binary                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  Error Path (build failure)                                      │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  emit_error() outputs to stdout:                                 │
+│    {"additionalContext":"[Plugin Build Error] ..."}              │
+│                                                                  │
+│  Also outputs to stderr for user visibility:                     │
+│    [plugin-name] ERROR: <message>                                │
+│                                                                  │
+│  Exit code 2 (Claude Code shows stderr to user)                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Build Lock
+
+The proxy uses a `mkdir`-based lock to prevent concurrent builds when
+multiple hooks fire simultaneously. This mechanism is portable across
+macOS, Linux, and WSL because `mkdir` is atomic on all POSIX systems.
+
+- **Lock directory**: `${PLUGIN_DIR}/.build-lock`
+- **Stale detection**: Lock older than 5 minutes is removed
+- **Wait behavior**: If another process holds the lock, the proxy waits
+  up to 5 minutes, then re-checks if the binary was built
+- **Cleanup**: `trap` removes the lock directory on exit
+
+### Self-Modification Protection
+
+The proxy script invokes the build system with the `--quiet` flag. When
+`--quiet` is set during a build:
+
+1. All non-error console output is suppressed
+2. Proxy script regeneration is skipped entirely
+3. hooks.json regeneration is skipped entirely
+
+This prevents a critical bash bug: if the running proxy script were
+overwritten mid-execution, bash would read corrupted data from the
+modified file. The entire proxy script is also wrapped in a `{ ... }`
+compound command block, which causes bash to read the full script into
+memory before execution begins.
+
+### Stat Portability
+
+The proxy needs file modification times for stale lock detection. macOS
+and Linux use different `stat` flags:
+
+- macOS: `stat -f %m <file>` (BSD stat)
+- Linux: `stat -c %Y <file>` (GNU coreutils)
+
+The `get_mtime()` function tries the macOS form first, falling back to
+GNU if that fails.
+
+### Error Communication with Claude
+
+When the build fails, the proxy communicates with Claude Code through
+the `additionalContext` field in the JSON response:
+
+```json
+{
+  "additionalContext": "[Plugin Build Error] The workflow plugin failed to build on this machine. Error: bun install failed. The plugin hooks and commands will not be available this session. To retry, delete the plugin cache and restart the session."
+}
+```
+
+This lets Claude know the plugin is unavailable and suggest remediation
+steps to the user. Exit code 2 causes Claude Code to display the stderr
+output to the user as well.
+
+### Generated Artifacts
+
+After `claude-binary-plugin build` completes, the following files exist:
+
+```text
+plugin-directory/
+├── scripts/
+│   └── setup-proxy.sh         # Proxy script (committed to git)
+├── hooks/
+│   └── hooks.json             # Hook manifest (committed to git)
+├── workflow.plugin             # Compiled binary (.gitignore'd)
+├── plugin.config.ts            # Plugin definition (committed)
+├── bun.lock                    # Lockfile (committed)
+└── node_modules/               # Dependencies (.gitignore'd)
+```
+
+### End-to-End Flow
+
+```text
+Developer Machine (build):
+  1. claude-binary-plugin build
+  2. Compiles workflow.plugin (platform-specific)
+  3. Generates scripts/setup-proxy.sh
+  4. Generates hooks/hooks.json (SessionStart → proxy, others → binary)
+  5. Binary is .gitignore'd; source + lockfile + proxy + hooks.json committed
+
+New Machine (first session):
+  1. Claude Code fires SessionStart
+  2. hooks.json routes to scripts/setup-proxy.sh
+  3. Proxy detects missing binary → slow path
+  4. bun install → bun x claude-binary-plugin build --quiet
+  5. Binary compiled for local platform
+  6. Buffered stdin forwarded to binary → hook executes normally
+
+New Machine (subsequent hooks):
+  1. hooks.json routes PreToolUse/PostToolUse/etc. directly to binary
+  2. Binary already exists → executes immediately
+  3. No proxy overhead for non-SessionStart hooks
+
+New Machine (subsequent sessions):
+  1. SessionStart routes through proxy again
+  2. Binary exists + node_modules present → fast path (exec)
+  3. Zero overhead: shell process replaced by binary
+```
+
+### Proxy Template Implementation
+
+The proxy script is generated by `generateProxyScript()` in
+`src/build/proxy-template.ts`. The function accepts:
+
+| Option | Description |
+| ------ | ----------- |
+| `binaryName` | Binary filename (e.g., `workflow.plugin`) |
+| `configFile` | Plugin config path (default: `plugin.config.ts`) |
+| `pluginName` | Name for log messages |
+
+The generated script resolves its own location to find the plugin
+directory, making it relocatable as long as the directory structure
+is preserved.
 
 ## Runtime Execution
 
@@ -1196,7 +1398,8 @@ const handler: Commands["lint"] = async ({ state }) => {
 src/
 ├── index.ts              # Hook events, response builders
 ├── build/
-│   └── builder.ts        # PluginBuilder class, entrypoint gen
+│   ├── builder.ts        # PluginBuilder class, entrypoint gen
+│   └── proxy-template.ts # Proxy script generator for distribution
 ├── cli/
 │   ├── index.ts          # CLI binary, @effect/cli commands
 │   └── macros.ts         # Build-time package version resolution

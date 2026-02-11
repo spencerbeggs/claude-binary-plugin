@@ -59,24 +59,25 @@ describe("generateProxyScript", () => {
 		expect(script).toContain("mkdir");
 	});
 
-	test("contains bun install command", () => {
+	test("contains silent bun install command", () => {
 		const script = generateProxyScript({ binaryName: "test.plugin" });
 
-		expect(script).toContain("bun install --frozen-lockfile");
+		expect(script).toContain("bun install --silent");
 	});
 
-	test("contains bun build command", () => {
+	test("contains quiet bun build command", () => {
 		const script = generateProxyScript({ binaryName: "test.plugin" });
 
 		expect(script).toContain("bun x claude-binary-plugin build");
-		expect(script).toContain("--no-persist");
+		expect(script).toContain("--no-persist --quiet");
 	});
 
-	test("contains error handler that emits valid JSON", () => {
+	test("contains error handler that emits additionalContext JSON", () => {
 		const script = generateProxyScript({ binaryName: "test.plugin" });
 
 		expect(script).toContain("emit_error");
-		expect(script).toContain("echo '{}' >&1");
+		expect(script).toContain("additionalContext");
+		expect(script).toContain("[Plugin Build Error]");
 	});
 
 	test("contains stale lock detection", () => {

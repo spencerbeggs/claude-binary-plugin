@@ -40,7 +40,8 @@
  * @see {@link PluginManifest} - Plugin manifest configuration
  * @see {@link BuildPluginOptions} - Build configuration options
  */
-import { relative, resolve } from "node:path";
+import { mkdir, rm } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 import type { PassthroughHookEntry } from "../pipeline/config.js";
 import type { GenerateProxyScriptOptions } from "./proxy-template.js";
 import { generateProxyScript } from "./proxy-template.js";
@@ -780,6 +781,8 @@ export interface BuildPluginOptions {
 	 * @defaultValue false
 	 */
 	persistLocal?: boolean;
+	/** Suppress all non-error output (default: false) */
+	quiet?: boolean;
 }
 
 /**
@@ -808,8 +811,6 @@ export interface PersistLocalConfig {
 	rootDir: string;
 	/** Marketplace name (e.g., "savvy-web-claude-tools") */
 	marketplaceName: string;
-	/** Shell executor for running commands */
-	shell: ShellExecutor;
 }
 
 /**
@@ -858,12 +859,32 @@ async function getPluginCachePath(config: PersistLocalConfig): Promise<string[]>
  * @internal
  */
 async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
-	const { rootDir, shell } = config;
+	const { rootDir } = config;
 
 	const cachePaths = await getPluginCachePath(config);
 
 	console.log(`  Source: ${rootDir}`);
 	console.log(`  Targets: ${cachePaths.length} cache location(s)`);
+
+	// Get list of non-ignored files using git ls-files.
+	// This respects all .gitignore rules (parent dirs, global, .git/info/exclude)
+	// so gitignored files like compiled binaries are excluded from the cache.
+	let files: string[];
+
+	try {
+		const gitResult = await Bun.$`git -C ${rootDir} ls-files --cached --others --exclude-standard`.quiet();
+		const stdout = gitResult.text().trim();
+		files = stdout ? stdout.split("\n") : [];
+	} catch {
+		// Fallback: scan with Bun.Glob, exclude common dev/build artifacts
+		const glob = new Bun.Glob("**/*");
+		files = [];
+		for await (const path of glob.scan({ cwd: rootDir, dot: true })) {
+			if (path.startsWith(".git/") || path.includes("node_modules/.cache/")) continue;
+			if (path.endsWith(".bun-build") || path.endsWith(".DS_Store")) continue;
+			files.push(path);
+		}
+	}
 
 	let successCount = 0;
 
@@ -871,31 +892,26 @@ async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
 		console.log(`  → ${cachePath}`);
 
 		try {
-			// Remove existing cache directory
-			await shell(`rm -rf "${cachePath}"`);
+			// Remove existing cache directory and recreate
+			await rm(cachePath, { recursive: true, force: true });
+			await mkdir(cachePath, { recursive: true });
 
-			// Create parent directories
-			await shell(`mkdir -p "${cachePath}"`);
-
-			// Copy plugin directory contents to cache
-			// Using rsync for efficient copying, excluding common dev files
-			const rsyncResult = await shell(
-				`rsync -a --delete \
-					--exclude='.git' \
-					--exclude='node_modules/.cache' \
-					--exclude='*.bun-build' \
-					--exclude='.DS_Store' \
-					"${rootDir}/" "${cachePath}/"`,
-			);
-
-			if (rsyncResult.exitCode !== 0) {
-				// Fallback to cp if rsync is not available
-				const cpResult = await shell(`cp -R "${rootDir}/." "${cachePath}/"`);
-				if (cpResult.exitCode !== 0) {
-					console.error(`    ✗ Failed to copy plugin to cache: ${cpResult.stderr}`);
-					continue;
-				}
+			// Collect unique directories to create them in bulk
+			const dirs = new Set<string>();
+			for (const relPath of files) {
+				dirs.add(dirname(resolve(cachePath, relPath)));
 			}
+			await Promise.all([...dirs].map((d) => mkdir(d, { recursive: true })));
+
+			// Copy files preserving directory structure
+			await Promise.all(
+				files.map(async (relPath) => {
+					const srcFile = Bun.file(resolve(rootDir, relPath));
+					if (await srcFile.exists()) {
+						await Bun.write(resolve(cachePath, relPath), srcFile);
+					}
+				}),
+			);
 
 			successCount++;
 		} catch (error) {
@@ -986,7 +1002,10 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 		marketplaceName = defaultMarketplaceName,
 		external = [],
 		persistLocal = false,
+		quiet = false,
 	} = options;
+
+	const log = quiet ? (..._args: unknown[]) => {} : console.log;
 
 	const absoluteRootDir = resolve(rootDir);
 	// Add .js extension for bundles (if not already present)
@@ -1025,9 +1044,9 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 	}
 
 	const action = compile ? "Compiling" : "Bundling";
-	console.log(`\n${action} unified plugin...`);
-	console.log(`Entrypoint: ${relativeEntrypoint}`);
-	console.log(`Output: ${relativeOutput}`);
+	log(`\n${action} unified plugin...`);
+	log(`Entrypoint: ${relativeEntrypoint}`);
+	log(`Output: ${relativeOutput}`);
 
 	// Build compile command arguments
 	const args = ["build", entrypointPath, "--outfile", outputPath];
@@ -1047,6 +1066,10 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 	if (bytecode) {
 		args.push("--bytecode");
 	}
+
+	// Plugins are ESM — ensure compiled binaries use ESM format
+	// (Bun >=1.3.9 defaults --bytecode to CJS without explicit --format)
+	args.push("--format=esm");
 
 	// When bundling (not compiling), default to bun target unless explicitly set
 	const effectiveTarget = target || (!compile ? "bun" : undefined);
@@ -1085,7 +1108,7 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 		}
 
 		const verb = compile ? "compiled" : "bundled";
-		console.log(`\n✓ Plugin ${verb} successfully (${duration.toFixed(0)}ms)`);
+		log(`\n✓ Plugin ${verb} successfully (${duration.toFixed(0)}ms)`);
 
 		// Persist plugin to local cache if enabled
 		if (persistLocal) {
@@ -1095,7 +1118,6 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 				await syncPluginToCache({
 					rootDir: absoluteRootDir,
 					marketplaceName,
-					shell,
 				});
 			}
 		}
@@ -1444,6 +1466,10 @@ async function buildPluginFromConfig(
 		args.push("--bytecode");
 	}
 
+	// Plugins are ESM — ensure compiled binaries use ESM format
+	// (Bun >=1.3.9 defaults --bytecode to CJS without explicit --format)
+	args.push("--format=esm");
+
 	// When bundling (not compiling), default to bun target unless explicitly set
 	const effectiveTarget = target || (!compile ? "bun" : undefined);
 	if (effectiveTarget) {
@@ -1549,7 +1575,6 @@ async function buildPluginFromConfig(
 				await syncPluginToCache({
 					rootDir: absoluteRootDir,
 					marketplaceName: manifestMarketplaceName,
-					shell,
 				});
 			}
 		}

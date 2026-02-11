@@ -15,6 +15,7 @@
  *   --no-persist    Don't persist to local cache (overrides config)
  *   --no-bytecode   Don't compile to bytecode (overrides config)
  *   --bundle        Bundle to JS instead of compiling to binary
+ *   --quiet         Suppress all non-error output
  */
 
 import { dirname, resolve } from "node:path";
@@ -44,12 +45,15 @@ const noBytecode = Options.boolean("no-bytecode").pipe(
 
 const bundle = Options.boolean("bundle").pipe(Options.withDescription("Bundle to JS instead of compiling to binary"));
 
+const quiet = Options.boolean("quiet").pipe(Options.withDescription("Suppress all non-error output"));
+
 // Build command implementation
 const buildCommand = Command.make(
 	"build",
-	{ pluginConfigPath, noPersist, noBytecode, bundle },
-	({ pluginConfigPath, noPersist, noBytecode, bundle }) =>
+	{ pluginConfigPath, noPersist, noBytecode, bundle, quiet },
+	({ pluginConfigPath, noPersist, noBytecode, bundle, quiet }) =>
 		Effect.gen(function* () {
+			const log = quiet ? () => Effect.void : Console.log;
 			const pluginFile = pluginConfigPath;
 
 			// Resolve plugin file path
@@ -63,7 +67,7 @@ const buildCommand = Command.make(
 				return yield* Effect.fail(new Error("Plugin file not found"));
 			}
 
-			yield* Console.log(`Building plugin from: ${pluginFile}`);
+			yield* log(`Building plugin from: ${pluginFile}`);
 
 			// Import plugin definition
 			const pluginDefinition = yield* Effect.tryPromise({
@@ -103,16 +107,16 @@ const buildCommand = Command.make(
 					})
 				: [];
 
-			yield* Console.log(`\nPlugin: ${pluginName} v${pluginVersion}`);
-			yield* Console.log(`Hooks: ${hookEntries.length}`);
+			yield* log(`\nPlugin: ${pluginName} v${pluginVersion}`);
+			yield* log(`Hooks: ${hookEntries.length}`);
 			for (const hook of hookEntries) {
 				const mode = hook.isPipeline ? "pipeline" : "handler";
-				yield* Console.log(`  ${hook.hookType}/${hook.name} (${mode})`);
+				yield* log(`  ${hook.hookType}/${hook.name} (${mode})`);
 			}
 			if (pipelineCommands.length > 0) {
-				yield* Console.log(`Commands: ${pipelineCommands.length}`);
+				yield* log(`Commands: ${pipelineCommands.length}`);
 				for (const cmd of pipelineCommands) {
-					yield* Console.log(`  ${cmd.name}`);
+					yield* log(`  ${cmd.name}`);
 				}
 			}
 
@@ -146,6 +150,7 @@ const buildCommand = Command.make(
 					minify: config.minify ?? true,
 					sourcemap: config.sourcemap ?? true,
 					cleanupTempFiles: true,
+					quiet,
 				}),
 			);
 
@@ -157,49 +162,53 @@ const buildCommand = Command.make(
 				return yield* Effect.fail(new Error("Build failed"));
 			}
 
-			// Generate proxy script for cross-platform distribution
-			const scriptsDir = "scripts";
-			const proxyScriptRelPath = `${scriptsDir}/setup-proxy.sh`;
-			const proxyScriptAbsPath = resolve(rootDir, proxyScriptRelPath);
-			const proxyScriptDir = dirname(proxyScriptAbsPath);
+			// Skip proxy/hooks generation in quiet mode (proxy-invoked builds).
+			// The proxy script is already running and must not be overwritten mid-execution.
+			if (!quiet) {
+				// Generate proxy script for cross-platform distribution
+				const scriptsDir = "scripts";
+				const proxyScriptRelPath = `${scriptsDir}/setup-proxy.sh`;
+				const proxyScriptAbsPath = resolve(rootDir, proxyScriptRelPath);
+				const proxyScriptDir = dirname(proxyScriptAbsPath);
 
-			yield* Effect.promise(() => Bun.$`mkdir -p ${proxyScriptDir}`.quiet());
+				yield* Effect.promise(() => Bun.$`mkdir -p ${proxyScriptDir}`.quiet());
 
-			const proxyScriptContent = PluginBuilder.generateProxyScript({
-				binaryName: result.output,
-				configFile: pluginFile,
-				pluginName,
-			});
+				const proxyScriptContent = PluginBuilder.generateProxyScript({
+					binaryName: result.output,
+					configFile: pluginFile,
+					pluginName,
+				});
 
-			yield* Effect.promise(() => Bun.write(proxyScriptAbsPath, proxyScriptContent));
-			yield* Effect.promise(() => Bun.$`chmod +x ${proxyScriptAbsPath}`.quiet());
+				yield* Effect.promise(() => Bun.write(proxyScriptAbsPath, proxyScriptContent));
+				yield* Effect.promise(() => Bun.$`chmod +x ${proxyScriptAbsPath}`.quiet());
 
-			const hasSessionStart = hookEntries.some((h) => h.hookType === "SessionStart");
-			if (!hasSessionStart) {
-				yield* Console.log("⚠ No SessionStart hooks - proxy will not trigger on-demand builds");
+				const hasSessionStart = hookEntries.some((h) => h.hookType === "SessionStart");
+				if (!hasSessionStart) {
+					yield* log("⚠ No SessionStart hooks - proxy will not trigger on-demand builds");
+				}
+
+				// Generate hooks.json with proxy routing for SessionStart
+				const hooksOutputPath = config.hooksOutputPath ?? "hooks/hooks.json";
+				const passthroughHooks = PluginBuilder.extractPassthroughEntries(config);
+				const hooksJson = PluginBuilder.generateHooksJson({
+					pluginBinaryName: result.output,
+					hooks: hookEntries,
+					passthroughHooks,
+					proxyScript: proxyScriptRelPath,
+				});
+
+				// Write hooks.json
+				const hooksJsonPath = resolve(rootDir, hooksOutputPath);
+				const hooksDir = dirname(hooksJsonPath);
+
+				// Ensure directory exists
+				yield* Effect.promise(() => Bun.$`mkdir -p ${hooksDir}`.quiet());
+				yield* Effect.promise(() => Bun.write(hooksJsonPath, `${JSON.stringify(hooksJson, null, "\t")}\n`));
+
+				yield* log(`\nBuild complete: ${result.output}`);
+				yield* log(`Proxy script: ${proxyScriptRelPath}`);
+				yield* log(`Hooks config: ${hooksOutputPath}`);
 			}
-
-			// Generate hooks.json with proxy routing for SessionStart
-			const hooksOutputPath = config.hooksOutputPath ?? "hooks/hooks.json";
-			const passthroughHooks = PluginBuilder.extractPassthroughEntries(config);
-			const hooksJson = PluginBuilder.generateHooksJson({
-				pluginBinaryName: result.output,
-				hooks: hookEntries,
-				passthroughHooks,
-				proxyScript: proxyScriptRelPath,
-			});
-
-			// Write hooks.json
-			const hooksJsonPath = resolve(rootDir, hooksOutputPath);
-			const hooksDir = dirname(hooksJsonPath);
-
-			// Ensure directory exists
-			yield* Effect.promise(() => Bun.$`mkdir -p ${hooksDir}`.quiet());
-			yield* Effect.promise(() => Bun.write(hooksJsonPath, `${JSON.stringify(hooksJson, null, "\t")}\n`));
-
-			yield* Console.log(`\nBuild complete: ${result.output}`);
-			yield* Console.log(`Proxy script: ${proxyScriptRelPath}`);
-			yield* Console.log(`Hooks config: ${hooksOutputPath}`);
 		}),
 );
 

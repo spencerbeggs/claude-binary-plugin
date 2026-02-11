@@ -480,13 +480,10 @@ describe("getPluginCachePath", () => {
 	});
 
 	test("throws when plugin.json not found", async () => {
-		const { shell } = createMockShell();
-
 		await expect(
 			PluginBuilder.getCachePath({
 				rootDir: PLUGIN_DIR,
 				marketplaceName: "test-marketplace",
-				shell,
 			}),
 		).rejects.toThrow("plugin.json not found");
 	});
@@ -494,13 +491,10 @@ describe("getPluginCachePath", () => {
 	test("throws when plugin.json missing name or version", async () => {
 		await Bun.write(join(PLUGIN_DIR, ".claude-plugin/plugin.json"), JSON.stringify({ name: "test" }));
 
-		const { shell } = createMockShell();
-
 		await expect(
 			PluginBuilder.getCachePath({
 				rootDir: PLUGIN_DIR,
 				marketplaceName: "test-marketplace",
-				shell,
 			}),
 		).rejects.toThrow("missing name or version");
 	});
@@ -511,12 +505,9 @@ describe("getPluginCachePath", () => {
 			JSON.stringify({ name: "my-plugin", version: "1.0.0" }),
 		);
 
-		const { shell } = createMockShell();
-
 		const paths = await PluginBuilder.getCachePath({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
-			shell,
 		});
 
 		expect(paths.length).toBe(1);
@@ -530,12 +521,9 @@ describe("getPluginCachePath", () => {
 			JSON.stringify({ name: "my-plugin", version: "2.0.0" }),
 		);
 
-		const { shell } = createMockShell();
-
 		const paths = await PluginBuilder.getCachePath({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "my-marketplace",
-			shell,
 		});
 
 		expect(paths.length).toBe(1);
@@ -545,13 +533,10 @@ describe("getPluginCachePath", () => {
 	test("throws on invalid JSON in plugin.json", async () => {
 		await Bun.write(join(PLUGIN_DIR, ".claude-plugin/plugin.json"), "not valid json");
 
-		const { shell } = createMockShell();
-
 		await expect(
 			PluginBuilder.getCachePath({
 				rootDir: PLUGIN_DIR,
 				marketplaceName: "test-marketplace",
-				shell,
 			}),
 		).rejects.toThrow("failed to parse plugin.json");
 	});
@@ -559,11 +544,13 @@ describe("getPluginCachePath", () => {
 
 describe("syncPluginToCache", () => {
 	const PLUGIN_DIR = join(TEST_DIR, "sync-test-plugin");
+	const FAKE_HOME = join(TEST_DIR, "fake-home");
 	let env: MockEnvContext;
 
 	beforeEach(async () => {
 		await mkdir(join(PLUGIN_DIR, ".claude-plugin"), { recursive: true });
-		env = TestFixtures.createEnv({ HOME: "/test/home" });
+		await mkdir(FAKE_HOME, { recursive: true });
+		env = TestFixtures.createEnv({ HOME: FAKE_HOME });
 	});
 
 	afterEach(async () => {
@@ -575,7 +562,7 @@ describe("syncPluginToCache", () => {
 		}
 	});
 
-	test("syncs plugin to cache successfully with rsync", async () => {
+	test("syncs plugin to cache with file copying", async () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
@@ -583,116 +570,54 @@ describe("syncPluginToCache", () => {
 			join(PLUGIN_DIR, ".claude-plugin/plugin.json"),
 			JSON.stringify({ name: "sync-plugin", version: "1.0.0" }),
 		);
-
-		const { shell, commands } = createMockShell();
+		await Bun.write(join(PLUGIN_DIR, "test-file.txt"), "hello");
 
 		const result = await PluginBuilder.syncToCache({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
-			shell,
 		});
 
 		expect(result).toBe(true);
 
-		// Should have called rm, mkdir, and rsync
-		expect(commands.some((cmd) => cmd.includes("rm -rf"))).toBe(true);
-		expect(commands.some((cmd) => cmd.includes("mkdir -p"))).toBe(true);
-		expect(commands.some((cmd) => cmd.includes("rsync"))).toBe(true);
+		// Verify files were copied to cache
+		const cachePath = join(FAKE_HOME, ".claude/plugins/cache/test-marketplace/sync-plugin/1.0.0");
+		const cachedFile = Bun.file(join(cachePath, "test-file.txt"));
+		expect(await cachedFile.exists()).toBe(true);
+		expect(await cachedFile.text()).toBe("hello");
 
 		console.log = originalLog;
 	});
 
-	test("falls back to cp when rsync fails", async () => {
+	test("excludes gitignored files from cache", async () => {
 		const originalLog = console.log;
 		console.log = mock(() => {});
 
 		await Bun.write(
 			join(PLUGIN_DIR, ".claude-plugin/plugin.json"),
-			JSON.stringify({ name: "fallback-plugin", version: "1.0.0" }),
+			JSON.stringify({ name: "ignore-plugin", version: "1.0.0" }),
 		);
+		await Bun.write(join(PLUGIN_DIR, "source.ts"), "export default {}");
+		await Bun.write(join(PLUGIN_DIR, "build-output.plugin"), "binary-content");
+		await Bun.write(join(PLUGIN_DIR, ".gitignore"), "*.plugin\n");
 
-		const commands: string[] = [];
-		const fallbackShell: ShellExecutor = async (cmd: string) => {
-			commands.push(cmd);
-			if (cmd.includes("rsync")) {
-				return { exitCode: 1, stdout: "", stderr: "rsync not found" };
-			}
-			return { exitCode: 0, stdout: "", stderr: "" };
-		};
+		// Initialize a git repo so git ls-files works
+		await Bun.$`git -C ${PLUGIN_DIR} init`.quiet();
+		await Bun.$`git -C ${PLUGIN_DIR} add -A`.quiet();
 
 		const result = await PluginBuilder.syncToCache({
 			rootDir: PLUGIN_DIR,
 			marketplaceName: "test-marketplace",
-			shell: fallbackShell,
 		});
 
 		expect(result).toBe(true);
-		expect(commands.some((cmd) => cmd.includes("cp -R"))).toBe(true);
+
+		const cachePath = join(FAKE_HOME, ".claude/plugins/cache/test-marketplace/ignore-plugin/1.0.0");
+		// Source file should be cached
+		expect(await Bun.file(join(cachePath, "source.ts")).exists()).toBe(true);
+		// Gitignored binary should NOT be cached
+		expect(await Bun.file(join(cachePath, "build-output.plugin")).exists()).toBe(false);
 
 		console.log = originalLog;
-	});
-
-	test("returns false when both rsync and cp fail", async () => {
-		const originalLog = console.log;
-		const originalError = console.error;
-		console.log = mock(() => {});
-		console.error = mock(() => {});
-
-		await Bun.write(
-			join(PLUGIN_DIR, ".claude-plugin/plugin.json"),
-			JSON.stringify({ name: "fail-plugin", version: "1.0.0" }),
-		);
-
-		const failShell: ShellExecutor = async (cmd: string) => {
-			if (cmd.includes("rsync") || cmd.includes("cp -R")) {
-				return { exitCode: 1, stdout: "", stderr: "copy failed" };
-			}
-			return { exitCode: 0, stdout: "", stderr: "" };
-		};
-
-		const result = await PluginBuilder.syncToCache({
-			rootDir: PLUGIN_DIR,
-			marketplaceName: "test-marketplace",
-			shell: failShell,
-		});
-
-		expect(result).toBe(false);
-
-		console.log = originalLog;
-		console.error = originalError;
-	});
-
-	test("handles exception during sync", async () => {
-		const originalLog = console.log;
-		const originalError = console.error;
-		console.log = mock(() => {});
-		console.error = mock(() => {});
-
-		await Bun.write(
-			join(PLUGIN_DIR, ".claude-plugin/plugin.json"),
-			JSON.stringify({ name: "exception-plugin", version: "1.0.0" }),
-		);
-
-		let callCount = 0;
-		const throwingShell: ShellExecutor = async () => {
-			callCount++;
-			// Let mkdir succeed, throw on rsync
-			if (callCount <= 2) {
-				return { exitCode: 0, stdout: "", stderr: "" };
-			}
-			throw new Error("Sync exception");
-		};
-
-		const result = await PluginBuilder.syncToCache({
-			rootDir: PLUGIN_DIR,
-			marketplaceName: "test-marketplace",
-			shell: throwingShell,
-		});
-
-		expect(result).toBe(false);
-
-		console.log = originalLog;
-		console.error = originalError;
 	});
 });
 

@@ -5,7 +5,7 @@ category: documentation
 created: 2026-01-22
 updated: 2026-02-10
 last-synced: 2026-02-10
-completeness: 90
+completeness: 95
 related:
   - .claude/design/architecture.md
   - .claude/design/testing.md
@@ -67,6 +67,7 @@ claude-binary-plugin build ./src/my-plugin.config.ts
 | `--no-persist` | Don't persist to local Claude Code plugins cache |
 | `--no-bytecode` | Don't compile to bytecode (faster builds) |
 | `--bundle` | Bundle to JS instead of compiling to binary |
+| `--quiet` | Suppress all non-error output; skip proxy/hooks.json generation |
 | `--help` | Show help information |
 | `--version` | Show CLI version |
 
@@ -100,14 +101,34 @@ export default plugin;
 The CLI produces:
 
 1. **Plugin binary** - Single-file Bun executable (e.g., `my-plugin.plugin`)
-2. **hooks.json** - Manifest file for Claude Code hook discovery
-3. **Generated entrypoint** - Temporary `.plugin-entrypoint.ts` (cleaned
+2. **Proxy script** - Bash wrapper for just-in-time compilation
+   (`scripts/setup-proxy.sh`)
+3. **hooks.json** - Manifest file for Claude Code hook discovery
+4. **Generated entrypoint** - Temporary `.plugin-entrypoint.ts` (cleaned
    up after build)
 
 Output location is determined by:
 
 - Plugin name from `.claude-plugin/plugin.json` manifest
 - Falls back to prefix-derived name if no manifest exists
+
+### Post-Compilation Steps
+
+After the binary is compiled, the build command performs two additional
+steps (unless `--quiet` is set):
+
+1. **Generate proxy script** - Creates `scripts/setup-proxy.sh`, a bash
+   script that wraps SessionStart hooks with just-in-time compilation
+   support. This enables cross-platform distribution by building the
+   binary on the target machine if it does not exist.
+
+2. **Generate hooks.json** - Creates the hook manifest with SessionStart
+   hooks routed through the proxy script and all other hooks pointing
+   directly at the compiled binary. This ensures the proxy triggers
+   on-demand builds while non-SessionStart hooks have zero overhead.
+
+If no SessionStart hooks are defined in the plugin configuration, the
+build emits a warning since the proxy will never trigger.
 
 ### Build Options Explained
 
@@ -116,6 +137,7 @@ Output location is determined by:
 | `--no-persist` | Skips copying the built binary to the local Claude Code plugins cache. Useful for CI builds or when deploying to a custom location. |
 | `--no-bytecode` | Disables bytecode compilation, producing a larger but faster-to-build binary. Useful during development iteration. |
 | `--bundle` | Outputs bundled JavaScript instead of a compiled Bun executable. Useful for debugging the generated code. |
+| `--quiet` | Suppresses all non-error output and skips proxy script and hooks.json generation. This flag is used internally by the proxy script during on-demand builds to prevent self-modification of the running proxy (see architecture.md for details). |
 
 ## Exit Codes
 
@@ -160,6 +182,50 @@ causes include:
 - Missing dependencies (run `bun install`)
 - TypeScript errors in hook handler files
 - Circular imports in the plugin code
+
+## Distribution Workflow
+
+The build command supports a cross-platform distribution workflow where
+source code is committed to a repository and the binary is built on
+each target machine at first use.
+
+### Recommended .gitignore
+
+```text
+# Plugin binary (platform-specific, built on each machine)
+*.plugin
+
+# Dependencies (installed on each machine)
+node_modules/
+
+# Build artifacts
+.plugin-entrypoint.ts
+.build-lock/
+```
+
+### What to Commit
+
+```text
+plugin.config.ts          # Plugin definition
+hooks/hooks.json          # Hook manifest (with proxy routing)
+scripts/setup-proxy.sh    # Proxy script for on-demand builds
+bun.lock                  # Lockfile for reproducible installs
+src/                      # Source code
+```
+
+### How It Works
+
+1. Run `claude-binary-plugin build` on the development machine
+2. The binary, proxy script, and hooks.json are all generated
+3. Commit everything except the binary and node_modules
+4. On a new machine, Claude Code fires SessionStart
+5. hooks.json routes SessionStart through the proxy script
+6. The proxy detects the missing binary and runs the build
+7. Subsequent hooks run directly against the compiled binary
+
+See `architecture.md` for detailed proxy script behavior including
+lock management, error handling, and the self-modification protection
+mechanism.
 
 ## Planned Features
 

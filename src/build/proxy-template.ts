@@ -8,7 +8,7 @@
  *
  * **Fast path**: Binary exists + node_modules present -> exec to binary (zero overhead)
  * **Slow path**: Buffer stdin -> acquire lock -> bun install -> build -> forward stdin
- * **Error path**: Emit `{}` to stdout (valid passthrough JSON) + error to stderr + exit 0
+ * **Error path**: Emit JSON with `additionalContext` to stdout + error to stderr + exit 2
  *
  * @see {@link GenerateProxyScriptOptions}
  */
@@ -63,11 +63,12 @@ export function generateProxyScript(options: GenerateProxyScriptOptions): string
 #
 # Fast path: binary exists + node_modules present -> exec to binary
 # Slow path: buffer stdin -> lock -> bun install -> build -> forward stdin
-# Error path: emit {} to stdout (valid passthrough) + error to stderr + exit 0
+# Error path: emit JSON with additionalContext to stdout + error to stderr + exit 2
 #
 # DO NOT EDIT - regenerate with: claude-binary-plugin prepare
 # =============================================================================
 
+{
 set -euo pipefail
 
 BINARY_NAME="${binaryName}"
@@ -100,13 +101,13 @@ get_mtime() {
 }
 
 # -----------------------------------------------------------------------------
-# Error handler: emit valid passthrough JSON and exit cleanly
+# Error handler: inform Claude via additionalContext and exit cleanly
 # -----------------------------------------------------------------------------
 emit_error() {
     local msg="$1"
-    echo '{}' >&1
+    echo "{\\"additionalContext\\":\\"[Plugin Build Error] The \${PLUGIN_NAME} plugin failed to build on this machine. Error: \${msg}. The plugin hooks and commands will not be available this session. To retry, delete the plugin cache and restart the session.\\"}" >&1
     echo "[\${PLUGIN_NAME}] ERROR: \${msg}" >&2
-    exit 0
+    exit 2
 }
 
 # -----------------------------------------------------------------------------
@@ -155,12 +156,12 @@ acquire_lock() {
 # -----------------------------------------------------------------------------
 build_plugin() {
     echo "[\${PLUGIN_NAME}] Installing dependencies..." >&2
-    if ! (cd "\${PLUGIN_DIR}" && bun install --frozen-lockfile 2>&1) >&2; then
+    if ! (cd "\${PLUGIN_DIR}" && bun install --silent 2>&1) >&2; then
         emit_error "bun install failed"
     fi
 
     echo "[\${PLUGIN_NAME}] Building plugin binary..." >&2
-    if ! (cd "\${PLUGIN_DIR}" && bun x claude-binary-plugin build "\${CONFIG_FILE}" --no-persist 2>&1) >&2; then
+    if ! (cd "\${PLUGIN_DIR}" && bun x claude-binary-plugin build "\${CONFIG_FILE}" --no-persist --quiet 2>&1) >&2; then
         emit_error "Plugin build failed"
     fi
 
@@ -196,5 +197,6 @@ fi
 
 # Forward buffered stdin to the binary
 echo "\${STDIN_BUFFER}" | exec "\${BINARY_PATH}" "$@"
+}
 `;
 }
