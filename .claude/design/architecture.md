@@ -5,7 +5,7 @@ category: architecture
 created: 2026-01-22
 updated: 2026-02-10
 last-synced: 2026-02-10
-completeness: 95
+completeness: 98
 related:
   - .claude/design/schema.md
   - .claude/design/testing.md
@@ -364,8 +364,9 @@ integration with existing hook scripts.
    PreToolUseInputSchema.parse(stdinData)
 
 4. Runtime loads state:
-   - SessionStart: Load .env files, run setup()
-   - Other hooks: Load from CLAUDE_ENV_FILE via session registry
+   - SessionStart: Load .env files, run setup(), persist to CLAUDE_ENV_FILE
+   - Other hooks: findSessionEnvDir() → loadAllHookFiles(*hook*.sh) →
+     extractPersistedState() from {PREFIX}_PLUGIN_STATE in Bun.env
 
 5. Runtime calls handler with typed context
    handler({ input, options, state })
@@ -400,9 +401,15 @@ SessionStart Hook
 └──────────────────┘
        │
        ▼
+┌──────────────────┐     ┌─────────────────────────────────────────┐
+│  Write to        │───▶ │  ~/.claude/session-env/{uuid}/          │
+│  CLAUDE_ENV_FILE │     │    sessionstart-hook-0.sh  (new naming) │
+└──────────────────┘     │    hook-0.sh               (old naming) │
+       │                 └─────────────────────────────────────────┘
+       ▼
 ┌──────────────────┐
-│  Write to        │───▶ ~/.claude/session-env/{uuid}/hook-0.sh
-│  CLAUDE_ENV_FILE │
+│  Derive dir via  │───▶ dirname(CLAUDE_ENV_FILE)
+│  dirname()       │     (NOT regex - see "Session Env File Naming")
 └──────────────────┘
        │
        ▼
@@ -415,14 +422,18 @@ Subsequent Hooks (PreToolUse, etc.)
        │
        ▼
 ┌──────────────────┐
-│  Look up session │◀── SessionRegistry.getBySessionId(session_id)
+│  Find session    │◀── findSessionEnvDir() fallback chain
+│  env directory   │    (see "Session Env Dir Lookup" below)
 └──────────────────┘
        │
        ▼
 ┌──────────────────┐
-│  Load hook-*.sh  │◀── Parse env file, decode base64 state
-│  files           │
+│  Load *hook*.sh  │◀── PluginEnv.loadAllHookFiles(dir)
+│  files           │    glob: *hook*.sh (matches both naming styles)
 └──────────────────┘
+       │
+       ▼
+│  extractPersistedState() decodes {PREFIX}_PLUGIN_STATE from Bun.env
        │
        ▼
 │  State available in handler({ state: { packageManager, ... } })
@@ -864,10 +875,14 @@ SessionStart Hook
    {PREFIX}_PLUGIN_STATE="eyJwYWNrYWdlTWFuYWdlciI6ImJ1biIsLi4ufQ=="
        │
        ▼
-3. Write to hook-*.sh files in session-env directory
+3. Write ALL magic vars + options + state to CLAUDE_ENV_FILE
+   (e.g., sessionstart-hook-0.sh or hook-0.sh)
        │
        ▼
-4. Register mapping in SQLite:
+4. Derive sessionEnvDir = dirname(CLAUDE_ENV_FILE)
+       │
+       ▼
+5. Register mapping in SQLite:
    SessionRegistry.register({
      sessionId,
      projectDir,
@@ -875,22 +890,43 @@ SessionStart Hook
    })
        │
        ▼
-[Subsequent hooks or commands]
+[Subsequent hooks]
        │
        ▼
-1. Look up session-env dir via SessionRegistry
-   - By sessionId (for hooks with CLAUDE_SESSION_ID)
-   - By projectDir (for commands using cwd)
+1. Find session-env dir via findSessionEnvDir() fallback chain
        │
        ▼
-2. Load hook-*.sh files from session-env dir
+2. PluginEnv.loadAllHookFiles(dir) — glob *hook*.sh
+   This sets {PREFIX}_PLUGIN_STATE and all magic vars into Bun.env
        │
        ▼
-3. Decode {PREFIX}_PLUGIN_STATE from base64
+3. extractPersistedState() decodes {PREFIX}_PLUGIN_STATE from base64
        │
        ▼
 4. State available in handler({ state })
+
+[Commands]
+       │
+       ▼
+1. Commands.findSessionEnvDir() locates session-env dir
+   (uses CLAUDE_ENV_FILE, *_PLUGIN_ENV_FILE, or SQLite registry)
+       │
+       ▼
+2. PluginEnv.loadAllHookFiles(dir) — same as hooks
+       │
+       ▼
+3. extractPersistedState() decodes state from Bun.env
+       │
+       ▼
+4. State available in handler({ args, options, state })
 ```
+
+**CRITICAL: Load-before-extract ordering.** Steps 2-3 above (for hooks
+and commands) must happen in that exact order. Without loading the hook
+files first via `loadAllHookFiles()`, `extractPersistedState()` finds
+nothing in `Bun.env` and returns empty state `{}`. This ordering bug
+caused all non-SessionStart hooks to return empty responses until it
+was identified and fixed.
 
 #### Magic Variables
 
@@ -917,9 +953,254 @@ SAVVY_WORKFLOW_PLUGIN_DIR="/Users/x/.claude/plugins/workflow"
 2. **Project-based lookup** - Commands can find state without session ID
 3. **Self-contained state** - Base64 JSON doesn't depend on shell parsing
 4. **Multiple sessions handled** - Most recent session for project wins
+5. **File naming resilient** - Uses `dirname()` not regex, `*hook*.sh`
+   glob not `hook-*.sh`, so naming convention changes do not break state
 
 This approach works around Claude Code's env file bugs while providing
 reliable state access for both hooks and commands.
+
+### Session Env File Naming and State Flow
+
+This section documents critical implementation details about how Claude
+Code names session env files and how state flows from SessionStart to
+all subsequent hooks and commands. These details were discovered through
+debugging production issues and are essential to preserve.
+
+#### Claude Code Session Env File Naming Convention
+
+Claude Code assigns a file path via `CLAUDE_ENV_FILE` for plugins to
+write environment variables that persist across hook invocations. The
+actual file lives in a session-env directory:
+
+```text
+~/.claude/session-env/{session-uuid}/
+```
+
+Claude Code has changed the naming convention for these files:
+
+| Version | File Name | Example |
+| ------- | --------- | ------- |
+| Old | `hook-{N}.sh` | `hook-0.sh`, `hook-1.sh` |
+| New | `{hooktype}-hook-{N}.sh` | `sessionstart-hook-0.sh` |
+
+The SDK must handle **both** naming conventions since users may run
+different Claude Code versions. This affects two operations:
+
+1. **Loading hook files** (`PluginEnv.loadAllHookFiles()`): Uses the
+   glob pattern `*hook*.sh` to match both old and new naming. A glob
+   of `hook-*.sh` would **NOT** match `sessionstart-hook-0.sh`.
+
+2. **Deriving sessionEnvDir** (`PipelineRuntime.persistSessionEnv()`):
+   Uses `dirname(CLAUDE_ENV_FILE)` instead of regex. A regex like
+   `/\/hook-\d+\.sh$/` would **NOT** match `sessionstart-hook-0.sh`,
+   causing session registration to silently fail.
+
+#### Session Env File Contents
+
+A session env file (e.g., `sessionstart-hook-0.sh`) contains shell
+`export` statements written during SessionStart by
+`PipelineRuntime.persistSessionEnv()`:
+
+```bash
+export SAVVY_WORKFLOW_PROJECT_DIR="/path/to/project"
+export SAVVY_WORKFLOW_PLUGIN_DIR="/path/to/plugin"
+export SAVVY_WORKFLOW_PLUGIN_ENV_FILE="/path/to/session-env/{uuid}/sessionstart-hook-0.sh"
+export SAVVY_WORKFLOW_PLUGIN_STATE="eyJ...base64..."
+export SAVVY_WORKFLOW_TIMEOUT_MS="30000"
+export SAVVY_WORKFLOW_DEBUG="false"
+```
+
+The file includes:
+
+- **Magic variables** (`_PROJECT_DIR`, `_PLUGIN_DIR`, `_PLUGIN_ENV_FILE`)
+  for path resolution in subsequent hooks and commands
+- **`{PREFIX}_PLUGIN_STATE`** containing a base64-encoded JSON blob with
+  the full computed state from `setup()`
+- **Plugin options** validated through the Zod schema with defaults applied
+- Values are double-quoted with bash-special characters escaped
+
+The file is made executable (`chmod +x`) so bash can source it.
+
+#### Detailed Data Flow: SessionStart to Subsequent Hooks
+
+```text
+SessionStart:
+  1. Claude Code spawns binary:
+     $ ./plugin --hook=SessionStart/context
+     CLAUDE_ENV_FILE is set to session-env path
+
+  2. Plugin reads stdin JSON, validates with Zod
+     Input: { session_id, cwd, source, ... }
+
+  3. PluginEnv.forContext("sessionStart") loads .env files from project root
+     Reads: .env, .env.{NODE_ENV}, .env.local
+
+  4. PipelineRuntime.run() calls setup() to compute state
+     state = await setup({ options, cwd, sessionId, baseState })
+     Returns: { packageManager: "bun", enabled: {...}, ... }
+
+  5. PipelineRuntime.persistSessionEnv():
+     a. Gets prefix from stateInstance.getPrefix()
+     b. Builds vars record:
+        - {PREFIX}_PROJECT_DIR = projectDir
+        - {PREFIX}_PLUGIN_DIR = pluginDir
+        - {PREFIX}_PLUGIN_ENV_FILE = claudeEnvFile
+        - {PREFIX}_<option> for each validated option
+        - {PREFIX}_PLUGIN_STATE = base64(JSON.stringify(state))
+     c. Calls PluginEnv.persistVars() → writes to CLAUDE_ENV_FILE
+     d. Derives sessionEnvDir = dirname(CLAUDE_ENV_FILE)
+     e. Calls PluginEnv.registerSession(sessionId, projectDir, sessionEnvDir)
+        → SQLite INSERT/UPSERT into sessions table
+
+  6. Returns response (context injection, etc.)
+     event.end(response) → writes JSON to stdout
+
+
+Subsequent Hooks (PreToolUse, PostToolUse, Stop, etc.):
+  1. Claude Code spawns binary:
+     $ ./plugin --hook=PreToolUse/security
+     stdin: { session_id, tool_name, tool_input, ... }
+
+  2. Plugin reads stdin JSON, validates with Zod
+
+  3. PipelineRuntime.findSessionEnvDir(event) locates session-env dir
+     Fallback chain (first match wins):
+     a. SessionRegistry.getBySessionId(event.session_id)
+     b. SessionRegistry.getBySessionId(CLAUDE_SESSION_ID env var)
+     c. dirname(CLAUDE_ENV_FILE)
+     d. dirname(any *_PLUGIN_ENV_FILE env var)
+     e. SessionRegistry.getByProjectDir(cwd)
+
+  4. PluginEnv.loadAllHookFiles(sessionEnvDir)
+     - Runs: ls -1 {dir}/*hook*.sh
+     - For each file: reads content, calls parseEnvFileContent()
+     - This sets {PREFIX}_PLUGIN_STATE and all magic vars into Bun.env
+
+  5. extractPersistedState(stateInstance):
+     - Reads {PREFIX}_PLUGIN_STATE from Bun.env
+     - Decodes base64 → JSON string → parsed object
+     - Returns typed state object
+
+  6. Handler receives full typed context:
+     handler({ input, options, state })
+```
+
+**CRITICAL ordering constraint**: Step 4 (loadAllHookFiles) MUST happen
+before step 5 (extractPersistedState). Without loading the hook files
+first, `Bun.env` does not contain `{PREFIX}_PLUGIN_STATE` and
+`extractPersistedState()` returns `{}`. This was the root cause of a
+bug where all non-SessionStart hooks returned empty responses.
+
+#### Detailed Data Flow: SessionStart to Commands
+
+```text
+Commands (invoked via --cmd=name):
+  1. User/Claude invokes:
+     $ ./plugin --cmd=lint src/
+     No stdin JSON — input comes from CLI args
+
+  2. Commands.run() parses CLI args, validates against Zod schema
+     rawArgs → { _positionals: ["src/"], fix: true }
+
+  3. Commands.findSessionEnvDir() locates session-env dir
+     Fallback chain (first match wins):
+     a. SessionRegistry.getBySessionId(CLAUDE_SESSION_ID)
+     b. dirname(CLAUDE_ENV_FILE)
+     c. dirname(any *_PLUGIN_ENV_FILE env var)
+     d. SessionRegistry.getByProjectDir(cwd)
+
+  4. PluginEnv.loadAllHookFiles(sessionEnvDir)
+     Same as hooks — reads *hook*.sh files into Bun.env
+
+  5. Creates stateInstance, reads from Bun.env:
+     - validatedOptions from schema parse
+     - baseState from {PREFIX}_PROJECT_DIR, {PREFIX}_PLUGIN_DIR, etc.
+     - persistedState decoded from {PREFIX}_PLUGIN_STATE
+
+  6. Handler receives full typed context:
+     handler({ args, options, state })
+
+  7. Outputs markdown to stdout, exits with code
+```
+
+Commands do not have `session_id` in their input (they are invoked via
+CLI, not stdin JSON). They rely more heavily on the `*_PLUGIN_ENV_FILE`
+vars and the project directory SQLite registry fallback.
+
+#### Session Registration (persistSessionEnv)
+
+During SessionStart, `PipelineRuntime.persistSessionEnv()` registers
+the session mapping in SQLite:
+
+```typescript
+// In PipelineRuntime.persistSessionEnv():
+const sessionEnvDir = dirname(claudeEnvFile);
+if (event.session_id && baseState.projectDir) {
+    PluginEnv.registerSession(
+        event.session_id,
+        baseState.projectDir,
+        sessionEnvDir,
+    );
+}
+```
+
+Key implementation details:
+
+1. **Uses `dirname()` not regex** to derive the session-env directory
+   from `CLAUDE_ENV_FILE`. This is critical because the file naming
+   convention has changed. A regex like `/\/hook-\d+\.sh$/` would not
+   match `sessionstart-hook-0.sh`, causing session registration to
+   silently fail.
+
+2. **SQLite UPSERT** ensures the mapping is created or updated. When a
+   new session starts for the same project, all existing sessions for
+   that project are updated to point to the new env directory.
+
+3. **Silently fails** if `CLAUDE_ENV_FILE` is not set (e.g., in test
+   environments) rather than crashing the hook.
+
+**Note**: The `PluginEnv.initializeSession()` method (used by some
+plugins directly) still has a legacy regex-based extraction:
+`envFilePath.replace(/\/hook-\d+\.sh$/, "")`. This only works with
+the old naming convention. The `PipelineRuntime.persistSessionEnv()`
+path uses the correct `dirname()` approach.
+
+#### The findSessionEnvDir Fallback Chain
+
+Both `PipelineRuntime.findSessionEnvDir()` (for hooks) and
+`Commands.findSessionEnvDir()` (for commands) implement a prioritized
+fallback chain to maximize reliability across different execution
+contexts:
+
+**PipelineRuntime.findSessionEnvDir() (hooks):**
+
+| Priority | Source | When Available |
+| -------- | ------ | -------------- |
+| 1 | `SessionRegistry.getBySessionId(event.session_id)` | After SessionStart registered this session |
+| 2 | `SessionRegistry.getBySessionId(CLAUDE_SESSION_ID)` | When Claude sets this env var |
+| 3 | `dirname(CLAUDE_ENV_FILE)` | During active hook execution |
+| 4 | `dirname(any *_PLUGIN_ENV_FILE env var)` | After SessionStart wrote magic vars |
+| 5 | `SessionRegistry.getByProjectDir(cwd)` | Fallback using project directory |
+
+**Commands.findSessionEnvDir() (commands):**
+
+| Priority | Source | When Available |
+| -------- | ------ | -------------- |
+| 1 | `SessionRegistry.getBySessionId(CLAUDE_SESSION_ID)` | When Claude sets this env var |
+| 2 | `dirname(CLAUDE_ENV_FILE)` | If env var is still available |
+| 3 | `dirname(any *_PLUGIN_ENV_FILE env var)` | After SessionStart wrote magic vars |
+| 4 | `SessionRegistry.getByProjectDir(cwd)` | Most common for commands |
+
+Commands lack `event.session_id` (priority 1 in the hook chain) because
+they receive input via CLI arguments, not stdin JSON. The project
+directory fallback (priority 4/5) is the most common path for commands,
+since commands typically run after the shell environment from
+SessionStart has been lost.
+
+This redundancy ensures state is accessible even in edge cases like
+continued conversations where env vars may be stale or missing, or
+when Claude Code changes its environment variable behavior between
+versions.
 
 ## OTEL Integration
 
@@ -1325,8 +1606,8 @@ Key elements:
 │  ───────────────────────────────────────────────────────────  │
 │  1. Parse CLI args: --key=value flags, positional args        │
 │  2. Validate against Zod schema                                │
-│  3. Find session env dir (SQLite or CLAUDE_ENV_FILE)          │
-│  4. Load hook-*.sh files to restore persisted state           │
+│  3. Find session env dir (SQLite, env vars, or cwd)           │
+│  4. Load *hook*.sh files to restore persisted state           │
 │  5. Decode {PREFIX}_PLUGIN_STATE from base64 JSON             │
 │  6. Call handler({ args, options, state })                    │
 │  7. Output markdown to stdout                                  │
@@ -1368,12 +1649,14 @@ SessionStart (runs once at session begin)
 setup() computes state ───▶ { packageManager, enabled, config }
        │
        ▼
-State persisted to hook-0.sh as base64 JSON
+State persisted to CLAUDE_ENV_FILE as base64 JSON
+  (e.g., sessionstart-hook-0.sh or hook-0.sh)
        │
        ▼
 Commands load state via:
-  1. SessionRegistry.getByProjectDir(cwd) → session-env dir
-  2. PluginEnv.loadAllHookFiles(dir) → parse hook-*.sh
+  1. Commands.findSessionEnvDir() → session-env dir
+     (SQLite registry, CLAUDE_ENV_FILE, *_PLUGIN_ENV_FILE, or cwd)
+  2. PluginEnv.loadAllHookFiles(dir) → parse *hook*.sh files
   3. Decode {PREFIX}_PLUGIN_STATE → access in handler({ state })
 ```
 

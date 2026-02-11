@@ -971,10 +971,12 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 		sessionEnvDir: string,
 		fs: PluginEnvFileSystem = defaultPluginEnvFileSystem,
 	): Promise<number> {
-		// List all hook-*.sh files in the directory
+		// List all *hook*.sh files in the directory
+		// Claude Code names these files with various prefixes (e.g., "sessionstart-hook-0.sh",
+		// "hook-0.sh") so we use a broad glob to match all variants.
 		// The ls command will fail if directory doesn't exist, so we don't need to check separately
 		// (Bun.file().exists() doesn't work for directories)
-		const result = await Bun.$`ls -1 ${sessionEnvDir}/hook-*.sh 2>/dev/null`.quiet().nothrow();
+		const result = await Bun.$`ls -1 ${sessionEnvDir}/*hook*.sh 2>/dev/null`.quiet().nothrow();
 		if (result.exitCode !== 0) {
 			return 0;
 		}

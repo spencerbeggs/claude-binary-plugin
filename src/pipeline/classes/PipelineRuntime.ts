@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import type { ReadonlyDeep } from "type-fest";
 import { z } from "zod";
 import { NotificationEvent } from "../../events/classes/NotificationEvent.js";
@@ -384,6 +385,11 @@ export class PipelineRuntime {
 					baseState,
 				})) as TState;
 			} else {
+				// Load session env files so PLUGIN_STATE is available in Bun.env
+				const sessionEnvDir = PipelineRuntime.findSessionEnvDir(event);
+				if (sessionEnvDir) {
+					await PluginEnv.loadAllHookFiles(sessionEnvDir);
+				}
 				state = PipelineRuntime.extractPersistedState(stateInstance) as TState;
 			}
 
@@ -584,6 +590,15 @@ export class PipelineRuntime {
 		const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE ?? "";
 		const cwd = "cwd" in event ? (event.cwd as string) : process.cwd();
 		const baseState = PipelineRuntime.createBaseState(cwd, claudeEnvFile, stateInstance);
+
+		// Load session env files for non-SessionStart hooks
+		if (hookType !== "SessionStart") {
+			const sessionEnvDir = PipelineRuntime.findSessionEnvDir(event);
+			if (sessionEnvDir) {
+				await PluginEnv.loadAllHookFiles(sessionEnvDir);
+			}
+		}
+
 		const persistedState = PipelineRuntime.extractPersistedState(stateInstance);
 		const pluginState = { ...baseState, ...persistedState } as TState;
 
@@ -1015,6 +1030,45 @@ export class PipelineRuntime {
 	}
 
 	/**
+	 * Find the session environment directory for loading persisted state.
+	 * Uses the same strategies as Commands.findSessionEnvDir but with
+	 * access to the hook event's session_id.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Event type varies by hook type
+	private static findSessionEnvDir(event: any): string | undefined {
+		// Try session_id from the hook event (most reliable for hooks)
+		if (event.session_id) {
+			const dir = PluginEnv.getSessionEnvDir(event.session_id);
+			if (dir) return dir;
+		}
+
+		// Try CLAUDE_SESSION_ID env var
+		if (Bun.env.CLAUDE_SESSION_ID) {
+			const dir = PluginEnv.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
+			if (dir) return dir;
+		}
+
+		// Try CLAUDE_ENV_FILE parent directory
+		if (Bun.env.CLAUDE_ENV_FILE) {
+			return dirname(Bun.env.CLAUDE_ENV_FILE);
+		}
+
+		// Look for any *_PLUGIN_ENV_FILE env var
+		for (const [key, value] of Object.entries(Bun.env)) {
+			if (key.endsWith("_PLUGIN_ENV_FILE") && value) {
+				return dirname(value);
+			}
+		}
+
+		// Try project directory via registry
+		const cwd = "cwd" in event ? (event.cwd as string) : process.cwd();
+		const dir = PluginEnv.getProjectSessionEnvDir(cwd);
+		if (dir) return dir;
+
+		return undefined;
+	}
+
+	/**
 	 * Create the base state object for the setup function.
 	 */
 	private static createBaseState(cwd: string, claudeEnvFile: string, stateInstance: PluginEnv<unknown>): BaseState {
@@ -1163,8 +1217,9 @@ export class PipelineRuntime {
 		await PluginEnv.persistVars(event.session_id, vars);
 
 		// Register session in SQLite registry for subsequent lookups
-		const sessionEnvDir = claudeEnvFile.replace(/\/hook-\d+\.sh$/, "");
-		if (sessionEnvDir !== claudeEnvFile && event.session_id && baseState.projectDir) {
+		// Claude Code names env files with various prefixes (e.g., "sessionstart-hook-0.sh")
+		const sessionEnvDir = dirname(claudeEnvFile);
+		if (event.session_id && baseState.projectDir) {
 			PluginEnv.registerSession(event.session_id, baseState.projectDir, sessionEnvDir);
 		}
 	}
