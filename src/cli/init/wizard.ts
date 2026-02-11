@@ -50,6 +50,23 @@ export async function runWizard(defaults: Partial<ScaffoldConfig>): Promise<Scaf
 	});
 	handleCancel(name);
 
+	// Prompt for output directory if not explicitly provided via arg or --dir
+	let finalDirectory: string;
+	if (defaults.directory) {
+		finalDirectory = defaults.directory;
+	} else {
+		const dirInput = await p.text({
+			message: "Output directory?",
+			initialValue: name as string,
+			placeholder: name as string,
+			validate: (v) => {
+				if (!v) return "Directory is required";
+			},
+		});
+		handleCancel(dirInput);
+		finalDirectory = dirInput as string;
+	}
+
 	const type = await p.select({
 		message: "What type of project?",
 		initialValue: defaults.type ?? "plugin",
@@ -118,6 +135,7 @@ export async function runWizard(defaults: Partial<ScaffoldConfig>): Promise<Scaf
 	const typeLabel = (type as string) === "marketplace" ? "Marketplace" : "Single Plugin";
 	const summaryLines = [
 		`Name:     ${name as string}`,
+		`Dir:      ${finalDirectory}`,
 		`Type:     ${typeLabel}`,
 		`Prefix:   ${prefix as string}`,
 		`Hooks:    ${hookList.join(", ")}`,
@@ -138,10 +156,8 @@ export async function runWizard(defaults: Partial<ScaffoldConfig>): Promise<Scaf
 		process.exit(1);
 	}
 
-	const directory = defaults.directory && defaults.directory !== "." ? defaults.directory : (name as string);
-
 	const config: ScaffoldConfig = {
-		directory,
+		directory: finalDirectory,
 		name: name as string,
 		type: type as "plugin" | "marketplace",
 		prefix: prefix as string,

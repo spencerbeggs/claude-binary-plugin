@@ -60,16 +60,21 @@ const yes = Options.boolean("yes").pipe(
 	Options.withDescription("Accept all defaults (skip wizard)"),
 );
 
+const dir = Options.text("dir").pipe(Options.optional, Options.withDescription("Output directory for the project"));
+
 export const initCommand = Command.make(
 	"init",
-	{ directory, name, type, prefix, description, hooks, commands, otel, git, install, yes },
+	{ directory, name, type, prefix, description, hooks, commands, otel, git, install, yes, dir },
 	(opts) =>
 		Effect.gen(function* () {
-			const resolvedDir = resolve(process.cwd(), opts.directory);
+			// Determine explicit directory: --dir flag > positional arg > null (prompt in wizard)
+			const dirFromFlag = opts.dir._tag === "Some" ? opts.dir.value : null;
+			const dirFromArg = opts.directory !== "." ? opts.directory : null;
+			const explicitDir = dirFromFlag ?? dirFromArg;
 
 			if (opts.yes) {
 				// Quick mode: accept all defaults
-				const derivedName = opts.directory !== "." ? basename(opts.directory) : "my-plugin";
+				const derivedName = explicitDir ? basename(explicitDir) : "my-plugin";
 				const projectName = opts.name._tag === "Some" ? opts.name.value : derivedName;
 				const projectType = opts.type._tag === "Some" ? (opts.type.value as "plugin" | "marketplace") : "plugin";
 				const projectPrefix = opts.prefix._tag === "Some" ? opts.prefix.value : toScreamingSnake(projectName);
@@ -83,6 +88,9 @@ export const initCommand = Command.make(
 				if (!hookList.includes("SessionStart")) {
 					hookList.unshift("SessionStart");
 				}
+
+				const dirName = explicitDir ?? projectName;
+				const resolvedDir = resolve(process.cwd(), dirName);
 
 				const config: ScaffoldConfig = {
 					directory: resolvedDir,
@@ -99,9 +107,7 @@ export const initCommand = Command.make(
 
 				yield* Effect.promise(() => scaffold(config));
 				yield* Console.log(`\nScaffolded ${projectType} project: ${projectName}`);
-				yield* Console.log(
-					`\nNext steps:\n  cd ${opts.directory !== "." ? opts.directory : projectName}\n  claude-binary-plugin build`,
-				);
+				yield* Console.log(`\nNext steps:\n  cd ${dirName}\n  claude-binary-plugin build`);
 				return;
 			}
 
@@ -121,6 +127,9 @@ export const initCommand = Command.make(
 					hookList.unshift("SessionStart");
 				}
 
+				const dirName = explicitDir ?? projectName;
+				const resolvedDir = resolve(process.cwd(), dirName);
+
 				const config: ScaffoldConfig = {
 					directory: resolvedDir,
 					name: projectName,
@@ -136,20 +145,20 @@ export const initCommand = Command.make(
 
 				yield* Effect.promise(() => scaffold(config));
 				yield* Console.log(`\nScaffolded ${projectType} project: ${projectName}`);
-				yield* Console.log(
-					`\nNext steps:\n  cd ${opts.directory !== "." ? opts.directory : projectName}\n  claude-binary-plugin build`,
-				);
+				yield* Console.log(`\nNext steps:\n  cd ${dirName}\n  claude-binary-plugin build`);
 				return;
 			}
 
 			// Interactive mode: run wizard with any provided flags as defaults
 			const defaults: Partial<ScaffoldConfig> = {
-				directory: resolvedDir,
 				initGit: opts.git,
 				runInstall: opts.install,
 				includeCommands: opts.commands,
 				includeOtel: opts.otel,
 			};
+
+			// Only set directory when explicitly provided; omit to trigger wizard prompt
+			if (explicitDir) defaults.directory = resolve(process.cwd(), explicitDir);
 
 			if (opts.name._tag === "Some") defaults.name = opts.name.value;
 			if (opts.type._tag === "Some") defaults.type = opts.type.value as "plugin" | "marketplace";
