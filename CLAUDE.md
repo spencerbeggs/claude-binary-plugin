@@ -32,6 +32,7 @@ For detailed architecture and schema information, reference these docs:
 - @.claude/design/architecture.md - System architecture, data flow, build
   system, command runtime, OTEL sidecar spawning and handshake
 - @.claude/design/cli.md - CLI binary usage, zero-config builds
+- @.claude/design/scaffold.md - Scaffold templates, interactive flow
 - @.claude/design/schema.md - OTEL telemetry schema, event types, metrics
 - @.claude/design/testing.md - Testing utilities and fluent API
 
@@ -40,6 +41,9 @@ For detailed architecture and schema information, reference these docs:
 ```bash
 # Install dependencies
 bun install
+
+# Scaffold a new plugin project
+claude-binary-plugin init [directory]
 
 # Run tests (LLM-formatted output)
 bun run test:ai
@@ -128,6 +132,9 @@ Load these files as needed for deeper context:
 | `src/core/tool-inputs.ts` | Typed tool inputs |
 | `src/testing/builder.ts` | `PluginTester` class |
 | `src/testing/mocks.ts` | `TestFixtures`, `MockState` |
+| `src/cli/init/index.ts` | `init` command definition |
+| `src/cli/init/wizard.ts` | Interactive scaffold wizard |
+| `src/cli/init/scaffold.ts` | Template engine |
 
 ### OTEL Classes
 

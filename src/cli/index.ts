@@ -25,6 +25,7 @@ import { Console, Effect } from "effect";
 import type { z } from "zod";
 import { PluginBuilder } from "../build/builder.js";
 import type { ClaudeBinaryPlugin } from "../pipeline/config.js";
+import { initCommand } from "./init/index.js";
 import { getPackageVersion } from "./macros.js";
 
 // Package version - works both at runtime and when bundled
@@ -214,8 +215,8 @@ const buildCommand = Command.make(
 
 // Root command (just shows help when called without subcommand)
 const rootCommand = Command.make("claude-binary-plugin", {}, () =>
-	Console.log("Use 'claude-binary-plugin build' to build plugins. Run with --help for more information."),
-).pipe(Command.withSubcommands([buildCommand]));
+	Console.log("Use 'claude-binary-plugin build' or 'init'. Run with --help for more information."),
+).pipe(Command.withSubcommands([buildCommand, initCommand]));
 
 // Create and run the CLI
 const cli = Command.run(rootCommand, {

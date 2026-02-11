@@ -31,16 +31,18 @@ The CLI is available after installing the package:
 bun add claude-binary-plugin
 ```
 
-## Usage
+## Commands
+
+### build
 
 ```bash
 claude-binary-plugin build [plugin-config-path] [options]
 ```
 
-### Default Behavior
+#### Default Behavior
 
-When run without arguments, the CLI looks for `plugin.config.ts` in the
-current directory:
+When run without arguments, the CLI looks for `plugin.config.ts` in
+the current directory:
 
 ```bash
 claude-binary-plugin build
@@ -52,7 +54,7 @@ This is equivalent to:
 claude-binary-plugin build plugin.config.ts
 ```
 
-### Custom Config Path
+#### Custom Config Path
 
 Specify a custom config file path:
 
@@ -60,7 +62,7 @@ Specify a custom config file path:
 claude-binary-plugin build ./src/my-plugin.config.ts
 ```
 
-### Options
+#### Build Options
 
 | Option | Description |
 | ------ | ----------- |
@@ -70,6 +72,83 @@ claude-binary-plugin build ./src/my-plugin.config.ts
 | `--quiet` | Suppress all non-error output; skip proxy/hooks.json generation |
 | `--help` | Show help information |
 | `--version` | Show CLI version |
+
+### init
+
+```bash
+claude-binary-plugin init [directory] [options]
+```
+
+Scaffolds a new plugin project with all files, configuration, and
+boilerplate needed to build and distribute a Claude Code plugin.
+
+#### Modes
+
+**Interactive (default)** - When invoked without flags (or with only
+a target directory), the command launches an interactive wizard using
+`@clack/prompts` that walks through project configuration
+step-by-step.
+
+**Programmatic** - All options can be passed as CLI flags. When all
+required options are provided, the wizard is bypassed entirely. Use
+`--yes` to accept defaults for any unspecified options.
+
+#### Arguments
+
+| Argument | Description | Default |
+| -------- | ----------- | ------- |
+| `directory` | Target directory | Current directory name |
+
+#### Options
+
+| Option | Type | Description |
+| ------ | ---- | ----------- |
+| `--name` | `string` | Project name (kebab-case) |
+| `--type` | `string` | `plugin` or `marketplace` |
+| `--prefix` | `string` | Env var prefix (SCREAMING_SNAKE) |
+| `--description` | `string` | Plugin description |
+| `--hooks` | `string[]` | Hook types to include |
+| `--commands` | `boolean` | Include example command |
+| `--otel` | `boolean` | Include OTEL telemetry setup |
+| `--git` | `boolean` | Initialize git repository |
+| `--install` | `boolean` | Run `bun install` after scaffold |
+| `--yes`/`-y` | `boolean` | Accept all defaults |
+
+**Defaults:** `--hooks` defaults to `SessionStart,PreToolUse`.
+`--commands`, `--git`, and `--install` default to `true`.
+`--otel` defaults to `false`. `--name` derives from directory.
+
+#### Init Exit Codes
+
+| Code | Meaning |
+| ---- | ------- |
+| 0 | Scaffold completed successfully |
+| 1 | Scaffold failed (invalid options, write error) |
+
+#### Examples
+
+```bash
+# Interactive wizard
+claude-binary-plugin init my-plugin
+
+# Quick scaffold with defaults
+claude-binary-plugin init my-plugin --yes
+
+# Full programmatic scaffold
+claude-binary-plugin init my-plugin \
+  --type=plugin \
+  --prefix=MY_PLUGIN \
+  --hooks=SessionStart,PreToolUse,PostToolUse \
+  --commands \
+  --otel
+
+# Marketplace scaffold
+claude-binary-plugin init my-marketplace \
+  --type=marketplace
+```
+
+See `scaffold.md` for detailed template contents, interactive flow,
+and implementation architecture.
 
 ## Plugin Config File
 
@@ -132,19 +211,29 @@ build emits a warning since the proxy will never trigger.
 
 ### Build Options Explained
 
-| Option | Effect |
-| ------ | ------ |
-| `--no-persist` | Skips copying the built binary to the local Claude Code plugins cache. Useful for CI builds or when deploying to a custom location. |
-| `--no-bytecode` | Disables bytecode compilation, producing a larger but faster-to-build binary. Useful during development iteration. |
-| `--bundle` | Outputs bundled JavaScript instead of a compiled Bun executable. Useful for debugging the generated code. |
-| `--quiet` | Suppresses all non-error output and skips proxy script and hooks.json generation. This flag is used internally by the proxy script during on-demand builds to prevent self-modification of the running proxy (see architecture.md for details). |
+**`--no-persist`** - Skips copying the built binary to the local
+Claude Code plugins cache. Useful for CI builds or when deploying
+to a custom location.
+
+**`--no-bytecode`** - Disables bytecode compilation, producing a
+larger but faster-to-build binary. Useful during development
+iteration.
+
+**`--bundle`** - Outputs bundled JavaScript instead of a compiled
+Bun executable. Useful for debugging the generated code.
+
+**`--quiet`** - Suppresses all non-error output and skips proxy
+script and hooks.json generation. This flag is used internally by
+the proxy script during on-demand builds to prevent
+self-modification of the running proxy (see architecture.md for
+details).
 
 ## Exit Codes
 
 | Code | Meaning |
 | ---- | ------- |
 | 0 | Build completed successfully |
-| 1 | Build failed (missing config, invalid plugin definition, compilation error) |
+| 1 | Build failed (config, compilation error) |
 
 The CLI uses `@effect/cli` for command parsing. Invalid arguments or
 `--help`/`--version` flags are handled automatically by the framework.
@@ -231,14 +320,22 @@ mechanism.
 
 Before 1.0.0 release:
 
-- **Scaffolding** - `claude-binary-plugin init` to scaffold new plugins
-- **Marketplace scaffolding** - Templates for plugin marketplace repos
+- **Template customization** - User-defined template overrides in
+  `~/.claude/templates/`
 
 ## Implementation
 
 The CLI is implemented in `src/cli/index.ts` using `@effect/cli` for
-argument parsing. It delegates to `PluginBuilder` in
-`src/build/builder.ts` for the actual build process.
+argument parsing. The `build` subcommand delegates to `PluginBuilder`
+in `src/build/builder.ts`. The `init` subcommand is implemented in
+`src/cli/init/`:
+
+| File | Purpose |
+| ---- | ------- |
+| `src/cli/init/index.ts` | Command definition (`@effect/cli`) |
+| `src/cli/init/wizard.ts` | Interactive wizard (`@clack/prompts`) |
+| `src/cli/init/scaffold.ts` | Template engine (file generation) |
+| `src/cli/init/templates/` | Template generators per project type |
 
 The package version is resolved via `src/cli/macros.ts`, which imports
 `package.json` at bundle time.
@@ -246,4 +343,5 @@ The package version is resolved via `src/cli/macros.ts`, which imports
 ## Related Documentation
 
 - `architecture.md` - Build system internals
+- `scaffold.md` - Scaffold templates and interactive flow
 - `testing.md` - Testing utilities
