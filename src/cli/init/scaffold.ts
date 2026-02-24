@@ -6,7 +6,6 @@
  */
 
 import { dirname, join } from "node:path";
-import * as p from "@clack/prompts";
 import { generateMarketplaceProject } from "./templates/marketplace.js";
 import { generatePluginProject } from "./templates/plugin.js";
 
@@ -19,8 +18,14 @@ export interface ScaffoldConfig {
 	hooks: string[];
 	includeCommands: boolean;
 	includeOtel: boolean;
+	includeLintStaged: boolean;
+	includeCommitlint: boolean;
+	includeChangesets: boolean;
 	initGit: boolean;
 	runInstall: boolean;
+	author: { name: string; email: string };
+	githubOwner: string;
+	license: string;
 }
 
 export interface GeneratedFile {
@@ -29,13 +34,14 @@ export interface GeneratedFile {
 	executable?: boolean;
 }
 
-export async function scaffold(config: ScaffoldConfig): Promise<void> {
+/** Progress callback for scaffold phases. */
+export type ScaffoldProgress = (phase: string, status: "start" | "done") => void;
+
+export async function scaffold(config: ScaffoldConfig, onProgress?: ScaffoldProgress): Promise<void> {
 	const files = config.type === "plugin" ? generatePluginProject(config) : generateMarketplaceProject(config);
 
-	const s = p.spinner();
-
 	// Create directories and write files
-	s.start("Creating project structure...");
+	onProgress?.("Creating project structure", "start");
 	const dirs = new Set<string>();
 	for (const file of files) {
 		const fullPath = join(config.directory, file.path);
@@ -49,18 +55,18 @@ export async function scaffold(config: ScaffoldConfig): Promise<void> {
 			await Bun.$`chmod +x ${fullPath}`.quiet();
 		}
 	}
-	s.stop(`Created ${files.length} files.`);
+	onProgress?.("Creating project structure", "done");
 
 	// Post-scaffold steps
 	if (config.runInstall) {
-		s.start("Installing dependencies...");
+		onProgress?.("Installing dependencies", "start");
 		await Bun.$`bun install --cwd ${config.directory}`.quiet();
-		s.stop("Dependencies installed.");
+		onProgress?.("Installing dependencies", "done");
 	}
 
 	if (config.initGit) {
-		s.start("Initializing git repository...");
+		onProgress?.("Initializing git repository", "start");
 		await Bun.$`git init ${config.directory}`.quiet();
-		s.stop("Git repository initialized.");
+		onProgress?.("Initializing git repository", "done");
 	}
 }

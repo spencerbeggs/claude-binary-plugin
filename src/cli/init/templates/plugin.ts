@@ -9,15 +9,18 @@ import type { GeneratedFile, ScaffoldConfig } from "../scaffold.js";
 import {
 	HOOK_NAME_MAP,
 	generateBiomeConfig,
+	generateBunfigToml,
 	generateClaudeMd,
 	generateCommandHandler,
 	generateCommandTest,
 	generateGitignore,
 	generateHookHandler,
 	generateHookTest,
+	generateLicenseFile,
 	generatePackageJson,
 	generatePluginConfig,
 	generatePluginJson,
+	generateReadme,
 	generateSkillMd,
 	generateTsConfig,
 } from "./shared.js";
@@ -92,7 +95,12 @@ export function generatePluginProject(config: ScaffoldConfig): GeneratedFile[] {
 
 	files.push({
 		path: "biome.jsonc",
-		content: generateBiomeConfig({ root: true }),
+		content: generateBiomeConfig({ root: true, lintStagedPreset: config.includeLintStaged }),
+	});
+
+	files.push({
+		path: "bunfig.toml",
+		content: generateBunfigToml(),
 	});
 
 	files.push({
@@ -103,6 +111,16 @@ export function generatePluginProject(config: ScaffoldConfig): GeneratedFile[] {
 	files.push({
 		path: "CLAUDE.md",
 		content: generateClaudeMd(config),
+	});
+
+	files.push({
+		path: "LICENSE",
+		content: generateLicenseFile(config),
+	});
+
+	files.push({
+		path: "README.md",
+		content: generateReadme(config),
 	});
 
 	return files;

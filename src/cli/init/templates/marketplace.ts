@@ -9,14 +9,17 @@ import type { GeneratedFile, ScaffoldConfig } from "../scaffold.js";
 import {
 	HOOK_NAME_MAP,
 	generateBiomeConfig,
+	generateBunfigToml,
 	generateCommandHandler,
 	generateCommandTest,
 	generateGitignore,
 	generateHookHandler,
 	generateHookTest,
+	generateLicenseFile,
 	generatePackageJson,
 	generatePluginConfig,
 	generatePluginJson,
+	generateReadme,
 	generateSkillMd,
 	generateTsConfig,
 } from "./shared.js";
@@ -48,7 +51,12 @@ export function generateMarketplaceProject(config: ScaffoldConfig): GeneratedFil
 
 	files.push({
 		path: "biome.jsonc",
-		content: generateBiomeConfig({ root: true }),
+		content: generateBiomeConfig({ root: true, lintStagedPreset: config.includeLintStaged }),
+	});
+
+	files.push({
+		path: "bunfig.toml",
+		content: generateBunfigToml(),
 	});
 
 	files.push({
@@ -132,13 +140,25 @@ export function generateMarketplaceProject(config: ScaffoldConfig): GeneratedFil
 		});
 	}
 
+	// --- ROOT LICENSE AND README ---
+
+	files.push({
+		path: "LICENSE",
+		content: generateLicenseFile(config),
+	});
+
+	files.push({
+		path: "README.md",
+		content: generateReadme(config),
+	});
+
 	return files;
 }
 
 function generateMarketplaceJson(config: ScaffoldConfig, pluginName: string): string {
 	const manifest = {
 		name: config.name,
-		owner: { name: "", email: "" },
+		owner: config.author,
 		metadata: {
 			description: config.description,
 			version: "0.1.0",
@@ -157,46 +177,60 @@ function generateMarketplaceJson(config: ScaffoldConfig, pluginName: string): st
 }
 
 function generateRootPackageJson(config: ScaffoldConfig): string {
-	const pkg = {
+	const scripts: Record<string, string> = {
+		build: "turbo run build --log-order=grouped",
+		test: "turbo run test",
+		lint: "turbo run lint",
+		typecheck: "turbo run typecheck --log-prefix=none",
+		validate: "turbo run validate --log-prefix=none",
+		"validate:marketplace": "claude plugin validate .",
+	};
+	if (config.includeLintStaged) {
+		scripts.prepare = "husky";
+	}
+	const pkg: Record<string, unknown> = {
 		name: config.name,
 		version: "0.1.0",
 		private: true,
 		description: config.description,
-		type: "module",
-		workspaces: ["plugins/*"],
-		scripts: {
-			build: "turbo run build",
-			test: "turbo run test",
-			lint: "turbo run lint",
-			typecheck: "turbo run typecheck",
-		},
-		devDependencies: {
-			"@biomejs/biome": "^1.9.0",
-			"@types/bun": "^1.3.0",
-			turbo: "^2.8.0",
-			typescript: "^5.9.0",
-		},
+	};
+	if (config.author.name || config.author.email) {
+		pkg.author = config.author;
+	}
+	if (config.license) {
+		pkg.license = config.license;
+	}
+	if (config.githubOwner) {
+		pkg.repository = { type: "git", url: `git+https://github.com/${config.githubOwner}/${config.name}.git` };
+		pkg.homepage = `https://github.com/${config.githubOwner}/${config.name}#readme`;
+		pkg.bugs = { url: `https://github.com/${config.githubOwner}/${config.name}/issues` };
+	}
+	pkg.type = "module";
+	pkg.workspaces = ["plugins/*"];
+	pkg.scripts = scripts;
+	const devDeps: Record<string, string> = {
+		"@biomejs/biome": "^1.9.0",
+		"@types/bun": "1.3.9",
+		turbo: "^2.8.0",
+		typescript: "^5.9.0",
+	};
+	if (config.includeLintStaged) devDeps["@savvy-web/lint-staged"] = "^0.4.6";
+	if (config.includeCommitlint) devDeps["@savvy-web/commitlint"] = "^0.3.4";
+	if (config.includeChangesets) devDeps["@savvy-web/changesets"] = "^0.1.2";
+	pkg.devDependencies = devDeps;
+	pkg.packageManager = "bun@1.3.9";
+	pkg.engines = { bun: ">=1.3.9" };
+	pkg.engineStrict = true;
+	pkg.devEngines = {
+		runtime: [{ name: "bun", version: "1.3.9", onFail: "ignore" }],
+		packageManager: { name: "bun", version: "1.3.9", onFail: "ignore" },
 	};
 	return `${JSON.stringify(pkg, null, "\t")}\n`;
 }
 
 function generateRootTsConfig(pluginName: string): string {
 	const tsconfig = {
-		compilerOptions: {
-			target: "ESNext",
-			module: "ESNext",
-			moduleResolution: "bundler",
-			strict: true,
-			noEmit: true,
-			esModuleInterop: true,
-			skipLibCheck: true,
-			forceConsistentCasingInFileNames: true,
-			resolveJsonModule: true,
-			declaration: true,
-			declarationMap: true,
-			composite: true,
-			types: ["bun-types"],
-		},
+		extends: ["claude-binary-plugin/tsconfig/root.json"],
 		references: [{ path: `plugins/${pluginName}` }],
 	};
 	return `${JSON.stringify(tsconfig, null, "\t")}\n`;
@@ -205,17 +239,27 @@ function generateRootTsConfig(pluginName: string): string {
 function generateTurboJson(): string {
 	const turbo = {
 		$schema: "https://turbo.build/schema.json",
+		globalPassThroughEnv: ["CLAUDE_CONFIG_HOME", "HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"],
 		tasks: {
 			build: {
-				dependsOn: ["^build"],
+				cache: false,
+				dependsOn: ["^build", "^typecheck", "validate"],
 				outputs: ["*.plugin", "hooks/hooks.json", "scripts/setup-proxy.sh"],
 			},
 			test: {
-				dependsOn: ["build"],
+				cache: false,
+				dependsOn: ["^build"],
 			},
 			lint: {},
 			typecheck: {
 				dependsOn: ["^typecheck"],
+			},
+			validate: {
+				cache: false,
+				dependsOn: ["//#validate:marketplace"],
+			},
+			"validate:marketplace": {
+				cache: false,
 			},
 		},
 	};
@@ -225,21 +269,6 @@ function generateTurboJson(): string {
 function generatePluginTurboJson(): string {
 	const turbo = {
 		extends: ["//"],
-		tasks: {
-			build: {
-				cache: false,
-				dependsOn: ["typecheck"],
-				outputs: ["*.plugin"],
-			},
-			test: {
-				cache: false,
-				outputs: [] as string[],
-			},
-			typecheck: {
-				cache: false,
-				dependsOn: ["^build"],
-			},
-		},
 	};
 	return `${JSON.stringify(turbo, null, "\t")}\n`;
 }

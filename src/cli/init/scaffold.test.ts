@@ -13,8 +13,14 @@ const baseConfig: ScaffoldConfig = {
 	hooks: ["SessionStart", "PreToolUse"],
 	includeCommands: true,
 	includeOtel: false,
+	includeLintStaged: true,
+	includeCommitlint: true,
+	includeChangesets: true,
 	initGit: false,
 	runInstall: false,
+	author: { name: "Test Author", email: "test@example.com" },
+	githubOwner: "test-owner",
+	license: "MIT",
 };
 
 /** Find a file by path and assert it exists, returning a non-undefined value. */
@@ -112,6 +118,7 @@ describe("generatePluginProject", () => {
 		expect(paths).toContain("package.json");
 		expect(paths).toContain("tsconfig.json");
 		expect(paths).toContain("biome.jsonc");
+		expect(paths).toContain("bunfig.toml");
 		expect(paths).toContain(".gitignore");
 		expect(paths).toContain("CLAUDE.md");
 	});
@@ -236,6 +243,134 @@ describe("generatePluginProject", () => {
 
 		expect(configFile.content).toContain('tools: ["Bash"]');
 	});
+
+	test("includes LICENSE and README.md files", () => {
+		const files = generatePluginProject(baseConfig);
+		const paths = files.map((f) => f.path);
+
+		expect(paths).toContain("LICENSE");
+		expect(paths).toContain("README.md");
+	});
+
+	test("plugin.json includes author and license", () => {
+		const files = generatePluginProject(baseConfig);
+		const pluginJson = findFile(files, ".claude-plugin/plugin.json");
+
+		const manifest = JSON.parse(pluginJson.content);
+		expect(manifest.author).toEqual({ name: "Test Author", email: "test@example.com" });
+		expect(manifest.license).toBe("MIT");
+	});
+
+	test("package.json includes author, license, and repository fields", () => {
+		const files = generatePluginProject(baseConfig);
+		const pkgFile = findFile(files, "package.json");
+
+		const pkg = JSON.parse(pkgFile.content);
+		expect(pkg.author).toEqual({ name: "Test Author", email: "test@example.com" });
+		expect(pkg.license).toBe("MIT");
+		expect(pkg.repository).toEqual({
+			type: "git",
+			url: "git+https://github.com/test-owner/test-plugin.git",
+		});
+		expect(pkg.homepage).toBe("https://github.com/test-owner/test-plugin#readme");
+		expect(pkg.bugs).toEqual({ url: "https://github.com/test-owner/test-plugin/issues" });
+	});
+
+	test("package.json uses tsgo for typecheck script", () => {
+		const files = generatePluginProject(baseConfig);
+		const pkgFile = findFile(files, "package.json");
+
+		const pkg = JSON.parse(pkgFile.content);
+		expect(pkg.scripts.typecheck).toBe("tsgo --noEmit");
+	});
+
+	test("package.json pins Bun version", () => {
+		const files = generatePluginProject(baseConfig);
+		const pkgFile = findFile(files, "package.json");
+
+		const pkg = JSON.parse(pkgFile.content);
+		expect(pkg.packageManager).toBe("bun@1.3.9");
+		expect(pkg.engines).toEqual({ bun: ">=1.3.9" });
+		expect(pkg.engineStrict).toBe(true);
+		expect(pkg.devEngines.runtime).toEqual([{ name: "bun", version: "1.3.9", onFail: "ignore" }]);
+		expect(pkg.devEngines.packageManager).toEqual({ name: "bun", version: "1.3.9", onFail: "ignore" });
+	});
+
+	test("package.json pins @types/bun version", () => {
+		const files = generatePluginProject(baseConfig);
+		const pkgFile = findFile(files, "package.json");
+
+		const pkg = JSON.parse(pkgFile.content);
+		expect(pkg.devDependencies["@types/bun"]).toBe("1.3.9");
+	});
+
+	test("package.json includes tooling deps when enabled", () => {
+		const files = generatePluginProject(baseConfig);
+		const pkgFile = findFile(files, "package.json");
+
+		const pkg = JSON.parse(pkgFile.content);
+		expect(pkg.devDependencies["@savvy-web/lint-staged"]).toBe("^0.4.6");
+		expect(pkg.devDependencies["@savvy-web/commitlint"]).toBe("^0.3.4");
+		expect(pkg.devDependencies["@savvy-web/changesets"]).toBe("^0.1.2");
+		expect(pkg.scripts.prepare).toBe("husky");
+	});
+
+	test("package.json excludes tooling deps when disabled", () => {
+		const config: ScaffoldConfig = {
+			...baseConfig,
+			includeLintStaged: false,
+			includeCommitlint: false,
+			includeChangesets: false,
+		};
+		const files = generatePluginProject(config);
+		const pkgFile = findFile(files, "package.json");
+
+		const pkg = JSON.parse(pkgFile.content);
+		expect(pkg.devDependencies["@savvy-web/lint-staged"]).toBeUndefined();
+		expect(pkg.devDependencies["@savvy-web/commitlint"]).toBeUndefined();
+		expect(pkg.devDependencies["@savvy-web/changesets"]).toBeUndefined();
+		expect(pkg.scripts.prepare).toBeUndefined();
+	});
+
+	test("tsconfig.json extends claude-binary-plugin preset", () => {
+		const files = generatePluginProject(baseConfig);
+		const tsConfigFile = findFile(files, "tsconfig.json");
+
+		const tsconfig = JSON.parse(tsConfigFile.content);
+		expect(tsconfig.extends).toEqual(["claude-binary-plugin/tsconfig/root.json"]);
+		expect(tsconfig.compilerOptions).toBeUndefined();
+	});
+
+	test("bunfig.toml includes test coverage configuration", () => {
+		const files = generatePluginProject(baseConfig);
+		const bunfig = findFile(files, "bunfig.toml");
+
+		expect(bunfig.content).toContain("[test]");
+		expect(bunfig.content).toContain("coverage = true");
+		expect(bunfig.content).toContain("coverageSkipTestFiles = true");
+		expect(bunfig.content).toContain("[test.coverageThreshold]");
+		expect(bunfig.content).toContain("line = 0.9");
+	});
+
+	test("biome.jsonc uses lint-staged preset when enabled", () => {
+		const files = generatePluginProject(baseConfig);
+		const biomeFile = findFile(files, "biome.jsonc");
+
+		const biome = JSON.parse(biomeFile.content);
+		expect(biome.$schema).toContain("2.4.1");
+		expect(biome.extends).toEqual(["@savvy-web/lint-staged/biome/silk.jsonc"]);
+	});
+
+	test("biome.jsonc uses inline config when lint-staged disabled", () => {
+		const config: ScaffoldConfig = { ...baseConfig, includeLintStaged: false };
+		const files = generatePluginProject(config);
+		const biomeFile = findFile(files, "biome.jsonc");
+
+		const biome = JSON.parse(biomeFile.content);
+		expect(biome.$schema).toContain("1.9.0");
+		expect(biome.formatter).toBeDefined();
+		expect(biome.linter).toBeDefined();
+	});
 });
 
 // =============================================================================
@@ -256,6 +391,7 @@ describe("generateMarketplaceProject", () => {
 		expect(paths).toContain("package.json");
 		expect(paths).toContain("tsconfig.json");
 		expect(paths).toContain("biome.jsonc");
+		expect(paths).toContain("bunfig.toml");
 		expect(paths).toContain("turbo.json");
 		expect(paths).toContain(".gitignore");
 		expect(paths).toContain("CLAUDE.md");
@@ -305,17 +441,17 @@ describe("generateMarketplaceProject", () => {
 		expect(pkg.name).toBe("test-plugin");
 		expect(pkg.private).toBe(true);
 		expect(pkg.workspaces).toEqual(["plugins/*"]);
-		expect(pkg.scripts.build).toBe("turbo run build");
+		expect(pkg.scripts.build).toBe("turbo run build --log-order=grouped");
 		expect(pkg.devDependencies.turbo).toBeDefined();
 	});
 
-	test("root tsconfig has project references", () => {
+	test("root tsconfig extends claude-binary-plugin preset with references", () => {
 		const files = generateMarketplaceProject(marketplaceConfig);
 		const rootTsConfig = findFile(files, "tsconfig.json");
 
 		const tsconfig = JSON.parse(rootTsConfig.content);
+		expect(tsconfig.extends).toEqual(["claude-binary-plugin/tsconfig/root.json"]);
 		expect(tsconfig.references).toEqual([{ path: "plugins/test-plugin-plugin" }]);
-		expect(tsconfig.compilerOptions.composite).toBe(true);
 	});
 
 	test("plugin-level tsconfig extends root", () => {
@@ -347,13 +483,13 @@ describe("generateMarketplaceProject", () => {
 		expect(turbo.tasks.typecheck).toBeDefined();
 	});
 
-	test("includes turbo.json at plugin level", () => {
+	test("includes simplified turbo.json at plugin level", () => {
 		const files = generateMarketplaceProject(marketplaceConfig);
 		const pluginTurbo = findFile(files, "plugins/test-plugin-plugin/turbo.json");
 
 		const turbo = JSON.parse(pluginTurbo.content);
 		expect(turbo.extends).toEqual(["//"]); // Turbo workspace root shorthand
-		expect(turbo.tasks.build).toBeDefined();
+		expect(turbo.tasks).toBeUndefined();
 	});
 
 	test("always includes SessionStart even when not in hooks array", () => {
@@ -394,5 +530,120 @@ describe("generateMarketplaceProject", () => {
 		const gitignore = findFile(files, ".gitignore");
 
 		expect(gitignore.content).toContain(".turbo/");
+	});
+
+	test("includes LICENSE and README.md at root level", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const paths = files.map((f) => f.path);
+
+		expect(paths).toContain("LICENSE");
+		expect(paths).toContain("README.md");
+	});
+
+	test("marketplace.json uses config.author for owner", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const manifest = findFile(files, ".claude-plugin/marketplace.json");
+
+		const json = JSON.parse(manifest.content);
+		expect(json.owner).toEqual({ name: "Test Author", email: "test@example.com" });
+	});
+
+	test("root package.json includes author, license, and repository fields", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const rootPkg = findFile(files, "package.json");
+
+		const pkg = JSON.parse(rootPkg.content);
+		expect(pkg.author).toEqual({ name: "Test Author", email: "test@example.com" });
+		expect(pkg.license).toBe("MIT");
+		expect(pkg.repository).toEqual({
+			type: "git",
+			url: "git+https://github.com/test-owner/test-plugin.git",
+		});
+		expect(pkg.homepage).toBe("https://github.com/test-owner/test-plugin#readme");
+		expect(pkg.bugs).toEqual({ url: "https://github.com/test-owner/test-plugin/issues" });
+	});
+
+	test("root package.json has validate scripts", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const rootPkg = findFile(files, "package.json");
+
+		const pkg = JSON.parse(rootPkg.content);
+		expect(pkg.scripts.validate).toBe("turbo run validate --log-prefix=none");
+		expect(pkg.scripts["validate:marketplace"]).toBe("claude plugin validate .");
+	});
+
+	test("turbo.json has globalPassThroughEnv and validate task", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const rootTurbo = findFile(files, "turbo.json");
+
+		const turbo = JSON.parse(rootTurbo.content);
+		expect(turbo.globalPassThroughEnv).toEqual(["CLAUDE_CONFIG_HOME", "HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]);
+		expect(turbo.tasks.validate).toBeDefined();
+		expect(turbo.tasks.validate.cache).toBe(false);
+		expect(turbo.tasks["validate:marketplace"]).toBeDefined();
+		expect(turbo.tasks["validate:marketplace"].cache).toBe(false);
+	});
+
+	test("plugin-level package.json has validate script in workspace mode", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const pluginPkg = findFile(files, "plugins/test-plugin-plugin/package.json");
+
+		const pkg = JSON.parse(pluginPkg.content);
+		expect(pkg.scripts.validate).toBe("claude plugin validate .");
+	});
+
+	test("plugin-level package.json uses tsgo for typecheck", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const pluginPkg = findFile(files, "plugins/test-plugin-plugin/package.json");
+
+		const pkg = JSON.parse(pluginPkg.content);
+		expect(pkg.scripts.typecheck).toBe("tsgo --noEmit");
+	});
+
+	test("root package.json pins Bun version", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const rootPkg = findFile(files, "package.json");
+
+		const pkg = JSON.parse(rootPkg.content);
+		expect(pkg.packageManager).toBe("bun@1.3.9");
+		expect(pkg.engines).toEqual({ bun: ">=1.3.9" });
+		expect(pkg.engineStrict).toBe(true);
+		expect(pkg.devDependencies["@types/bun"]).toBe("1.3.9");
+	});
+
+	test("root package.json includes tooling deps when enabled", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const rootPkg = findFile(files, "package.json");
+
+		const pkg = JSON.parse(rootPkg.content);
+		expect(pkg.devDependencies["@savvy-web/lint-staged"]).toBe("^0.4.6");
+		expect(pkg.devDependencies["@savvy-web/commitlint"]).toBe("^0.3.4");
+		expect(pkg.devDependencies["@savvy-web/changesets"]).toBe("^0.1.2");
+		expect(pkg.scripts.prepare).toBe("husky");
+	});
+
+	test("root package.json excludes tooling deps when disabled", () => {
+		const config: ScaffoldConfig = {
+			...marketplaceConfig,
+			includeLintStaged: false,
+			includeCommitlint: false,
+			includeChangesets: false,
+		};
+		const files = generateMarketplaceProject(config);
+		const rootPkg = findFile(files, "package.json");
+
+		const pkg = JSON.parse(rootPkg.content);
+		expect(pkg.devDependencies["@savvy-web/lint-staged"]).toBeUndefined();
+		expect(pkg.devDependencies["@savvy-web/commitlint"]).toBeUndefined();
+		expect(pkg.devDependencies["@savvy-web/changesets"]).toBeUndefined();
+		expect(pkg.scripts.prepare).toBeUndefined();
+	});
+
+	test("bunfig.toml included at root level", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const bunfig = findFile(files, "bunfig.toml");
+
+		expect(bunfig.content).toContain("[test]");
+		expect(bunfig.content).toContain("coverage = true");
 	});
 });
