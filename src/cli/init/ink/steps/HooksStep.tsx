@@ -9,11 +9,15 @@ interface HooksStepProps {
 
 const HOOK_OPTIONS = [
 	{ label: "SessionStart (recommended \u2014 inject project context)", value: "SessionStart" },
+	{ label: "SessionEnd (cleanup on session end)", value: "SessionEnd" },
 	{ label: "PreToolUse (filter tool calls)", value: "PreToolUse" },
 	{ label: "PostToolUse (respond after tool execution)", value: "PostToolUse" },
 	{ label: "Stop (guard against premature stops)", value: "Stop" },
+	{ label: "SubagentStop (guard subagent stops)", value: "SubagentStop" },
 	{ label: "UserPromptSubmit (validate user prompts)", value: "UserPromptSubmit" },
 	{ label: "Notification (observe notifications)", value: "Notification" },
+	{ label: "PermissionRequest (auto-allow/deny permissions)", value: "PermissionRequest" },
+	{ label: "PreCompact (observe context compaction)", value: "PreCompact" },
 ];
 
 export function HooksStep({ defaultValue, onSubmit }: HooksStepProps): React.ReactElement {

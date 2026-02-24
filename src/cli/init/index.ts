@@ -11,7 +11,10 @@ import { Console, Effect } from "effect";
 import { detectDefaults } from "./detect-defaults.js";
 import type { ScaffoldConfig } from "./scaffold.js";
 import { scaffold } from "./scaffold.js";
-import { toScreamingSnake } from "./templates/shared.js";
+import { HOOK_NAME_MAP, toScreamingSnake } from "./templates/shared.js";
+
+/** Valid hook type names (keys of HOOK_NAME_MAP). */
+const VALID_HOOK_TYPES = new Set(Object.keys(HOOK_NAME_MAP));
 
 // Arguments
 const directory = Args.text({ name: "directory" }).pipe(Args.withDefault("."));
@@ -109,8 +112,19 @@ async function buildConfigFromFlags(
 			? (opts.hooks.value as string).split(",").map((h) => h.trim())
 			: ["SessionStart", "PreToolUse"];
 
-	if (!hookList.includes("SessionStart")) {
-		hookList.unshift("SessionStart");
+	// Validate hook names and warn about invalid ones
+	const invalidHooks = hookList.filter((h) => !VALID_HOOK_TYPES.has(h));
+	if (invalidHooks.length > 0) {
+		console.error(
+			`Warning: Unknown hook type(s): ${invalidHooks.join(", ")}. Valid types: ${[...VALID_HOOK_TYPES].join(", ")}`,
+		);
+	}
+
+	// Remove invalid hooks so they don't cause silent failures
+	const validHookList = hookList.filter((h) => VALID_HOOK_TYPES.has(h));
+
+	if (!validHookList.includes("SessionStart")) {
+		validHookList.unshift("SessionStart");
 	}
 
 	const dirName = explicitDir ?? projectName;
@@ -125,7 +139,7 @@ async function buildConfigFromFlags(
 		type: projectType,
 		prefix: projectPrefix,
 		description: projectDesc,
-		hooks: hookList,
+		hooks: validHookList,
 		includeCommands: !opts.skipCommands,
 		includeOtel: opts.otel,
 		includeLintStaged: !opts.skipLintStaged,

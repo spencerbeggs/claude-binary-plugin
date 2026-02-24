@@ -13,6 +13,7 @@ import {
 	generateClaudeMd,
 	generateCommandHandler,
 	generateCommandTest,
+	generateEnvExample,
 	generateGitignore,
 	generateHookHandler,
 	generateHookTest,
@@ -53,7 +54,7 @@ export function generatePluginProject(config: ScaffoldConfig): GeneratedFile[] {
 
 		files.push({
 			path: `hooks/${mapping.file}.hook.ts`,
-			content: generateHookHandler(hookType, mapping.name, config.prefix),
+			content: generateHookHandler(hookType, mapping.name, config.prefix, { includeOtel: config.includeOtel }),
 		});
 
 		files.push({
@@ -101,6 +102,11 @@ export function generatePluginProject(config: ScaffoldConfig): GeneratedFile[] {
 	files.push({
 		path: "bunfig.toml",
 		content: generateBunfigToml(),
+	});
+
+	files.push({
+		path: ".env.example",
+		content: generateEnvExample(config),
 	});
 
 	files.push({

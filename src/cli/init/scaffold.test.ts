@@ -119,8 +119,33 @@ describe("generatePluginProject", () => {
 		expect(paths).toContain("tsconfig.json");
 		expect(paths).toContain("biome.jsonc");
 		expect(paths).toContain("bunfig.toml");
+		expect(paths).toContain(".env.example");
 		expect(paths).toContain(".gitignore");
 		expect(paths).toContain("CLAUDE.md");
+	});
+
+	test(".env.example contains prefixed env vars", () => {
+		const files = generatePluginProject(baseConfig);
+		const envFile = findFile(files, ".env.example");
+
+		expect(envFile.content).toContain("TEST_PLUGIN_DEBUG=false");
+		expect(envFile.content).toContain("TEST_PLUGIN_TIMEOUT_MS=30000");
+	});
+
+	test(".env.example includes OTEL vars when otel enabled", () => {
+		const config: ScaffoldConfig = { ...baseConfig, includeOtel: true };
+		const files = generatePluginProject(config);
+		const envFile = findFile(files, ".env.example");
+
+		expect(envFile.content).toContain("OTEL_EXPORTER_OTLP_ENDPOINT");
+		expect(envFile.content).toContain("OTEL_EXPORTER_OTLP_HEADERS");
+	});
+
+	test(".env.example excludes OTEL vars when otel disabled", () => {
+		const files = generatePluginProject(baseConfig);
+		const envFile = findFile(files, ".env.example");
+
+		expect(envFile.content).not.toContain("OTEL_EXPORTER_OTLP_ENDPOINT");
 	});
 
 	test("always includes SessionStart even when not in hooks array", () => {
@@ -235,6 +260,45 @@ describe("generatePluginProject", () => {
 			expect(paths).toContain(`hooks/${mapping.file}.hook.ts`);
 			expect(paths).toContain(`tests/${mapping.file}.hook.test.ts`);
 		}
+	});
+
+	test("generates SessionEnd and PreCompact hook files when selected", () => {
+		const config: ScaffoldConfig = {
+			...baseConfig,
+			hooks: ["SessionStart", "SessionEnd", "PreCompact"],
+		};
+		const files = generatePluginProject(config);
+		const paths = files.map((f) => f.path);
+
+		expect(paths).toContain("hooks/cleanup.hook.ts");
+		expect(paths).toContain("tests/cleanup.hook.test.ts");
+		expect(paths).toContain("hooks/pre-compact.hook.ts");
+		expect(paths).toContain("tests/pre-compact.hook.test.ts");
+	});
+
+	test("SessionStart handler includes OtelConfig when otel enabled", () => {
+		const config: ScaffoldConfig = { ...baseConfig, includeOtel: true };
+		const files = generatePluginProject(config);
+		const contextHook = findFile(files, "hooks/context.hook.ts");
+
+		expect(contextHook.content).toContain("OtelConfig");
+		expect(contextHook.content).toContain("isEnabled");
+	});
+
+	test("SessionStart handler excludes OtelConfig when otel disabled", () => {
+		const files = generatePluginProject(baseConfig);
+		const contextHook = findFile(files, "hooks/context.hook.ts");
+
+		expect(contextHook.content).not.toContain("OtelConfig");
+	});
+
+	test("CLAUDE.md includes distribution section", () => {
+		const files = generatePluginProject(baseConfig);
+		const claudeMd = findFile(files, "CLAUDE.md");
+
+		expect(claudeMd.content).toContain("## Distribution");
+		expect(claudeMd.content).toContain("hooks/hooks.json");
+		expect(claudeMd.content).toContain("setup-proxy.sh");
 	});
 
 	test("PreToolUse hook config includes tools array in plugin.config.ts", () => {
@@ -637,6 +701,23 @@ describe("generateMarketplaceProject", () => {
 		expect(pkg.devDependencies["@savvy-web/commitlint"]).toBeUndefined();
 		expect(pkg.devDependencies["@savvy-web/changesets"]).toBeUndefined();
 		expect(pkg.scripts.prepare).toBeUndefined();
+	});
+
+	test(".env.example included at plugin level", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const envFile = findFile(files, "plugins/test-plugin-plugin/.env.example");
+
+		expect(envFile.content).toContain("TEST_PLUGIN_DEBUG=false");
+		expect(envFile.content).toContain("TEST_PLUGIN_TIMEOUT_MS=30000");
+	});
+
+	test("CLAUDE.md includes distribution section", () => {
+		const files = generateMarketplaceProject(marketplaceConfig);
+		const claudeMd = findFile(files, "CLAUDE.md");
+
+		expect(claudeMd.content).toContain("## Distribution");
+		expect(claudeMd.content).toContain("hooks.json");
+		expect(claudeMd.content).toContain("setup-proxy.sh");
 	});
 
 	test("bunfig.toml included at root level", () => {

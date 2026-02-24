@@ -12,6 +12,7 @@ import {
 	generateBunfigToml,
 	generateCommandHandler,
 	generateCommandTest,
+	generateEnvExample,
 	generateGitignore,
 	generateHookHandler,
 	generateHookTest,
@@ -106,6 +107,11 @@ export function generateMarketplaceProject(config: ScaffoldConfig): GeneratedFil
 		content: generatePluginTurboJson(),
 	});
 
+	files.push({
+		path: `${pluginDir}/.env.example`,
+		content: generateEnvExample(config),
+	});
+
 	// Hook handler and test files
 	for (const hookType of hooks) {
 		const mapping = HOOK_NAME_MAP[hookType];
@@ -113,7 +119,7 @@ export function generateMarketplaceProject(config: ScaffoldConfig): GeneratedFil
 
 		files.push({
 			path: `${pluginDir}/hooks/${mapping.file}.hook.ts`,
-			content: generateHookHandler(hookType, mapping.name, config.prefix),
+			content: generateHookHandler(hookType, mapping.name, config.prefix, { includeOtel: config.includeOtel }),
 		});
 
 		files.push({
@@ -385,5 +391,25 @@ ${commandSection}
 
 Tests use the \`PluginTester\` fluent API from \`claude-binary-plugin\`.
 Run \`bun run test\` to execute tests across all plugins.
+
+## Distribution
+
+Each plugin uses a proxy script for cross-platform distribution.
+Compiled binaries are platform-specific and \`.gitignore\`'d; they get
+built automatically on each machine at first use.
+
+### What to commit
+
+| File | Purpose |
+| ---- | ------- |
+| \`plugins/*/plugin.config.ts\` | Plugin source definitions |
+| \`plugins/*/hooks/hooks.json\` | Hook manifests (Claude Code discovery) |
+| \`plugins/*/scripts/setup-proxy.sh\` | On-demand build triggers |
+| \`bun.lock\` | Reproducible dependency installs |
+
+### What NOT to commit (\`.gitignore\`'d)
+
+\`*.plugin\` (binaries), \`node_modules/\`, \`.plugin-entrypoint.ts\`,
+\`.build-lock/\`, \`.turbo/\`
 `;
 }

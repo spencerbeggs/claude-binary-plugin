@@ -41,6 +41,8 @@ export const HOOK_NAME_MAP: Record<string, { name: string; file: string; tools?:
 	UserPromptSubmit: { name: "prompt-filter", file: "prompt-filter" },
 	Notification: { name: "notification", file: "notification" },
 	PermissionRequest: { name: "permission", file: "permission" },
+	SessionEnd: { name: "cleanup", file: "cleanup" },
+	PreCompact: { name: "pre-compact", file: "pre-compact" },
 };
 
 // =============================================================================
@@ -191,6 +193,39 @@ perFile = true
 `;
 }
 
+/** Generate .env.example showing available plugin options. */
+export function generateEnvExample(config: ScaffoldConfig): string {
+	const lines = [
+		`# ${config.name} — Plugin Options`,
+		`# Copy to .env.local and customize as needed.`,
+		`#`,
+		`# These environment variables are read by the plugin at startup`,
+		`# and validated against the options schema in plugin.config.ts.`,
+		"",
+		`# Enable debug logging (default: false)`,
+		`${config.prefix}_DEBUG=false`,
+		"",
+		`# Timeout for operations in milliseconds (default: 30000)`,
+		`${config.prefix}_TIMEOUT_MS=30000`,
+	];
+
+	if (config.includeOtel) {
+		lines.push(
+			"",
+			"# --- OTEL Telemetry ---",
+			"",
+			"# OTLP endpoint for sending telemetry (required to enable OTEL)",
+			"# OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318",
+			"",
+			"# Authentication headers for the OTLP endpoint",
+			"# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer YOUR_TOKEN",
+		);
+	}
+
+	lines.push("");
+	return lines.join("\n");
+}
+
 /** Generate .gitignore for plugin projects. */
 export function generateGitignore(opts?: { marketplace?: boolean }): string {
 	const lines = [
@@ -268,6 +303,40 @@ ${commandSection}
 
 Tests use the \`PluginTester\` fluent API from \`claude-binary-plugin\`.
 Run \`bun test\` to execute all tests.
+
+## Distribution
+
+This plugin uses a proxy script for cross-platform distribution.
+The compiled binary is platform-specific and \`.gitignore\`'d; it gets
+built automatically on each machine at first use.
+
+### What to commit
+
+| File | Purpose |
+| ---- | ------- |
+| \`plugin.config.ts\` | Plugin source definition |
+| \`hooks/hooks.json\` | Hook manifest (Claude Code discovery) |
+| \`scripts/setup-proxy.sh\` | On-demand build trigger |
+| \`bun.lock\` | Reproducible dependency installs |
+| \`src/\`, \`hooks/\`, \`commands/\` | Source code |
+
+### What NOT to commit (\`.gitignore\`'d)
+
+| File | Reason |
+| ---- | ------ |
+| \`*.plugin\` | Platform-specific binary |
+| \`node_modules/\` | Installed per-machine |
+| \`.plugin-entrypoint.ts\` | Build artifact |
+| \`.build-lock/\` | Build lock directory |
+
+### How it works
+
+1. \`claude-binary-plugin build\` compiles the binary and generates
+   \`hooks/hooks.json\` and \`scripts/setup-proxy.sh\`
+2. On a new machine, Claude Code fires SessionStart
+3. \`hooks.json\` routes through the proxy script
+4. The proxy detects the missing binary, runs \`bun install\` + build
+5. Subsequent hooks run directly against the compiled binary
 `;
 }
 
@@ -638,7 +707,7 @@ export function generatePluginConfig(config: ScaffoldConfig): string {
 		.map((hookType) => {
 			const mapping = HOOK_NAME_MAP[hookType];
 			if (!mapping) return null;
-			const toolsLine = mapping.tools ? `\n\t\t\ttools: ${JSON.stringify(mapping.tools)},` : "";
+			const toolsLine = mapping.tools ? `\n\t\t\t\ttools: ${JSON.stringify(mapping.tools)},` : "";
 			return `\t\t${hookType}: [\n\t\t\t{\n\t\t\t\tname: "${mapping.name}",${toolsLine}\n\t\t\t\tpipeline: "./hooks/${mapping.file}.hook.ts",\n\t\t\t},\n\t\t],`;
 		})
 		.filter(Boolean)
@@ -731,14 +800,22 @@ export default plugin;
 // =============================================================================
 
 /** Generate a typed hook handler file for the given hook type. */
-export function generateHookHandler(hookType: string, hookName: string, _prefix: string): string {
+export function generateHookHandler(
+	hookType: string,
+	hookName: string,
+	_prefix: string,
+	opts?: { includeOtel?: boolean },
+): string {
+	const otel = opts?.includeOtel ?? false;
 	switch (hookType) {
 		case "SessionStart":
-			return generateSessionStartHandler(hookName);
+			return generateSessionStartHandler(hookName, otel);
+		case "SessionEnd":
+			return generateSessionEndHandler(hookName);
 		case "PreToolUse":
-			return generatePreToolUseHandler(hookName);
+			return generatePreToolUseHandler(hookName, otel);
 		case "PostToolUse":
-			return generatePostToolUseHandler(hookName);
+			return generatePostToolUseHandler(hookName, otel);
 		case "Stop":
 			return generateStopHandler(hookName);
 		case "SubagentStop":
@@ -749,12 +826,23 @@ export function generateHookHandler(hookType: string, hookName: string, _prefix:
 			return generateNotificationHandler(hookName);
 		case "PermissionRequest":
 			return generatePermissionRequestHandler(hookName);
+		case "PreCompact":
+			return generatePreCompactHandler(hookName);
 		default:
 			return generateGenericHandler(hookType, hookName);
 	}
 }
 
-function generateSessionStartHandler(_hookName: string): string {
+function generateSessionStartHandler(_hookName: string, includeOtel: boolean): string {
+	const otelImport = includeOtel ? '\nimport { OtelConfig } from "claude-binary-plugin";\n' : "";
+	const otelContext = includeOtel
+		? `
+\tif (OtelConfig.isEnabled()) {
+\t\tlines.push("- OTEL telemetry is enabled");
+\t}
+`
+		: "";
+
 	return `/**
  * SessionStart hook — "context"
  *
@@ -766,7 +854,7 @@ function generateSessionStartHandler(_hookName: string): string {
  * Output: SessionStartPipelineOutput (action: "context" | "none")
  */
 
-import type { Pipeline } from "../plugin.config.js";
+import type { Pipeline } from "../plugin.config.js";${otelImport}
 
 const handler: Pipeline["SessionStart"] = ({ input, options, state }) => {
 \t// Build context lines based on detected project characteristics
@@ -783,7 +871,7 @@ const handler: Pipeline["SessionStart"] = ({ input, options, state }) => {
 \tif (options.DEBUG) {
 \t\tlines.push(\`- Debug mode is enabled (timeout: \${options.TIMEOUT_MS}ms)\`);
 \t}
-
+${otelContext}
 \t// Only inject context if we have something useful to say
 \tif (lines.length <= 1) {
 \t\treturn {
@@ -805,7 +893,39 @@ export default handler;
 `;
 }
 
-function generatePreToolUseHandler(_hookName: string): string {
+function generateSessionEndHandler(_hookName: string): string {
+	return `/**
+ * SessionEnd hook — "cleanup"
+ *
+ * Runs when the Claude Code session ends. Use this for cleanup tasks
+ * like flushing caches, closing connections, or logging session stats.
+ *
+ * Handler type: Pipeline["SessionEnd"]
+ * Input:  { reason: "clear" | "logout" | "prompt_input_exit" | "other" }
+ * Output: PassthroughPipelineOutput (action: "none" only)
+ */
+
+import type { Pipeline } from "../plugin.config.js";
+
+const handler: Pipeline["SessionEnd"] = ({ input }) => {
+\t// SessionEnd is passthrough-only — use for cleanup, not behavior changes.
+\t// The reason tells you why the session ended:
+\t//   "clear"  — user cleared the session
+\t//   "logout" — user logged out
+\t//   "prompt_input_exit" — user exited the prompt
+\t//   "other"  — other reason
+\treturn {
+\t\tstatus: "executed",
+\t\taction: "none",
+\t\tsummary: \`session ended: \${input.reason}\`,
+\t};
+};
+
+export default handler;
+`;
+}
+
+function generatePreToolUseHandler(_hookName: string, _includeOtel: boolean): string {
 	return `/**
  * PreToolUse hook — "security"
  *
@@ -856,7 +976,7 @@ export default handler;
 `;
 }
 
-function generatePostToolUseHandler(_hookName: string): string {
+function generatePostToolUseHandler(_hookName: string, _includeOtel: boolean): string {
 	return `/**
  * PostToolUse hook — "post-tool"
  *
@@ -1068,6 +1188,36 @@ export default handler;
 `;
 }
 
+function generatePreCompactHandler(_hookName: string): string {
+	return `/**
+ * PreCompact hook — "pre-compact"
+ *
+ * Runs before Claude Code compacts the conversation context. Use this
+ * to add custom instructions that should be included in the compacted
+ * summary.
+ *
+ * Handler type: Pipeline["PreCompact"]
+ * Input:  { trigger: "manual" | "auto", custom_instructions?: string }
+ * Output: PassthroughPipelineOutput (action: "none" only)
+ */
+
+import type { Pipeline } from "../plugin.config.js";
+
+const handler: Pipeline["PreCompact"] = () => {
+\t// PreCompact is passthrough-only — the primary use is to observe
+\t// when compaction happens. Custom instructions can be added via
+\t// the custom_instructions field in the input.
+\treturn {
+\t\tstatus: "executed",
+\t\taction: "none",
+\t\tsummary: "pre-compact observed",
+\t};
+};
+
+export default handler;
+`;
+}
+
 function generateGenericHandler(hookType: string, _hookName: string): string {
 	return `/**
  * ${hookType} hook
@@ -1186,6 +1336,8 @@ export function generateHookTest(hookType: string, hookName: string): string {
 	switch (hookType) {
 		case "SessionStart":
 			return generateSessionStartTest(hookName);
+		case "SessionEnd":
+			return generateSessionEndTest(hookName);
 		case "PreToolUse":
 			return generatePreToolUseTest(hookName);
 		case "PostToolUse":
@@ -1200,6 +1352,8 @@ export function generateHookTest(hookType: string, hookName: string): string {
 			return generateNotificationTest(hookName);
 		case "PermissionRequest":
 			return generatePermissionRequestTest(hookName);
+		case "PreCompact":
+			return generatePreCompactTest(hookName);
 		default:
 			return generateGenericTest(hookType, hookName);
 	}
@@ -1238,6 +1392,41 @@ describe("SessionStart/${hookName}", () => {
 \t\t\t.runHook("SessionStart", "${hookName}");
 
 \t\texpect(result.exitCode).toBe(0);
+\t\texpect(result.action).toBe("none");
+\t});
+});
+`;
+}
+
+function generateSessionEndTest(hookName: string): string {
+	return `import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import plugin from "../plugin.config.js";
+
+describe("SessionEnd/${hookName}", () => {
+\tlet ctx: ReturnType<typeof plugin.test>;
+
+\tbeforeEach(() => {
+\t\tctx = plugin.test()
+\t\t\t.withOptions({ DEBUG: "false", TIMEOUT_MS: "30000" })
+\t\t\t.withState({ hasPackageJson: true, hasTsConfig: true });
+\t});
+
+\tafterEach(() => ctx.dispose());
+
+\ttest("handles logout", async () => {
+\t\tconst result = await ctx
+\t\t\t.withSessionEndInput({ reason: "logout" })
+\t\t\t.runHook("SessionEnd", "${hookName}");
+
+\t\texpect(result.exitCode).toBe(0);
+\t\texpect(result.action).toBe("none");
+\t});
+
+\ttest("handles clear", async () => {
+\t\tconst result = await ctx
+\t\t\t.withSessionEndInput({ reason: "clear" })
+\t\t\t.runHook("SessionEnd", "${hookName}");
+
 \t\texpect(result.action).toBe("none");
 \t});
 });
@@ -1479,6 +1668,41 @@ describe("PermissionRequest/${hookName}", () => {
 
 \t\texpect(result.exitCode).toBe(0);
 \t\texpect(result.action).toBe("allow");
+\t});
+});
+`;
+}
+
+function generatePreCompactTest(hookName: string): string {
+	return `import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import plugin from "../plugin.config.js";
+
+describe("PreCompact/${hookName}", () => {
+\tlet ctx: ReturnType<typeof plugin.test>;
+
+\tbeforeEach(() => {
+\t\tctx = plugin.test()
+\t\t\t.withOptions({ DEBUG: "false", TIMEOUT_MS: "30000" })
+\t\t\t.withState({ hasPackageJson: true, hasTsConfig: true });
+\t});
+
+\tafterEach(() => ctx.dispose());
+
+\ttest("observes auto compaction", async () => {
+\t\tconst result = await ctx
+\t\t\t.withPreCompactInput({ trigger: "auto" })
+\t\t\t.runHook("PreCompact", "${hookName}");
+
+\t\texpect(result.exitCode).toBe(0);
+\t\texpect(result.action).toBe("none");
+\t});
+
+\ttest("observes manual compaction", async () => {
+\t\tconst result = await ctx
+\t\t\t.withPreCompactInput({ trigger: "manual" })
+\t\t\t.runHook("PreCompact", "${hookName}");
+
+\t\texpect(result.action).toBe("none");
 \t});
 });
 `;
