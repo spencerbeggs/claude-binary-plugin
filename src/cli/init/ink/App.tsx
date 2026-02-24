@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@inkjs/ui";
-import { Box } from "ink";
+import { Box, Text } from "ink";
 import type React from "react";
 import { useCallback, useState } from "react";
 import type { ScaffoldConfig } from "../scaffold.js";
@@ -55,6 +55,7 @@ export function App({ defaults, onComplete }: AppProps): React.ReactElement {
 		includeChangesets: defaults.includeChangesets ?? true,
 	});
 	const [phases, setPhases] = useState<Phase[]>([]);
+	const [warnings, setWarnings] = useState<string[]>([]);
 
 	// Track which steps have been completed
 	const completedStepIndex = STEP_ORDER.indexOf(currentStep);
@@ -138,7 +139,7 @@ export function App({ defaults, onComplete }: AppProps): React.ReactElement {
 		];
 		setPhases(phaseList);
 
-		await scaffold(config, (phase, status) => {
+		const result = await scaffold(config, (phase, status) => {
 			setPhases((prev) =>
 				prev.map((p) => {
 					if (p.name === phase) {
@@ -151,6 +152,9 @@ export function App({ defaults, onComplete }: AppProps): React.ReactElement {
 
 		// Mark all done
 		setPhases((prev) => prev.map((p) => ({ ...p, status: "done" as const })));
+		if (result.warnings.length > 0) {
+			setWarnings(result.warnings);
+		}
 
 		// Small delay so user sees completion
 		await new Promise((resolve) => setTimeout(resolve, 500));
@@ -187,7 +191,6 @@ export function App({ defaults, onComplete }: AppProps): React.ReactElement {
 			case WizardStep.Type:
 				return (
 					<TypeStep
-						defaultValue={state.type}
 						onSubmit={(v) => {
 							setState((s) => ({ ...s, type: v as "plugin" | "marketplace" }));
 							advanceStep();
@@ -238,7 +241,6 @@ export function App({ defaults, onComplete }: AppProps): React.ReactElement {
 			case WizardStep.License:
 				return (
 					<LicenseStep
-						defaultValue={state.license}
 						onSubmit={(v) => {
 							setState((s) => ({ ...s, license: v }));
 							advanceStep();
@@ -287,7 +289,17 @@ export function App({ defaults, onComplete }: AppProps): React.ReactElement {
 					/>
 				);
 			case WizardStep.Scaffold:
-				return <ScaffoldProgress phases={phases} />;
+				return (
+					<Box flexDirection="column">
+						<ScaffoldProgress phases={phases} />
+						{warnings.map((w) => (
+							<Box key={w} gap={1}>
+								<Text color="yellow">{"\u26A0"}</Text>
+								<Text color="yellow">{w}</Text>
+							</Box>
+						))}
+					</Box>
+				);
 			default:
 				return null;
 		}

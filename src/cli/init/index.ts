@@ -8,6 +8,7 @@
 import { basename, resolve } from "node:path";
 import { Args, Command, Options } from "@effect/cli";
 import { Console, Effect } from "effect";
+import { detectDefaults } from "./detect-defaults.js";
 import type { ScaffoldConfig } from "./scaffold.js";
 import { scaffold } from "./scaffold.js";
 import { toScreamingSnake } from "./templates/shared.js";
@@ -35,40 +36,22 @@ const hooks = Options.text("hooks").pipe(
 	Options.withDescription("Comma-separated hook types to include"),
 );
 
-const commands = Options.boolean("commands").pipe(
-	Options.withDefault(true),
-	Options.withDescription("Include example command"),
-);
+// Boolean options — @effect/cli Options.boolean defaults to false when not passed.
+// For features that default to ON, we use --skip-* flags so "not passed" (false) means "include".
+// For features that default to OFF, we use positive flags so "not passed" (false) means "exclude".
+const skipCommands = Options.boolean("skip-commands").pipe(Options.withDescription("Skip example command generation"));
 
-const otel = Options.boolean("otel").pipe(
-	Options.withDefault(false),
-	Options.withDescription("Include OTEL telemetry setup"),
-);
+const otel = Options.boolean("otel").pipe(Options.withDescription("Include OTEL telemetry setup"));
 
-const lintStaged = Options.boolean("lint-staged").pipe(
-	Options.withDefault(true),
-	Options.withDescription("Include @savvy-web/lint-staged (pre-commit hooks)"),
-);
+const skipLintStaged = Options.boolean("skip-lint-staged").pipe(Options.withDescription("Skip @savvy-web/lint-staged"));
 
-const commitlint = Options.boolean("commitlint").pipe(
-	Options.withDefault(true),
-	Options.withDescription("Include @savvy-web/commitlint (commit message validation)"),
-);
+const skipCommitlint = Options.boolean("skip-commitlint").pipe(Options.withDescription("Skip @savvy-web/commitlint"));
 
-const changesets = Options.boolean("changesets").pipe(
-	Options.withDefault(true),
-	Options.withDescription("Include @savvy-web/changesets (version management)"),
-);
+const skipChangesets = Options.boolean("skip-changesets").pipe(Options.withDescription("Skip @savvy-web/changesets"));
 
-const git = Options.boolean("git").pipe(
-	Options.withDefault(true),
-	Options.withDescription("Initialize git repository"),
-);
+const skipGit = Options.boolean("skip-git").pipe(Options.withDescription("Skip git repository initialization"));
 
-const install = Options.boolean("install").pipe(
-	Options.withDefault(true),
-	Options.withDescription("Run bun install after scaffolding"),
-);
+const skipInstall = Options.boolean("skip-install").pipe(Options.withDescription("Skip bun install after scaffolding"));
 
 const yes = Options.boolean("yes").pipe(
 	Options.withAlias("y"),
@@ -92,26 +75,9 @@ const license = Options.text("license").pipe(
 	Options.withDescription("SPDX license identifier (e.g., MIT, Apache-2.0)"),
 );
 
-/** Detect git user.name, user.email, and GitHub owner from remote. */
-async function detectGitDefaults(): Promise<{ name: string; email: string; owner: string }> {
-	const [nameResult, emailResult, remoteResult] = await Promise.allSettled([
-		Bun.$`git config user.name`.quiet().text(),
-		Bun.$`git config user.email`.quiet().text(),
-		Bun.$`git config --get remote.origin.url`.quiet().text(),
-	]);
-
-	const gitName = nameResult.status === "fulfilled" ? nameResult.value.trim() : "";
-	const gitEmail = emailResult.status === "fulfilled" ? emailResult.value.trim() : "";
-
-	let owner = "";
-	if (remoteResult.status === "fulfilled") {
-		const url = remoteResult.value.trim();
-		const sshMatch = url.match(/git@github\.com:([^/]+)\//);
-		const httpsMatch = url.match(/github\.com\/([^/]+)\//);
-		owner = sshMatch?.[1] ?? httpsMatch?.[1] ?? "";
-	}
-
-	return { name: gitName, email: gitEmail, owner };
+/** Unwrap an @effect/cli Option, returning the value or a fallback. */
+function optionOr<T>(opt: { _tag: string; value?: T }, fallback: T): T {
+	return opt._tag === "Some" ? (opt.value as T) : fallback;
 }
 
 /** Build a ScaffoldConfig from CLI flags, filling in git defaults for --yes mode. */
@@ -122,22 +88,22 @@ async function buildConfigFromFlags(
 		prefix: { _tag: string; value?: string };
 		description: { _tag: string; value?: string };
 		hooks: { _tag: string; value?: string };
-		commands: boolean;
+		skipCommands: boolean;
 		otel: boolean;
-		lintStaged: boolean;
-		commitlint: boolean;
-		changesets: boolean;
-		git: boolean;
-		install: boolean;
+		skipLintStaged: boolean;
+		skipCommitlint: boolean;
+		skipChangesets: boolean;
+		skipGit: boolean;
+		skipInstall: boolean;
 	},
 	explicitDir: string | null,
 	overrides?: { author?: string; email?: string; githubOwner?: string; license?: string },
 ): Promise<ScaffoldConfig> {
 	const derivedName = explicitDir ? basename(explicitDir) : "my-plugin";
-	const projectName = opts.name._tag === "Some" ? (opts.name.value as string) : derivedName;
-	const projectType = opts.type._tag === "Some" ? (opts.type.value as "plugin" | "marketplace") : "plugin";
-	const projectPrefix = opts.prefix._tag === "Some" ? (opts.prefix.value as string) : toScreamingSnake(projectName);
-	const projectDesc = opts.description._tag === "Some" ? (opts.description.value as string) : "";
+	const projectName = optionOr(opts.name, derivedName);
+	const projectType = optionOr(opts.type, "plugin") as "plugin" | "marketplace";
+	const projectPrefix = optionOr(opts.prefix, toScreamingSnake(projectName));
+	const projectDesc = optionOr(opts.description, "");
 	const hookList =
 		opts.hooks._tag === "Some"
 			? (opts.hooks.value as string).split(",").map((h) => h.trim())
@@ -151,7 +117,7 @@ async function buildConfigFromFlags(
 	const resolvedDir = resolve(process.cwd(), dirName);
 
 	// Detect git defaults for author/owner if not explicitly provided
-	const gitDefaults = await detectGitDefaults();
+	const detected = await detectDefaults();
 
 	return {
 		directory: resolvedDir,
@@ -160,18 +126,18 @@ async function buildConfigFromFlags(
 		prefix: projectPrefix,
 		description: projectDesc,
 		hooks: hookList,
-		includeCommands: opts.commands,
+		includeCommands: !opts.skipCommands,
 		includeOtel: opts.otel,
-		includeLintStaged: opts.lintStaged,
-		includeCommitlint: opts.commitlint,
-		includeChangesets: opts.changesets,
-		initGit: opts.git,
-		runInstall: opts.install,
+		includeLintStaged: !opts.skipLintStaged,
+		includeCommitlint: !opts.skipCommitlint,
+		includeChangesets: !opts.skipChangesets,
+		initGit: !opts.skipGit,
+		runInstall: !opts.skipInstall,
 		author: {
-			name: overrides?.author ?? gitDefaults.name,
-			email: overrides?.email ?? gitDefaults.email,
+			name: overrides?.author ?? detected.name,
+			email: overrides?.email ?? detected.email,
 		},
-		githubOwner: overrides?.githubOwner ?? gitDefaults.owner,
+		githubOwner: overrides?.githubOwner ?? detected.githubOwner,
 		license: overrides?.license ?? "MIT",
 	};
 }
@@ -185,13 +151,13 @@ export const initCommand = Command.make(
 		prefix,
 		description,
 		hooks,
-		commands,
+		skipCommands,
 		otel,
-		lintStaged,
-		commitlint,
-		changesets,
-		git,
-		install,
+		skipLintStaged,
+		skipCommitlint,
+		skipChangesets,
+		skipGit,
+		skipInstall,
 		yes,
 		dir,
 		author,
@@ -217,8 +183,11 @@ export const initCommand = Command.make(
 				// Quick mode: accept all defaults, detect git info
 				const config = yield* Effect.promise(() => buildConfigFromFlags(opts, explicitDir, flagOverrides));
 
-				yield* Effect.promise(() => scaffold(config));
+				const result = yield* Effect.promise(() => scaffold(config));
 				const dirName = explicitDir ?? config.name;
+				for (const warning of result.warnings) {
+					yield* Console.log(`\n\u26A0  ${warning}`);
+				}
 				yield* Console.log(`\nScaffolded ${config.type} project: ${config.name}`);
 				yield* Console.log(`\nNext steps:\n  cd ${dirName}\n  claude-binary-plugin build`);
 				return;
@@ -228,8 +197,11 @@ export const initCommand = Command.make(
 			if (opts.name._tag === "Some" && opts.type._tag === "Some") {
 				const config = yield* Effect.promise(() => buildConfigFromFlags(opts, explicitDir, flagOverrides));
 
-				yield* Effect.promise(() => scaffold(config));
+				const result = yield* Effect.promise(() => scaffold(config));
 				const dirName = explicitDir ?? config.name;
+				for (const warning of result.warnings) {
+					yield* Console.log(`\n\u26A0  ${warning}`);
+				}
 				yield* Console.log(`\nScaffolded ${config.type} project: ${config.name}`);
 				yield* Console.log(`\nNext steps:\n  cd ${dirName}\n  claude-binary-plugin build`);
 				return;
@@ -237,13 +209,13 @@ export const initCommand = Command.make(
 
 			// Interactive mode: launch React Ink wizard
 			const defaults: Partial<ScaffoldConfig> = {
-				initGit: opts.git,
-				runInstall: opts.install,
-				includeCommands: opts.commands,
+				initGit: !opts.skipGit,
+				runInstall: !opts.skipInstall,
+				includeCommands: !opts.skipCommands,
 				includeOtel: opts.otel,
-				includeLintStaged: opts.lintStaged,
-				includeCommitlint: opts.commitlint,
-				includeChangesets: opts.changesets,
+				includeLintStaged: !opts.skipLintStaged,
+				includeCommitlint: !opts.skipCommitlint,
+				includeChangesets: !opts.skipChangesets,
 			};
 
 			// Only set directory when explicitly provided; omit to trigger wizard prompt
