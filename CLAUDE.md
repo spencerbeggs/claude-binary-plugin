@@ -35,6 +35,7 @@ For detailed architecture and schema information, reference these docs:
 - @.claude/design/scaffold.md - Scaffold templates, interactive flow
 - @.claude/design/schema.md - OTEL telemetry schema, event types, metrics
 - @.claude/design/testing.md - Testing utilities and fluent API
+- @docs/README.md - User-facing SDK documentation and guides
 
 ## Development Commands
 
@@ -133,8 +134,9 @@ Load these files as needed for deeper context:
 | `src/testing/builder.ts` | `PluginTester` class |
 | `src/testing/mocks.ts` | `TestFixtures`, `MockState` |
 | `src/cli/init/index.ts` | `init` command definition |
-| `src/cli/init/wizard.ts` | Interactive scaffold wizard |
+| `src/cli/init/ink/App.tsx` | Interactive Ink wizard |
 | `src/cli/init/scaffold.ts` | Template engine |
+| `src/cli/init/detect-defaults.ts` | Git/GitHub default detection |
 
 ### OTEL Classes
 

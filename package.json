@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"description": "Toolkit for compiling complex single-file executable Claude Code plugins",
 	"keywords": ["claude", "claude-code", "plugin", "cli", "effect", "typescript", "bun", "anthropic"],
-	"homepage": "https://spencerbeg.gs/claude-binary-plugin",
+	"homepage": "https://github.com/spencerbeggs/claude-binary-plugin#documentation",
 	"bugs": {
 		"url": "https://github.com/spencerbeggs/claude-binary-plugin/issues"
 	},
