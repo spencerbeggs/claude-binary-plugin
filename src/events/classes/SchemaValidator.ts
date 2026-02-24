@@ -31,6 +31,7 @@ export interface FormattedValidationError {
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SchemaValidator {
 	/**
 	 * Parse and validate JSON with OTEL error capture.

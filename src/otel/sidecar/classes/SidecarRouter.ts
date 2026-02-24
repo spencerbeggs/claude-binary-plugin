@@ -23,6 +23,7 @@ import { SpanHandler } from "./SpanHandler.js";
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarRouter {
 	/**
 	 * Per-session configuration storage.

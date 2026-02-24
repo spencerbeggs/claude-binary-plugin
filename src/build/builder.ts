@@ -1658,6 +1658,7 @@ async function buildPluginFromConfig(
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class PluginBuilder {
 	// =========================================================================
 	// BUILD OPERATIONS

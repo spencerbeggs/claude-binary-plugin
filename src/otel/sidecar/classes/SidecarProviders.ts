@@ -32,6 +32,7 @@ import { SidecarResource } from "./SidecarResource.js";
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarProviders {
 	/**
 	 * Module-level state for providers.

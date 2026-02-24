@@ -84,6 +84,7 @@ export interface BudgetCheckResult {
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class TokenMetrics {
 	/**
 	 * Default token budget (200k context window).

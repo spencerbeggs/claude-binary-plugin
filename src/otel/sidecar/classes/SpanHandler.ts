@@ -44,6 +44,7 @@ const STATUS_CODE_MAP: Record<NonNullable<SpanData["status"]>["code"], SpanStatu
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SpanHandler {
 	/**
 	 * Handle a span message from a hook.

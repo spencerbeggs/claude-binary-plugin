@@ -20,6 +20,7 @@ import type { OtelProtocolConfig } from "../../protocol.js";
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarExporters {
 	/**
 	 * Create a trace exporter based on configuration.

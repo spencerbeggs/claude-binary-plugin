@@ -171,7 +171,6 @@ export const emptyArgsSchema = z.object({});
  * @public
  */
 // biome-ignore lint/complexity/noBannedTypes: Empty object type is intentional for commands with no args
-// biome-ignore lint/style/useConsistentTypeDefinitions: Type alias needed to avoid interface extending object
 export type EmptyArgs = {};
 
 // =============================================================================
@@ -225,6 +224,7 @@ export type EmptyArgs = {};
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class Commands {
 	// =========================================================================
 	// EXECUTION

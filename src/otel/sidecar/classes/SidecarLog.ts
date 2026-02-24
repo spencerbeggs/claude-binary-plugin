@@ -22,6 +22,7 @@ const LOG_FILE = "/tmp/claude-otel-sidecar.log";
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarLog {
 	/**
 	 * Flag to enable logging. Set by sidecar main when running as actual sidecar.
