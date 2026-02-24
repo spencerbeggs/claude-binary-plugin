@@ -121,11 +121,11 @@ export interface PipelineHookEntry {
 	/** Whether this is a pipeline (true) or raw handler (false) */
 	isPipeline: boolean;
 	/** Tool filter for PreToolUse/PostToolUse */
-	tools?: string[];
+	tools?: string[] | undefined;
 	/** Description for help text */
-	description?: string;
+	description?: string | undefined;
 	/** File path for file-based hooks (resolved via import.meta.resolve) */
-	filePath?: string;
+	filePath?: string | undefined;
 }
 
 /**
@@ -136,7 +136,7 @@ export interface PipelineCommandEntry {
 	/** Command name for CLI routing */
 	name: string;
 	/** Description for help text */
-	description?: string;
+	description?: string | undefined;
 	/** File path for the command handler (resolved via import.meta.resolve) */
 	filePath: string;
 	/** Whether the command has an args schema */
@@ -451,14 +451,14 @@ main().catch((error) => {
  * @public
  */
 export interface ExtractableHook {
-	name?: string;
-	tools?: string[];
-	description?: string;
+	name?: string | undefined;
+	tools?: string[] | undefined;
+	description?: string | undefined;
 	pipeline?: unknown;
 	handler?: unknown;
 	/** Passthrough hooks array (for raw hooks.json entries) */
-	hooks?: Array<{ type: "command"; command: string }>;
-	matcher?: string;
+	hooks?: Array<{ type: "command"; command: string }> | undefined;
+	matcher?: string | undefined;
 }
 
 /**
@@ -1183,7 +1183,7 @@ export interface HooksJsonCommand {
  * @public
  */
 export interface HooksJsonEntry {
-	matcher?: string;
+	matcher?: string | undefined;
 	hooks: HooksJsonCommand[];
 }
 

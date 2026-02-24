@@ -57,7 +57,7 @@ export class SidecarLifecycle {
 	/**
 	 * Callback when shutdown completes.
 	 */
-	private onShutdown?: () => void;
+	private onShutdown?: (() => void) | undefined;
 
 	/**
 	 * Create a lifecycle manager for the sidecar.

@@ -64,8 +64,8 @@ export class MetricHandler {
 					let counter = MetricHandler.counters.get(data.name);
 					if (!counter) {
 						counter = meter.createCounter(data.name, {
-							description: data.description,
-							unit: data.unit,
+							...(data.description !== undefined && { description: data.description }),
+							...(data.unit !== undefined && { unit: data.unit }),
 						});
 						MetricHandler.counters.set(data.name, counter);
 					}
@@ -75,8 +75,8 @@ export class MetricHandler {
 					let upDownCounter = MetricHandler.upDownCounters.get(data.name);
 					if (!upDownCounter) {
 						upDownCounter = meter.createUpDownCounter(data.name, {
-							description: data.description,
-							unit: data.unit,
+							...(data.description !== undefined && { description: data.description }),
+							...(data.unit !== undefined && { unit: data.unit }),
 						});
 						MetricHandler.upDownCounters.set(data.name, upDownCounter);
 					}
@@ -91,8 +91,8 @@ export class MetricHandler {
 				let gauge = MetricHandler.upDownCounters.get(data.name);
 				if (!gauge) {
 					gauge = meter.createUpDownCounter(data.name, {
-						description: data.description,
-						unit: data.unit,
+						...(data.description !== undefined && { description: data.description }),
+						...(data.unit !== undefined && { unit: data.unit }),
 					});
 					MetricHandler.upDownCounters.set(data.name, gauge);
 				}
@@ -104,8 +104,8 @@ export class MetricHandler {
 				let histogram = MetricHandler.histograms.get(data.name);
 				if (!histogram) {
 					histogram = meter.createHistogram(data.name, {
-						description: data.description,
-						unit: data.unit,
+						...(data.description !== undefined && { description: data.description }),
+						...(data.unit !== undefined && { unit: data.unit }),
 					});
 					MetricHandler.histograms.set(data.name, histogram);
 				}

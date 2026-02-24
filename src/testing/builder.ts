@@ -148,11 +148,11 @@ export interface HookTestResult {
 	/** Parsed JSON response from the hook */
 	output: Record<string, unknown>;
 	/** Convenience accessor for hook action (allow/deny/block/etc) */
-	action?: HookAction;
+	action?: HookAction | undefined;
 	/** Convenience accessor for additionalContext */
-	context?: string;
+	context?: string | undefined;
 	/** Convenience accessor for reason */
-	reason?: string;
+	reason?: string | undefined;
 }
 
 /**
@@ -171,7 +171,7 @@ export interface CommandTestResult {
 	/** Captured console.error calls */
 	errors: string[];
 	/** Optional structured data returned by the command */
-	data?: Record<string, unknown>;
+	data?: Record<string, unknown> | undefined;
 }
 
 // =============================================================================
@@ -291,10 +291,10 @@ interface BufferShellMockConfig {
 interface MockFnState<TArgs extends unknown[], TReturn> {
 	calls: TArgs[];
 	results: Array<{ type: "return" | "throw"; value: TReturn | Error }>;
-	defaultReturn?: TReturn;
+	defaultReturn?: TReturn | undefined;
 	returnQueue: TReturn[];
-	implementation?: (...args: TArgs) => TReturn;
-	rejectedError?: Error;
+	implementation?: ((...args: TArgs) => TReturn) | undefined;
+	rejectedError?: Error | undefined;
 }
 
 /**

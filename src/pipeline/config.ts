@@ -479,7 +479,7 @@ export interface RawFileHookDefinition extends HookDefinitionBase {
  */
 export interface PassthroughHookEntry {
 	/** Optional matcher pattern for tool filtering */
-	matcher?: string;
+	matcher?: string | undefined;
 	/** Array of hook commands to execute */
 	hooks: Array<{ type: "command"; command: string }>;
 	/** Mark that this is not a compiled hook */

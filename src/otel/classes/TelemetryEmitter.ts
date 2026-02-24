@@ -74,35 +74,35 @@ export interface HookExecutionResult {
 	/** Whether the hook executed successfully */
 	success: boolean;
 	/** Semantic outcome of the hook execution */
-	outcome?: HookOutcome;
+	outcome?: HookOutcome | undefined;
 	/** Human-readable summary for log body (e.g., "auto-allowed: git status") */
-	summary?: string;
+	summary?: string | undefined;
 	/** Error message if hook failed */
-	error?: string;
+	error?: string | undefined;
 	/** Tool name for tool-related hooks */
-	toolName?: string;
+	toolName?: string | undefined;
 	/** Tool use ID for correlation with Claude Code events */
-	toolUseId?: string;
+	toolUseId?: string | undefined;
 	/** Permission decision for PreToolUse hooks */
-	permissionDecision?: "allow" | "deny" | "ask";
+	permissionDecision?: "allow" | "deny" | "ask" | undefined;
 	/** Source of the permission decision (who/what made it) */
-	decisionSource?: DecisionSource;
+	decisionSource?: DecisionSource | undefined;
 	/** Reason for permission decision */
-	permissionDecisionReason?: string;
+	permissionDecisionReason?: string | undefined;
 	/** Whether the tool input was modified */
-	hasUpdatedInput?: boolean;
+	hasUpdatedInput?: boolean | undefined;
 	/** Block decision (for blocking responses) */
-	decision?: "block";
+	decision?: "block" | undefined;
 	/** Reason for blocking */
-	reason?: string;
+	reason?: string | undefined;
 	/** Whether additional context was provided */
-	hasAdditionalContext?: boolean;
+	hasAdditionalContext?: boolean | undefined;
 	/** Additional context content (used as event body) */
-	additionalContext?: string;
+	additionalContext?: string | undefined;
 	/** Operational metrics for performance analysis */
-	metrics?: HookMetrics;
+	metrics?: HookMetrics | undefined;
 	/** Hook-specific context attributes */
-	context?: Record<string, string | number | boolean>;
+	context?: Record<string, string | number | boolean> | undefined;
 }
 
 /**
@@ -119,7 +119,7 @@ export interface SchemaValidationErrorResult {
 	/** Formatted error message */
 	errorMessage: string;
 	/** Raw JSON that failed validation (truncated if large) */
-	rawInput?: string;
+	rawInput?: string | undefined;
 }
 
 /**
@@ -136,7 +136,7 @@ export interface EnvValidationErrorResult {
 	/** Formatted error message */
 	errorMessage: string;
 	/** The env class that failed validation */
-	envClassName?: string;
+	envClassName?: string | undefined;
 }
 
 /**
@@ -151,13 +151,13 @@ export interface FatalErrorResult {
 	/** Error message */
 	errorMessage: string;
 	/** Error stack trace if available */
-	errorStack?: string;
+	errorStack?: string | undefined;
 	/** Whether the error was a validation error */
-	isValidationError?: boolean;
+	isValidationError?: boolean | undefined;
 	/** Number of validation issues (for validation errors) */
-	issueCount?: number;
+	issueCount?: number | undefined;
 	/** First validation path (for validation errors) */
-	validationPath?: string;
+	validationPath?: string | undefined;
 }
 
 /**
@@ -177,11 +177,11 @@ export interface HookExecutionDirectResult {
 	/** Whether the hook executed successfully */
 	success: boolean;
 	/** Semantic outcome of the hook execution */
-	outcome?: HookOutcome;
+	outcome?: HookOutcome | undefined;
 	/** Human-readable summary for log body */
-	summary?: string;
+	summary?: string | undefined;
 	/** Error message if hook failed */
-	error?: string;
+	error?: string | undefined;
 }
 
 /**

@@ -44,7 +44,7 @@ export class SidecarExporters {
 		// Default to OTLP HTTP
 		return new OTLPTraceExporter({
 			url: `${endpoint}/v1/traces`,
-			headers: config.headers,
+			...(config.headers !== undefined && { headers: config.headers }),
 			timeoutMillis: config.exportTimeoutMs ?? OtelConfig.DEFAULTS.EXPORT_TIMEOUT_MS,
 		});
 	}
@@ -66,7 +66,7 @@ export class SidecarExporters {
 		// Default to OTLP HTTP
 		return new OTLPMetricExporter({
 			url: `${endpoint}/v1/metrics`,
-			headers: config.headers,
+			...(config.headers !== undefined && { headers: config.headers }),
 			timeoutMillis: config.exportTimeoutMs ?? OtelConfig.DEFAULTS.EXPORT_TIMEOUT_MS,
 		});
 	}
@@ -88,7 +88,7 @@ export class SidecarExporters {
 		// Default to OTLP HTTP
 		return new OTLPLogExporter({
 			url: `${endpoint}/v1/logs`,
-			headers: config.headers,
+			...(config.headers !== undefined && { headers: config.headers }),
 			timeoutMillis: config.exportTimeoutMs ?? OtelConfig.DEFAULTS.EXPORT_TIMEOUT_MS,
 		});
 	}

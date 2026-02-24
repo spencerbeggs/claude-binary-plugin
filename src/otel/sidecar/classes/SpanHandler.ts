@@ -65,7 +65,7 @@ export class SpanHandler {
 			data.name,
 			{
 				kind: SPAN_KIND_MAP[data.kind],
-				attributes: data.attributes,
+				...(data.attributes !== undefined && { attributes: data.attributes }),
 				startTime,
 			},
 			// No parent context - spans from hooks are independent
@@ -82,7 +82,7 @@ export class SpanHandler {
 		if (data.status) {
 			span.setStatus({
 				code: STATUS_CODE_MAP[data.status.code],
-				message: data.status.message,
+				...(data.status.message !== undefined && { message: data.status.message }),
 			});
 
 			// Record exception for error status

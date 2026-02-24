@@ -28,12 +28,14 @@ async function fromGitConfig(): Promise<Partial<DetectedDefaults>> {
 		Bun.$`git config --get remote.origin.url`.quiet().text(),
 	]);
 
-	return {
-		name: nameResult.status === "fulfilled" ? nameResult.value.trim() : undefined,
-		email: emailResult.status === "fulfilled" ? emailResult.value.trim() : undefined,
-		githubOwner:
-			remoteResult.status === "fulfilled" ? parseGithubOwner(remoteResult.value.trim()) || undefined : undefined,
-	};
+	const result: Partial<DetectedDefaults> = {};
+	if (nameResult.status === "fulfilled") result.name = nameResult.value.trim();
+	if (emailResult.status === "fulfilled") result.email = emailResult.value.trim();
+	if (remoteResult.status === "fulfilled") {
+		const owner = parseGithubOwner(remoteResult.value.trim());
+		if (owner) result.githubOwner = owner;
+	}
+	return result;
 }
 
 /** Try detecting defaults from the GitHub CLI (`gh`). */
@@ -41,11 +43,11 @@ async function fromGhCli(): Promise<Partial<DetectedDefaults>> {
 	try {
 		const json = await Bun.$`gh api user --jq '{login: .login, name: .name, email: .email}'`.quiet().text();
 		const user = JSON.parse(json.trim()) as { login?: string; name?: string; email?: string };
-		return {
-			name: user.name || undefined,
-			email: user.email || undefined,
-			githubOwner: user.login || undefined,
-		};
+		const result: Partial<DetectedDefaults> = {};
+		if (user.name) result.name = user.name;
+		if (user.email) result.email = user.email;
+		if (user.login) result.githubOwner = user.login;
+		return result;
 	} catch {
 		// gh not installed or not authenticated
 		return {};

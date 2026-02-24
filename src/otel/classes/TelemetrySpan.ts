@@ -142,7 +142,7 @@ export class TelemetrySpan {
 				},
 				status: {
 					code: statusCode,
-					message: errorMessage,
+					...(errorMessage !== undefined && { message: errorMessage }),
 				},
 			};
 
@@ -160,8 +160,10 @@ export class TelemetrySpan {
 				pluginVersion: PluginInfo.get().version,
 				durationMs,
 				success: statusCode === "ok",
-				error: errorMessage,
-				toolName: attributes?.[TelemetryEmitter.ATTRS.TOOL_NAME] as string | undefined,
+				...(errorMessage !== undefined && { error: errorMessage }),
+				...(attributes?.[TelemetryEmitter.ATTRS.TOOL_NAME] !== undefined && {
+					toolName: attributes[TelemetryEmitter.ATTRS.TOOL_NAME] as string,
+				}),
 			});
 		}
 	}

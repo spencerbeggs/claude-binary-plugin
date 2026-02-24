@@ -10,13 +10,13 @@ export type GitProvider = "github" | "gitlab" | "bitbucket" | "unknown";
  */
 export interface GitInfoData {
 	/** Current branch name */
-	branch?: string;
+	branch?: string | undefined;
 	/** Git provider (github, gitlab, bitbucket, unknown) */
-	provider?: GitProvider;
+	provider?: GitProvider | undefined;
 	/** Repository owner/organization */
-	owner?: string;
+	owner?: string | undefined;
 	/** Repository name */
-	repo?: string;
+	repo?: string | undefined;
 }
 
 /**
@@ -58,25 +58,25 @@ export class GitInfo {
 	 * Current branch name.
 	 * @public
 	 */
-	readonly branch?: string;
+	readonly branch?: string | undefined;
 
 	/**
 	 * Git provider (github, gitlab, bitbucket, unknown).
 	 * @public
 	 */
-	readonly provider?: GitProvider;
+	readonly provider?: GitProvider | undefined;
 
 	/**
 	 * Repository owner/organization.
 	 * @public
 	 */
-	readonly owner?: string;
+	readonly owner?: string | undefined;
 
 	/**
 	 * Repository name.
 	 * @public
 	 */
-	readonly repo?: string;
+	readonly repo?: string | undefined;
 
 	/**
 	 * Create a GitInfo instance.

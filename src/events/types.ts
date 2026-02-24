@@ -54,11 +54,11 @@ export interface HookEventBase {
 	/** Unique identifier for the current session (UUID format) */
 	session_id: string;
 	/** Absolute path to the conversation transcript JSON file (optional) */
-	transcript_path?: string;
+	transcript_path?: string | undefined;
 	/** Current working directory (optional) */
-	cwd?: string;
+	cwd?: string | undefined;
 	/** Current permission mode (optional - not present in SessionStart) */
-	permission_mode?: HookPermissionsMode;
+	permission_mode?: HookPermissionsMode | undefined;
 	/** The type of hook event */
 	hook_event_name: HookType;
 }

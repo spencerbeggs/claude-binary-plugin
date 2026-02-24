@@ -8,9 +8,9 @@ export interface PluginInfoData {
 	/** Plugin version (e.g., "1.0.0", "2.3.1") */
 	version: string;
 	/** Optional marketplace name */
-	marketplace?: string;
+	marketplace?: string | undefined;
 	/** Optional marketplace version */
-	marketplaceVersion?: string;
+	marketplaceVersion?: string | undefined;
 }
 
 /**
@@ -87,13 +87,13 @@ export class PluginInfo {
 	 * Optional marketplace name.
 	 * @public
 	 */
-	readonly marketplace?: string;
+	readonly marketplace?: string | undefined;
 
 	/**
 	 * Optional marketplace version.
 	 * @public
 	 */
-	readonly marketplaceVersion?: string;
+	readonly marketplaceVersion?: string | undefined;
 
 	/**
 	 * Internal singleton instance.

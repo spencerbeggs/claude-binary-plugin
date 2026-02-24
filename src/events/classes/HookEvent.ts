@@ -55,17 +55,17 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	/** Unique Claude Code session identifier (UUID format) */
 	session_id: string;
 	/** Absolute path to the conversation transcript file, if available */
-	transcript_path?: string;
+	transcript_path?: string | undefined;
 	/** Current working directory where Claude Code is running */
-	cwd?: string;
+	cwd?: string | undefined;
 	/** Current permission mode setting for the session */
-	permission_mode?: HookPermissionsMode;
+	permission_mode?: HookPermissionsMode | undefined;
 	/** The type of hook event (e.g., "PreToolUse", "SessionStart") */
 	hook_event_name: HookType;
 	/** Debug logger instance for structured logging with timing */
 	readonly log: DebugLogger;
 	/** The loaded plugin state containing options and computed state */
-	readonly state?: TState;
+	readonly state?: TState | undefined;
 
 	/**
 	 * Standard input stream for reading event data.

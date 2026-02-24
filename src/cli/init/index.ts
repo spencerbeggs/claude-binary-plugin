@@ -100,7 +100,7 @@ async function buildConfigFromFlags(
 		skipInstall: boolean;
 	},
 	explicitDir: string | null,
-	overrides?: { author?: string; email?: string; githubOwner?: string; license?: string },
+	overrides?: { author?: string; email?: string; githubOwner?: string; license?: string } | undefined,
 ): Promise<ScaffoldConfig> {
 	const derivedName = explicitDir ? basename(explicitDir) : "my-plugin";
 	const projectName = optionOr(opts.name, derivedName);
@@ -186,12 +186,11 @@ export const initCommand = Command.make(
 			const dirFromArg = opts.directory !== "." ? opts.directory : null;
 			const explicitDir = dirFromFlag ?? dirFromArg;
 
-			const flagOverrides = {
-				author: opts.author._tag === "Some" ? opts.author.value : undefined,
-				email: opts.email._tag === "Some" ? opts.email.value : undefined,
-				githubOwner: opts.githubOwner._tag === "Some" ? opts.githubOwner.value : undefined,
-				license: opts.license._tag === "Some" ? opts.license.value : undefined,
-			};
+			const flagOverrides: { author?: string; email?: string; githubOwner?: string; license?: string } = {};
+			if (opts.author._tag === "Some") flagOverrides.author = opts.author.value;
+			if (opts.email._tag === "Some") flagOverrides.email = opts.email.value;
+			if (opts.githubOwner._tag === "Some") flagOverrides.githubOwner = opts.githubOwner.value;
+			if (opts.license._tag === "Some") flagOverrides.license = opts.license.value;
 
 			if (opts.yes) {
 				// Quick mode: accept all defaults, detect git info

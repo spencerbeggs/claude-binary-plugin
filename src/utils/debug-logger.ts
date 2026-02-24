@@ -16,10 +16,10 @@ export type LogLevel = "debug" | "info" | "warn" | "error" | "diag";
 export interface TimingEntry {
 	label: string;
 	startTime: number;
-	endTime?: number;
-	duration?: number;
+	endTime?: number | undefined;
+	duration?: number | undefined;
 	children: TimingEntry[];
-	parent?: TimingEntry;
+	parent?: TimingEntry | undefined;
 }
 
 /**
@@ -41,15 +41,15 @@ export interface TimerHandle {
  */
 export interface DebugLoggerOptions {
 	/** Prefix for log messages (e.g., "workflow-context", "code-check") */
-	prefix?: string;
+	prefix?: string | undefined;
 	/** Plugin name for per-plugin log files (e.g., "workflow" creates "workflow-debug.log") */
-	pluginName?: string;
+	pluginName?: string | undefined;
 	/** Override the log file path (default: `pluginName-debug.log` in session-env directory) */
-	logPath?: string;
+	logPath?: string | undefined;
 	/** Force enable/disable logging (default: reads from CLAUDE_DEBUG env var) */
-	enabled?: boolean;
+	enabled?: boolean | undefined;
 	/** Session ID for OTEL correlation (enables dual-write to sidecar when OTEL is enabled) */
-	sessionId?: string;
+	sessionId?: string | undefined;
 }
 
 /**

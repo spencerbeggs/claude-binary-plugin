@@ -120,9 +120,9 @@ export interface PreToolUseResponseData {
 	/** Permission decision: allow tool execution, deny with reason, or defer to user */
 	permissionDecision: "allow" | "deny" | "ask";
 	/** Reason for denial (shown to Claude when decision is "deny") */
-	reason?: string;
+	reason?: string | undefined;
 	/** Modified tool input to use instead of original (allows input transformation) */
-	updatedInput?: Record<string, unknown>;
+	updatedInput?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -179,11 +179,11 @@ export interface PermissionRequestResponseData {
 	/** Auto-allow or auto-deny the permission request */
 	behavior: "allow" | "deny";
 	/** Message to display explaining the permission decision */
-	message?: string;
+	message?: string | undefined;
 	/** Whether to interrupt the current operation when denying */
-	interrupt?: boolean;
+	interrupt?: boolean | undefined;
 	/** Modified input to use if allowing with changes */
-	updatedInput?: Record<string, unknown>;
+	updatedInput?: Record<string, unknown> | undefined;
 }
 
 // =============================================================================
@@ -204,9 +204,9 @@ interface PersistSessionEnvOptions {
 	/** Plugin environment instance for accessing prefix and persisting variables */
 	stateInstance: PluginEnv<unknown>;
 	/** Zod schema for validating and transforming options before persistence */
-	schema?: z.ZodType<unknown>;
+	schema?: z.ZodType<unknown> | undefined;
 	/** Computed state from setup() function (will be JSON-stringified and base64-encoded) */
-	state?: Record<string, unknown>;
+	state?: Record<string, unknown> | undefined;
 	/** Base state containing projectDir, pluginDir, and pluginEnvFile paths */
 	baseState: BaseState;
 }

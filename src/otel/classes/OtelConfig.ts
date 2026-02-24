@@ -7,21 +7,21 @@ import { Platform } from "./Platform.js";
  */
 export interface OtelConfigData {
 	/** OTLP endpoint URL */
-	endpoint?: string;
+	endpoint?: string | undefined;
 	/** Protocol to use (http or grpc) */
-	protocol?: "http" | "grpc";
+	protocol?: "http" | "grpc" | undefined;
 	/** Service name for OTEL resource */
-	serviceName?: string;
+	serviceName?: string | undefined;
 	/** Plugin name for resource attributes */
-	pluginName?: string;
+	pluginName?: string | undefined;
 	/** Marketplace name */
-	marketplaceName?: string;
+	marketplaceName?: string | undefined;
 	/** Additional resource attributes */
-	resourceAttributes?: Record<string, string | number | boolean>;
+	resourceAttributes?: Record<string, string | number | boolean> | undefined;
 	/** Headers for OTLP requests */
-	headers?: Record<string, string>;
+	headers?: Record<string, string> | undefined;
 	/** Export timeout in milliseconds */
-	exportTimeoutMs?: number;
+	exportTimeoutMs?: number | undefined;
 }
 
 /**
@@ -99,49 +99,49 @@ export class OtelConfig {
 	 * OTLP endpoint URL.
 	 * @public
 	 */
-	readonly endpoint?: string;
+	readonly endpoint?: string | undefined;
 
 	/**
 	 * Protocol to use for export (http or grpc).
 	 * @public
 	 */
-	readonly protocol?: "http" | "grpc";
+	readonly protocol?: "http" | "grpc" | undefined;
 
 	/**
 	 * Service name for OTEL resource.
 	 * @public
 	 */
-	readonly serviceName?: string;
+	readonly serviceName?: string | undefined;
 
 	/**
 	 * Plugin name for resource attributes.
 	 * @public
 	 */
-	readonly pluginName?: string;
+	readonly pluginName?: string | undefined;
 
 	/**
 	 * Marketplace name.
 	 * @public
 	 */
-	readonly marketplaceName?: string;
+	readonly marketplaceName?: string | undefined;
 
 	/**
 	 * Additional resource attributes.
 	 * @public
 	 */
-	readonly resourceAttributes?: Record<string, string | number | boolean>;
+	readonly resourceAttributes?: Record<string, string | number | boolean> | undefined;
 
 	/**
 	 * Headers for OTLP requests.
 	 * @public
 	 */
-	readonly headers?: Record<string, string>;
+	readonly headers?: Record<string, string> | undefined;
 
 	/**
 	 * Export timeout in milliseconds.
 	 * @public
 	 */
-	readonly exportTimeoutMs?: number;
+	readonly exportTimeoutMs?: number | undefined;
 
 	/**
 	 * Create an OtelConfig instance.

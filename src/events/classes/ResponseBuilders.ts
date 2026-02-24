@@ -145,14 +145,14 @@ export class HookResponse {
 	 * Get telemetry-relevant data from the response.
 	 */
 	getTelemetryData(): {
-		permissionDecision?: "allow" | "deny" | "ask";
-		permissionDecisionReason?: string;
-		hasUpdatedInput?: boolean;
-		decision?: "block";
-		reason?: string;
-		outcome?: HookOutcome;
-		metrics?: HookMetrics;
-		context?: Record<string, string | number | boolean>;
+		permissionDecision?: "allow" | "deny" | "ask" | undefined;
+		permissionDecisionReason?: string | undefined;
+		hasUpdatedInput?: boolean | undefined;
+		decision?: "block" | undefined;
+		reason?: string | undefined;
+		outcome?: HookOutcome | undefined;
+		metrics?: HookMetrics | undefined;
+		context?: Record<string, string | number | boolean> | undefined;
 	} {
 		const hookOutput = this.response.hookSpecificOutput as Record<string, unknown> | undefined;
 
