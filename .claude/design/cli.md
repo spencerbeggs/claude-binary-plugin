@@ -86,7 +86,7 @@ boilerplate needed to build and distribute a Claude Code plugin.
 
 **Interactive (default)** - When invoked without flags (or with only
 a target directory), the command launches an interactive wizard using
-`@clack/prompts` that walks through project configuration
+React Ink (`@inkjs/ui`) that walks through project configuration
 step-by-step.
 
 **Programmatic** - All options can be passed as CLI flags. When all
@@ -108,15 +108,19 @@ required options are provided, the wizard is bypassed entirely. Use
 | `--prefix` | `string` | Env var prefix (SCREAMING_SNAKE) |
 | `--description` | `string` | Plugin description |
 | `--hooks` | `string[]` | Hook types to include |
-| `--commands` | `boolean` | Include example command |
+| `--skip-commands` | `boolean` | Skip example command generation |
 | `--otel` | `boolean` | Include OTEL telemetry setup |
-| `--git` | `boolean` | Initialize git repository |
-| `--install` | `boolean` | Run `bun install` after scaffold |
+| `--skip-lint-staged` | `boolean` | Skip @savvy-web/lint-staged |
+| `--skip-commitlint` | `boolean` | Skip @savvy-web/commitlint |
+| `--skip-changesets` | `boolean` | Skip @savvy-web/changesets |
+| `--skip-git` | `boolean` | Skip git repository initialization |
+| `--skip-install` | `boolean` | Skip `bun install` after scaffold |
 | `--yes`/`-y` | `boolean` | Accept all defaults |
 
 **Defaults:** `--hooks` defaults to `SessionStart,PreToolUse`.
-`--commands`, `--git`, and `--install` default to `true`.
-`--otel` defaults to `false`. `--name` derives from directory.
+Commands, git, and install are included by default (use `--skip-*`
+flags to disable). `--otel` defaults to `false`. `--name` derives
+from directory.
 
 #### Init Exit Codes
 
@@ -139,7 +143,6 @@ claude-binary-plugin init my-plugin \
   --type=plugin \
   --prefix=MY_PLUGIN \
   --hooks=SessionStart,PreToolUse,PostToolUse \
-  --commands \
   --otel
 
 # Marketplace scaffold
@@ -333,9 +336,10 @@ in `src/build/builder.ts`. The `init` subcommand is implemented in
 | File | Purpose |
 | ---- | ------- |
 | `src/cli/init/index.ts` | Command definition (`@effect/cli`) |
-| `src/cli/init/wizard.ts` | Interactive wizard (`@clack/prompts`) |
+| `src/cli/init/ink/` | Interactive wizard (React Ink) |
 | `src/cli/init/scaffold.ts` | Template engine (file generation) |
 | `src/cli/init/templates/` | Template generators per project type |
+| `src/cli/init/detect-defaults.ts` | Git/GitHub default detection |
 
 The package version is resolved via `src/cli/macros.ts`, which imports
 `package.json` at bundle time.

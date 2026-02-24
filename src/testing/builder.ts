@@ -1,4 +1,5 @@
 import { mock, spyOn } from "bun:test";
+import { rmSync } from "node:fs";
 import type { PartialDeep } from "type-fest";
 import type { z } from "zod";
 import type { ShellResult } from "../build/builder.js";
@@ -1655,9 +1656,7 @@ export class PluginTester<
 		// Clean up temp project directory
 		if (this.state.tempProjectDir) {
 			try {
-				// Use synchronous fs for cleanup in dispose()
-				const fs = require("node:fs");
-				fs.rmSync(this.state.tempProjectDir, { recursive: true, force: true });
+				rmSync(this.state.tempProjectDir, { recursive: true, force: true });
 			} catch {
 				// Ignore cleanup errors
 			}

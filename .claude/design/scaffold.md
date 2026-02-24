@@ -26,16 +26,19 @@ mode** where all options are passed as CLI flags for scripting and CI.
 │  Interactive Mode (default)                                    │
 │       │                                                        │
 │       ▼                                                        │
-│  @clack/prompts wizard                                         │
+│  React Ink wizard (ink + @inkjs/ui)                              │
 │       │                                                        │
 │       ├── Project name                                         │
+│       ├── Output directory                                     │
 │       ├── Project type (plugin / marketplace)                  │
-│       ├── Plugin prefix                                        │
+│       ├── Env var prefix                                       │
 │       ├── Description                                          │
+│       ├── Author (name + email, git-detected defaults)         │
+│       ├── GitHub owner (git/gh-detected default)               │
+│       ├── License (SPDX identifier)                            │
 │       ├── Hook selection                                       │
-│       ├── Include commands?                                    │
-│       ├── Include OTEL?                                        │
-│       └── Confirm + scaffold                                   │
+│       ├── Features (commands, OTEL, lint-staged, etc.)         │
+│       └── Summary + confirm → scaffold                         │
 │                                                                │
 │  Programmatic Mode (--name, --type, etc.)                      │
 │       │                                                        │
@@ -83,7 +86,7 @@ claude-binary-plugin init [directory]
 ```
 
 When invoked without flags (or with only a target directory), the
-command launches an interactive wizard using `@clack/prompts`.
+command launches an interactive wizard using React Ink (`@inkjs/ui`).
 
 ### Programmatic Mode
 
@@ -109,15 +112,19 @@ If all required options are provided, the wizard is bypassed entirely.
 | `--prefix` | `string` | Env var prefix (SCREAMING_SNAKE) |
 | `--description` | `string` | Plugin description |
 | `--hooks` | `string[]` | Hook types to include |
-| `--commands` | `boolean` | Include example command |
+| `--skip-commands` | `boolean` | Skip example command generation |
 | `--otel` | `boolean` | Include OTEL telemetry setup |
-| `--git` | `boolean` | Initialize git repository |
-| `--install` | `boolean` | Run `bun install` after scaffold |
+| `--skip-lint-staged` | `boolean` | Skip @savvy-web/lint-staged |
+| `--skip-commitlint` | `boolean` | Skip @savvy-web/commitlint |
+| `--skip-changesets` | `boolean` | Skip @savvy-web/changesets |
+| `--skip-git` | `boolean` | Skip git repository initialization |
+| `--skip-install` | `boolean` | Skip `bun install` after scaffold |
 | `--yes` | `boolean` | Accept all defaults (skip wizard) |
 
 **Defaults:** `--name` derives from directory, `--hooks` defaults
-to `["SessionStart", "PreToolUse"]`, `--commands` and `--git` and
-`--install` default to `true`, `--otel` defaults to `false`.
+to `["SessionStart", "PreToolUse"]`. Commands, git, and install are
+included by default (use `--skip-*` flags to disable). `--otel`
+defaults to `false`.
 
 ### Exit Codes
 
@@ -141,7 +148,6 @@ claude-binary-plugin init my-plugin \
   --prefix=MY_PLUGIN \
   --description="Security and workflow hooks" \
   --hooks=SessionStart,PreToolUse,PostToolUse \
-  --commands \
   --otel
 
 # Marketplace scaffold
@@ -150,86 +156,68 @@ claude-binary-plugin init my-marketplace --type=marketplace
 
 ## Interactive Flow
 
-The interactive wizard uses `@clack/prompts` for a polished CLI
-experience. The flow adapts based on the selected project type.
+The interactive wizard uses React Ink (`ink` + `@inkjs/ui`) for a
+rich terminal UI rendered as React components. The flow proceeds
+through a fixed sequence of steps, with completed steps displayed
+as a summary above the active step. The flow adapts based on the
+selected project type.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  $ claude-binary-plugin init                                     │
 │                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Claude Binary Plugin - Project Scaffolder               │   │
-│  │                                                          │   │
-│  │  Create a new Claude Code plugin project with            │   │
-│  │  hooks, commands, and cross-platform distribution.       │   │
-│  └──────────────────────────────────────────────────────────┘   │
+│  ╔═══════════════════════════════╗                               │
+│  ║  Claude Plugin  (ink-big-text) ║                               │
+│  ╚═══════════════════════════════╝                               │
+│  Create a new Claude Code plugin project                         │
 │                                                                  │
-│  ◆ What is your project name?                                    │
-│  │ my-plugin                                                     │
-│  └                                                               │
+│  ✔ Name: my-plugin                                               │
+│  ✔ Directory: my-plugin                                          │
+│  ✔ Type: Single Plugin                                           │
+│  ✔ Prefix: MY_PLUGIN                                             │
+│  ✔ Description: Security and workflow hooks                      │
+│  ✔ Author: Jane Doe <jane@example.com>                           │
+│  ✔ GitHub: jdoe                                                  │
+│  ✔ License: MIT                                                  │
+│  ✔ Hooks: SessionStart, PreToolUse                               │
+│  ✔ Features: commands, lint-staged, commitlint, changesets       │
 │                                                                  │
-│  ◆ What type of project?                                         │
-│  │ ○ Single Plugin - One plugin with hooks and commands          │
-│  │ ● Marketplace   - Multiple plugins in a monorepo             │
-│  └                                                               │
+│  ── Summary ──────────────────────────────────────               │
+│  Name:      my-plugin                                            │
+│  Directory: my-plugin                                            │
+│  Type:      Single Plugin                                        │
+│  Prefix:    MY_PLUGIN                                            │
+│  ...                                                             │
+│  [Confirm]                                                       │
 │                                                                  │
-│  ◆ Environment variable prefix?                                  │
-│  │ MY_PLUGIN  (derived from name, editable)                      │
-│  └                                                               │
-│                                                                  │
-│  ◆ Short description?                                            │
-│  │ Security and workflow hooks for Claude Code                   │
-│  └                                                               │
-│                                                                  │
-│  ◆ Which hooks do you want to include?                           │
-│  │ ◻ SessionStart (recommended)                                  │
-│  │ ◼ PreToolUse                                                  │
-│  │ ◻ PostToolUse                                                 │
-│  │ ◻ Stop                                                        │
-│  │ ◻ UserPromptSubmit                                            │
-│  │ ◻ Notification                                                │
-│  └                                                               │
-│                                                                  │
-│  ◆ Include an example command?                                   │
-│  │ Yes                                                           │
-│  └                                                               │
-│                                                                  │
-│  ◆ Include OTEL telemetry?                                       │
-│  │ No                                                            │
-│  └                                                               │
-│                                                                  │
-│  ◆ Ready to scaffold?                                            │
-│  │                                                               │
-│  │  Name:     my-plugin                                          │
-│  │  Type:     Single Plugin                                      │
-│  │  Prefix:   MY_PLUGIN                                          │
-│  │  Hooks:    SessionStart, PreToolUse                           │
-│  │  Commands: Yes                                                │
-│  │  OTEL:     No                                                 │
-│  │                                                               │
-│  │ Yes                                                           │
-│  └                                                               │
-│                                                                  │
-│  ◇ Creating project structure...                                 │
-│  ◇ Writing plugin configuration...                               │
-│  ◇ Generating hook handlers...                                   │
-│  ◇ Generating command handler...                                 │
-│  ◇ Writing package.json...                                       │
-│  ◇ Running bun install...                                        │
-│  ◇ Initializing git repository...                                │
-│  ◇ Running initial build...                                      │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Project scaffolded successfully!                        │   │
-│  │                                                          │   │
-│  │  cd my-plugin                                            │   │
-│  │  claude-binary-plugin build                              │   │
-│  │                                                          │   │
-│  │  See CLAUDE.md for development instructions.             │   │
-│  └──────────────────────────────────────────────────────────┘   │
+│  ✔ Creating project structure                                    │
+│  ● Installing dependencies                                      │
+│  ○ Initializing git repository                                   │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### Step Sequence
+
+The wizard proceeds through the following steps in order:
+
+| Step | Component | Description |
+| ---- | --------- | ----------- |
+| Name | `NameStep` | Project name (kebab-case, validated) |
+| Directory | `DirectoryStep` | Output directory (defaults to name) |
+| Type | `TypeStep` | Plugin or Marketplace |
+| Prefix | `PrefixStep` | Env var prefix (derived from name, editable) |
+| Description | `DescriptionStep` | Short plugin description |
+| Author | `AuthorStep` | Author name + email (git config defaults) |
+| GitHub Owner | `GithubOwnerStep` | GitHub user/org (git remote/gh CLI defaults) |
+| License | `LicenseStep` | SPDX license identifier (default: MIT) |
+| Hooks | `HooksStep` | Multi-select hook types to include |
+| Features | `FeaturesStep` | Toggles for commands, OTEL, lint-staged, commitlint, changesets |
+| Summary | `SummaryStep` | Review all selections, confirm to scaffold |
+| Scaffold | `ScaffoldProgress` | Phase-by-phase progress with spinners |
+
+Completed steps are rendered above the active step using the
+`CompletedStep` component (green checkmark + label + value).
 
 ### SessionStart Enforcement
 
@@ -245,14 +233,10 @@ SessionStart, it is silently re-added with a note:
 
 ### Cancel Handling
 
-All prompts check for cancellation via `@clack/prompts`' `isCancel()`.
-If the user presses Ctrl+C at any point:
-
-```text
-◇ Scaffold cancelled.
-```
-
-Exit code 1.
+Pressing Ctrl+C at any point unmounts the Ink component tree. The
+`render()` instance's `waitUntilExit()` promise resolves, and the
+process exits cleanly. No explicit cancel handling is needed in
+individual step components since Ink handles SIGINT natively.
 
 ## Single Plugin Template
 
@@ -962,8 +946,30 @@ src/
 │   ├── macros.ts              # Existing — package version resolution
 │   └── init/
 │       ├── index.ts           # Init command definition (@effect/cli)
-│       ├── wizard.ts          # Interactive wizard (@clack/prompts)
+│       ├── detect-defaults.ts # Git/GitHub default detection (name, email, owner)
 │       ├── scaffold.ts        # Template engine (file generation)
+│       ├── ink/               # React Ink interactive wizard
+│       │   ├── App.tsx        # Main wizard component (step state machine)
+│       │   ├── run.tsx        # Render entry point (ink render + waitUntilExit)
+│       │   ├── types.ts       # WizardStep enum, WizardState, STEP_ORDER
+│       │   ├── theme.ts       # @inkjs/ui theme configuration
+│       │   ├── Header.tsx     # ink-big-text header banner
+│       │   ├── CompletedStep.tsx  # Green checkmark summary for finished steps
+│       │   ├── ScaffoldProgress.tsx # Phase progress with spinners
+│       │   ├── hooks/
+│       │   │   └── useGitDefaults.ts  # React hook for async git detection
+│       │   └── steps/         # Individual wizard step components
+│       │       ├── NameStep.tsx
+│       │       ├── DirectoryStep.tsx
+│       │       ├── TypeStep.tsx
+│       │       ├── PrefixStep.tsx
+│       │       ├── DescriptionStep.tsx
+│       │       ├── AuthorStep.tsx
+│       │       ├── GithubOwnerStep.tsx
+│       │       ├── LicenseStep.tsx
+│       │       ├── HooksStep.tsx
+│       │       ├── FeaturesStep.tsx
+│       │       └── SummaryStep.tsx
 │       └── templates/
 │           ├── shared.ts      # Shared template helpers
 │           ├── plugin.ts      # Single plugin templates
@@ -976,16 +982,17 @@ src/
 
 The `@effect/cli` command definition. Parses CLI arguments, determines
 whether to run the interactive wizard or programmatic mode, then
-delegates to the scaffold engine:
+delegates to the scaffold engine. The Ink wizard is dynamically imported
+only when interactive mode is needed, keeping `ink` and `react` out
+of the bundle for non-interactive paths:
 
 ```typescript
 import { Args, Command, Options } from "@effect/cli";
 import { Effect } from "effect";
-import { runWizard } from "./wizard.js";
 import { scaffold } from "./scaffold.js";
 
 // CLI argument/option definitions
-const directory = Args.directory({ name: "directory" }).pipe(
+const directory = Args.text({ name: "directory" }).pipe(
   Args.withDefault("."),
 );
 
@@ -999,76 +1006,95 @@ const type = Options.choice("type", ["plugin", "marketplace"]).pipe(
   Options.withDescription("Project type"),
 );
 
-// ... other options
+// ... other options (--skip-commands, --otel, --skip-git, etc.)
 
 export const initCommand = Command.make(
   "init",
-  { directory, name, type, /* ... */ },
+  { directory, name, type, /* ... */ yes, dir, author, email, githubOwner, license },
   (opts) => Effect.gen(function* () {
-    // If all required options present → programmatic mode
-    // Otherwise → interactive wizard
-    const config = opts.name && opts.type
-      ? buildConfigFromFlags(opts)
-      : yield* Effect.promise(() => runWizard(opts));
+    // Quick mode: --yes flag accepts all defaults
+    if (opts.yes) {
+      const config = yield* Effect.promise(() => buildConfigFromFlags(opts, explicitDir));
+      yield* Effect.promise(() => scaffold(config));
+      return;
+    }
 
-    yield* Effect.promise(() => scaffold(config));
+    // Programmatic mode: enough flags provided to skip wizard
+    if (opts.name._tag === "Some" && opts.type._tag === "Some") {
+      const config = yield* Effect.promise(() => buildConfigFromFlags(opts, explicitDir));
+      yield* Effect.promise(() => scaffold(config));
+      return;
+    }
+
+    // Interactive mode: launch React Ink wizard
+    yield* Effect.promise(async () => {
+      const { runInkWizard } = await import("./ink/run.js");
+      await runInkWizard(defaults);
+    });
   }),
 );
 ```
 
-#### src/cli/init/wizard.ts
+#### src/cli/init/ink/ (React Ink Wizard)
 
-The interactive wizard using `@clack/prompts`. Each prompt maps to a
-configuration option:
+The interactive wizard is implemented as a React Ink application. The
+`App` component manages a step-based state machine where each step is
+a dedicated React component in `steps/`.
+
+**Entry point (`ink/run.tsx`):**
 
 ```typescript
-import * as p from "@clack/prompts";
+import { render } from "ink";
+import type { ScaffoldConfig } from "../scaffold.js";
+import { App } from "./App.js";
 
-export interface ScaffoldConfig {
-  directory: string;
-  name: string;
-  type: "plugin" | "marketplace";
-  prefix: string;
-  description: string;
-  hooks: string[];
-  includeCommands: boolean;
-  includeOtel: boolean;
-  initGit: boolean;
-  runInstall: boolean;
-}
-
-export async function runWizard(
-  defaults: Partial<ScaffoldConfig>,
-): Promise<ScaffoldConfig> {
-  p.intro("Claude Binary Plugin - Project Scaffolder");
-
-  const config = await p.group({
-    name: () => p.text({
-      message: "What is your project name?",
-      initialValue: defaults.name ?? "",
-      validate: (v) => {
-        if (!v) return "Name is required";
-        if (!/^[a-z][a-z0-9-]*$/.test(v)) return "Must be kebab-case";
-      },
-    }),
-    type: () => p.select({
-      message: "What type of project?",
-      options: [
-        { value: "plugin", label: "Single Plugin" },
-        { value: "marketplace", label: "Marketplace" },
-      ],
-    }),
-    // ... remaining prompts
-  }, {
-    onCancel: () => {
-      p.cancel("Scaffold cancelled.");
-      process.exit(1);
-    },
+export async function runInkWizard(defaults: Partial<ScaffoldConfig>): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const instance = render(
+      <App defaults={defaults} onComplete={() => instance.unmount()} />,
+    );
+    instance.waitUntilExit().then(resolve);
   });
-
-  return { ...defaults, ...config } as ScaffoldConfig;
 }
 ```
+
+**Main component (`ink/App.tsx`):**
+
+The `App` component tracks wizard state via `useState` and advances
+through steps defined in `STEP_ORDER`. Completed steps are displayed
+above the active step as a summary. When the user confirms at the
+`SummaryStep`, scaffolding begins with phase-by-phase progress shown
+via `ScaffoldProgress`.
+
+Key implementation details:
+
+- `WizardStep` enum and `STEP_ORDER` array define the step sequence
+- `WizardState` interface holds all collected values
+- `useGitDefaults()` hook asynchronously detects git config and
+  `gh` CLI defaults for author name, email, and GitHub owner
+- `CompletedStep` renders a green checkmark with label and value
+- `ScaffoldProgress` shows spinner/checkmark per build phase
+- The `scaffold()` function accepts a progress callback that the
+  App uses to update phase status in real time
+
+**Step components (`ink/steps/`):**
+
+Each step is a focused React component that renders its prompt and
+calls `onSubmit(value)` when the user confirms their input:
+
+| Component | Input Type | Notes |
+| --------- | ---------- | ----- |
+| `NameStep` | Text input | Validates kebab-case |
+| `DirectoryStep` | Text input | Defaults to project name |
+| `TypeStep` | Select | Plugin or Marketplace |
+| `PrefixStep` | Text input | Auto-derived from name |
+| `DescriptionStep` | Text input | Optional |
+| `AuthorStep` | Two text inputs | Name + email, git defaults |
+| `GithubOwnerStep` | Text input | git remote / gh CLI default |
+| `LicenseStep` | Select | SPDX identifiers |
+| `HooksStep` | Multi-select | Checkboxes for hook types |
+| `FeaturesStep` | Multi-toggle | Commands, OTEL, tooling |
+| `SummaryStep` | Confirm | Full review before scaffold |
 
 #### src/cli/init/scaffold.ts
 
@@ -1077,7 +1103,6 @@ The template engine that creates directories and writes files:
 ```typescript
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import type { ScaffoldConfig } from "./wizard.js";
 import { generatePluginProject } from "./templates/plugin.js";
 import { generateMarketplaceProject } from "./templates/marketplace.js";
 
@@ -1166,21 +1191,26 @@ const rootCommand = Command.make("claude-binary-plugin", {}, () =>
 ).pipe(Command.withSubcommands([buildCommand, initCommand]));
 ```
 
-### Dependency: @clack/prompts
+### Dependencies: React Ink
 
-Add `@clack/prompts` as a regular dependency (not devDependency) since
-the CLI binary ships with the SDK:
+The interactive wizard uses React Ink for terminal rendering. These
+are regular dependencies (not devDependencies) since the CLI binary
+ships with the SDK:
 
 ```json
 {
   "dependencies": {
-    "@clack/prompts": "^0.10.0"
+    "ink": "^5.2.0",
+    "@inkjs/ui": "^2.0.0",
+    "react": "^18.3.0",
+    "ink-big-text": "^2.0.0"
   }
 }
 ```
 
-The `@clack/prompts` package is small (~15KB) and has zero dependencies,
-making it suitable for inclusion in the CLI binary.
+The Ink wizard is dynamically imported (`import("./ink/run.js")`) only
+when interactive mode is needed. This keeps `ink`, `react`, and related
+dependencies out of the bundle for programmatic and `--yes` mode paths.
 
 ## Name Derivation
 
