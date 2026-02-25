@@ -1,15 +1,3 @@
-/**
- * Tests for SidecarClientPool.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - SidecarClientPool.get() client creation
- * - SidecarClientPool.get() client caching
- * - SidecarClientPool.remove() client removal
- * - SidecarClientPool.clearAll() cache clearing
- * - Client lifecycle management
- */
-
 import { describe, expect, test } from "bun:test";
 import { SidecarClientPool } from "./SidecarClientPool.js";
 

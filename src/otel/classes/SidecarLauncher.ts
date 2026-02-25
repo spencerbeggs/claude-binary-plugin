@@ -1,29 +1,7 @@
-/**
- * Sidecar process spawning utilities.
- *
- * @remarks
- * Handles spawning the OTEL sidecar as a detached background process.
- * The sidecar runs independently and auto-terminates after idle timeout.
- *
- * @example
- * ```typescript
- * import { SidecarLauncher, OTELConfig } from "claude-binary-plugin";
- *
- * const config = OTELConfig.fromEnv();
- * const result = await SidecarLauncher.spawn(sessionId, config);
- *
- * if (result.success) {
- *   console.log(`Sidecar listening on: ${result.socketPath}`);
- * }
- * ```
- *
- * @public
- */
-
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { ENV_VARS } from "../constants.js";
-import type { OTELConfigData } from "./OTELConfig.js";
+import type { OtelConfigData } from "./OtelConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { Platform } from "./Platform.js";
 import { PluginInfo } from "./PluginInfo.js";
 import { SessionEnv } from "./SessionEnv.js";
@@ -90,7 +68,7 @@ export class SidecarLauncher {
 	 *
 	 * @public
 	 */
-	static async spawn(sessionId: string, config: OTELConfigData): Promise<SpawnResult> {
+	static async spawn(sessionId: string, config: OtelConfigData): Promise<SpawnResult> {
 		// Find the plugin binary (sidecar is now part of the unified binary)
 		const pluginPath = SidecarLauncher.getBinaryPath();
 		if (!pluginPath) {
@@ -182,33 +160,33 @@ export class SidecarLauncher {
 	private static buildSidecarEnv(
 		sessionId: string,
 		socketPath: string,
-		config: OTELConfigData,
+		config: OtelConfigData,
 	): Record<string, string | undefined> {
 		const env: Record<string, string | undefined> = {
 			// Inherit current environment
 			...process.env,
 			// Sidecar-specific vars
-			[ENV_VARS.OTEL_SIDECAR_SOCKET]: socketPath,
-			[ENV_VARS.OTEL_SIDECAR_SESSION_ID]: sessionId,
-			[ENV_VARS.OTEL_SIDECAR_IDLE_TIMEOUT_MS]: String(SessionEnv.getIdleTimeout()),
+			[OtelConfig.ENV_VARS.OTEL_SIDECAR_SOCKET]: socketPath,
+			[OtelConfig.ENV_VARS.OTEL_SIDECAR_SESSION_ID]: sessionId,
+			[OtelConfig.ENV_VARS.OTEL_SIDECAR_IDLE_TIMEOUT_MS]: String(SessionEnv.getIdleTimeout()),
 		};
 
 		// Pass OTEL config as env vars
 		if (config.endpoint) {
-			env[ENV_VARS.OTEL_EXPORTER_ENDPOINT] = config.endpoint;
+			env[OtelConfig.ENV_VARS.OTEL_EXPORTER_ENDPOINT] = config.endpoint;
 		}
 		if (config.protocol) {
-			env[ENV_VARS.OTEL_EXPORTER_PROTOCOL] = config.protocol;
+			env[OtelConfig.ENV_VARS.OTEL_EXPORTER_PROTOCOL] = config.protocol;
 		}
 		if (config.serviceName) {
-			env[ENV_VARS.OTEL_SERVICE_NAME] = config.serviceName;
+			env[OtelConfig.ENV_VARS.OTEL_SERVICE_NAME] = config.serviceName;
 		}
 		if (config.headers) {
 			// Convert headers object to comma-separated string
 			const headerStr = Object.entries(config.headers)
 				.map(([k, v]) => `${k}=${v}`)
 				.join(",");
-			env[ENV_VARS.OTEL_EXPORTER_HEADERS] = headerStr;
+			env[OtelConfig.ENV_VARS.OTEL_EXPORTER_HEADERS] = headerStr;
 		}
 
 		return env;

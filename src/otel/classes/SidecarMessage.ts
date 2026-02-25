@@ -1,28 +1,3 @@
-/**
- * IPC message serialization for OTEL sidecar communication.
- *
- * @remarks
- * Messages are sent as JSON Lines (newline-delimited JSON) over Unix sockets.
- * This format is simple, debuggable, and efficient for the expected message sizes.
- *
- * @example
- * ```typescript
- * import { SidecarMessage } from "claude-binary-plugin";
- *
- * // Serialize a message
- * const serialized = SidecarMessage.serialize({
- *   type: "ping",
- *   sessionId: "abc-123",
- *   config: { endpoint: "http://localhost:4318" }
- * });
- *
- * // Parse a message
- * const parsed = SidecarMessage.parse(line);
- * ```
- *
- * @public
- */
-
 import type { SidecarProtocolMessage } from "../protocol.js";
 
 /**

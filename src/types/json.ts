@@ -1,42 +1,3 @@
-/**
- * JSON type utilities for type-safe serialization.
- *
- * @remarks
- * This module re-exports JSON types from type-fest and provides additional
- * utilities for working with JSON data in the plugin system. These types
- * are more precise than `Record<string, unknown>` for data that must be
- * JSON-serializable.
- *
- * **Why these types matter:**
- *
- * Claude Code communicates with plugins via JSON over stdin/stdout. Using
- * proper JSON types ensures:
- *
- * 1. **Type safety** - Prevents passing non-JSON values (functions, symbols, etc.)
- * 2. **Serialization safety** - Values are guaranteed to survive JSON.stringify/parse
- * 3. **Documentation** - Makes the JSON contract explicit in the type system
- *
- * @example
- * ```typescript
- * import type { JsonObject, JsonValue } from "claude-binary-plugin";
- *
- * // Tool inputs are always JSON objects
- * function processToolInput(input: JsonObject): void {
- *   // input["command"] is JsonValue, not unknown
- * }
- *
- * // For arbitrary JSON values
- * function processAny(value: JsonValue): void {
- *   if (typeof value === "string") {
- *     // Narrowed to string
- *   }
- * }
- * ```
- *
- * @see {@link https://github.com/sindresorhus/type-fest | type-fest}
- * @module
- */
-
 // Re-export core JSON types from type-fest
 export type {
 	/**
@@ -162,7 +123,7 @@ export type JsonObjectWith<K extends string> = {
  *
  * @public
  */
-export type OTELAttributeValue = string | number | boolean;
+export type OtelAttributeValue = string | number | boolean;
 
 /**
  * OTEL attribute map.
@@ -173,7 +134,7 @@ export type OTELAttributeValue = string | number | boolean;
  *
  * @public
  */
-export type OTELAttributes = Record<string, OTELAttributeValue>;
+export type OtelAttributes = Record<string, OtelAttributeValue>;
 
 /**
  * OTEL headers map (string values only).
@@ -183,10 +144,10 @@ export type OTELAttributes = Record<string, OTELAttributeValue>;
  *
  * @public
  */
-export type OTELHeaders = Record<string, string>;
+export type OtelHeaders = Record<string, string>;
 
 // =============================================================================
-// ZOD SCHEMAS FOR JSON TYPES
+// ZOD SCHEMAS FOR JSON TYPES (INTERNAL)
 // =============================================================================
 
 import { z } from "zod";
@@ -198,8 +159,7 @@ import { z } from "zod";
  * Matches: `string`, `number`, `boolean`, `null`.
  * Does not match: `undefined`, `bigint`, `symbol`, `function`.
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
@@ -211,8 +171,7 @@ export const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(),
  * lazy evaluation to handle recursive structures (arrays and objects
  * containing other JSON values).
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonValueSchema: z.ZodType<import("type-fest").JsonValue> = z.lazy(() =>
 	z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), z.record(z.string(), JsonValueSchema)]),
@@ -222,11 +181,10 @@ export const JsonValueSchema: z.ZodType<import("type-fest").JsonValue> = z.lazy(
  * Zod schema for JSON objects.
  *
  * @remarks
- * A JSON object has string keys and JsonValue values. Use this for
+ * A JSON object has string keys and JsonValue values. Used internally for
  * `tool_input` and `tool_response` fields which are always JSON objects.
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonObjectSchema: z.ZodType<import("type-fest").JsonObject> = z.record(z.string(), JsonValueSchema);
 
@@ -236,7 +194,6 @@ export const JsonObjectSchema: z.ZodType<import("type-fest").JsonObject> = z.rec
  * @remarks
  * A JSON array contains only JsonValue elements.
  *
- * @schema
- * @public
+ * @internal
  */
 export const JsonArraySchema: z.ZodType<import("type-fest").JsonArray> = z.array(JsonValueSchema);

@@ -39,10 +39,12 @@
  *
  * @see {@link PluginManifest} - Plugin manifest configuration
  * @see {@link BuildPluginOptions} - Build configuration options
- * @module
  */
-import { relative, resolve } from "node:path";
+import { mkdir, rm } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 import type { PassthroughHookEntry } from "../pipeline/config.js";
+import type { GenerateProxyScriptOptions } from "./proxy-template.js";
+import { generateProxyScript } from "./proxy-template.js";
 
 /**
  * Result of a shell command execution.
@@ -119,11 +121,11 @@ export interface PipelineHookEntry {
 	/** Whether this is a pipeline (true) or raw handler (false) */
 	isPipeline: boolean;
 	/** Tool filter for PreToolUse/PostToolUse */
-	tools?: string[];
+	tools?: string[] | undefined;
 	/** Description for help text */
-	description?: string;
+	description?: string | undefined;
 	/** File path for file-based hooks (resolved via import.meta.resolve) */
-	filePath?: string;
+	filePath?: string | undefined;
 }
 
 /**
@@ -134,7 +136,7 @@ export interface PipelineCommandEntry {
 	/** Command name for CLI routing */
 	name: string;
 	/** Description for help text */
-	description?: string;
+	description?: string | undefined;
 	/** File path for the command handler (resolved via import.meta.resolve) */
 	filePath: string;
 	/** Whether the command has an args schema */
@@ -217,13 +219,13 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 				if (fileHookImport) {
 					// File-based pipeline hook
 					hookCases.push(`    case "${hookKey}": {
-      return Pipeline.run({
+      return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         pipeline: ${fileHookImport},
-        envClass: EnvClass,
+        stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
         setup: pluginConfig.setup,
@@ -234,13 +236,13 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("pipeline" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return Pipeline.run({
+      return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         pipeline: hookDef.pipeline,
-        envClass: EnvClass,
+        stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
         setup: pluginConfig.setup,
@@ -251,13 +253,13 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 				if (fileHookImport) {
 					// File-based handler hook
 					hookCases.push(`    case "${hookKey}": {
-      return Pipeline.runRaw({
+      return PipelineRuntime.runRaw({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         handler: ${fileHookImport},
-        envClass: EnvClass,
+        stateClass: EnvClass,
       });
     }`);
 				} else {
@@ -265,13 +267,13 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return Pipeline.runRaw({
+      return PipelineRuntime.runRaw({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         handler: hookDef.handler,
-        envClass: EnvClass,
+        stateClass: EnvClass,
       });
     }`);
 				}
@@ -283,16 +285,16 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 	const commandCases = pipelineCommands
 		.map((c) => {
 			const importName = commandImportMap.get(c.name);
-			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "emptyArgsSchema";
+			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Commands.emptySchema";
 			return `    case "${c.name}": {
-      return runCommandPipeline({
+      return Commands.run({
         commandName: "${c.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         handler: ${importName},
         rawArgs: cmdArgs,
         argsSchema: ${argsSchemaAccess},
-        envClass: EnvClass,
+        stateClass: EnvClass,
       });
     }`;
 		})
@@ -308,9 +310,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
-	const commandRuntimeImport = hasPipelineCmds
-		? `import { runCommand as runCommandPipeline, emptyArgsSchema } from "claude-binary-plugin";`
-		: "";
+	const commandRuntimeImport = hasPipelineCmds ? `import { Commands } from "claude-binary-plugin";` : "";
 
 	return `#!/usr/bin/env bun
 /**
@@ -322,7 +322,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { Pipeline, PluginEnv, setPluginInfo } from "claude-binary-plugin";
+import { PipelineRuntime, PluginEnv, PluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -339,8 +339,8 @@ const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLU
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
-  const { sidecarMain } = await import("claude-binary-plugin");
-  sidecarMain();
+  const { Sidecar } = await import("claude-binary-plugin");
+  Sidecar.main();
 }
 
 const validHooks = [${validHooksArray}];
@@ -384,7 +384,7 @@ Examples:
 
 async function main(): Promise<void> {
   // Set plugin info for telemetry (module-level, not env vars)
-  setPluginInfo({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
+  PluginInfo.set({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
 
   const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -413,7 +413,7 @@ async function main(): Promise<void> {
     const hookKey = values.hook;
 
     if (!validHooks.includes(hookKey)) {
-      await Pipeline.handleUnknown(hookKey, validHooks);
+      await PipelineRuntime.handleUnknown(hookKey, validHooks);
     }
 
     await runHook(hookKey);
@@ -451,14 +451,14 @@ main().catch((error) => {
  * @public
  */
 export interface ExtractableHook {
-	name?: string;
-	tools?: string[];
-	description?: string;
+	name?: string | undefined;
+	tools?: string[] | undefined;
+	description?: string | undefined;
 	pipeline?: unknown;
 	handler?: unknown;
 	/** Passthrough hooks array (for raw hooks.json entries) */
-	hooks?: Array<{ type: "command"; command: string }>;
-	matcher?: string;
+	hooks?: Array<{ type: "command"; command: string }> | undefined;
+	matcher?: string | undefined;
 }
 
 /**
@@ -781,6 +781,8 @@ export interface BuildPluginOptions {
 	 * @defaultValue false
 	 */
 	persistLocal?: boolean;
+	/** Suppress all non-error output (default: false) */
+	quiet?: boolean;
 }
 
 /**
@@ -809,8 +811,6 @@ export interface PersistLocalConfig {
 	rootDir: string;
 	/** Marketplace name (e.g., "savvy-web-claude-tools") */
 	marketplaceName: string;
-	/** Shell executor for running commands */
-	shell: ShellExecutor;
 }
 
 /**
@@ -859,12 +859,32 @@ async function getPluginCachePath(config: PersistLocalConfig): Promise<string[]>
  * @internal
  */
 async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
-	const { rootDir, shell } = config;
+	const { rootDir } = config;
 
 	const cachePaths = await getPluginCachePath(config);
 
 	console.log(`  Source: ${rootDir}`);
 	console.log(`  Targets: ${cachePaths.length} cache location(s)`);
+
+	// Get list of non-ignored files using git ls-files.
+	// This respects all .gitignore rules (parent dirs, global, .git/info/exclude)
+	// so gitignored files like compiled binaries are excluded from the cache.
+	let files: string[];
+
+	try {
+		const gitResult = await Bun.$`git -C ${rootDir} ls-files --cached --others --exclude-standard`.quiet();
+		const stdout = gitResult.text().trim();
+		files = stdout ? stdout.split("\n") : [];
+	} catch {
+		// Fallback: scan with Bun.Glob, exclude common dev/build artifacts
+		const glob = new Bun.Glob("**/*");
+		files = [];
+		for await (const path of glob.scan({ cwd: rootDir, dot: true })) {
+			if (path.startsWith(".git/") || path.includes("node_modules/.cache/")) continue;
+			if (path.endsWith(".bun-build") || path.endsWith(".DS_Store")) continue;
+			files.push(path);
+		}
+	}
 
 	let successCount = 0;
 
@@ -872,31 +892,26 @@ async function syncPluginToCache(config: PersistLocalConfig): Promise<boolean> {
 		console.log(`  → ${cachePath}`);
 
 		try {
-			// Remove existing cache directory
-			await shell(`rm -rf "${cachePath}"`);
+			// Remove existing cache directory and recreate
+			await rm(cachePath, { recursive: true, force: true });
+			await mkdir(cachePath, { recursive: true });
 
-			// Create parent directories
-			await shell(`mkdir -p "${cachePath}"`);
-
-			// Copy plugin directory contents to cache
-			// Using rsync for efficient copying, excluding common dev files
-			const rsyncResult = await shell(
-				`rsync -a --delete \
-					--exclude='.git' \
-					--exclude='node_modules/.cache' \
-					--exclude='*.bun-build' \
-					--exclude='.DS_Store' \
-					"${rootDir}/" "${cachePath}/"`,
-			);
-
-			if (rsyncResult.exitCode !== 0) {
-				// Fallback to cp if rsync is not available
-				const cpResult = await shell(`cp -R "${rootDir}/." "${cachePath}/"`);
-				if (cpResult.exitCode !== 0) {
-					console.error(`    ✗ Failed to copy plugin to cache: ${cpResult.stderr}`);
-					continue;
-				}
+			// Collect unique directories to create them in bulk
+			const dirs = new Set<string>();
+			for (const relPath of files) {
+				dirs.add(dirname(resolve(cachePath, relPath)));
 			}
+			await Promise.all([...dirs].map((d) => mkdir(d, { recursive: true })));
+
+			// Copy files preserving directory structure
+			await Promise.all(
+				files.map(async (relPath) => {
+					const srcFile = Bun.file(resolve(rootDir, relPath));
+					if (await srcFile.exists()) {
+						await Bun.write(resolve(cachePath, relPath), srcFile);
+					}
+				}),
+			);
 
 			successCount++;
 		} catch (error) {
@@ -987,7 +1002,10 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 		marketplaceName = defaultMarketplaceName,
 		external = [],
 		persistLocal = false,
+		quiet = false,
 	} = options;
+
+	const log = quiet ? (..._args: unknown[]) => {} : console.log;
 
 	const absoluteRootDir = resolve(rootDir);
 	// Add .js extension for bundles (if not already present)
@@ -1026,9 +1044,9 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 	}
 
 	const action = compile ? "Compiling" : "Bundling";
-	console.log(`\n${action} unified plugin...`);
-	console.log(`Entrypoint: ${relativeEntrypoint}`);
-	console.log(`Output: ${relativeOutput}`);
+	log(`\n${action} unified plugin...`);
+	log(`Entrypoint: ${relativeEntrypoint}`);
+	log(`Output: ${relativeOutput}`);
 
 	// Build compile command arguments
 	const args = ["build", entrypointPath, "--outfile", outputPath];
@@ -1048,6 +1066,10 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 	if (bytecode) {
 		args.push("--bytecode");
 	}
+
+	// Plugins are ESM — ensure compiled binaries use ESM format
+	// (Bun >=1.3.9 defaults --bytecode to CJS without explicit --format)
+	args.push("--format=esm");
 
 	// When bundling (not compiling), default to bun target unless explicitly set
 	const effectiveTarget = target || (!compile ? "bun" : undefined);
@@ -1086,7 +1108,7 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 		}
 
 		const verb = compile ? "compiled" : "bundled";
-		console.log(`\n✓ Plugin ${verb} successfully (${duration.toFixed(0)}ms)`);
+		log(`\n✓ Plugin ${verb} successfully (${duration.toFixed(0)}ms)`);
 
 		// Persist plugin to local cache if enabled
 		if (persistLocal) {
@@ -1096,7 +1118,6 @@ async function buildPlugin(options: BuildPluginOptions = {}): Promise<PluginBuil
 				await syncPluginToCache({
 					rootDir: absoluteRootDir,
 					marketplaceName,
-					shell,
 				});
 			}
 		}
@@ -1144,6 +1165,8 @@ export interface GenerateHooksJsonOptions {
 	hooks: PipelineHookEntry[];
 	/** Passthrough hooks to include directly in hooks.json */
 	passthroughHooks?: ExtractedPassthroughHooks;
+	/** Relative path to proxy script (e.g., "scripts/setup-proxy.sh"). When set, SessionStart hooks route through the proxy instead of the binary. */
+	proxyScript?: string;
 }
 
 /**
@@ -1160,7 +1183,7 @@ export interface HooksJsonCommand {
  * @public
  */
 export interface HooksJsonEntry {
-	matcher?: string;
+	matcher?: string | undefined;
 	hooks: HooksJsonCommand[];
 }
 
@@ -1202,7 +1225,7 @@ export interface HooksJsonFile {
  * @internal
  */
 function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
-	const { pluginBinaryName, hooks, passthroughHooks = {} } = options;
+	const { pluginBinaryName, hooks, passthroughHooks = {}, proxyScript } = options;
 
 	// Group hooks by type
 	const hooksByType = new Map<string, PipelineHookEntry[]>();
@@ -1225,7 +1248,9 @@ function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
 		const typeHooks = hooksByType.get(hookType) || [];
 		for (const hook of typeHooks) {
 			const hookId = `${hookType}/${hook.name}`;
-			const command = `\${CLAUDE_PLUGIN_ROOT}/${pluginBinaryName} --hook=${hookId}`;
+			const useProxy = proxyScript && hookType === "SessionStart";
+			const target = useProxy ? proxyScript : pluginBinaryName;
+			const command = `\${CLAUDE_PLUGIN_ROOT}/${target} --hook=${hookId}`;
 
 			const entry: HooksJsonEntry = {
 				hooks: [{ type: "command", command }],
@@ -1441,6 +1466,10 @@ async function buildPluginFromConfig(
 		args.push("--bytecode");
 	}
 
+	// Plugins are ESM — ensure compiled binaries use ESM format
+	// (Bun >=1.3.9 defaults --bytecode to CJS without explicit --format)
+	args.push("--format=esm");
+
 	// When bundling (not compiling), default to bun target unless explicitly set
 	const effectiveTarget = target || (!compile ? "bun" : undefined);
 	if (effectiveTarget) {
@@ -1491,11 +1520,36 @@ async function buildPluginFromConfig(
 			};
 		}
 
-		// Generate hooks.json
+		// Generate proxy script for cross-platform distribution
+		const scriptsDir = "scripts";
+		const proxyScriptName = "setup-proxy.sh";
+		const proxyScriptRelPath = `${scriptsDir}/${proxyScriptName}`;
+		const proxyScriptAbsPath = resolve(absoluteRootDir, proxyScriptRelPath);
+		const proxyScriptDir = resolve(proxyScriptAbsPath, "..");
+
+		const hasSessionStart = resolvedHooks.some((h) => h.hookType === "SessionStart");
+
+		const proxyScriptContent = generateProxyScript({
+			binaryName: outputName,
+			configFile: "plugin.config.ts",
+			pluginName: manifestPluginName ?? "plugin",
+		});
+
+		await shell(`mkdir -p "${proxyScriptDir}"`);
+		await Bun.write(proxyScriptAbsPath, proxyScriptContent);
+		await shell(`chmod +x "${proxyScriptAbsPath}"`);
+		console.log(`✓ Generated proxy script: ${proxyScriptRelPath}`);
+
+		if (!hasSessionStart) {
+			console.warn("⚠ No SessionStart hooks defined - proxy will not trigger on-demand builds");
+		}
+
+		// Generate hooks.json with proxy routing for SessionStart
 		const hooksJson = generateHooksJson({
 			pluginBinaryName: outputName,
 			hooks: resolvedHooks,
 			passthroughHooks,
+			proxyScript: proxyScriptRelPath,
 		});
 
 		// Write hooks.json
@@ -1521,7 +1575,6 @@ async function buildPluginFromConfig(
 				await syncPluginToCache({
 					rootDir: absoluteRootDir,
 					marketplaceName: manifestMarketplaceName,
-					shell,
 				});
 			}
 		}
@@ -1572,7 +1625,7 @@ async function buildPluginFromConfig(
  * | Category | Methods |
  * |----------|---------|
  * | Build | `build`, `fromConfig` |
- * | Code Generation | `generateEntrypoint`, `generateHooksJson` |
+ * | Code Generation | `generateEntrypoint`, `generateHooksJson`, `generateProxyScript` |
  * | Extraction | `extractHookEntries`, `extractCommandEntries`, `extractPassthroughEntries` |
  * | Cache | `getCachePath`, `syncToCache` |
  * | Manifests | `readPluginManifest`, `readMarketplaceManifest` |
@@ -1605,6 +1658,7 @@ async function buildPluginFromConfig(
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class PluginBuilder {
 	// =========================================================================
 	// BUILD OPERATIONS
@@ -1727,6 +1781,33 @@ export class PluginBuilder {
 	 */
 	static generateEntrypoint(options: GeneratePipelinePluginOptions): string {
 		return generatePipelinePluginEntrypoint(options);
+	}
+
+	/**
+	 * Generate a proxy script for cross-platform distribution.
+	 *
+	 * @remarks
+	 * Creates a bash script that wraps SessionStart hooks with just-in-time
+	 * compilation. The script checks if the binary exists and builds it
+	 * on-demand if needed.
+	 *
+	 * @param options - Generation options
+	 * @returns Bash script string
+	 *
+	 * @example
+	 * ```typescript
+	 * const script = PluginBuilder.generateProxyScript({
+	 *   binaryName: "workflow.plugin",
+	 *   pluginName: "workflow",
+	 * });
+	 *
+	 * await Bun.write("scripts/setup-proxy.sh", script);
+	 * ```
+	 *
+	 * @see {@link GenerateProxyScriptOptions}
+	 */
+	static generateProxyScript(options: GenerateProxyScriptOptions): string {
+		return generateProxyScript(options);
 	}
 
 	/**

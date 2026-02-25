@@ -1,55 +1,3 @@
-/**
- * Pipeline output types for structured hook results.
- *
- * @remarks
- * This module defines Zod-validated output schemas for all hook types. Pipeline
- * outputs follow a **three-audience model**:
- *
- * 1. **Telemetry** - `status`, `action`, `metrics` for observability
- * 2. **User** - `userMessage` shown in terminal, `summary` for logs
- * 3. **Claude** - `claudeContext` for detailed context, `reason` for decisions
- *
- * Each hook type has a discriminated union schema based on `status`:
- *
- * | Status | Description | Valid Actions |
- * |--------|-------------|---------------|
- * | `executed` | Hook ran normally | Hook-specific |
- * | `skipped` | Didn't need to run | - |
- * | `disabled` | Preconditions failed | - |
- * | `cached` | Used cached result | Same as executed |
- * | `error` | Exception thrown | - |
- * | `timeout` | Exceeded time limit | - |
- *
- * **Valid actions by hook type:**
- *
- * | Hook Type | Actions |
- * |-----------|---------|
- * | PreToolUse | `allow`, `deny`, `ask`, `modify` |
- * | PostToolUse | `block`, `continue`, `context`, `none` |
- * | SessionStart | `context`, `none` |
- * | Stop/SubagentStop | `block`, `continue` |
- * | UserPromptSubmit | `block`, `continue`, `context`, `none` |
- * | PermissionRequest | `allow`, `deny` |
- * | Passthrough (SessionEnd, PreCompact, Notification) | `none` |
- *
- * @example
- * ```typescript
- * import type { PreToolUseOutput } from "claude-binary-plugin";
- *
- * const output: PreToolUseOutput = {
- *   status: "executed",
- *   action: "deny",
- *   summary: "Blocked dangerous rm -rf command",
- *   reason: "rm -rf commands are not allowed",
- *   userMessage: "⚠️ Command blocked for safety",
- * };
- * ```
- *
- * @see {@link isPipelineOutput} - Type guard for pipeline outputs
- * @see {@link OutputSchemas} - Map of hook types to output schemas
- * @module
- */
-
 import { z } from "zod";
 import { JsonObjectSchema } from "../types/json.js";
 
@@ -828,39 +776,6 @@ export type PreCompactPipelineOutput = PassthroughPipelineOutput;
 export const NotificationOutputSchema = PassthroughOutputSchema;
 /** @public */
 export type NotificationPipelineOutput = PassthroughPipelineOutput;
-
-// =============================================================================
-// OUTPUT SCHEMA MAP
-// =============================================================================
-
-/**
- * Map of hook event names to their Zod output schemas.
- *
- * @remarks
- * This map enables runtime validation of pipeline outputs based on hook type.
- * Use with `OutputSchemas[hookType].parse(output)` to validate outputs.
- *
- * @example
- * ```typescript
- * const hookType = "PreToolUse";
- * const schema = OutputSchemas[hookType];
- * const validatedOutput = schema.parse(output);
- * ```
- *
- * @public
- */
-export const OutputSchemas = {
-	SessionStart: SessionStartOutputSchema,
-	SessionEnd: SessionEndOutputSchema,
-	PreToolUse: PreToolUseOutputSchema,
-	PostToolUse: PostToolUseOutputSchema,
-	Stop: StopOutputSchema,
-	SubagentStop: SubagentStopOutputSchema,
-	UserPromptSubmit: UserPromptSubmitOutputSchema,
-	PreCompact: PreCompactOutputSchema,
-	Notification: NotificationOutputSchema,
-	PermissionRequest: PermissionRequestOutputSchema,
-} as const;
 
 // =============================================================================
 // HELPER TYPES

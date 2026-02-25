@@ -35,7 +35,7 @@ import {
 	UserPromptSubmitResponse,
 } from "./index.js";
 import type { MockEnvContext } from "./testing/mocks.js";
-import { envPresets, mockEnv } from "./testing/mocks.js";
+import { TestFixtures } from "./testing/mocks.js";
 
 // =============================================================================
 // TEST UTILITIES
@@ -100,7 +100,7 @@ let testEnv: MockEnvContext;
 
 beforeEach(() => {
 	// Redirect session-env writes to /tmp to avoid polluting real ~/.claude
-	testEnv = mockEnv({
+	testEnv = TestFixtures.createEnv({
 		CLAUDE_CONFIG_DIR: "/tmp/test-claude-config",
 		HOME: "/tmp/test-home",
 	});
@@ -802,7 +802,7 @@ describe("SessionStartEvent", () => {
 	});
 
 	test("creates with startup source", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
@@ -817,7 +817,7 @@ describe("SessionStartEvent", () => {
 	});
 
 	test("handles resume source", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
@@ -830,7 +830,7 @@ describe("SessionStartEvent", () => {
 	});
 
 	test("handles clear source", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
@@ -843,7 +843,7 @@ describe("SessionStartEvent", () => {
 	});
 
 	test("handles compact source", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),
@@ -856,7 +856,7 @@ describe("SessionStartEvent", () => {
 	});
 
 	test("response() returns SessionStartResponse", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const io = mockBunStdin<SessionStartInput>({
 			...baseEventData(),

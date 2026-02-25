@@ -1,12 +1,3 @@
-/**
- * Unix socket server for OTEL sidecar.
- *
- * Uses Bun's native `Bun.listen()` with Unix socket support for high-performance
- * IPC between hooks and the sidecar process.
- *
- * @module
- */
-
 import type { Socket, SocketHandler } from "bun";
 import { SidecarMessage } from "../../classes/SidecarMessage.js";
 import type { SidecarProtocolMessage, SidecarResponse } from "../../protocol.js";
@@ -32,11 +23,11 @@ interface ClientData {
  */
 export interface SidecarServerOptions {
 	/** Called when activity occurs (for idle timeout) */
-	onActivity?: () => void;
+	onActivity?: (() => void) | undefined;
 	/** Called when server closes */
-	onClose?: () => void;
+	onClose?: (() => void) | undefined;
 	/** Sidecar version string */
-	version?: string;
+	version?: string | undefined;
 }
 
 /**
@@ -80,12 +71,12 @@ export class SidecarServer {
 	/**
 	 * Activity callback.
 	 */
-	private onActivity?: () => void;
+	private onActivity?: (() => void) | undefined;
 
 	/**
 	 * Close callback.
 	 */
-	private onClose?: () => void;
+	private onClose?: (() => void) | undefined;
 
 	/**
 	 * Sidecar version string.

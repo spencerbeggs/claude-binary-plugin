@@ -1,15 +1,3 @@
-/**
- * Tests for hook event type definitions.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - IO interface type checking
- * - HookEventOptions interface
- * - HookEventBase interface
- * - Tool input/output types
- * - Session input types per hook type
- */
-
 import { describe, expect, test } from "bun:test";
 import type { HookEventBase, IO } from "./types.js";
 

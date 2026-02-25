@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { MockEnvContext } from "../testing/mocks.js";
-import { mockEnv } from "../testing/mocks.js";
+import { TestFixtures } from "../testing/mocks.js";
 import type { FileSystem } from "./debug-logger.js";
 import { DebugLogger, getProjectDir } from "./debug-logger.js";
 
@@ -33,7 +33,7 @@ describe("DebugLogger", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -395,7 +395,7 @@ describe("DebugLogger.create", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -430,7 +430,7 @@ describe("timing functionality", () => {
 
 	beforeEach(() => {
 		// Set session env file so file writes work
-		env = mockEnv({ TEST_PLUGIN_ENV_FILE: "/tmp/session-env/abc/hook-0.sh" });
+		env = TestFixtures.createEnv({ TEST_PLUGIN_ENV_FILE: "/tmp/session-env/abc/hook-0.sh" });
 	});
 
 	afterEach(() => {
@@ -637,7 +637,7 @@ describe("getProjectDir", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {
@@ -661,7 +661,7 @@ describe("DebugLogger OTEL integration", () => {
 	let env: MockEnvContext;
 
 	beforeEach(() => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 		// Set session env file so file writes work
 		env.set("TEST_PLUGIN_ENV_FILE", "/tmp/session-env/abc/hook-0.sh");
 	});

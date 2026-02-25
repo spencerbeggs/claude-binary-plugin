@@ -1,52 +1,9 @@
-/**
- * Auto-instrumentation utilities for pipeline telemetry.
- *
- * @remarks
- * This module provides automatic metric extraction and token estimation for
- * pipeline outputs. It enables observability without requiring hooks to
- * manually calculate metrics.
- *
- * **Token Estimation:**
- * Uses content-type-aware heuristics for more accurate estimates:
- * - Prose/Markdown: ~4 chars/token
- * - Code: ~3.5 chars/token (more symbols)
- * - JSON: ~3 chars/token (heavy punctuation)
- *
- * **Auto-Extracted Metrics:**
- * - Token counts for claudeContext, userMessage, reason
- * - Tool input/response sizes
- * - File operation details (path, extension, content size)
- * - Bash command prefixes and flags
- *
- * **Session Tracking:**
- * Aggregate token tracking across all hooks in a session to monitor
- * context consumption and warn when approaching budget limits.
- *
- * @example
- * ```typescript
- * import { TokenMetrics } from "claude-binary-plugin";
- *
- * const tokens = TokenMetrics.estimate(largeCodeBlock, "code");
- * const metrics = TokenMetrics.extractFromOutput(pipelineOutput);
- * console.log(`Hook added ${metrics.hookTotal} tokens to context`);
- * ```
- *
- * @see {@link TokenMetrics} - Main token metrics class
- * @module
- */
-
 import { extname } from "node:path";
 import type { AnyPipelineOutput, ContentType, ExecutionQuality, PipelineMetrics, TokenMetricsData } from "./types.js";
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-/**
- * OTEL attribute record type.
- * @public
- */
-export type OtelAttributes = Record<string, string | number | boolean | undefined>;
 
 /**
  * Session-level token tracking state.
@@ -127,6 +84,7 @@ export interface BudgetCheckResult {
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class TokenMetrics {
 	/**
 	 * Default token budget (200k context window).
@@ -351,6 +309,8 @@ export class TokenMetrics {
 	 * @param output - Pipeline output returned by the handler
 	 * @param durationMs - Execution duration in milliseconds
 	 * @returns OTEL attributes record for telemetry export
+	 *
+	 * @internal
 	 */
 	static extractAuto(
 		hookType: string,
@@ -359,8 +319,8 @@ export class TokenMetrics {
 		event: Record<string, unknown>,
 		output: AnyPipelineOutput,
 		durationMs: number,
-	): OtelAttributes {
-		const attrs: OtelAttributes = {
+	): Record<string, string | number | boolean | undefined> {
+		const attrs: Record<string, string | number | boolean | undefined> = {
 			// ─────────────────────────────────────────────────────────────────────
 			// Always available
 			// ─────────────────────────────────────────────────────────────────────
@@ -562,9 +522,11 @@ export class TokenMetrics {
 	 * const attrs = TokenMetrics.getSessionAttributes(state);
 	 * // { "session.tokens.total_context_added": 1500, ... }
 	 * ```
+	 *
+	 * @internal
 	 */
-	static getSessionAttributes(state: SessionTokenState): OtelAttributes {
-		const attrs: OtelAttributes = {
+	static getSessionAttributes(state: SessionTokenState): Record<string, string | number | boolean | undefined> {
+		const attrs: Record<string, string | number | boolean | undefined> = {
 			"session.tokens.total_context_added": state.totalContextAdded,
 		};
 

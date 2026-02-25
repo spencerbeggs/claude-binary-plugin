@@ -1,0 +1,138 @@
+{
+	"$schema": "../skills/design-config/json-schemas/current.json",
+	"version": "1.0.0",
+	"project": {
+		"name": "spencerbeggs/claude-binary-plugin",
+		"type": "package",
+		"repository": "https://github.com/spencerbeggs/claude-binary-plugin",
+		"maintainer": "C. Spencer Beggs"
+	},
+	"paths": {
+		"designDocs": ".claude/design",
+		"plans": ".claude/plans",
+		"skills": ".claude/skills",
+		"context": "CLAUDE.md",
+		"localContext": "CLAUDE.local.md"
+	},
+	"modules": {
+		"claude-binary-plugin": {
+			"path": ".",
+			"designDocsPath": ".claude/design",
+			"categories": ["architecture", "observability", "testing", "documentation"],
+			"maintainer": "C. Spencer Beggs",
+			"userDocs": {
+				"readme": "README.md",
+				"repoDocs": null,
+				"siteDocs": "/Users/spencer/workspaces/spencerbeggs/website/website/docs/en/claude-binary-plugin"
+			}
+		}
+	},
+	"skills": {
+		"baseNamespace": "/",
+		"enabled": [
+			"design-init",
+			"design-validate",
+			"design-update",
+			"design-sync",
+			"design-review",
+			"design-audit",
+			"design-search",
+			"design-link",
+			"design-config",
+			"design-report",
+			"design-prune",
+			"design-archive",
+			"design-compare",
+			"design-export",
+			"plan-create",
+			"plan-validate",
+			"plan-list",
+			"plan-explore",
+			"plan-complete",
+			"context-review",
+			"context-validate",
+			"context-audit",
+			"context-update",
+			"context-split",
+			"docs-generate-readme",
+			"docs-generate-repo",
+			"docs-generate-site",
+			"docs-sync",
+			"docs-review",
+			"rspress-page",
+			"rspress-frontmatter",
+			"rspress-nav",
+			"rspress-navigation",
+			"rspress-components",
+			"rspress-ui",
+			"rspress-mermaid",
+			"rspress-api-docs",
+			"rspress-guide",
+			"rspress-examples",
+			"rspress-sync",
+			"rspress-review",
+			"claude-plugin-concepts",
+			"claude-plugin-hooks",
+			"claude-plugin-commands",
+			"claude-plugin-otel",
+			"claude-plugin-testing"
+		]
+	},
+	"quality": {
+		"designDocs": {
+			"maxLineLength": 120,
+			"requireFrontmatter": true,
+			"requireTOC": true,
+			"minSections": ["Overview"]
+		},
+		"userDocs": {
+			"level1": {
+				"targetWordCount": [200, 800],
+				"maxLineLength": 80,
+				"requireSections": ["Overview", "Installation", "Usage"]
+			},
+			"level2": {
+				"maxLineLength": 100,
+				"requireNavigation": true
+			},
+			"level3": {
+				"framework": "rspress",
+				"requireMetadata": true,
+				"requireCodeExamples": true
+			}
+		},
+		"context": {
+			"rootMaxLines": 500,
+			"childMaxLines": 300,
+			"requireDesignDocPointers": true
+		},
+		"plans": {
+			"maxLineLength": 120,
+			"requireFrontmatter": true,
+			"requiredFields": ["name", "title", "created", "status", "progress"],
+			"validStatuses": ["ready", "in-progress", "blocked", "completed", "abandoned"],
+			"progressRange": [0, 100],
+			"stalenessThresholdDays": 30,
+			"archiveAfterDays": 30
+		}
+	},
+	"integration": {
+		"ci": {
+			"enabled": false,
+			"validateOnPR": false,
+			"syncOnMerge": false
+		},
+		"git": {
+			"trackDesignDocs": true,
+			"requireReviewForChanges": false
+		},
+		"plans": {
+			"enabled": true,
+			"bidirectionalLinking": true,
+			"autoSyncProgress": false,
+			"validateOnCommit": true,
+			"cacheMetadata": true,
+			"cacheTTL": 300
+		}
+	}
+}

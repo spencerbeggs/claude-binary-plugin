@@ -1,37 +1,8 @@
-/**
- * Span instrumentation utilities for hooks.
- *
- * @remarks
- * Provides a class-based API for tracing hook execution with spans.
- * Spans capture timing and context, serialize to JSON, and send
- * to the sidecar via fire-and-forget IPC.
- *
- * @example
- * ```typescript
- * import { TelemetrySpan, OTELConfig } from "claude-binary-plugin";
- *
- * if (OTELConfig.isEnabled()) {
- *   // Execute code within a traced span
- *   const result = await TelemetrySpan.withHookSpan(event, "validate", async () => {
- *     return validateInput(event.tool_input);
- *   });
- *
- *   // Wrap a hook handler with automatic instrumentation
- *   const handler = TelemetrySpan.instrumentHook("pre-bash", async (event) => {
- *     // Hook logic - automatically traced
- *     return { status: "executed", action: "allow", summary: "ok" };
- *   });
- * }
- * ```
- *
- * @public
- */
-
 import type { HookEventBase } from "../../events/types.js";
-import { getSidecarClient } from "../client.js";
 import type { SpanData } from "../protocol.js";
-import { OTELConfig } from "./OTELConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
+import { getSidecarClient } from "./SidecarClient.js";
 import { TelemetryEmitter } from "./TelemetryEmitter.js";
 
 /**
@@ -134,7 +105,7 @@ export class TelemetrySpan {
 		handler: () => Promise<T>,
 		attributes?: Record<string, string | number | boolean>,
 	): Promise<T> {
-		if (!OTELConfig.isEnabled()) {
+		if (!OtelConfig.isEnabled()) {
 			return handler();
 		}
 
@@ -171,7 +142,7 @@ export class TelemetrySpan {
 				},
 				status: {
 					code: statusCode,
-					message: errorMessage,
+					...(errorMessage !== undefined && { message: errorMessage }),
 				},
 			};
 
@@ -189,8 +160,10 @@ export class TelemetrySpan {
 				pluginVersion: PluginInfo.get().version,
 				durationMs,
 				success: statusCode === "ok",
-				error: errorMessage,
-				toolName: attributes?.[TelemetryEmitter.ATTRS.TOOL_NAME] as string | undefined,
+				...(errorMessage !== undefined && { error: errorMessage }),
+				...(attributes?.[TelemetryEmitter.ATTRS.TOOL_NAME] !== undefined && {
+					toolName: attributes[TelemetryEmitter.ATTRS.TOOL_NAME] as string,
+				}),
 			});
 		}
 	}

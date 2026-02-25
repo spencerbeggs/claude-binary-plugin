@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import { OtelConfig } from "../../classes/OtelConfig.js";
 import { PluginInfo } from "../../classes/PluginInfo.js";
-import { DEFAULTS, RESOURCE_ATTRS } from "../../constants.js";
 import type { ResourceConfig } from "./SidecarResource.js";
 import { SidecarResource } from "./SidecarResource.js";
 
@@ -31,7 +31,7 @@ describe("SidecarResource", () => {
 			const resource = SidecarResource.create({});
 
 			const attrs = resource.attributes;
-			expect(attrs[ATTR_SERVICE_NAME]).toBe(DEFAULTS.SERVICE_NAME);
+			expect(attrs[ATTR_SERVICE_NAME]).toBe(OtelConfig.DEFAULTS.SERVICE_NAME);
 		});
 
 		test("uses custom service name from config", () => {
@@ -55,7 +55,7 @@ describe("SidecarResource", () => {
 		test("includes service namespace", () => {
 			const resource = SidecarResource.create({});
 
-			expect(resource.attributes["service.namespace"]).toBe(DEFAULTS.SERVICE_NAMESPACE);
+			expect(resource.attributes["service.namespace"]).toBe(OtelConfig.DEFAULTS.SERVICE_NAMESPACE);
 		});
 
 		// NOTE: Plugin-specific attributes (plugin.name, plugin.version, marketplace.*)
@@ -124,7 +124,7 @@ describe("SidecarResource", () => {
 
 			const resource = SidecarResource.create({});
 
-			expect(resource.attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV]).toBe("production");
+			expect(resource.attributes[SidecarResource.ATTRS.DEPLOYMENT_ENV]).toBe("production");
 		});
 
 		test("falls back to NODE_ENV for deployment environment", () => {
@@ -133,7 +133,7 @@ describe("SidecarResource", () => {
 
 			const resource = SidecarResource.create({});
 
-			expect(resource.attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV]).toBe("development");
+			expect(resource.attributes[SidecarResource.ATTRS.DEPLOYMENT_ENV]).toBe("development");
 		});
 
 		test("prefers DEPLOYMENT_ENV over NODE_ENV", () => {
@@ -142,7 +142,7 @@ describe("SidecarResource", () => {
 
 			const resource = SidecarResource.create({});
 
-			expect(resource.attributes[RESOURCE_ATTRS.DEPLOYMENT_ENV]).toBe("staging");
+			expect(resource.attributes[SidecarResource.ATTRS.DEPLOYMENT_ENV]).toBe("staging");
 		});
 	});
 });

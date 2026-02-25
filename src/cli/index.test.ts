@@ -1,17 +1,3 @@
-/**
- * Tests for Claude Binary Plugin Builder CLI.
- *
- * @remarks
- * Stub test file for coverage tracking. Tests to be implemented for:
- * - Build command argument parsing
- * - Plugin config file loading
- * - --no-persist flag handling
- * - --no-bytecode flag handling
- * - --bundle flag handling
- * - Error handling for missing files
- * - Integration with PluginBuilder
- */
-
 import { describe, expect, test } from "bun:test";
 
 describe("CLI", () => {

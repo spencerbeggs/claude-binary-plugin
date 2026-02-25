@@ -1,31 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { SessionStartEvent } from "../events/classes/SessionStartEvent.js";
 import { HookType } from "../events/enums.js";
-import { SessionStartEvent } from "../events/subclasses.js";
 import type { SessionStartInput } from "../events/types.js";
 import type { MockEnvContext } from "./mocks.js";
-import {
-	MockExitError,
-	createMockBufferShellResult,
-	createMockInMemoryShellExecutor,
-	createMockShellExecutor,
-	createMockShellResult,
-	defaultInMemoryShellExecutor,
-	defaultShellExecutor,
-	envPresets,
-	mockCommand,
-	mockEnv,
-	mockIO,
-	resetMockIO,
-	runMockedCommand,
-	runMockedHook,
-	testFatalErrorHandler,
-} from "./mocks.js";
+import { MockExitError, TestFixtures } from "./mocks.js";
 
-describe("mockIO", () => {
+describe("TestFixtures.createIO", () => {
 	let env: MockEnvContext;
 
 	afterEach(() => {
-		resetMockIO();
+		TestFixtures.resetIO();
 		env?.restore();
 	});
 
@@ -43,7 +27,7 @@ describe("mockIO", () => {
 			source: "startup",
 		};
 
-		const io = mockIO(input);
+		const io = TestFixtures.createIO(input);
 
 		expect(io.stdin).toBeDefined();
 		expect(io.stdout).toBeDefined();
@@ -51,7 +35,7 @@ describe("mockIO", () => {
 	});
 
 	test("works with async HookEvent.create", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const input: SessionStartInput = {
 			session_id: TEST_UUID,
@@ -62,7 +46,7 @@ describe("mockIO", () => {
 			source: "resume",
 		};
 
-		const io = mockIO(input);
+		const io = TestFixtures.createIO(input);
 		const { event } = await SessionStartEvent.create(io);
 
 		expect(event.session_id).toBe(TEST_UUID);
@@ -80,7 +64,7 @@ describe("mockIO", () => {
 			source: "startup",
 		};
 
-		const io = mockIO(input);
+		const io = TestFixtures.createIO(input);
 
 		// Call write
 		io.stdout.write("test output");
@@ -99,7 +83,7 @@ describe("mockIO", () => {
 			source: "startup",
 		};
 
-		const io = mockIO(input);
+		const io = TestFixtures.createIO(input);
 
 		// Call write
 		io.stderr.write("error output");
@@ -108,8 +92,8 @@ describe("mockIO", () => {
 		expect(io.stderr.write).toHaveBeenCalledWith("error output");
 	});
 
-	test("resetMockIO cleans up properly", async () => {
-		env = mockEnv(envPresets.claudeHook());
+	test("resetIO cleans up properly", async () => {
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const input: SessionStartInput = {
 			session_id: TEST_UUID,
@@ -121,25 +105,25 @@ describe("mockIO", () => {
 		};
 
 		// First call should work
-		const io1 = mockIO(input);
+		const io1 = TestFixtures.createIO(input);
 		const { event: event1 } = await SessionStartEvent.create(io1);
 		expect(event1.session_id).toBe(TEST_UUID);
 
 		// Reset the mock
-		resetMockIO();
+		TestFixtures.resetIO();
 
 		// Second call with different input should work
 		const input2: SessionStartInput = {
 			...input,
 			session_id: TEST_UUID_2,
 		};
-		const io2 = mockIO(input2);
+		const io2 = TestFixtures.createIO(input2);
 		const { event: event2 } = await SessionStartEvent.create(io2);
 		expect(event2.session_id).toBe(TEST_UUID_2);
 	});
 
 	test("captures stdout from actual write calls", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const input: SessionStartInput = {
 			session_id: TEST_UUID,
@@ -150,7 +134,7 @@ describe("mockIO", () => {
 			source: "startup",
 		};
 
-		const io = mockIO(input);
+		const io = TestFixtures.createIO(input);
 
 		// Simulate actual write calls (as would happen in real hook execution)
 		process.stdout.write("test stdout output");
@@ -161,7 +145,7 @@ describe("mockIO", () => {
 	});
 
 	test("captures stderr from actual write calls", async () => {
-		env = mockEnv(envPresets.claudeHook());
+		env = TestFixtures.createEnv(TestFixtures.envPresets.claudeHook());
 
 		const input: SessionStartInput = {
 			session_id: TEST_UUID,
@@ -172,7 +156,7 @@ describe("mockIO", () => {
 			source: "startup",
 		};
 
-		const io = mockIO(input);
+		const io = TestFixtures.createIO(input);
 
 		// Simulate actual write calls
 		process.stderr.write("error message");
@@ -183,7 +167,7 @@ describe("mockIO", () => {
 	});
 });
 
-describe("mockEnv", () => {
+describe("TestFixtures.createEnv", () => {
 	let env: MockEnvContext;
 
 	afterEach(() => {
@@ -191,14 +175,14 @@ describe("mockEnv", () => {
 	});
 
 	test("sets env vars in both Bun.env and process.env", () => {
-		env = mockEnv({ TEST_MOCK_VAR: "hello" });
+		env = TestFixtures.createEnv({ TEST_MOCK_VAR: "hello" });
 		expect(Bun.env.TEST_MOCK_VAR).toBe("hello");
 		expect(process.env.TEST_MOCK_VAR).toBe("hello");
 	});
 
 	test("restore() removes vars that were set", () => {
 		const originalValue = Bun.env.TEST_RESTORE_VAR;
-		env = mockEnv({ TEST_RESTORE_VAR: "temp_value" });
+		env = TestFixtures.createEnv({ TEST_RESTORE_VAR: "temp_value" });
 		expect(Bun.env.TEST_RESTORE_VAR).toBe("temp_value");
 
 		env.restore();
@@ -209,7 +193,7 @@ describe("mockEnv", () => {
 		// Save a reference to check restoration works
 		const originalHome = Bun.env.HOME;
 
-		env = mockEnv({ TEST_MOCK_VAR: "mock_value" });
+		env = TestFixtures.createEnv({ TEST_MOCK_VAR: "mock_value" });
 
 		// Only the mock var should be visible
 		expect(Bun.env.TEST_MOCK_VAR).toBe("mock_value");
@@ -227,7 +211,7 @@ describe("mockEnv", () => {
 	test("restore() fully restores original env state", () => {
 		const originalPath = Bun.env.PATH;
 
-		env = mockEnv({ CUSTOM_VAR: "custom" });
+		env = TestFixtures.createEnv({ CUSTOM_VAR: "custom" });
 		expect(Bun.env.PATH).toBeUndefined(); // Isolated
 
 		env.restore();
@@ -235,7 +219,7 @@ describe("mockEnv", () => {
 	});
 
 	test("set() adds new vars during test", () => {
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 		env.set("TEST_DYNAMIC_VAR", "dynamic");
 		expect(Bun.env.TEST_DYNAMIC_VAR).toBe("dynamic");
 
@@ -244,7 +228,7 @@ describe("mockEnv", () => {
 	});
 
 	test("delete() removes vars during test", () => {
-		env = mockEnv({ TEST_TO_DELETE: "will_be_deleted" });
+		env = TestFixtures.createEnv({ TEST_TO_DELETE: "will_be_deleted" });
 		expect(Bun.env.TEST_TO_DELETE).toBe("will_be_deleted");
 
 		env.delete("TEST_TO_DELETE");
@@ -252,84 +236,84 @@ describe("mockEnv", () => {
 	});
 
 	test("get() returns current value", () => {
-		env = mockEnv({ TEST_GET_VAR: "get_me" });
+		env = TestFixtures.createEnv({ TEST_GET_VAR: "get_me" });
 		expect(env.get("TEST_GET_VAR")).toBe("get_me");
 		expect(env.get("NONEXISTENT")).toBeUndefined();
 	});
 
 	test("undefined values in vars are not set", () => {
-		env = mockEnv({ DEFINED: "yes", UNDEFINED: undefined });
+		env = TestFixtures.createEnv({ DEFINED: "yes", UNDEFINED: undefined });
 		expect(Bun.env.DEFINED).toBe("yes");
 		expect(Bun.env.UNDEFINED).toBeUndefined();
 	});
 });
 
-describe("createMockShellResult", () => {
+describe("TestFixtures.shellResult", () => {
 	test("creates result with all fields", () => {
-		const result = createMockShellResult(0, "output", "error");
+		const result = TestFixtures.shellResult(0, "output", "error");
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout).toBe("output");
 		expect(result.stderr).toBe("error");
 	});
 
 	test("defaults stdout and stderr to empty strings", () => {
-		const result = createMockShellResult(1);
+		const result = TestFixtures.shellResult(1);
 		expect(result.exitCode).toBe(1);
 		expect(result.stdout).toBe("");
 		expect(result.stderr).toBe("");
 	});
 });
 
-describe("envPresets", () => {
+describe("TestFixtures.envPresets", () => {
 	test("claudeHook returns expected defaults", () => {
-		const preset = envPresets.claudeHook();
+		const preset = TestFixtures.envPresets.claudeHook();
 		expect(preset.CLAUDE_PROJECT_DIR).toBe("/tmp/test-project");
 		expect(preset.CLAUDE_PLUGIN_ROOT).toBe("/tmp/test-plugin");
 	});
 
 	test("claudeHook accepts overrides", () => {
-		const preset = envPresets.claudeHook({ CLAUDE_PROJECT_DIR: "/custom/path" });
+		const preset = TestFixtures.envPresets.claudeHook({ CLAUDE_PROJECT_DIR: "/custom/path" });
 		expect(preset.CLAUDE_PROJECT_DIR).toBe("/custom/path");
 		expect(preset.CLAUDE_PLUGIN_ROOT).toBe("/tmp/test-plugin");
 	});
 
 	test("withEnvFile returns expected defaults with env file", () => {
-		const preset = envPresets.withEnvFile("/tmp/env-file.sh");
+		const preset = TestFixtures.envPresets.withEnvFile("/tmp/env-file.sh");
 		expect(preset.CLAUDE_PROJECT_DIR).toBe("/tmp/test-project");
 		expect(preset.CLAUDE_PLUGIN_ROOT).toBe("/tmp/test-plugin");
 		expect(preset.CLAUDE_ENV_FILE).toBe("/tmp/env-file.sh");
 	});
 
 	test("withEnvFile accepts overrides", () => {
-		const preset = envPresets.withEnvFile("/tmp/env-file.sh", { CLAUDE_PROJECT_DIR: "/custom/path" });
+		const preset = TestFixtures.envPresets.withEnvFile("/tmp/env-file.sh", { CLAUDE_PROJECT_DIR: "/custom/path" });
 		expect(preset.CLAUDE_PROJECT_DIR).toBe("/custom/path");
 		expect(preset.CLAUDE_ENV_FILE).toBe("/tmp/env-file.sh");
 	});
 });
 
-describe("mockCommand", () => {
+describe("TestFixtures.createCommand", () => {
 	test("mocks process.argv with provided args", () => {
-		const ctx = mockCommand(["--debug", "test"]);
+		const ctx = TestFixtures.createCommand(["--debug", "test"]);
 		expect(process.argv).toEqual(["bun", "script.ts", "--debug", "test"]);
 		ctx.restore();
 	});
 
 	test("captures console.log output", () => {
-		const ctx = mockCommand([]);
+		const ctx = TestFixtures.createCommand([]);
 		console.log("test message");
 		expect(ctx.output.logs).toContain("test message");
 		ctx.restore();
 	});
 
 	test("captures console.error output", () => {
-		const ctx = mockCommand([]);
+		const ctx = TestFixtures.createCommand([]);
 		console.error("error message");
 		expect(ctx.output.errors).toContain("error message");
 		ctx.restore();
 	});
 
 	test("captures process.exit calls", () => {
-		const ctx = mockCommand([]);
+		const ctx = TestFixtures.createCommand([]);
 		try {
 			process.exit(42);
 		} catch (e) {
@@ -345,7 +329,7 @@ describe("mockCommand", () => {
 		const originalError = console.error;
 		const originalExit = process.exit;
 
-		const ctx = mockCommand(["test"]);
+		const ctx = TestFixtures.createCommand(["test"]);
 		ctx.restore();
 
 		expect(process.argv).toBe(originalArgv);
@@ -355,7 +339,7 @@ describe("mockCommand", () => {
 	});
 
 	test("defaults exit code to 0 when called without argument", () => {
-		const ctx = mockCommand([]);
+		const ctx = TestFixtures.createCommand([]);
 		try {
 			process.exit();
 		} catch {
@@ -374,13 +358,13 @@ describe("MockExitError", () => {
 	});
 });
 
-describe("runMockedCommand", () => {
+describe("TestFixtures.runCommand", () => {
 	test("runs command and captures output", async () => {
 		const mainFn = async () => {
 			console.log("success");
 		};
 
-		const output = await runMockedCommand(["test"], mainFn);
+		const output = await TestFixtures.runCommand(["test"], mainFn);
 		expect(output.logs).toContain("success");
 		expect(output.exitCode).toBeNull();
 	});
@@ -391,7 +375,7 @@ describe("runMockedCommand", () => {
 			process.exit(1);
 		};
 
-		const output = await runMockedCommand(["test"], mainFn);
+		const output = await TestFixtures.runCommand(["test"], mainFn);
 		expect(output.logs).toContain("before exit");
 		expect(output.exitCode).toBe(1);
 	});
@@ -400,7 +384,7 @@ describe("runMockedCommand", () => {
 		const originalArgv = process.argv;
 		const mainFn = async () => {};
 
-		await runMockedCommand(["test"], mainFn);
+		await TestFixtures.runCommand(["test"], mainFn);
 
 		expect(process.argv).toBe(originalArgv);
 	});
@@ -410,17 +394,17 @@ describe("runMockedCommand", () => {
 			throw new Error("unexpected error");
 		};
 
-		await expect(runMockedCommand(["test"], mainFn)).rejects.toThrow("unexpected error");
+		await expect(TestFixtures.runCommand(["test"], mainFn)).rejects.toThrow("unexpected error");
 	});
 });
 
-describe("runMockedHook", () => {
+describe("TestFixtures.runHook", () => {
 	test("runs hook and returns exit code", async () => {
 		const hookFn = async () => {
 			process.exit(0);
 		};
 
-		const exitCode = await runMockedHook(hookFn);
+		const exitCode = await TestFixtures.runHook(hookFn);
 		expect(exitCode).toBe(0);
 	});
 
@@ -429,7 +413,7 @@ describe("runMockedHook", () => {
 			process.exit();
 		};
 
-		const exitCode = await runMockedHook(hookFn);
+		const exitCode = await TestFixtures.runHook(hookFn);
 		expect(exitCode).toBe(0);
 	});
 
@@ -439,7 +423,7 @@ describe("runMockedHook", () => {
 			process.exit(0);
 		};
 
-		await runMockedHook(hookFn);
+		await TestFixtures.runHook(hookFn);
 
 		expect(process.exit).toBe(originalExit);
 	});
@@ -449,29 +433,29 @@ describe("runMockedHook", () => {
 			throw new Error("hook error");
 		};
 
-		await expect(runMockedHook(hookFn)).rejects.toThrow("hook error");
+		await expect(TestFixtures.runHook(hookFn)).rejects.toThrow("hook error");
 	});
 });
 
-describe("defaultShellExecutor", () => {
+describe("TestFixtures.defaultShellExecutor", () => {
 	test("executes shell command and returns result", async () => {
-		const result = await defaultShellExecutor("echo hello");
+		const result = await TestFixtures.defaultShellExecutor("echo hello");
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout).toContain("hello");
 		expect(result.stderr).toBe("");
 	});
 
 	test("handles command errors", async () => {
-		const result = await defaultShellExecutor("false");
+		const result = await TestFixtures.defaultShellExecutor("false");
 		expect(result.exitCode).toBe(1);
 	});
 });
 
-describe("createMockShellExecutor", () => {
+describe("TestFixtures.shellExecutor", () => {
 	test("returns predefined results for exact matches", async () => {
-		const mockShell = createMockShellExecutor({
-			"node --version": createMockShellResult(0, "v22.0.0"),
-			"bun --version": createMockShellResult(0, "1.1.38"),
+		const mockShell = TestFixtures.shellExecutor({
+			"node --version": TestFixtures.shellResult(0, "v22.0.0"),
+			"bun --version": TestFixtures.shellResult(0, "1.1.38"),
 		});
 
 		const nodeResult = await mockShell("node --version");
@@ -482,8 +466,8 @@ describe("createMockShellExecutor", () => {
 	});
 
 	test("returns predefined results for partial matches", async () => {
-		const mockShell = createMockShellExecutor({
-			"--version": createMockShellResult(0, "v1.0.0"),
+		const mockShell = TestFixtures.shellExecutor({
+			"--version": TestFixtures.shellResult(0, "v1.0.0"),
 		});
 
 		const result = await mockShell("some-tool --version");
@@ -491,7 +475,7 @@ describe("createMockShellExecutor", () => {
 	});
 
 	test("returns default result for unknown commands", async () => {
-		const mockShell = createMockShellExecutor({}, createMockShellResult(127, "", "command not found"));
+		const mockShell = TestFixtures.shellExecutor({}, TestFixtures.shellResult(127, "", "command not found"));
 
 		const result = await mockShell("unknown-command");
 		expect(result.exitCode).toBe(127);
@@ -499,7 +483,7 @@ describe("createMockShellExecutor", () => {
 	});
 
 	test("uses custom default result", async () => {
-		const mockShell = createMockShellExecutor({}, createMockShellResult(2, "", "custom error"));
+		const mockShell = TestFixtures.shellExecutor({}, TestFixtures.shellResult(2, "", "custom error"));
 
 		const result = await mockShell("unknown");
 		expect(result.exitCode).toBe(2);
@@ -507,28 +491,28 @@ describe("createMockShellExecutor", () => {
 	});
 });
 
-describe("defaultInMemoryShellExecutor", () => {
+describe("TestFixtures.defaultInMemoryShellExecutor", () => {
 	test("executes command and returns Buffer result", async () => {
-		const result = await defaultInMemoryShellExecutor(["echo", "hello"]);
+		const result = await TestFixtures.defaultInMemoryShellExecutor(["echo", "hello"]);
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout.toString()).toContain("hello");
 	});
 
 	test("handles command errors", async () => {
-		const result = await defaultInMemoryShellExecutor(["false"]);
+		const result = await TestFixtures.defaultInMemoryShellExecutor(["false"]);
 		expect(result.exitCode).toBe(1);
 	});
 
 	test("respects timeout option", async () => {
 		// This test would actually timeout, so we'll just verify the interface
-		const result = await defaultInMemoryShellExecutor(["echo", "test"], { timeout: 5000 });
+		const result = await TestFixtures.defaultInMemoryShellExecutor(["echo", "test"], { timeout: 5000 });
 		expect(result.exitCode).toBe(0);
 	});
 });
 
-describe("createMockBufferShellResult", () => {
+describe("TestFixtures.bufferShellResult", () => {
 	test("creates result with Buffer outputs from strings", () => {
-		const result = createMockBufferShellResult(0, "stdout text", "stderr text");
+		const result = TestFixtures.bufferShellResult(0, "stdout text", "stderr text");
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout).toBeInstanceOf(Buffer);
 		expect(result.stderr).toBeInstanceOf(Buffer);
@@ -539,26 +523,26 @@ describe("createMockBufferShellResult", () => {
 	test("creates result with Buffer outputs from Buffers", () => {
 		const stdoutBuf = Buffer.from("stdout");
 		const stderrBuf = Buffer.from("stderr");
-		const result = createMockBufferShellResult(1, stdoutBuf, stderrBuf);
+		const result = TestFixtures.bufferShellResult(1, stdoutBuf, stderrBuf);
 		expect(result.exitCode).toBe(1);
 		expect(result.stdout).toBe(stdoutBuf);
 		expect(result.stderr).toBe(stderrBuf);
 	});
 
 	test("defaults stdout and stderr to empty Buffers", () => {
-		const result = createMockBufferShellResult(0);
+		const result = TestFixtures.bufferShellResult(0);
 		expect(result.stdout.toString()).toBe("");
 		expect(result.stderr.toString()).toBe("");
 	});
 });
 
-describe("createMockInMemoryShellExecutor", () => {
+describe("TestFixtures.inMemoryShellExecutor", () => {
 	test("returns results from handler function", async () => {
-		const mockShell = createMockInMemoryShellExecutor(async (cmd) => {
+		const mockShell = TestFixtures.inMemoryShellExecutor(async (cmd: string[]) => {
 			if (cmd.includes("--write")) {
-				return createMockBufferShellResult(0);
+				return TestFixtures.bufferShellResult(0);
 			}
-			return createMockBufferShellResult(1, "", "error");
+			return TestFixtures.bufferShellResult(1, "", "error");
 		});
 
 		const successResult = await mockShell(["biome", "check", "--write"]);
@@ -570,9 +554,9 @@ describe("createMockInMemoryShellExecutor", () => {
 
 	test("passes command array to handler", async () => {
 		let receivedCmd: string[] = [];
-		const mockShell = createMockInMemoryShellExecutor(async (cmd, _options) => {
+		const mockShell = TestFixtures.inMemoryShellExecutor(async (cmd: string[], _options?: { timeout?: number }) => {
 			receivedCmd = cmd;
-			return createMockBufferShellResult(0);
+			return TestFixtures.bufferShellResult(0);
 		});
 
 		await mockShell(["test", "command", "--flag"]);
@@ -581,9 +565,9 @@ describe("createMockInMemoryShellExecutor", () => {
 
 	test("passes options to handler", async () => {
 		let receivedOptions: { timeout?: number } | undefined;
-		const mockShell = createMockInMemoryShellExecutor(async (_cmd, options) => {
+		const mockShell = TestFixtures.inMemoryShellExecutor(async (_cmd: string[], options?: { timeout?: number }) => {
 			receivedOptions = options;
-			return createMockBufferShellResult(0);
+			return TestFixtures.bufferShellResult(0);
 		});
 
 		await mockShell(["test"], { timeout: 10000 });
@@ -591,14 +575,14 @@ describe("createMockInMemoryShellExecutor", () => {
 	});
 });
 
-describe("testFatalErrorHandler", () => {
+describe("TestFixtures.testFatalError", () => {
 	test("captures exit code and error messages", () => {
 		const handler = (error: unknown): never => {
 			console.error("Fatal error:", error);
 			process.exit(2);
 		};
 
-		const result = testFatalErrorHandler(handler);
+		const result = TestFixtures.testFatalError(handler);
 		expect(result.exitCode).toBe(2);
 		expect(result.errorMessages.join(" ")).toContain("Fatal error");
 		expect(result.errorMessages.join(" ")).toContain("Test error");
@@ -610,7 +594,7 @@ describe("testFatalErrorHandler", () => {
 			process.exit(1);
 		};
 
-		const result = testFatalErrorHandler(handler, new Error("Custom error"));
+		const result = TestFixtures.testFatalError(handler, new Error("Custom error"));
 		expect(result.exitCode).toBe(1);
 		expect(result.errorMessages.join(" ")).toContain("Custom error");
 	});
@@ -620,7 +604,7 @@ describe("testFatalErrorHandler", () => {
 			process.exit();
 		};
 
-		const result = testFatalErrorHandler(handler);
+		const result = TestFixtures.testFatalError(handler);
 		expect(result.exitCode).toBe(0);
 	});
 
@@ -632,7 +616,7 @@ describe("testFatalErrorHandler", () => {
 			process.exit(2);
 		};
 
-		testFatalErrorHandler(handler);
+		TestFixtures.testFatalError(handler);
 
 		expect(console.error).toBe(originalError);
 		expect(process.exit).toBe(originalExit);
@@ -643,6 +627,6 @@ describe("testFatalErrorHandler", () => {
 			throw new Error("Unexpected error");
 		};
 
-		expect(() => testFatalErrorHandler(handler)).toThrow("Unexpected error");
+		expect(() => TestFixtures.testFatalError(handler)).toThrow("Unexpected error");
 	});
 });

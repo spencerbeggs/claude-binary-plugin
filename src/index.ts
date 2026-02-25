@@ -43,10 +43,9 @@
 // CORE TYPES
 // =============================================================================
 
-export type { EnvCodecMetadata } from "./state/codecs.js";
-export { EnvCodecs } from "./state/codecs.js";
+export type { EnvCodecMetadata } from "./state/classes/EnvCodecs.js";
+export { EnvCodecs } from "./state/classes/EnvCodecs.js";
 export type {
-	ClaudeBinaryPluginState,
 	CommandConfig,
 	CommandContextParams,
 	CommandContextResult,
@@ -58,15 +57,14 @@ export type {
 	ValidationResult,
 	ZodErrorMinimal,
 	ZodIssueMinimal,
-	ZodSchema,
-} from "./state/plugin-state.js";
-export { EnvFileLoadError, PluginEnv } from "./state/plugin-state.js";
-export type { SessionRecord, SessionRegistration } from "./state/session-registry.js";
+} from "./state/classes/PluginEnv.js";
+export { EnvFileLoadError, PluginEnv } from "./state/classes/PluginEnv.js";
+export type { SessionRecord, SessionRegistration } from "./state/classes/SessionRegistry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry, closeDb } from "./state/session-registry.js";
+export { SessionRegistry } from "./state/classes/SessionRegistry.js";
 // Branded types for type-safe identifiers
 export type { HookName, SessionId, ToolUseId, TranscriptPath } from "./types/branded.js";
-// JSON type utilities (re-exported from type-fest with Zod schemas)
+// JSON type utilities (re-exported from type-fest)
 export type {
 	JsonArray,
 	JsonObject,
@@ -75,12 +73,11 @@ export type {
 	JsonValue,
 	Jsonifiable,
 	Jsonify,
-	OTELAttributeValue,
-	OTELAttributes,
-	OTELHeaders,
+	OtelAttributeValue,
+	OtelAttributes,
+	OtelHeaders,
 	ParsedJson,
 } from "./types/json.js";
-export { JsonArraySchema, JsonObjectSchema, JsonPrimitiveSchema, JsonValueSchema } from "./types/json.js";
 // Type utilities re-exported from type-fest for user convenience
 export type { PartialDeep, ReadonlyDeep, RequiredDeep, Tagged, WritableDeep } from "./types/utility.js";
 export type {
@@ -98,10 +95,13 @@ export { DebugLogger } from "./utils/debug-logger.js";
 // =============================================================================
 
 // Base HookEvent class
-export { HookEvent } from "./events/base.js";
-export type { HookPermissionsMode } from "./events/enums.js";
-// Enums
-export { HookType } from "./events/enums.js";
+export { HookEvent } from "./events/classes/HookEvent.js";
+// HookEvent subclasses
+export { NotificationEvent } from "./events/classes/NotificationEvent.js";
+export { PermissionRequestEvent } from "./events/classes/PermissionRequestEvent.js";
+export { PostToolUseEvent } from "./events/classes/PostToolUseEvent.js";
+export { PreCompactEvent } from "./events/classes/PreCompactEvent.js";
+export { PreToolUseEvent } from "./events/classes/PreToolUseEvent.js";
 // Response builders
 export {
 	HookResponse,
@@ -111,24 +111,20 @@ export {
 	SessionStartResponse,
 	StopResponse,
 	UserPromptSubmitResponse,
-} from "./events/response-builders.js";
-
+} from "./events/classes/ResponseBuilders.js";
+// Schema validation
+export type { FormattedValidationError } from "./events/classes/SchemaValidator.js";
+export { SchemaValidator } from "./events/classes/SchemaValidator.js";
+export { SessionEndEvent } from "./events/classes/SessionEndEvent.js";
+export { SessionStartEvent } from "./events/classes/SessionStartEvent.js";
+export { StopEvent } from "./events/classes/StopEvent.js";
+export { SubagentStopEvent } from "./events/classes/SubagentStopEvent.js";
+export { UserPromptSubmitEvent } from "./events/classes/UserPromptSubmitEvent.js";
+export type { HookPermissionsMode } from "./events/enums.js";
+// Enums
+export { HookType } from "./events/enums.js";
 // Response types
 export type { BlockDecision, HookResponseData } from "./events/response-types.js";
-export { estimateTokenCount } from "./events/response-types.js";
-// HookEvent subclasses
-export {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "./events/subclasses.js";
 // Event type definitions
 export type {
 	HookEventBase,
@@ -160,10 +156,6 @@ export type {
 	UserPromptSubmitInput,
 	UserPromptSubmitOutput,
 } from "./events/types.js";
-
-// Schema validation
-export type { FormattedValidationError } from "./events/validation.js";
-export { SchemaValidator } from "./events/validation.js";
 
 // =============================================================================
 // TYPED TOOL INPUTS
@@ -220,7 +212,6 @@ export {
 	StopEventSchema,
 	SubagentStopEventSchema,
 	UserPromptSubmitEventSchema,
-	hookEventSchemaRegistry,
 } from "./core/schemas.js";
 
 // =============================================================================
@@ -233,7 +224,6 @@ export {
 	CommandArgumentError,
 	// Main class (preferred)
 	Commands,
-	emptyArgsSchema,
 } from "./commands/runtime.js";
 
 // =============================================================================
@@ -245,8 +235,8 @@ export type { ClaudeAccountInfoData } from "./otel/classes/ClaudeAccountInfo.js"
 export { ClaudeAccountInfo } from "./otel/classes/ClaudeAccountInfo.js";
 export type { GitInfoData, GitProvider } from "./otel/classes/GitInfo.js";
 export { GitInfo } from "./otel/classes/GitInfo.js";
-export type { OTELConfigData } from "./otel/classes/OTELConfig.js";
-export { OTELConfig } from "./otel/classes/OTELConfig.js";
+export type { OtelConfigData } from "./otel/classes/OtelConfig.js";
+export { OtelConfig } from "./otel/classes/OtelConfig.js";
 
 // Platform utilities
 export type { PlatformType, SupportedPlatform } from "./otel/classes/Platform.js";
@@ -254,6 +244,11 @@ export { Platform } from "./otel/classes/Platform.js";
 export type { PluginInfoData } from "./otel/classes/PluginInfo.js";
 export { PluginInfo } from "./otel/classes/PluginInfo.js";
 export { SessionEnv } from "./otel/classes/SessionEnv.js";
+// Sidecar entry point (compiled separately by builder)
+export { Sidecar } from "./otel/classes/Sidecar.js";
+// Sidecar management
+export type { ClientState } from "./otel/classes/SidecarClient.js";
+export { SidecarClient } from "./otel/classes/SidecarClient.js";
 export { SidecarClientPool } from "./otel/classes/SidecarClientPool.js";
 export type { SpawnResult } from "./otel/classes/SidecarLauncher.js";
 export { SidecarLauncher } from "./otel/classes/SidecarLauncher.js";
@@ -272,10 +267,6 @@ export type {
 export { TelemetryEmitter } from "./otel/classes/TelemetryEmitter.js";
 export { TelemetryMetrics } from "./otel/classes/TelemetryMetrics.js";
 export { TelemetrySpan } from "./otel/classes/TelemetrySpan.js";
-// Sidecar management
-export type { ClientState } from "./otel/client.js";
-export { SidecarClient } from "./otel/client.js";
-
 // Protocol types (for advanced usage)
 export type {
 	EventData,
@@ -283,7 +274,7 @@ export type {
 	MetricData,
 	MetricMessage,
 	MetricType,
-	OTELProtocolConfig,
+	OtelProtocolConfig,
 	PingMessage,
 	ScopeData,
 	ShutdownMessage,
@@ -293,25 +284,50 @@ export type {
 	SpanMessage,
 } from "./otel/protocol.js";
 
-// Sidecar entry point (compiled separately by builder)
-export { main as sidecarMain } from "./otel/sidecar/main.js";
-
 // =============================================================================
 // PIPELINE CONFIG
 // =============================================================================
 
+// Pipeline utilities (type guards, metrics)
+export { Pipeline } from "./pipeline/classes/Pipeline.js";
+// Pipeline runtime types
+export type {
+	HookEventType,
+	IODependencies,
+	PermissionRequestResponseData,
+	PipelineConfig,
+	PostToolUseResponseData,
+	PreToolUseResponseData,
+	RunRawHandlerOptions,
+	SessionStartResponseData,
+	StopResponseData,
+	UserPromptSubmitResponseData,
+} from "./pipeline/classes/PipelineRuntime.js";
+// Pipeline runtime execution
+export { PipelineRuntime } from "./pipeline/classes/PipelineRuntime.js";
 export type {
 	BaseState,
 	CmdContext,
 	CommandDefinition,
+	CommandDefinitionBase,
+	CommandFileDefinition,
 	CommandHandler,
+	CommandHandlerFn,
+	CommandInlineDefinition,
 	CommandOutput,
 	CommandsMap,
+	ExtractCommands,
+	ExtractOptionsSchema,
+	ExtractSetup,
 	ExtractSetupReturn,
 	HandlerContext,
 	HookDefinition,
 	HookDefinitionBase,
 	HooksMap,
+	InferPluginCommands,
+	InferPluginOptions,
+	InferPluginPipeline,
+	InferPluginState,
 	NotificationHookDefinition,
 	NotificationPipeline,
 	NotificationRawHandler,
@@ -358,11 +374,8 @@ export type {
 } from "./pipeline/config.js";
 export { ClaudeBinaryPlugin } from "./pipeline/config.js";
 // Pipeline metrics
-export type { BudgetCheckResult, OtelAttributes, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
+export type { BudgetCheckResult, SessionTokenState, TokenBudget } from "./pipeline/metrics.js";
 export { TokenMetrics } from "./pipeline/metrics.js";
-// Unified Pipeline class (preferred)
-export { Pipeline } from "./pipeline/pipeline.js";
-
 // Pipeline types - distinct from events/types.ts output interfaces
 export type {
 	AnyPipelineOutput,
@@ -391,7 +404,6 @@ export {
 	ExecutionStatusSchema,
 	HookActionSchema,
 	NotificationOutputSchema,
-	OutputSchemas,
 	PassthroughOutputSchema,
 	PermissionRequestOutputSchema,
 	PipelineMetricsSchema,
@@ -406,23 +418,6 @@ export {
 	UserPromptSubmitOutputSchema,
 	ValidationResultSchema,
 } from "./pipeline/types.js";
-
-// =============================================================================
-// PIPELINE RUNTIME
-// =============================================================================
-
-export type {
-	HookEventType,
-	IODependencies,
-	PermissionRequestResponseData,
-	PipelineConfig,
-	PostToolUseResponseData,
-	PreToolUseResponseData,
-	RunRawHandlerOptions,
-	SessionStartResponseData,
-	StopResponseData,
-	UserPromptSubmitResponseData,
-} from "./pipeline/runtime.js";
 
 // =============================================================================
 // BUILD SYSTEM
@@ -450,6 +445,7 @@ export type {
 	ShellResult,
 } from "./build/builder.js";
 export { PluginBuilder } from "./build/builder.js";
+export type { GenerateProxyScriptOptions } from "./build/proxy-template.js";
 
 // =============================================================================
 // TESTING UTILITIES
@@ -460,6 +456,7 @@ export type {
 	CommandTestResult,
 	HookInputBase,
 	HookTestResult,
+	MockFn,
 	NotificationTestInput,
 	PermissionRequestTestInput,
 	PostToolUseTestInput,
@@ -471,7 +468,7 @@ export type {
 	SubagentStopTestInput,
 	UserPromptSubmitTestInput,
 } from "./testing/builder.js";
-export { PluginTester } from "./testing/builder.js";
+export { PluginTester, createMockFn } from "./testing/builder.js";
 export type {
 	BufferShellResult,
 	InMemoryShellExecutor,

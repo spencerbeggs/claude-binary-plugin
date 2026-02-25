@@ -1,26 +1,4 @@
-/**
- * Sidecar client pool management.
- *
- * @remarks
- * Manages a pool of SidecarClient instances, one per session.
- * Provides a singleton pattern for client access within a process.
- *
- * @example
- * ```typescript
- * import { SidecarClientPool } from "claude-binary-plugin";
- *
- * // Get or create client for a session
- * const client = SidecarClientPool.get(sessionId);
- * await client.preconnect();
- *
- * // Clean up when done
- * SidecarClientPool.remove(sessionId);
- * ```
- *
- * @public
- */
-
-import { SidecarClient } from "../client.js";
+import { SidecarClient } from "./SidecarClient.js";
 
 /**
  * Sidecar client pool.

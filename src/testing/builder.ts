@@ -1,49 +1,20 @@
-/**
- * Fluent test builder for Claude Code plugins.
- *
- * @remarks
- * `PluginTester` provides a type-safe, fluent API for testing plugin hooks
- * and commands. It integrates with `ClaudeBinaryPlugin` to provide full type
- * inference for options, state, and hook inputs.
- *
- * @example
- * ```typescript
- * import myPlugin from "../plugin.config.js";
- *
- * describe("security hook", () => {
- *   let ctx: ReturnType<typeof myPlugin.test>;
- *
- *   beforeEach(() => {
- *     ctx = myPlugin.test()
- *       .withOptions({ ALLOW_SUDO: false, API_KEY: "test" })
- *       .withState({ packageManager: "bun", gitRepo: true });
- *   });
- *
- *   afterEach(() => ctx.dispose());
- *
- *   test("blocks dangerous commands", async () => {
- *     const result = await ctx
- *       .withPreToolUseInput({
- *         tool_name: "Bash",
- *         tool_input: { command: "rm -rf /" },
- *       })
- *       .runHook("PreToolUse", "security");
- *
- *     expect(result.action).toBe("deny");
- *   });
- * });
- * ```
- *
- * @module
- */
-
 import { mock, spyOn } from "bun:test";
+import { rmSync } from "node:fs";
 import type { PartialDeep } from "type-fest";
 import type { z } from "zod";
 import type { ShellResult } from "../build/builder.js";
-import type { CommandDefinition, PluginConfig } from "../pipeline/config.js";
-import type { HookAction } from "../pipeline/types.js";
-import { MockExitError } from "./mocks.js";
+import type {
+	BaseState,
+	CommandDefinition,
+	CommandHandler,
+	CommandOutput,
+	PipelineHandler,
+	PluginConfig,
+	PluginState,
+} from "../pipeline/config.js";
+import type { AnyPipelineOutput, HookAction } from "../pipeline/types.js";
+import { isPipelineOutput } from "../pipeline/types.js";
+import type { BufferShellResult } from "./mocks.js";
 
 // =============================================================================
 // HOOK INPUT TYPES
@@ -177,11 +148,11 @@ export interface HookTestResult {
 	/** Parsed JSON response from the hook */
 	output: Record<string, unknown>;
 	/** Convenience accessor for hook action (allow/deny/block/etc) */
-	action?: HookAction;
+	action?: HookAction | undefined;
 	/** Convenience accessor for additionalContext */
-	context?: string;
+	context?: string | undefined;
 	/** Convenience accessor for reason */
-	reason?: string;
+	reason?: string | undefined;
 }
 
 /**
@@ -189,16 +160,273 @@ export interface HookTestResult {
  * @public
  */
 export interface CommandTestResult {
-	/** Exit code from the command */
+	/** Exit code from the command (0 = success, 1 = issues found, 2 = fatal error) */
 	exitCode: number;
-	/** Raw stdout output */
+	/** Command output (markdown content) */
 	stdout: string;
-	/** Raw stderr output */
+	/** Error output */
 	stderr: string;
 	/** Captured console.log calls */
 	logs: string[];
 	/** Captured console.error calls */
 	errors: string[];
+	/** Optional structured data returned by the command */
+	data?: Record<string, unknown> | undefined;
+}
+
+// =============================================================================
+// MOCK TYPES
+// =============================================================================
+
+/**
+ * A tracked mock function that records calls and can be configured.
+ * Inspired by Jest's mock function API.
+ * @public
+ */
+export interface MockFn<TArgs extends unknown[] = unknown[], TReturn = unknown> {
+	/** The mock function to use in tests */
+	(...args: TArgs): TReturn;
+	/** Array of all calls made to the mock */
+	calls: TArgs[];
+	/** Array of all return values */
+	results: Array<{ type: "return" | "throw"; value: TReturn | Error }>;
+	/** Configure the mock to return a specific value */
+	mockReturnValue(value: TReturn): MockFn<TArgs, TReturn>;
+	/** Configure the mock to return a value only once */
+	mockReturnValueOnce(value: TReturn): MockFn<TArgs, TReturn>;
+	/** Configure the mock with a custom implementation */
+	mockImplementation(fn: (...args: TArgs) => TReturn): MockFn<TArgs, TReturn>;
+	/** Configure the mock to throw an error */
+	mockRejectedValue(error: Error): MockFn<TArgs, TReturn>;
+	/** Clear all recorded calls and results */
+	mockClear(): MockFn<TArgs, TReturn>;
+	/** Reset the mock to its initial state */
+	mockReset(): MockFn<TArgs, TReturn>;
+	/** Get the number of times the mock was called */
+	readonly callCount: number;
+	/** Check if the mock was called */
+	readonly called: boolean;
+	/** Get the last call arguments */
+	readonly lastCall: TArgs | undefined;
+}
+
+/**
+ * Result from a mock shell command execution.
+ * Mimics the structure returned by awaiting Bun.$.
+ * @internal
+ */
+interface MockShellResult {
+	exitCode: number;
+	stdout: Buffer;
+	stderr: Buffer;
+}
+
+/**
+ * Mock shell promise that mimics Bun.$ return value.
+ * Supports chaining methods like .quiet(), .nothrow(), .text(), etc.
+ * @internal
+ */
+interface MockShellPromise extends PromiseLike<MockShellResult> {
+	/** Suppress stdout/stderr output (no-op in mock) */
+	quiet(): MockShellPromise;
+	/** Don't throw on non-zero exit code */
+	nothrow(): MockShellPromise;
+	/** Set environment variables (no-op in mock) */
+	env(env: Record<string, string>): MockShellPromise;
+	/** Set working directory (no-op in mock) */
+	cwd(path: string): MockShellPromise;
+	/** Get stdout as trimmed string */
+	text(): Promise<string>;
+	/** Parse stdout as JSON */
+	json(): Promise<unknown>;
+	/** Get stdout as Blob */
+	blob(): Promise<Blob>;
+	/** Get stdout as array of non-empty lines */
+	lines(): Promise<string[]>;
+	/** Promise catch handler */
+	catch<TResult = never>(
+		onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+	): Promise<MockShellResult | TResult>;
+	/** Promise finally handler */
+	finally(onfinally?: (() => void) | null): Promise<MockShellResult>;
+	/** String tag for proper Promise detection */
+	readonly [Symbol.toStringTag]: string;
+}
+
+/**
+ * Configuration for shell mock with sequencing support.
+ * @internal
+ */
+interface ShellMockConfig {
+	/** Default result to return */
+	default?: ShellResult;
+	/** Queue of results to return in sequence */
+	sequence: ShellResult[];
+	/** Matcher function for pattern matching */
+	matcher?: (command: string) => boolean;
+}
+
+/**
+ * Configuration for buffer shell mock with sequencing support.
+ * Used for InMemoryShellExecutor mocking (command arrays, Buffer results).
+ * @internal
+ */
+interface BufferShellMockConfig {
+	/** Default result to return */
+	default?: BufferShellResult;
+	/** Queue of results to return in sequence */
+	sequence: BufferShellResult[];
+	/** Matcher function for pattern matching against command array */
+	matcher?: (cmd: string[]) => boolean;
+}
+
+// =============================================================================
+// MOCK FUNCTION FACTORY
+// =============================================================================
+
+/**
+ * Internal state for a mock function.
+ * @internal
+ */
+interface MockFnState<TArgs extends unknown[], TReturn> {
+	calls: TArgs[];
+	results: Array<{ type: "return" | "throw"; value: TReturn | Error }>;
+	defaultReturn?: TReturn | undefined;
+	returnQueue: TReturn[];
+	implementation?: ((...args: TArgs) => TReturn) | undefined;
+	rejectedError?: Error | undefined;
+}
+
+/**
+ * Create a tracked mock function with Jest-like API.
+ *
+ * @param initialImpl - Optional initial implementation
+ * @returns A MockFn instance
+ *
+ * @example
+ * ```typescript
+ * const mockFetch = createMockFn<[string], Response>();
+ * mockFetch.mockReturnValue({ ok: true, json: () => ({}) });
+ *
+ * await someFunction(mockFetch);
+ *
+ * expect(mockFetch.called).toBe(true);
+ * expect(mockFetch.callCount).toBe(1);
+ * expect(mockFetch.lastCall).toEqual(["https://api.example.com"]);
+ * ```
+ *
+ * @public
+ */
+export function createMockFn<TArgs extends unknown[] = unknown[], TReturn = unknown>(
+	initialImpl?: (...args: TArgs) => TReturn,
+): MockFn<TArgs, TReturn> {
+	const state: MockFnState<TArgs, TReturn> = {
+		calls: [],
+		results: [],
+		returnQueue: [],
+		implementation: initialImpl,
+	};
+
+	// The actual mock function
+	const mockFn = ((...args: TArgs): TReturn => {
+		state.calls.push(args);
+
+		// Check for rejected error
+		if (state.rejectedError) {
+			const error = state.rejectedError;
+			state.results.push({ type: "throw", value: error });
+			throw error;
+		}
+
+		// Check for custom implementation
+		if (state.implementation) {
+			try {
+				const result = state.implementation(...args);
+				state.results.push({ type: "return", value: result });
+				return result;
+			} catch (error) {
+				state.results.push({ type: "throw", value: error as Error });
+				throw error;
+			}
+		}
+
+		// Check for queued return values
+		if (state.returnQueue.length > 0) {
+			const result = state.returnQueue.shift() as TReturn;
+			state.results.push({ type: "return", value: result });
+			return result;
+		}
+
+		// Return default value
+		const result = state.defaultReturn as TReturn;
+		state.results.push({ type: "return", value: result });
+		return result;
+	}) as MockFn<TArgs, TReturn>;
+
+	// Attach properties
+	Object.defineProperty(mockFn, "calls", {
+		get: () => state.calls,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "results", {
+		get: () => state.results,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "callCount", {
+		get: () => state.calls.length,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "called", {
+		get: () => state.calls.length > 0,
+		enumerable: true,
+	});
+
+	Object.defineProperty(mockFn, "lastCall", {
+		get: () => (state.calls.length > 0 ? state.calls[state.calls.length - 1] : undefined),
+		enumerable: true,
+	});
+
+	// Attach methods
+	mockFn.mockReturnValue = (value: TReturn): MockFn<TArgs, TReturn> => {
+		state.defaultReturn = value;
+		return mockFn;
+	};
+
+	mockFn.mockReturnValueOnce = (value: TReturn): MockFn<TArgs, TReturn> => {
+		state.returnQueue.push(value);
+		return mockFn;
+	};
+
+	mockFn.mockImplementation = (fn: (...args: TArgs) => TReturn): MockFn<TArgs, TReturn> => {
+		state.implementation = fn;
+		return mockFn;
+	};
+
+	mockFn.mockRejectedValue = (error: Error): MockFn<TArgs, TReturn> => {
+		state.rejectedError = error;
+		return mockFn;
+	};
+
+	mockFn.mockClear = (): MockFn<TArgs, TReturn> => {
+		state.calls = [];
+		state.results = [];
+		return mockFn;
+	};
+
+	mockFn.mockReset = (): MockFn<TArgs, TReturn> => {
+		state.calls = [];
+		state.results = [];
+		state.defaultReturn = undefined;
+		state.returnQueue = [];
+		state.implementation = initialImpl;
+		state.rejectedError = undefined;
+		return mockFn;
+	};
+
+	return mockFn;
 }
 
 // =============================================================================
@@ -214,8 +442,23 @@ interface BuilderState<TOptions, TState> {
 	state?: TState;
 	hookInput?: Record<string, unknown>;
 	hookEventName?: string;
+	/** Plugin root directory for resolving relative paths */
+	pluginRoot?: string;
+	/** Project directory (cwd) for tests */
+	projectDir?: string;
+	/** Whether to use a temp project directory */
+	useTempProject?: boolean;
+	/** Temp project directory path (created on demand) */
+	tempProjectDir?: string;
+	/** Files to create in temp project: path -> content */
+	tempProjectFiles: Map<string, string | Uint8Array>;
 	shellResponses: Map<string, ShellResult>;
+	shellMocks: Map<string, ShellMockConfig>;
+	bufferShellResponses: Map<string, BufferShellResult>;
+	bufferShellMocks: Map<string, BufferShellMockConfig>;
 	envVars: Map<string, string>;
+	// Use unknown to allow storing any MockFn<TArgs, TReturn> variant
+	mockFunctions: Map<string, unknown>;
 }
 
 // =============================================================================
@@ -237,17 +480,26 @@ export class PluginTester<
 	TState,
 	// biome-ignore lint/suspicious/noExplicitAny: Hooks map has optional properties that don't satisfy Record constraint
 	THooks extends Record<string, any>,
-	TCommands extends Record<string, CommandDefinition>,
+	// biome-ignore lint/suspicious/noExplicitAny: CommandDefinitionBase allows string | function for pipeline
+	TCommands extends Record<string, any>,
 > {
 	private state: BuilderState<TOptions, TState> = {
+		tempProjectFiles: new Map(),
 		shellResponses: new Map(),
+		shellMocks: new Map(),
+		bufferShellResponses: new Map(),
+		bufferShellMocks: new Map(),
 		envVars: new Map(),
+		mockFunctions: new Map(),
 	};
 
 	private savedEnv: Map<string, string | undefined> = new Map();
 	private stdoutBuffer = "";
 	private stderrBuffer = "";
 	private isDisposed = false;
+	private isBunShellMocked = false;
+	// biome-ignore lint/suspicious/noExplicitAny: Bun.$ type is complex tagged template literal
+	private originalBunShell: any = null;
 
 	/**
 	 * Plugin configuration reference for type inference.
@@ -315,6 +567,124 @@ export class PluginTester<
 	withState(state: PartialDeep<TState>): this {
 		this.state.state = state as TState;
 		return this;
+	}
+
+	/**
+	 * Set the plugin root directory for resolving relative paths.
+	 *
+	 * @remarks
+	 * This is essential for command testing when commands are defined
+	 * with relative paths like `./commands/test.cmd.ts`. The plugin root
+	 * is used to resolve these paths to absolute paths.
+	 *
+	 * @param path - Absolute path to the plugin root directory
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Set to the directory containing your plugin config
+	 * ctx.withPluginRoot(import.meta.dir);
+	 *
+	 * // Or resolve from test file location
+	 * ctx.withPluginRoot(resolve(import.meta.dir, ".."));
+	 * ```
+	 */
+	withPluginRoot(path: string): this {
+		this.state.pluginRoot = path;
+		return this;
+	}
+
+	/**
+	 * Set the project directory (cwd) for tests.
+	 *
+	 * @remarks
+	 * This sets `CLAUDE_PROJECT_DIR` which represents the user's project
+	 * directory where Claude Code is running. Useful for testing commands
+	 * that operate on project files.
+	 *
+	 * @param path - Absolute path to the project directory
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Use a temp directory for isolated tests
+	 * const tempDir = await mkdtemp(join(tmpdir(), "test-"));
+	 * ctx.withProjectDir(tempDir);
+	 * ```
+	 */
+	withProjectDir(path: string): this {
+		this.state.projectDir = path;
+		return this;
+	}
+
+	/**
+	 * Use a temporary project directory for isolated file system tests.
+	 *
+	 * @remarks
+	 * Creates an isolated temp directory that acts as the project root.
+	 * The directory is automatically created before tests run and cleaned
+	 * up when `dispose()` is called.
+	 *
+	 * Use `withFile()` to add files to the temp project before running tests.
+	 *
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * const result = await plugin.test()
+	 *   .withTempProject()
+	 *   .withFile("package.json", JSON.stringify({ name: "test" }))
+	 *   .withFile("tsconfig.json", JSON.stringify({ compilerOptions: {} }))
+	 *   .withOptions({ DEBUG: "false" })
+	 *   .withState({ enabled: true })
+	 *   .runCommand("typecheck", {});
+	 * ```
+	 */
+	withTempProject(): this {
+		this.state.useTempProject = true;
+		return this;
+	}
+
+	/**
+	 * Add a file to the temp project directory.
+	 *
+	 * @remarks
+	 * Files are created when tests run. Requires `withTempProject()` to be called first.
+	 * Directories are created automatically as needed.
+	 *
+	 * @param relativePath - Path relative to project root (e.g., "src/index.ts")
+	 * @param content - File content as string or binary data
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.withTempProject()
+	 *   .withFile("package.json", JSON.stringify({ name: "test", type: "module" }))
+	 *   .withFile("src/index.ts", "export const foo = 1;")
+	 *   .withFile("tsconfig.json", JSON.stringify({
+	 *     compilerOptions: { strict: true }
+	 *   }));
+	 * ```
+	 */
+	withFile(relativePath: string, content: string | Uint8Array): this {
+		if (!this.state.useTempProject) {
+			throw new Error("PluginTester: withTempProject() must be called before withFile()");
+		}
+		this.state.tempProjectFiles.set(relativePath, content);
+		return this;
+	}
+
+	/**
+	 * Get the temp project directory path.
+	 *
+	 * @remarks
+	 * Returns the path after tests have run (setupMocks creates the directory).
+	 * Returns undefined if withTempProject() wasn't called or tests haven't run yet.
+	 *
+	 * @returns The temp project directory path, or undefined
+	 */
+	getTempProjectDir(): string | undefined {
+		return this.state.tempProjectDir;
 	}
 
 	// =========================================================================
@@ -481,18 +851,587 @@ export class PluginTester<
 	/**
 	 * Add a mock shell response for a command pattern.
 	 *
-	 * @param pattern - Command string or pattern to match
+	 * @remarks
+	 * Uses substring matching - the pattern must appear anywhere in the command.
+	 * For more flexible matching, use `withShellMatching()` (regex) or
+	 * `withShellMatcher()` (custom function).
+	 *
+	 * @param pattern - Command substring to match (uses `command.includes(pattern)`)
 	 * @param result - ShellResult to return for matching commands
 	 * @returns this for chaining
 	 *
 	 * @example
 	 * ```typescript
+	 * // Matches any command containing "git status"
 	 * ctx.withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" });
+	 *
+	 * // Also matches "git status --short", "cd /foo && git status", etc.
 	 * ```
 	 */
 	withShell(pattern: string, result: ShellResult): this {
 		this.state.shellResponses.set(pattern, result);
 		return this;
+	}
+
+	/**
+	 * Add a mock shell response with regex pattern matching.
+	 *
+	 * @remarks
+	 * Use this for complex patterns where substring matching isn't sufficient.
+	 * The regex is tested against the full reconstructed command string.
+	 *
+	 * @param pattern - RegExp to test against command
+	 * @param result - ShellResult to return for matching commands
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Match "bunx tsc" with any arguments
+	 * ctx.withShellMatching(/bunx\s+tsc/, { exitCode: 0, stdout: "", stderr: "" });
+	 *
+	 * // Match "npm test" or "bun test"
+	 * ctx.withShellMatching(/(?:npm|bun)\s+test/, { exitCode: 0, stdout: "pass", stderr: "" });
+	 * ```
+	 */
+	withShellMatching(pattern: RegExp, result: ShellResult): this {
+		// Store as a mock with a matcher function
+		const patternKey = `__regex__${pattern.source}__${pattern.flags}`;
+		this.state.shellMocks.set(patternKey, {
+			default: result,
+			sequence: [],
+			matcher: (command: string) => pattern.test(command),
+		});
+		return this;
+	}
+
+	/**
+	 * Add a mock shell response with a custom matcher function.
+	 *
+	 * @remarks
+	 * Use this for complex matching logic that can't be expressed as a
+	 * substring or regex. The matcher receives the full command string.
+	 *
+	 * @param name - Unique name for the matcher (for internal tracking)
+	 * @param matcher - Function that returns true if command matches
+	 * @param result - ShellResult to return for matching commands
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Match commands that start with "npm" or "yarn"
+	 * ctx.withShellMatcher(
+	 *   "package-manager",
+	 *   (cmd) => cmd.startsWith("npm ") || cmd.startsWith("yarn "),
+	 *   { exitCode: 0, stdout: "done", stderr: "" }
+	 * );
+	 *
+	 * // Match based on parsed command structure
+	 * ctx.withShellMatcher(
+	 *   "tsc-with-project",
+	 *   (cmd) => cmd.includes("tsc") && cmd.includes("-p"),
+	 *   { exitCode: 0, stdout: "", stderr: "" }
+	 * );
+	 * ```
+	 */
+	withShellMatcher(name: string, matcher: (command: string) => boolean, result: ShellResult): this {
+		this.state.shellMocks.set(`__matcher__${name}`, {
+			default: result,
+			sequence: [],
+			matcher,
+		});
+		return this;
+	}
+
+	// =========================================================================
+	// MOCK UTILITIES (Jest-like API)
+	// =========================================================================
+
+	/**
+	 * Create a tracked mock function.
+	 *
+	 * @remarks
+	 * Creates a mock function that tracks calls, return values, and provides
+	 * Jest-like configuration methods. The mock is registered with the test
+	 * context and will be cleaned up on dispose().
+	 *
+	 * @param name - Unique name for the mock (used for cleanup)
+	 * @param initialImpl - Optional initial implementation
+	 * @returns A MockFn instance
+	 *
+	 * @example
+	 * ```typescript
+	 * const fetchMock = ctx.mockFn<[string], Response>("fetch");
+	 * fetchMock.mockReturnValue({ ok: true, json: () => ({}) });
+	 *
+	 * // Use in test...
+	 *
+	 * expect(fetchMock.called).toBe(true);
+	 * expect(fetchMock.callCount).toBe(1);
+	 * ```
+	 */
+	mockFn<TArgs extends unknown[] = unknown[], TReturn = unknown>(
+		name: string,
+		initialImpl?: (...args: TArgs) => TReturn,
+	): MockFn<TArgs, TReturn> {
+		const fn = createMockFn<TArgs, TReturn>(initialImpl);
+		this.state.mockFunctions.set(name, fn);
+		return fn;
+	}
+
+	/**
+	 * Add a one-time shell mock response for a command pattern.
+	 *
+	 * @remarks
+	 * The result will only be returned once. Subsequent calls to the same
+	 * pattern will return the next queued result or the default response.
+	 *
+	 * @param pattern - Command string or pattern to match
+	 * @param result - ShellResult to return once
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // First call returns success, subsequent calls return error
+	 * ctx.mockShellOnce("npm install", { exitCode: 0, stdout: "installed", stderr: "" });
+	 * ctx.withShell("npm install", { exitCode: 1, stdout: "", stderr: "failed" });
+	 * ```
+	 */
+	mockShellOnce(pattern: string, result: ShellResult): this {
+		const existing = this.state.shellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(result);
+		} else {
+			this.state.shellMocks.set(pattern, {
+				sequence: [result],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Add a sequence of shell mock responses for a command pattern.
+	 *
+	 * @remarks
+	 * Results will be returned in order. After the sequence is exhausted,
+	 * subsequent calls return the default shell response if set.
+	 *
+	 * @param pattern - Command string or pattern to match
+	 * @param results - Array of ShellResults to return in sequence
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // Simulate retry behavior
+	 * ctx.mockShellSequence("curl https://api.example.com", [
+	 *   { exitCode: 1, stdout: "", stderr: "timeout" },
+	 *   { exitCode: 1, stdout: "", stderr: "timeout" },
+	 *   { exitCode: 0, stdout: '{"success": true}', stderr: "" },
+	 * ]);
+	 * ```
+	 */
+	mockShellSequence(pattern: string, results: ShellResult[]): this {
+		const existing = this.state.shellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(...results);
+		} else {
+			this.state.shellMocks.set(pattern, {
+				sequence: [...results],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Get a shell mock result for a command, consuming from sequence if available.
+	 *
+	 * @param command - The command being executed
+	 * @returns ShellResult or undefined if no mock matches
+	 *
+	 * @internal
+	 */
+	getShellMock(command: string): ShellResult | undefined {
+		// First check sequenced mocks
+		for (const [pattern, config] of this.state.shellMocks) {
+			const matches = config.matcher ? config.matcher(command) : command.includes(pattern);
+			if (matches) {
+				// Return from sequence if available
+				if (config.sequence.length > 0) {
+					return config.sequence.shift();
+				}
+				// Return default if set
+				if (config.default) {
+					return config.default;
+				}
+			}
+		}
+
+		// Fall back to static shell responses
+		for (const [pattern, result] of this.state.shellResponses) {
+			if (command.includes(pattern)) {
+				return result;
+			}
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Clear all call history from registered mock functions.
+	 *
+	 * @remarks
+	 * This clears the calls and results arrays but preserves configured
+	 * return values and implementations. Useful between test assertions.
+	 *
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * // After first test phase
+	 * expect(myMock.callCount).toBe(3);
+	 *
+	 * ctx.clearMockCalls();
+	 *
+	 * // Start fresh for next phase
+	 * expect(myMock.callCount).toBe(0);
+	 * ```
+	 */
+	clearMockCalls(): this {
+		for (const fn of this.state.mockFunctions.values()) {
+			(fn as MockFn).mockClear();
+		}
+		return this;
+	}
+
+	/**
+	 * Reset all registered mock functions to their initial state.
+	 *
+	 * @remarks
+	 * This clears calls, results, and all configured return values/implementations.
+	 *
+	 * @returns this for chaining
+	 */
+	resetMocks(): this {
+		for (const fn of this.state.mockFunctions.values()) {
+			(fn as MockFn).mockReset();
+		}
+		// Also reset shell mocks sequences
+		for (const config of this.state.shellMocks.values()) {
+			config.sequence = [];
+		}
+		for (const config of this.state.bufferShellMocks.values()) {
+			config.sequence = [];
+		}
+		return this;
+	}
+
+	// =========================================================================
+	// BUFFER SHELL MOCKING (For InMemoryShellExecutor)
+	// =========================================================================
+
+	/**
+	 * Add a mock buffer shell response for a command pattern.
+	 *
+	 * @remarks
+	 * Buffer shell mocks are for InMemoryShellExecutor which takes command
+	 * arrays and returns BufferShellResult with Buffer stdout/stderr.
+	 *
+	 * @param pattern - Command string pattern to match (matched against joined command array)
+	 * @param result - BufferShellResult to return for matching commands
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.withBufferShell("git status", {
+	 *   exitCode: 0,
+	 *   stdout: Buffer.from("clean"),
+	 *   stderr: Buffer.from(""),
+	 * });
+	 * ```
+	 */
+	withBufferShell(pattern: string, result: BufferShellResult): this {
+		this.state.bufferShellResponses.set(pattern, result);
+		return this;
+	}
+
+	/**
+	 * Add a one-time buffer shell mock response for a command pattern.
+	 *
+	 * @remarks
+	 * The result will only be returned once. Subsequent calls to the same
+	 * pattern will return the next queued result or the default response.
+	 *
+	 * @param pattern - Command string pattern to match
+	 * @param result - BufferShellResult to return once
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.mockBufferShellOnce("npm install", {
+	 *   exitCode: 0,
+	 *   stdout: Buffer.from("installed"),
+	 *   stderr: Buffer.from(""),
+	 * });
+	 * ```
+	 */
+	mockBufferShellOnce(pattern: string, result: BufferShellResult): this {
+		const existing = this.state.bufferShellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(result);
+		} else {
+			this.state.bufferShellMocks.set(pattern, {
+				sequence: [result],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Add a sequence of buffer shell mock responses for a command pattern.
+	 *
+	 * @remarks
+	 * Results will be returned in order. After the sequence is exhausted,
+	 * subsequent calls return the default buffer shell response if set.
+	 *
+	 * @param pattern - Command string pattern to match
+	 * @param results - Array of BufferShellResults to return in sequence
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.mockBufferShellSequence("curl https://api.example.com", [
+	 *   { exitCode: 1, stdout: Buffer.from(""), stderr: Buffer.from("timeout") },
+	 *   { exitCode: 0, stdout: Buffer.from('{"ok":true}'), stderr: Buffer.from("") },
+	 * ]);
+	 * ```
+	 */
+	mockBufferShellSequence(pattern: string, results: BufferShellResult[]): this {
+		const existing = this.state.bufferShellMocks.get(pattern);
+		if (existing) {
+			existing.sequence.push(...results);
+		} else {
+			this.state.bufferShellMocks.set(pattern, {
+				sequence: [...results],
+			});
+		}
+		return this;
+	}
+
+	/**
+	 * Get a buffer shell mock result for a command, consuming from sequence if available.
+	 *
+	 * @param cmd - The command array being executed
+	 * @returns BufferShellResult or undefined if no mock matches
+	 *
+	 * @internal
+	 */
+	getBufferShellMock(cmd: string[]): BufferShellResult | undefined {
+		const command = cmd.join(" ");
+
+		// First check sequenced mocks
+		for (const [pattern, config] of this.state.bufferShellMocks) {
+			const matches = config.matcher ? config.matcher(cmd) : command.includes(pattern);
+			if (matches) {
+				// Return from sequence if available
+				if (config.sequence.length > 0) {
+					return config.sequence.shift();
+				}
+				// Return default if set
+				if (config.default) {
+					return config.default;
+				}
+			}
+		}
+
+		// Fall back to static buffer shell responses
+		for (const [pattern, result] of this.state.bufferShellResponses) {
+			if (command.includes(pattern)) {
+				return result;
+			}
+		}
+
+		return undefined;
+	}
+
+	// =========================================================================
+	// BUN.$ INTERCEPTION
+	// =========================================================================
+
+	/**
+	 * Activate Bun.$ interception to route shell calls through mock configuration.
+	 *
+	 * @remarks
+	 * After calling this method, all `Bun.$` template literal calls will be
+	 * intercepted and routed through the configured shell mocks (withShell,
+	 * mockShellOnce, mockShellSequence). The original `Bun.$` is restored
+	 * when `dispose()` is called.
+	 *
+	 * @returns this for chaining
+	 *
+	 * @example
+	 * ```typescript
+	 * ctx.withShell("git status", { exitCode: 0, stdout: "clean", stderr: "" })
+	 *    .mockBunShell();
+	 *
+	 * // Now Bun.$ calls are intercepted
+	 * const result = await Bun.$`git status`.text();
+	 * expect(result).toBe("clean");
+	 * ```
+	 */
+	mockBunShell(): this {
+		if (this.isBunShellMocked) {
+			return this;
+		}
+
+		// Save original Bun.$
+		this.originalBunShell = Bun.$;
+		this.isBunShellMocked = true;
+		const mockShell = (strings: TemplateStringsArray, ...values: unknown[]) => {
+			// Reconstruct command from template literal
+			let command = strings[0] ?? "";
+			for (let i = 0; i < values.length; i++) {
+				const value = values[i];
+				// Handle arrays (e.g., Bun.$`${["bunx", "tsc"]}`) - join with spaces
+				if (Array.isArray(value)) {
+					command += value.join(" ");
+				}
+				// Handle { raw: string } pattern used for interpolation
+				else if (typeof value === "object" && value !== null && "raw" in value) {
+					command += String((value as { raw: string }).raw);
+				} else {
+					command += String(value);
+				}
+				command += strings[i + 1] ?? "";
+			}
+
+			return this.createMockShellPromise(command.trim());
+		};
+
+		// Replace Bun.$
+		// @ts-expect-error - Replacing Bun.$ with mock
+		Bun.$ = mockShell;
+
+		return this;
+	}
+
+	/**
+	 * Restore original Bun.$ if it was mocked.
+	 *
+	 * @remarks
+	 * This is automatically called by `dispose()`, but can be called manually
+	 * if you need to restore Bun.$ before the test ends.
+	 *
+	 * @returns this for chaining
+	 */
+	restoreBunShell(): this {
+		if (this.isBunShellMocked && this.originalBunShell) {
+			Bun.$ = this.originalBunShell;
+			this.originalBunShell = null;
+			this.isBunShellMocked = false;
+		}
+		return this;
+	}
+
+	/**
+	 * Create a mock ShellPromise-like object for a command.
+	 *
+	 * @param command - The shell command string
+	 * @returns A mock object that mimics Bun.$ return value
+	 *
+	 * @internal
+	 */
+	private createMockShellPromise(command: string): MockShellPromise {
+		let shouldThrow = true; // By default, throw on non-zero exit
+
+		// Get mock result or create default "command not found"
+		const getMockResult = (): ShellResult => {
+			const result = this.getShellMock(command);
+			if (result) {
+				return result;
+			}
+			// Default: command not found
+			return { exitCode: 127, stdout: "", stderr: `command not found: ${command.split(" ")[0]}` };
+		};
+
+		// Create the base result object
+		const createResult = () => {
+			const mock = getMockResult();
+			return {
+				exitCode: mock.exitCode,
+				stdout: Buffer.from(mock.stdout),
+				stderr: Buffer.from(mock.stderr),
+			};
+		};
+
+		// The mock shell promise object
+		const shellPromise: MockShellPromise = {
+			// biome-ignore lint/suspicious/noThenProperty: Required to implement PromiseLike interface
+			then<TResult1 = MockShellResult, TResult2 = never>(
+				onfulfilled?: ((value: MockShellResult) => TResult1 | PromiseLike<TResult1>) | null,
+				onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+			): Promise<TResult1 | TResult2> {
+				const result = createResult();
+				if (shouldThrow && result.exitCode !== 0) {
+					const error = new Error(`Command failed: ${command}`);
+					(error as NodeJS.ErrnoException).code = String(result.exitCode);
+					return Promise.reject(error).then(onfulfilled, onrejected);
+				}
+				return Promise.resolve(result).then(onfulfilled, onrejected);
+			},
+
+			catch<TResult = never>(
+				onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+			): Promise<MockShellResult | TResult> {
+				return Promise.resolve(shellPromise).catch(onrejected);
+			},
+
+			finally(onfinally?: (() => void) | null): Promise<MockShellResult> {
+				return Promise.resolve(shellPromise).finally(onfinally);
+			},
+
+			// Chainable methods that return the same promise
+			quiet(): MockShellPromise {
+				return shellPromise;
+			},
+
+			nothrow(): MockShellPromise {
+				shouldThrow = false;
+				return shellPromise;
+			},
+
+			env(_env: Record<string, string>): MockShellPromise {
+				return shellPromise;
+			},
+
+			cwd(_path: string): MockShellPromise {
+				return shellPromise;
+			},
+
+			// Terminal methods that return different promises
+			async text(): Promise<string> {
+				const result = await shellPromise.nothrow();
+				return result.stdout.toString().trim();
+			},
+
+			async json(): Promise<unknown> {
+				const text = await shellPromise.text();
+				return JSON.parse(text);
+			},
+
+			async blob(): Promise<Blob> {
+				const result = await shellPromise.nothrow();
+				return new Blob([result.stdout]);
+			},
+
+			async lines(): Promise<string[]> {
+				const text = await shellPromise.text();
+				return text.split("\n").filter((line) => line.length > 0);
+			},
+
+			// Symbol for proper Promise behavior
+			[Symbol.toStringTag]: "MockShellPromise",
+		};
+
+		return shellPromise;
 	}
 
 	// =========================================================================
@@ -512,110 +1451,158 @@ export class PluginTester<
 	 * expect(result.action).toBe("allow");
 	 * ```
 	 */
-	async runHook<K extends keyof THooks>(hookType: K, _hookName: string): Promise<HookTestResult> {
+	async runHook<K extends keyof THooks>(hookType: K, hookName: string): Promise<HookTestResult> {
 		this.validateState();
-		this.setupMocks();
-
-		let exitCode = 0;
+		await this.setupMocks();
 
 		try {
-			// Import and run the hook dynamically
-			// For now, we'll create a mock handler context
-			// The actual implementation will integrate with the pipeline runtime
-			const hookInput = this.buildHookInput(hookType as string);
-
-			// Mock stdin with the hook input
-			spyOn(Bun.stdin, "text").mockResolvedValue(JSON.stringify(hookInput));
-
-			// Mock process.exit
-			const originalExit = process.exit;
-			process.exit = mock((code?: number) => {
-				exitCode = code ?? 0;
-				throw new MockExitError(code ?? 0);
-			}) as typeof process.exit;
-
-			try {
-				// The hook would be run here - for now we simulate
-				// In the full implementation, this would call the actual hook handler
-				// through the pipeline runtime
-				throw new MockExitError(0); // Simulate successful exit
-			} catch (error) {
-				if (!(error instanceof MockExitError)) {
-					process.exit = originalExit;
-					throw error;
-				}
-			} finally {
-				process.exit = originalExit;
+			// Find the hook definition
+			// biome-ignore lint/suspicious/noExplicitAny: Dynamic hook type access requires runtime type checking
+			const hookDefinitions = (this.pluginConfig.hooks as any)[hookType as string];
+			if (!hookDefinitions || !Array.isArray(hookDefinitions)) {
+				throw new Error(`No hooks defined for type "${String(hookType)}"`);
 			}
-		} finally {
-			// Don't restore mocks here - dispose() handles that
-		}
 
-		return this.buildHookResult(exitCode);
+			// Find the specific hook by name
+			const hookDef = hookDefinitions.find((h: { name?: string }) => h.name === hookName);
+			if (!hookDef) {
+				const availableHooks = hookDefinitions
+					.filter((h: { name?: string }) => h.name)
+					.map((h: { name?: string }) => h.name)
+					.join(", ");
+				throw new Error(
+					`Hook "${hookName}" not found in "${String(hookType)}". Available: ${availableHooks || "none"}`,
+				);
+			}
+
+			// Check for passthrough hooks (no pipeline or handler)
+			if (!hookDef.pipeline && !hookDef.handler) {
+				throw new Error(`Hook "${hookName}" is a passthrough hook and cannot be tested with runHook()`);
+			}
+
+			// Resolve the handler
+			const handler = await this.resolveHandler(hookDef);
+			if (!handler) {
+				throw new Error(`Could not resolve handler for hook "${hookName}"`);
+			}
+
+			// Build the handler context
+			const hookInput = this.buildHookInput(hookType as string);
+			const context = this.buildHandlerContext(hookInput);
+
+			// Call the handler - cast context to match handler signature
+			// biome-ignore lint/suspicious/noExplicitAny: Handler context types are verified at runtime
+			const output = await handler(context as any);
+
+			// Build and return the result
+			return this.buildHookResultFromOutput(output);
+		} catch (error) {
+			// Return error result
+			return {
+				exitCode: 1,
+				stdout: this.stdoutBuffer,
+				stderr: error instanceof Error ? error.message : String(error),
+				output: {},
+				action: undefined,
+				context: undefined,
+				reason: error instanceof Error ? error.message : String(error),
+			};
+		}
 	}
 
 	/**
 	 * Run a command handler with the configured test context.
 	 *
 	 * @param command - The command name to run
-	 * @param args - Optional command arguments
+	 * @param args - Optional command arguments (raw values, will be validated against schema)
 	 * @returns Promise resolving to the command test result
 	 *
 	 * @example
 	 * ```typescript
-	 * const result = await ctx.runCommand("lint", { fix: true });
+	 * const result = await ctx.runCommand("lint", { fix: true, path: "src/" });
 	 * expect(result.exitCode).toBe(0);
+	 * expect(result.stdout).toContain("All checks passed");
 	 * ```
 	 */
 	async runCommand<K extends keyof TCommands>(
-		_command: K,
-		_args?: TCommands[K] extends CommandDefinition ? z.infer<TCommands[K]["args"]> : never,
+		command: K,
+		args?: TCommands[K] extends { args?: infer TArgs }
+			? TArgs extends z.ZodType
+				? Partial<z.infer<TArgs>>
+				: unknown
+			: unknown,
 	): Promise<CommandTestResult> {
 		this.validateState();
-		this.setupMocks();
+		await this.setupMocks();
 
 		const logs: string[] = [];
 		const errors: string[] = [];
-		let exitCode = 0;
 
 		const originalLog = console.log;
 		const originalError = console.error;
-		const originalExit = process.exit;
 
-		console.log = mock((...args: unknown[]) => {
-			logs.push(args.map(String).join(" "));
+		console.log = mock((...logArgs: unknown[]) => {
+			logs.push(logArgs.map(String).join(" "));
 		}) as typeof console.log;
 
-		console.error = mock((...args: unknown[]) => {
-			errors.push(args.map(String).join(" "));
+		console.error = mock((...logArgs: unknown[]) => {
+			errors.push(logArgs.map(String).join(" "));
 		}) as typeof console.error;
 
-		process.exit = mock((code?: number) => {
-			exitCode = code ?? 0;
-			throw new MockExitError(code ?? 0);
-		}) as typeof process.exit;
-
 		try {
-			// The command would be run here
-			// In the full implementation, this would call the actual command handler
-			throw new MockExitError(0); // Simulate successful exit
-		} catch (error) {
-			if (!(error instanceof MockExitError)) {
-				throw error;
+			// Find the command definition
+			const commands = this.pluginConfig.commands as Record<string, CommandDefinition> | undefined;
+			if (!commands) {
+				throw new Error("No commands defined in plugin configuration");
 			}
+
+			const commandDef = commands[command as string];
+			if (!commandDef) {
+				const availableCommands = Object.keys(commands).join(", ");
+				throw new Error(`Command "${String(command)}" not found. Available: ${availableCommands || "none"}`);
+			}
+
+			// Resolve the handler
+			const handler = await this.resolveCommandHandler(commandDef);
+			if (!handler) {
+				throw new Error(`Could not resolve handler for command "${String(command)}"`);
+			}
+
+			// Validate args against the command's schema
+			const validatedArgs = await this.validateCommandArgs(commandDef, args ?? {});
+
+			// Build the command context
+			const context = this.buildCommandContext(validatedArgs);
+
+			// Call the handler
+			// biome-ignore lint/suspicious/noExplicitAny: Command context types are verified at runtime
+			const output = await handler(context as any);
+
+			// Validate output structure
+			this.validateCommandOutput(output, command as string);
+
+			// Return success result
+			return {
+				exitCode: output.exitCode,
+				stdout: output.output,
+				stderr: this.stderrBuffer,
+				logs,
+				errors,
+				data: output.data,
+			};
+		} catch (error) {
+			// Return error result
+			return {
+				exitCode: 2,
+				stdout: "",
+				stderr: error instanceof Error ? error.message : String(error),
+				logs,
+				errors,
+			};
 		} finally {
 			console.log = originalLog;
 			console.error = originalError;
-			process.exit = originalExit;
 		}
-
-		return {
-			exitCode,
-			stdout: this.stdoutBuffer,
-			stderr: this.stderrBuffer,
-			logs,
-			errors,
-		};
 	}
 
 	// =========================================================================
@@ -663,10 +1650,27 @@ export class PluginTester<
 			process.stderr.write.mockRestore();
 		}
 
+		// Restore Bun.$ if mocked
+		this.restoreBunShell();
+
+		// Clean up temp project directory
+		if (this.state.tempProjectDir) {
+			try {
+				rmSync(this.state.tempProjectDir, { recursive: true, force: true });
+			} catch {
+				// Ignore cleanup errors
+			}
+		}
+
 		// Clear state
 		this.state = {
+			tempProjectFiles: new Map(),
 			shellResponses: new Map(),
+			shellMocks: new Map(),
+			bufferShellResponses: new Map(),
+			bufferShellMocks: new Map(),
 			envVars: new Map(),
+			mockFunctions: new Map(),
 		};
 		this.savedEnv.clear();
 		this.stdoutBuffer = "";
@@ -694,14 +1698,38 @@ export class PluginTester<
 	 * Set up mocks for the test run.
 	 * @internal
 	 */
-	private setupMocks(): void {
+	private async setupMocks(): Promise<void> {
 		// Save and set environment variables
 		const prefix = this.pluginConfig.prefix;
 
-		// Set up base env vars
+		// Create temp project directory if requested
+		if (this.state.useTempProject && !this.state.tempProjectDir) {
+			const { mkdtemp, mkdir } = await import("node:fs/promises");
+			const { tmpdir } = await import("node:os");
+			const { join, dirname } = await import("node:path");
+
+			// Create temp directory
+			this.state.tempProjectDir = await mkdtemp(join(tmpdir(), "plugin-test-"));
+
+			// Write queued files
+			for (const [relativePath, content] of this.state.tempProjectFiles) {
+				const fullPath = join(this.state.tempProjectDir, relativePath);
+				// Ensure parent directory exists
+				const parentDir = dirname(fullPath);
+				if (parentDir !== this.state.tempProjectDir) {
+					await mkdir(parentDir, { recursive: true });
+				}
+				await Bun.write(fullPath, content);
+			}
+
+			// Use temp dir as project dir
+			this.state.projectDir = this.state.tempProjectDir;
+		}
+
+		// Set up base env vars - use configured paths or defaults
 		this.setEnvVar("CLAUDE_SESSION_ID", crypto.randomUUID());
-		this.setEnvVar("CLAUDE_PROJECT_DIR", "/test/project");
-		this.setEnvVar("CLAUDE_PLUGIN_ROOT", "/test/plugin");
+		this.setEnvVar("CLAUDE_PROJECT_DIR", this.state.projectDir ?? "/test/project");
+		this.setEnvVar("CLAUDE_PLUGIN_ROOT", this.state.pluginRoot ?? "/test/plugin");
 		this.setEnvVar("CLAUDE_ENV_FILE", "/tmp/test-env.sh");
 
 		// Set up options as env vars
@@ -763,49 +1791,302 @@ export class PluginTester<
 	}
 
 	/**
-	 * Build the hook test result from captured output.
+	 * Resolve a handler from a hook definition.
+	 * Supports inline functions and file paths.
 	 * @internal
 	 */
-	private buildHookResult(exitCode: number): HookTestResult {
-		let output: Record<string, unknown> = {};
-		let action: HookAction | undefined;
-		let context: string | undefined;
-		let reason: string | undefined;
+	// biome-ignore lint/suspicious/noExplicitAny: Hook definitions have varied shapes
+	private async resolveHandler(hookDef: any): Promise<PipelineHandler<unknown, unknown, TOptions, TState> | null> {
+		// Check for inline pipeline function
+		if (typeof hookDef.pipeline === "function") {
+			return hookDef.pipeline;
+		}
+
+		// Check for inline handler function (raw handler)
+		if (typeof hookDef.handler === "function") {
+			// Wrap raw handler in pipeline interface
+			// Raw handlers call event.end() directly, so we need to adapt
+			throw new Error(
+				"Raw handlers (handler property) are not supported in runHook(). " +
+					"Use pipeline handlers or test raw handlers separately.",
+			);
+		}
+
+		// Check for file path
+		if (typeof hookDef.pipeline === "string") {
+			return this.importHandler(hookDef.pipeline);
+		}
+
+		if (typeof hookDef.handler === "string") {
+			throw new Error(
+				"Raw handler file paths (handler property) are not supported in runHook(). " +
+					"Use pipeline handlers or test raw handlers separately.",
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Import a handler from a file path.
+	 * @internal
+	 */
+	private async importHandler(filePath: string): Promise<PipelineHandler<unknown, unknown, TOptions, TState>> {
+		// Try to resolve the path
+		let resolvedPath = filePath;
+
+		// If it's a relative path, resolve from plugin root (preferred) or cwd
+		if (filePath.startsWith("./") || filePath.startsWith("../")) {
+			// Use configured plugin root if available, otherwise fall back to cwd
+			const baseDir = this.state.pluginRoot ?? process.cwd();
+			resolvedPath = `${baseDir}/${filePath}`;
+		}
 
 		try {
-			if (this.stdoutBuffer) {
-				output = JSON.parse(this.stdoutBuffer);
+			// Dynamic import
+			const module = await import(resolvedPath);
+			const handler = module.default || module;
 
-				// Extract convenience fields
-				const hookOutput = output.hookSpecificOutput as Record<string, unknown> | undefined;
-				if (hookOutput) {
-					if (hookOutput.permissionDecision) {
-						action = hookOutput.permissionDecision as HookAction;
-					}
-					if (hookOutput.decision) {
-						action = hookOutput.decision as HookAction;
-					}
-					if (hookOutput.additionalContext) {
-						context = hookOutput.additionalContext as string;
-					}
-					if (hookOutput.reason) {
-						reason = hookOutput.reason as string;
-					}
-				}
+			if (typeof handler !== "function") {
+				throw new Error(`Handler file "${filePath}" does not export a function`);
 			}
-		} catch {
-			// Output wasn't valid JSON
+
+			return handler;
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Cannot find module")) {
+				const baseDir = this.state.pluginRoot ?? process.cwd();
+				throw new Error(
+					`Could not import handler from "${filePath}". ` +
+						`Make sure the file exists and the path is correct relative to plugin root (${baseDir}). ` +
+						`Use withPluginRoot() to set the plugin directory.`,
+				);
+			}
+			throw error;
 		}
+	}
+
+	/**
+	 * Build the handler context from configured state.
+	 * @internal
+	 */
+	private buildHandlerContext(input: Record<string, unknown>): {
+		input: unknown;
+		options: TOptions;
+		state: PluginState<TState>;
+	} {
+		// Create base state
+		const baseState: BaseState = {
+			projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? "/test/project",
+			pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "/test/plugin",
+			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
+			// Provide no-op logger methods for testing
+			log: () => {},
+			info: () => {},
+			debug: () => {},
+		};
+
+		// Merge base state with user-provided state
+		const pluginState: PluginState<TState> = {
+			...baseState,
+			...(this.state.state as TState),
+		};
+
+		return {
+			input,
+			options: this.state.options as TOptions,
+			state: pluginState,
+		};
+	}
+
+	/**
+	 * Build a HookTestResult from pipeline output.
+	 * @internal
+	 */
+	private buildHookResultFromOutput(output: unknown): HookTestResult {
+		// Check if it's a valid pipeline output
+		if (!isPipelineOutput(output)) {
+			return {
+				exitCode: 1,
+				stdout: "",
+				stderr: "Handler returned non-pipeline output",
+				output: typeof output === "object" && output !== null ? (output as Record<string, unknown>) : {},
+				action: undefined,
+				context: undefined,
+				reason: "Handler returned non-pipeline output",
+			};
+		}
+
+		const pipelineOutput = output as AnyPipelineOutput;
+
+		// Extract convenience fields
+		let action: HookAction | undefined;
+		if ("action" in pipelineOutput) {
+			action = pipelineOutput.action;
+		}
+
+		let context: string | undefined;
+		if ("claudeContext" in pipelineOutput && pipelineOutput.claudeContext) {
+			context = pipelineOutput.claudeContext;
+		}
+
+		let reason: string | undefined;
+		if ("reason" in pipelineOutput && pipelineOutput.reason) {
+			reason = pipelineOutput.reason;
+		}
+
+		// Determine exit code based on status
+		const exitCode = pipelineOutput.status === "error" || pipelineOutput.status === "timeout" ? 1 : 0;
 
 		return {
 			exitCode,
-			stdout: this.stdoutBuffer,
+			stdout: JSON.stringify(pipelineOutput),
 			stderr: this.stderrBuffer,
-			output,
+			output: pipelineOutput as Record<string, unknown>,
 			action,
 			context,
 			reason,
 		};
+	}
+
+	// =========================================================================
+	// COMMAND HELPERS
+	// =========================================================================
+
+	/**
+	 * Resolve a command handler from a command definition.
+	 * Supports inline functions and file paths.
+	 * @internal
+	 */
+	private async resolveCommandHandler(
+		commandDef: CommandDefinition,
+	): Promise<CommandHandler<unknown, TOptions, TState> | null> {
+		// Check for inline pipeline function
+		if (typeof commandDef.pipeline === "function") {
+			return commandDef.pipeline as CommandHandler<unknown, TOptions, TState>;
+		}
+
+		// Check for file path
+		if (typeof commandDef.pipeline === "string") {
+			return this.importCommandHandler(commandDef.pipeline);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Import a command handler from a file path.
+	 * @internal
+	 */
+	private async importCommandHandler(filePath: string): Promise<CommandHandler<unknown, TOptions, TState>> {
+		// Try to resolve the path
+		let resolvedPath = filePath;
+
+		// If it's a relative path, resolve from plugin root (preferred) or cwd
+		if (filePath.startsWith("./") || filePath.startsWith("../")) {
+			// Use configured plugin root if available, otherwise fall back to cwd
+			const baseDir = this.state.pluginRoot ?? process.cwd();
+			resolvedPath = `${baseDir}/${filePath}`;
+		}
+
+		try {
+			// Dynamic import
+			const module = await import(resolvedPath);
+			const handler = module.default || module;
+
+			if (typeof handler !== "function") {
+				throw new Error(`Command handler file "${filePath}" does not export a function`);
+			}
+
+			return handler;
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Cannot find module")) {
+				const baseDir = this.state.pluginRoot ?? process.cwd();
+				throw new Error(
+					`Could not import command handler from "${filePath}". ` +
+						`Make sure the file exists and the path is correct relative to plugin root (${baseDir}). ` +
+						`Use withPluginRoot() to set the plugin directory.`,
+				);
+			}
+			throw error;
+		}
+	}
+
+	/**
+	 * Validate command arguments against the command's schema.
+	 * @internal
+	 */
+	private async validateCommandArgs(commandDef: CommandDefinition, args: Record<string, unknown>): Promise<unknown> {
+		const schema = commandDef.args;
+
+		// If no schema defined, return args as-is (empty object for no-arg commands)
+		if (!schema) {
+			return args;
+		}
+
+		// Cast to z.ZodType for proper method access
+		const zodSchema = schema as z.ZodType<unknown>;
+
+		// Use safeParseAsync for async validation
+		const result = await zodSchema.safeParseAsync(args);
+
+		if (!result.success) {
+			const issues = result.error.issues
+				// biome-ignore lint/suspicious/noExplicitAny: Zod issue type varies between versions
+				.map((issue: any) => `${(issue.path || []).join(".")}: ${issue.message}`)
+				.join(", ");
+			throw new Error(`Argument validation failed: ${issues}`);
+		}
+
+		return result.data;
+	}
+
+	/**
+	 * Build the command context from configured state and args.
+	 * @internal
+	 */
+	private buildCommandContext(args: unknown): {
+		args: unknown;
+		options: TOptions;
+		state: PluginState<TState>;
+	} {
+		// Create base state
+		const baseState: BaseState = {
+			projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? "/test/project",
+			pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "/test/plugin",
+			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
+			// Provide no-op logger methods for testing
+			log: () => {},
+			info: () => {},
+			debug: () => {},
+		};
+
+		// Merge base state with user-provided state
+		const pluginState: PluginState<TState> = {
+			...baseState,
+			...(this.state.state as TState),
+		};
+
+		return {
+			args,
+			options: this.state.options as TOptions,
+			state: pluginState,
+		};
+	}
+
+	/**
+	 * Validate command output structure.
+	 * @internal
+	 */
+	private validateCommandOutput(output: CommandOutput, commandName: string): void {
+		if (typeof output.exitCode !== "number") {
+			throw new Error(`Command "${commandName}" returned invalid exitCode: ${output.exitCode}`);
+		}
+		if (typeof output.output !== "string") {
+			throw new Error(`Command "${commandName}" returned invalid output: expected string`);
+		}
+		if (output.exitCode < 0 || output.exitCode > 255) {
+			throw new Error(`Command "${commandName}" returned invalid exitCode: must be 0-255`);
+		}
 	}
 }
 

@@ -1,26 +1,4 @@
 /**
- * Git repository information for OTEL resource attributes.
- *
- * @remarks
- * Detects git branch, provider (GitHub/GitLab/Bitbucket), owner, and repo
- * from the current working directory. Gracefully handles non-git directories.
- *
- * @example
- * ```typescript
- * import { GitInfo } from "claude-binary-plugin";
- *
- * const info = await GitInfo.detect("/path/to/repo");
- * console.log(`Branch: ${info.branch}`);
- * console.log(`Repo: ${info.owner}/${info.repo}`);
- *
- * const attrs = info.toAttributes();
- * // { "git.branch": "main", "git.provider": "github", ... }
- * ```
- *
- * @public
- */
-
-/**
  * Supported git providers.
  * @public
  */
@@ -32,13 +10,13 @@ export type GitProvider = "github" | "gitlab" | "bitbucket" | "unknown";
  */
 export interface GitInfoData {
 	/** Current branch name */
-	branch?: string;
+	branch?: string | undefined;
 	/** Git provider (github, gitlab, bitbucket, unknown) */
-	provider?: GitProvider;
+	provider?: GitProvider | undefined;
 	/** Repository owner/organization */
-	owner?: string;
+	owner?: string | undefined;
 	/** Repository name */
-	repo?: string;
+	repo?: string | undefined;
 }
 
 /**
@@ -60,8 +38,7 @@ const PROVIDER_HOSTS: Record<string, GitProvider> = {
  *
  * @example
  * ```typescript
- * // Detect from current directory
- * const info = await GitInfo.detect();
+ * import { GitInfo } from "claude-binary-plugin";
  *
  * // Detect from specific directory
  * const info = await GitInfo.detect("/path/to/repo");
@@ -81,25 +58,25 @@ export class GitInfo {
 	 * Current branch name.
 	 * @public
 	 */
-	readonly branch?: string;
+	readonly branch?: string | undefined;
 
 	/**
 	 * Git provider (github, gitlab, bitbucket, unknown).
 	 * @public
 	 */
-	readonly provider?: GitProvider;
+	readonly provider?: GitProvider | undefined;
 
 	/**
 	 * Repository owner/organization.
 	 * @public
 	 */
-	readonly owner?: string;
+	readonly owner?: string | undefined;
 
 	/**
 	 * Repository name.
 	 * @public
 	 */
-	readonly repo?: string;
+	readonly repo?: string | undefined;
 
 	/**
 	 * Create a GitInfo instance.
@@ -131,6 +108,7 @@ export class GitInfo {
 	 *
 	 * @example
 	 * ```typescript
+	 * import { GitInfo } from "claude-binary-plugin";
 	 * // Detect from current directory
 	 * const info = await GitInfo.detect();
 	 *

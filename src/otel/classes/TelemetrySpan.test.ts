@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { HookType } from "../../events/enums.js";
 import type { HookEventBase } from "../../events/types.js";
 import type { MockEnvContext } from "../../testing/mocks.js";
-import { mockEnv } from "../../testing/mocks.js";
-import { clearSidecarClients } from "../client.js";
+import { TestFixtures } from "../../testing/mocks.js";
+import { clearSidecarClients } from "./SidecarClient.js";
 import { TelemetrySpan } from "./TelemetrySpan.js";
 
 // Mock HookEventBase for testing
@@ -23,7 +23,7 @@ describe("TelemetrySpan", () => {
 
 	beforeEach(() => {
 		// Full isolation - tests only see env vars they explicitly set
-		env = mockEnv({});
+		env = TestFixtures.createEnv({});
 	});
 
 	afterEach(() => {

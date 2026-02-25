@@ -1,12 +1,3 @@
-/**
- * Simple file logger for sidecar debugging.
- *
- * Writes to /tmp/claude-otel-sidecar.log for troubleshooting.
- * Only logs when running as an actual sidecar process (not in tests).
- *
- * @module
- */
-
 import { appendFileSync } from "node:fs";
 
 /**
@@ -31,6 +22,7 @@ const LOG_FILE = "/tmp/claude-otel-sidecar.log";
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarLog {
 	/**
 	 * Flag to enable logging. Set by sidecar main when running as actual sidecar.

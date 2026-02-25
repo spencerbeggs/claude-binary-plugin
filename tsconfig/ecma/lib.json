@@ -1,0 +1,39 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"composite": true,
+		"allowImportingTsExtensions": true,
+		"allowJs": true,
+		"emitDeclarationOnly": true,
+		"jsx": "react-jsx",
+		"lib": ["ESNext"],
+		"module": "Preserve",
+		"moduleDetection": "force",
+		"moduleResolution": "bundler",
+		"noEmit": false,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noPropertyAccessFromIndexSignature": false,
+		"noUncheckedIndexedAccess": true,
+		"resolveJsonModule": true,
+		"rootDir": "${configDir}",
+		"outDir": "${configDir}/dist",
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ESNext",
+		"tsBuildInfoFile": "${configDir}/dist/.tsbuildinfo.lib",
+		"typeRoots": ["${configDir}/node_modules/@types"],
+		"verbatimModuleSyntax": true
+	},
+	"exclude": ["${configDir}/node_modules", "${configDir}/dist/**/*"],
+	"include": [
+		"${configDir}/package.json",
+		"${configDir}/*.ts",
+		"${configDir}/*.tsx",
+		"${configDir}/src/**/*.ts",
+		"${configDir}/src/**/*.tsx",
+		"${configDir}/src/**/*.json"
+	]
+}

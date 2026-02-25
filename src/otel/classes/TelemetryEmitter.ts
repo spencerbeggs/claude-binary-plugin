@@ -1,38 +1,9 @@
-/**
- * Telemetry event emission for OTEL sidecar.
- *
- * @remarks
- * Provides a class-based API for emitting telemetry events from hooks.
- * Events are serialized and sent to the sidecar process via IPC.
- *
- * @example
- * ```typescript
- * import { TelemetryEmitter, OTELConfig } from "claude-binary-plugin";
- *
- * if (OTELConfig.isEnabled()) {
- *   await TelemetryEmitter.preconnect(sessionId);
- *
- *   TelemetryEmitter.emitHookExecution(event, "pre-bash", {
- *     hookType: "PreToolUse",
- *     pluginName: "workflow",
- *     pluginVersion: "1.0.0",
- *     durationMs: 42,
- *     success: true,
- *     outcome: "allowed",
- *   });
- * }
- * ```
- *
- * @public
- */
-
 import type { HookEventBase } from "../../events/types.js";
-import { getSidecarClient } from "../client.js";
-import { EVENT_NAMES, SCOPE } from "../constants.js";
 import type { EventData } from "../protocol.js";
 import { getSdkVersion } from "../version.macro.js";
-import { OTELConfig } from "./OTELConfig.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { PluginInfo } from "./PluginInfo.js";
+import { getSidecarClient } from "./SidecarClient.js";
 
 // SDK version - works both at runtime and when bundled
 const SDK_VERSION = getSdkVersion();
@@ -103,35 +74,35 @@ export interface HookExecutionResult {
 	/** Whether the hook executed successfully */
 	success: boolean;
 	/** Semantic outcome of the hook execution */
-	outcome?: HookOutcome;
+	outcome?: HookOutcome | undefined;
 	/** Human-readable summary for log body (e.g., "auto-allowed: git status") */
-	summary?: string;
+	summary?: string | undefined;
 	/** Error message if hook failed */
-	error?: string;
+	error?: string | undefined;
 	/** Tool name for tool-related hooks */
-	toolName?: string;
+	toolName?: string | undefined;
 	/** Tool use ID for correlation with Claude Code events */
-	toolUseId?: string;
+	toolUseId?: string | undefined;
 	/** Permission decision for PreToolUse hooks */
-	permissionDecision?: "allow" | "deny" | "ask";
+	permissionDecision?: "allow" | "deny" | "ask" | undefined;
 	/** Source of the permission decision (who/what made it) */
-	decisionSource?: DecisionSource;
+	decisionSource?: DecisionSource | undefined;
 	/** Reason for permission decision */
-	permissionDecisionReason?: string;
+	permissionDecisionReason?: string | undefined;
 	/** Whether the tool input was modified */
-	hasUpdatedInput?: boolean;
+	hasUpdatedInput?: boolean | undefined;
 	/** Block decision (for blocking responses) */
-	decision?: "block";
+	decision?: "block" | undefined;
 	/** Reason for blocking */
-	reason?: string;
+	reason?: string | undefined;
 	/** Whether additional context was provided */
-	hasAdditionalContext?: boolean;
+	hasAdditionalContext?: boolean | undefined;
 	/** Additional context content (used as event body) */
-	additionalContext?: string;
+	additionalContext?: string | undefined;
 	/** Operational metrics for performance analysis */
-	metrics?: HookMetrics;
+	metrics?: HookMetrics | undefined;
 	/** Hook-specific context attributes */
-	context?: Record<string, string | number | boolean>;
+	context?: Record<string, string | number | boolean> | undefined;
 }
 
 /**
@@ -148,7 +119,7 @@ export interface SchemaValidationErrorResult {
 	/** Formatted error message */
 	errorMessage: string;
 	/** Raw JSON that failed validation (truncated if large) */
-	rawInput?: string;
+	rawInput?: string | undefined;
 }
 
 /**
@@ -165,7 +136,7 @@ export interface EnvValidationErrorResult {
 	/** Formatted error message */
 	errorMessage: string;
 	/** The env class that failed validation */
-	envClassName?: string;
+	envClassName?: string | undefined;
 }
 
 /**
@@ -180,13 +151,13 @@ export interface FatalErrorResult {
 	/** Error message */
 	errorMessage: string;
 	/** Error stack trace if available */
-	errorStack?: string;
+	errorStack?: string | undefined;
 	/** Whether the error was a validation error */
-	isValidationError?: boolean;
+	isValidationError?: boolean | undefined;
 	/** Number of validation issues (for validation errors) */
-	issueCount?: number;
+	issueCount?: number | undefined;
 	/** First validation path (for validation errors) */
-	validationPath?: string;
+	validationPath?: string | undefined;
 }
 
 /**
@@ -206,11 +177,11 @@ export interface HookExecutionDirectResult {
 	/** Whether the hook executed successfully */
 	success: boolean;
 	/** Semantic outcome of the hook execution */
-	outcome?: HookOutcome;
+	outcome?: HookOutcome | undefined;
 	/** Human-readable summary for log body */
-	summary?: string;
+	summary?: string | undefined;
 	/** Error message if hook failed */
-	error?: string;
+	error?: string | undefined;
 }
 
 /**
@@ -222,18 +193,25 @@ export interface HookExecutionDirectResult {
  *
  * @example
  * ```typescript
- * // Pre-connect for faster emission
- * await TelemetryEmitter.preconnect(sessionId);
+ * import { TelemetryEmitter, OtelConfig } from "claude-binary-plugin";
+ * import type { HookEventBase } from "claude-binary-plugin";
  *
- * // Emit hook execution event
- * TelemetryEmitter.emitHookExecution(event, "my-hook", {
- *   hookType: "PreToolUse",
- *   pluginName: "workflow",
- *   pluginVersion: "1.0.0",
- *   durationMs: 42,
- *   success: true,
- *   outcome: "allowed",
- * });
+ * async function emitTelemetry(event: HookEventBase): Promise<void> {
+ *   if (!OtelConfig.isEnabled()) return;
+ *
+ *   // Pre-connect for faster emission
+ *   await TelemetryEmitter.preconnect(event.session_id);
+ *
+ *   // Emit hook execution event
+ *   TelemetryEmitter.emitHookExecution(event, "my-hook", {
+ *     hookType: "PreToolUse",
+ *     pluginName: "workflow",
+ *     pluginVersion: "1.0.0",
+ *     durationMs: 42,
+ *     success: true,
+ *     outcome: "allowed",
+ *   });
+ * }
  * ```
  *
  * @public
@@ -313,6 +291,32 @@ export class TelemetryEmitter {
 	} as const;
 
 	/**
+	 * Scope configuration for OTEL instrumentation.
+	 * Aligns with Claude Code's native scope naming pattern.
+	 * @public
+	 */
+	static readonly SCOPE = {
+		/** The scope name for all plugin hook telemetry. */
+		NAME: "systems.savvyweb.claude_code.events",
+	} as const;
+
+	/**
+	 * Event names for hook telemetry.
+	 * Uses `claude_code.hook.*` pattern to align with Anthropic's naming.
+	 * @public
+	 */
+	static readonly EVENT_NAMES = {
+		/** Main event emitted when a hook execution completes. */
+		HOOK_EXECUTION: "claude_code.hook.execution",
+		/** Event emitted when schema validation fails. */
+		SCHEMA_VALIDATION_ERROR: "claude_code.hook.validation_error",
+		/** Event emitted when environment variable validation fails. */
+		ENV_VALIDATION_ERROR: "claude_code.hook.env_error",
+		/** Event emitted when an uncaught exception occurs. */
+		FATAL_ERROR: "claude_code.hook.fatal_error",
+	} as const;
+
+	/**
 	 * Pre-connect to the OTEL sidecar for faster emission.
 	 *
 	 * @remarks
@@ -324,15 +328,19 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * if (OTELConfig.isEnabled()) {
-	 *   await TelemetryEmitter.preconnect(sessionId);
+	 * import { TelemetryEmitter, OtelConfig } from "claude-binary-plugin";
+	 *
+	 * async function initTelemetry(sessionId: string): Promise<void> {
+	 *   if (OtelConfig.isEnabled()) {
+	 *     await TelemetryEmitter.preconnect(sessionId);
+	 *   }
 	 * }
 	 * ```
 	 *
 	 * @public
 	 */
 	static async preconnect(sessionId: string): Promise<void> {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 		const client = getSidecarClient(sessionId);
 		await client.preconnect();
 	}
@@ -350,21 +358,26 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitHookExecution(event, "pre-bash", {
-	 *   hookType: "PreToolUse",
-	 *   pluginName: "workflow",
-	 *   pluginVersion: "1.0.0",
-	 *   durationMs: 42,
-	 *   success: true,
-	 *   outcome: "allowed",
-	 *   summary: "auto-allowed: git status",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 * import type { HookEventBase } from "claude-binary-plugin";
+	 *
+	 * function emitExecution(event: HookEventBase): void {
+	 *   TelemetryEmitter.emitHookExecution(event, "pre-bash", {
+	 *     hookType: "PreToolUse",
+	 *     pluginName: "workflow",
+	 *     pluginVersion: "1.0.0",
+	 *     durationMs: 42,
+	 *     success: true,
+	 *     outcome: "allowed",
+	 *     summary: "auto-allowed: git status",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
 	 */
 	static emitHookExecution(event: HookEventBase, hookName: string, result: HookExecutionResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(event.session_id);
 		const now = new Date();
@@ -372,7 +385,7 @@ export class TelemetryEmitter {
 		// Build attributes with aligned naming
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: event.session_id,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
@@ -447,13 +460,13 @@ export class TelemetryEmitter {
 			`${hookName} (${result.hookType}): ${result.success ? "success" : "failed"}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.HOOK_EXECUTION,
+			name: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: result.success ? "info" : "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -476,21 +489,25 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitHookExecutionDirect({
-	 *   sessionId: "abc-123",
-	 *   hookName: "PreToolUse/unknown",
-	 *   hookType: "PreToolUse",
-	 *   durationMs: 1,
-	 *   success: false,
-	 *   outcome: "error",
-	 *   error: "Unknown hook: unknown",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function emitUnknownHookError(): void {
+	 *   TelemetryEmitter.emitHookExecutionDirect({
+	 *     sessionId: "abc-123",
+	 *     hookName: "PreToolUse/unknown",
+	 *     hookType: "PreToolUse",
+	 *     durationMs: 1,
+	 *     success: false,
+	 *     outcome: "error",
+	 *     error: "Unknown hook: unknown",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
 	 */
 	static emitHookExecutionDirect(result: HookExecutionDirectResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(result.sessionId);
 		const now = new Date();
@@ -498,7 +515,7 @@ export class TelemetryEmitter {
 		// Build attributes with aligned naming
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: result.sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.HOOK_EXECUTION,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: result.hookName,
@@ -527,13 +544,13 @@ export class TelemetryEmitter {
 			`${result.hookName} (${result.hookType}): ${result.success ? "success" : "failed"}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.HOOK_EXECUTION,
+			name: TelemetryEmitter.EVENT_NAMES.HOOK_EXECUTION,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: result.success ? "info" : "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -558,25 +575,29 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitSchemaValidationError(sessionId, "pre-bash", {
-	 *   hookName: "pre-bash",
-	 *   issueCount: 2,
-	 *   validationPath: "tool_input.command",
-	 *   errorMessage: "Required field missing",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function emitValidationError(sessionId: string): void {
+	 *   TelemetryEmitter.emitSchemaValidationError(sessionId, "pre-bash", {
+	 *     hookName: "pre-bash",
+	 *     issueCount: 2,
+	 *     validationPath: "tool_input.command",
+	 *     errorMessage: "Required field missing",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
 	 */
 	static emitSchemaValidationError(sessionId: string, hookName: string, result: SchemaValidationErrorResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
@@ -593,13 +614,13 @@ export class TelemetryEmitter {
 		const body = `Schema validation failed in ${hookName}: ${result.errorMessage}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
+			name: TelemetryEmitter.EVENT_NAMES.SCHEMA_VALIDATION_ERROR,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -624,26 +645,30 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * TelemetryEmitter.emitEnvValidationError(sessionId, "pre-bash", {
-	 *   hookName: "pre-bash",
-	 *   issueCount: 1,
-	 *   validationPath: "API_KEY",
-	 *   errorMessage: "Required environment variable missing",
-	 *   envClassName: "WorkflowEnv",
-	 * });
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function emitEnvError(sessionId: string): void {
+	 *   TelemetryEmitter.emitEnvValidationError(sessionId, "pre-bash", {
+	 *     hookName: "pre-bash",
+	 *     issueCount: 1,
+	 *     validationPath: "API_KEY",
+	 *     errorMessage: "Required environment variable missing",
+	 *     envClassName: "WorkflowEnv",
+	 *   });
+	 * }
 	 * ```
 	 *
 	 * @public
 	 */
 	static emitEnvValidationError(sessionId: string, hookName: string, result: EnvValidationErrorResult): void {
-		if (!OTELConfig.isEnabled()) return;
+		if (!OtelConfig.isEnabled()) return;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.ENV_VALIDATION_ERROR,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.ENV_VALIDATION_ERROR,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: hookName,
@@ -664,13 +689,13 @@ export class TelemetryEmitter {
 		const body = `Environment validation failed in ${hookName}: ${result.errorMessage}`;
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.ENV_VALIDATION_ERROR,
+			name: TelemetryEmitter.EVENT_NAMES.ENV_VALIDATION_ERROR,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: "error",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};
@@ -697,28 +722,32 @@ export class TelemetryEmitter {
 	 *
 	 * @example
 	 * ```typescript
-	 * process.on("uncaughtException", async (error) => {
-	 *   await TelemetryEmitter.emitFatalError(sessionId, {
-	 *     hookName: "pre-bash",
-	 *     errorType: "uncaughtException",
-	 *     errorMessage: error.message,
-	 *     errorStack: error.stack,
+	 * import { TelemetryEmitter } from "claude-binary-plugin";
+	 *
+	 * function setupErrorHandler(sessionId: string): void {
+	 *   process.on("uncaughtException", async (error) => {
+	 *     await TelemetryEmitter.emitFatalError(sessionId, {
+	 *       hookName: "pre-bash",
+	 *       errorType: "uncaughtException",
+	 *       errorMessage: error.message,
+	 *       errorStack: error.stack,
+	 *     });
+	 *     process.exit(1);
 	 *   });
-	 *   process.exit(1);
-	 * });
+	 * }
 	 * ```
 	 *
 	 * @public
 	 */
 	static async emitFatalError(sessionId: string, result: FatalErrorResult, flushTimeoutMs = 500): Promise<boolean> {
-		if (!OTELConfig.isEnabled()) return false;
+		if (!OtelConfig.isEnabled()) return false;
 
 		const client = getSidecarClient(sessionId);
 		const now = new Date();
 
 		const attributes: Record<string, string | number | boolean> = {
 			[TelemetryEmitter.ATTRS.SESSION_ID]: sessionId,
-			[TelemetryEmitter.ATTRS.EVENT_NAME]: EVENT_NAMES.FATAL_ERROR,
+			[TelemetryEmitter.ATTRS.EVENT_NAME]: TelemetryEmitter.EVENT_NAMES.FATAL_ERROR,
 			[TelemetryEmitter.ATTRS.APP_VERSION]: TelemetryEmitter.getClaudeVersion(),
 			[TelemetryEmitter.ATTRS.TERMINAL_TYPE]: TelemetryEmitter.getTerminalType(),
 			[TelemetryEmitter.ATTRS.HOOK_NAME]: result.hookName,
@@ -752,13 +781,13 @@ export class TelemetryEmitter {
 		}
 
 		const eventData: EventData = {
-			name: EVENT_NAMES.FATAL_ERROR,
+			name: TelemetryEmitter.EVENT_NAMES.FATAL_ERROR,
 			timeNs: BigInt(now.getTime()) * BigInt(1_000_000),
 			severity: "fatal",
 			body,
 			attributes,
 			scope: {
-				name: SCOPE.NAME,
+				name: TelemetryEmitter.SCOPE.NAME,
 				version: SDK_VERSION,
 			},
 		};

@@ -1,11 +1,3 @@
-/**
- * Event/log message handler for OTEL sidecar.
- *
- * Emits OTEL logs from EventData messages received from hooks.
- *
- * @module
- */
-
 import { SeverityNumber } from "@opentelemetry/api-logs";
 import type { EventData } from "../../protocol.js";
 import { SidecarLog } from "./SidecarLog.js";
@@ -54,6 +46,7 @@ const SEVERITY_TEXT_MAP: Record<NonNullable<EventData["severity"]>, string> = {
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class EventHandler {
 	/**
 	 * Handle an event message from a hook.

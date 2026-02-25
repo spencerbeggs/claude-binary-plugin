@@ -1,26 +1,5 @@
-/**
- * Session environment utilities for OTEL telemetry.
- *
- * @remarks
- * Provides utilities for discovering session environment directories
- * and extracting session IDs from paths.
- *
- * @example
- * ```typescript
- * import { SessionEnv } from "claude-binary-plugin";
- *
- * const dir = SessionEnv.getDir();
- * if (dir) {
- *   const sessionId = SessionEnv.extractSessionId(dir);
- *   console.log(`Session: ${sessionId}`);
- * }
- * ```
- *
- * @public
- */
-
 import { dirname } from "node:path";
-import { DEFAULTS, ENV_VARS } from "../constants.js";
+import { OtelConfig } from "./OtelConfig.js";
 
 /**
  * Session environment utilities.
@@ -119,7 +98,7 @@ export class SessionEnv {
 	 * @public
 	 */
 	static shouldIncludeSessionId(): boolean {
-		return Bun.env[ENV_VARS.OTEL_INCLUDE_SESSION_ID] === "true";
+		return Bun.env[OtelConfig.ENV_VARS.OTEL_INCLUDE_SESSION_ID] === "true";
 	}
 
 	/**
@@ -134,12 +113,12 @@ export class SessionEnv {
 	 * @public
 	 */
 	static getIdleTimeout(): number {
-		const envValue = Bun.env[ENV_VARS.OTEL_SIDECAR_IDLE_TIMEOUT_MS];
-		if (!envValue) return DEFAULTS.IDLE_TIMEOUT_MS;
+		const envValue = Bun.env[OtelConfig.ENV_VARS.OTEL_SIDECAR_IDLE_TIMEOUT_MS];
+		if (!envValue) return OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS;
 
 		const parsed = Number.parseInt(envValue, 10);
 		if (Number.isNaN(parsed) || parsed <= 0) {
-			return DEFAULTS.IDLE_TIMEOUT_MS;
+			return OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS;
 		}
 
 		return parsed;

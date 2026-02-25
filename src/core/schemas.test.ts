@@ -1,10 +1,6 @@
-/**
- * Tests for Zod hook event schemas.
- */
-
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { HookEventSchemas, hookEventSchemaRegistry } from "./schemas.js";
+import { HookEventSchemas } from "./schemas.js";
 
 // =============================================================================
 // TEST FIXTURES
@@ -89,10 +85,11 @@ const validNotificationEvent = {
 // HOOK EVENT SCHEMAS NAMESPACE TESTS
 // =============================================================================
 
-describe("HookEventSchemas namespace", () => {
+describe("HookEventSchemas class", () => {
 	test("exposes registry with metadata", () => {
 		expect(HookEventSchemas.registry).toBeDefined();
-		expect(HookEventSchemas.registry).toBe(hookEventSchemaRegistry);
+		// Registry is a Zod registry containing schema metadata
+		expect(typeof HookEventSchemas.registry.get).toBe("function");
 	});
 
 	test("PreToolUse schema has registry metadata", () => {

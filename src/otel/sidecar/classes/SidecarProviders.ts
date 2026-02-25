@@ -1,12 +1,3 @@
-/**
- * OTEL Provider management for the sidecar.
- *
- * This class manages the OTEL SDK with trace, metric, and log providers.
- * Providers are initialized lazily on first ping message and are singletons.
- *
- * @module
- */
-
 import { metrics, trace } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
 import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";
@@ -14,7 +5,7 @@ import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { GitInfo } from "../../classes/GitInfo.js";
-import { SCOPE } from "../../constants.js";
+import { TelemetryEmitter } from "../../classes/TelemetryEmitter.js";
 import { SidecarExporters } from "./SidecarExporters.js";
 import type { ResourceConfig } from "./SidecarResource.js";
 import { SidecarResource } from "./SidecarResource.js";
@@ -41,6 +32,7 @@ import { SidecarResource } from "./SidecarResource.js";
  *
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarProviders {
 	/**
 	 * Module-level state for providers.
@@ -209,33 +201,33 @@ export class SidecarProviders {
 	/**
 	 * Get a tracer for creating spans.
 	 *
-	 * @param name - Tracer name (defaults to SCOPE.NAME)
+	 * @param name - Tracer name (defaults to TelemetryEmitter.SCOPE.NAME)
 	 * @param version - Tracer version
 	 * @returns Tracer instance
 	 */
-	static getTracer(name: string = SCOPE.NAME, version?: string) {
+	static getTracer(name: string = TelemetryEmitter.SCOPE.NAME, version?: string) {
 		return trace.getTracer(name, version);
 	}
 
 	/**
 	 * Get a meter for recording metrics.
 	 *
-	 * @param name - Meter name (defaults to SCOPE.NAME)
+	 * @param name - Meter name (defaults to TelemetryEmitter.SCOPE.NAME)
 	 * @param version - Meter version
 	 * @returns Meter instance
 	 */
-	static getMeter(name: string = SCOPE.NAME, version?: string) {
+	static getMeter(name: string = TelemetryEmitter.SCOPE.NAME, version?: string) {
 		return metrics.getMeter(name, version);
 	}
 
 	/**
 	 * Get a logger for emitting logs.
 	 *
-	 * @param name - Logger name (defaults to SCOPE.NAME)
+	 * @param name - Logger name (defaults to TelemetryEmitter.SCOPE.NAME)
 	 * @param version - Logger version
 	 * @returns Logger instance
 	 */
-	static getLogger(name: string = SCOPE.NAME, version?: string) {
+	static getLogger(name: string = TelemetryEmitter.SCOPE.NAME, version?: string) {
 		return logs.getLogger(name, version);
 	}
 

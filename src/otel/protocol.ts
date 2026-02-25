@@ -1,63 +1,54 @@
 /**
- * IPC Protocol types for communication between hooks and OTEL sidecar.
- *
- * Messages are sent as JSON Lines (newline-delimited JSON) over Unix sockets.
- * This format is simple, debuggable, and efficient for the expected message sizes.
- *
- * @module
- */
-
-/**
  * OTEL exporter configuration sent from hooks to sidecar.
  * The sidecar uses this to configure its OTEL providers.
  * @public
  */
-export interface OTELProtocolConfig {
+export interface OtelProtocolConfig {
 	/**
 	 * OTLP endpoint URL (e.g., "http://localhost:4318")
 	 * @defaultValue "http://localhost:4318"
 	 */
-	endpoint?: string;
+	endpoint?: string | undefined;
 
 	/**
 	 * Protocol to use for export.
 	 * HTTP is preferred for Bun compatibility (gRPC has issues).
 	 * @defaultValue "http"
 	 */
-	protocol?: "http" | "grpc";
+	protocol?: "http" | "grpc" | undefined;
 
 	/**
 	 * Service name for OTEL resource.
 	 * @defaultValue "claude-code-plugin"
 	 */
-	serviceName?: string;
+	serviceName?: string | undefined;
 
 	/**
 	 * Plugin name for resource attributes.
 	 * Set via setPluginInfo() at startup.
 	 */
-	pluginName?: string;
+	pluginName?: string | undefined;
 
 	/**
 	 * Marketplace name the plugin belongs to.
 	 */
-	marketplaceName?: string;
+	marketplaceName?: string | undefined;
 
 	/**
 	 * Additional resource attributes to include with all telemetry.
 	 */
-	resourceAttributes?: Record<string, string | number | boolean>;
+	resourceAttributes?: Record<string, string | number | boolean> | undefined;
 
 	/**
 	 * Headers to include with OTLP requests (e.g., auth tokens).
 	 */
-	headers?: Record<string, string>;
+	headers?: Record<string, string> | undefined;
 
 	/**
 	 * Export timeout in milliseconds.
 	 * @defaultValue 30000
 	 */
-	exportTimeoutMs?: number;
+	exportTimeoutMs?: number | undefined;
 }
 
 /**
@@ -73,7 +64,7 @@ export interface SpanData {
 	traceId: string;
 
 	/** Parent span ID, if this span has a parent */
-	parentSpanId?: string;
+	parentSpanId?: string | undefined;
 
 	/** Human-readable name for this span */
 	name: string;
@@ -85,19 +76,21 @@ export interface SpanData {
 	startTimeNs: bigint;
 
 	/** End time in Unix nanoseconds (if span is complete) */
-	endTimeNs?: bigint;
+	endTimeNs?: bigint | undefined;
 
 	/** Span attributes (key-value pairs) */
-	attributes?: Record<string, string | number | boolean>;
+	attributes?: Record<string, string | number | boolean> | undefined;
 
 	/** Span status */
-	status?: {
-		code: "unset" | "ok" | "error";
-		message?: string;
-	};
+	status?:
+		| {
+				code: "unset" | "ok" | "error";
+				message?: string | undefined;
+		  }
+		| undefined;
 
 	/** Events attached to this span */
-	events?: SpanEvent[];
+	events?: SpanEvent[] | undefined;
 }
 
 /**
@@ -112,7 +105,7 @@ export interface SpanEvent {
 	timeNs: bigint;
 
 	/** Event attributes */
-	attributes?: Record<string, string | number | boolean>;
+	attributes?: Record<string, string | number | boolean> | undefined;
 }
 
 /**
@@ -123,7 +116,7 @@ export interface ScopeData {
 	/** Scope name (e.g., "systems.savvyweb.claude_code.events") */
 	name: string;
 	/** Scope version (e.g., plugin version) */
-	version?: string;
+	version?: string | undefined;
 }
 
 /**
@@ -139,16 +132,16 @@ export interface EventData {
 	timeNs: bigint;
 
 	/** Event attributes */
-	attributes?: Record<string, string | number | boolean>;
+	attributes?: Record<string, string | number | boolean> | undefined;
 
 	/** Severity level */
-	severity?: "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+	severity?: "trace" | "debug" | "info" | "warn" | "error" | "fatal" | undefined;
 
 	/** Human-readable message */
-	body?: string;
+	body?: string | undefined;
 
 	/** Instrumentation scope metadata */
-	scope?: ScopeData;
+	scope?: ScopeData | undefined;
 }
 
 /**
@@ -161,16 +154,16 @@ export interface MetricData {
 	name: string;
 
 	/** Metric description */
-	description?: string;
+	description?: string | undefined;
 
 	/** Metric unit (e.g., "ms", "bytes", "1") */
-	unit?: string;
+	unit?: string | undefined;
 
 	/** Metric type and value */
 	type: MetricType;
 
 	/** Metric attributes (dimensions) */
-	attributes?: Record<string, string | number | boolean>;
+	attributes?: Record<string, string | number | boolean> | undefined;
 
 	/** Timestamp in Unix nanoseconds */
 	timeNs: bigint;
@@ -195,7 +188,7 @@ export interface PingMessage {
 	/** Session ID for correlation */
 	sessionId: string;
 	/** OTEL configuration for this session */
-	config: OTELProtocolConfig;
+	config: OtelProtocolConfig;
 }
 
 /**
@@ -241,7 +234,7 @@ export interface MetricMessage {
 export interface ShutdownMessage {
 	type: "shutdown";
 	/** Optional session ID if shutting down a specific session */
-	sessionId?: string;
+	sessionId?: string | undefined;
 }
 
 /**
@@ -258,11 +251,7 @@ export interface SidecarResponse {
 	/** Whether the operation succeeded */
 	ok: boolean;
 	/** Error message if not ok */
-	error?: string;
+	error?: string | undefined;
 	/** Sidecar version for debugging */
-	version?: string;
+	version?: string | undefined;
 }
-
-// Note: serializeMessage and parseMessage functions have been moved to the
-// SidecarMessage class in ./classes/SidecarMessage.ts
-// Use SidecarMessage.serialize() and SidecarMessage.parse() instead.

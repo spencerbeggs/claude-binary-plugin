@@ -1,53 +1,17 @@
-/**
- * Pipeline-based hook system for declarative hook definitions.
- *
- * This module provides a higher-level abstraction over the raw hook event system,
- * allowing hooks to be defined as pure transformation functions with strict
- * Zod-validated inputs and outputs.
- *
- * @example
- * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
- * import { z } from "zod";
- *
- * export default ClaudeBinaryPlugin.create({
- *   prefix: "MY_PLUGIN",
- *   options: z.object({
- *     TIMEOUT_MS: z.number().default(30000),
- *   }),
- *   hooks: {
- *     SessionStart: [{
- *       name: "project-context",
- *       pipeline: async ({ input, state }) => {
- *         return {
- *           status: "executed",
- *           action: "context",
- *           summary: "added project context",
- *           claudeContext: "Project uses TypeScript",
- *         };
- *       }
- *     }],
- *   }
- * });
- * ```
- */
-
 import type { ReadonlyDeep } from "type-fest";
 import type { z } from "zod";
 import type { $ZodType } from "zod/v4/core";
 import type { PluginBuildResult } from "../build/builder.js";
-import type {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "../events/subclasses.js";
+import type { NotificationEvent } from "../events/classes/NotificationEvent.js";
+import type { PermissionRequestEvent } from "../events/classes/PermissionRequestEvent.js";
+import type { PostToolUseEvent } from "../events/classes/PostToolUseEvent.js";
+import type { PreCompactEvent } from "../events/classes/PreCompactEvent.js";
+import type { PreToolUseEvent } from "../events/classes/PreToolUseEvent.js";
+import type { SessionEndEvent } from "../events/classes/SessionEndEvent.js";
+import type { SessionStartEvent } from "../events/classes/SessionStartEvent.js";
+import type { StopEvent } from "../events/classes/StopEvent.js";
+import type { SubagentStopEvent } from "../events/classes/SubagentStopEvent.js";
+import type { UserPromptSubmitEvent } from "../events/classes/UserPromptSubmitEvent.js";
 import type {
 	NotificationInput,
 	PermissionRequestInput,
@@ -75,7 +39,6 @@ import type {
 	SubagentStopPipelineOutput,
 	UserPromptSubmitPipelineOutput,
 } from "./types.js";
-import { OutputSchemas } from "./types.js";
 
 // =============================================================================
 // HANDLER TYPES
@@ -516,7 +479,7 @@ export interface RawFileHookDefinition extends HookDefinitionBase {
  */
 export interface PassthroughHookEntry {
 	/** Optional matcher pattern for tool filtering */
-	matcher?: string;
+	matcher?: string | undefined;
 	/** Array of hook commands to execute */
 	hooks: Array<{ type: "command"; command: string }>;
 	/** Mark that this is not a compiled hook */
@@ -673,7 +636,7 @@ export interface HooksMap<TOptions> {
 // =============================================================================
 
 /**
- * Command definition with Zod argument schema for declarative command definitions.
+ * Command definition with file path for the handler.
  *
  * @typeParam TArgs - Zod schema type for command arguments
  *
@@ -692,7 +655,7 @@ export interface HooksMap<TOptions> {
  * ```
  * @public
  */
-export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
+export interface CommandFileDefinition<TArgs extends $ZodType = $ZodType> {
 	/** Description shown in help text and to LLM */
 	description: string;
 	/** Zod schema for validating CLI arguments */
@@ -700,6 +663,74 @@ export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
 	/** Path to handler file (relative to plugin root) */
 	pipeline: string;
 }
+
+/**
+ * Command definition with inline handler function.
+ *
+ * @typeParam TArgs - Zod schema type for command arguments
+ * @typeParam TOptions - Validated options from plugin schema
+ * @typeParam TState - Computed state from setup function
+ *
+ * @example
+ * ```ts
+ * commands: {
+ *   status: {
+ *     description: "Show project status",
+ *     args: z.object({}),
+ *     pipeline: async ({ state }) => ({
+ *       exitCode: 0,
+ *       output: `# Status\n\nProject: ${state.projectDir}`,
+ *     }),
+ *   },
+ * }
+ * ```
+ * @public
+ */
+export interface CommandInlineDefinition<
+	TArgs extends $ZodType = $ZodType,
+	TOptions = unknown,
+	TState = Record<string, unknown>,
+> {
+	/** Description shown in help text and to LLM */
+	description: string;
+	/** Zod schema for validating CLI arguments */
+	args?: TArgs;
+	/** Inline handler function */
+	pipeline: CommandHandler<z.infer<TArgs>, TOptions, TState>;
+}
+
+/**
+ * Command definition - either file path or inline handler.
+ *
+ * @typeParam TArgs - Zod schema type for command arguments
+ * @typeParam TOptions - Validated options from plugin schema
+ * @typeParam TState - Computed state from setup function
+ *
+ * @example File path (production)
+ * ```ts
+ * {
+ *   description: "Fix lint errors",
+ *   args: z.object({ path: z.string().default(".") }),
+ *   pipeline: "./commands/lint.cmd.ts",
+ * }
+ * ```
+ *
+ * @example Inline handler (testing or simple commands)
+ * ```ts
+ * {
+ *   description: "Show status",
+ *   args: z.object({}),
+ *   pipeline: async ({ state }) => ({
+ *     exitCode: 0,
+ *     output: `Project: ${state.projectDir}`,
+ *   }),
+ * }
+ * ```
+ * @public
+ */
+export type CommandDefinition<TArgs extends $ZodType = $ZodType, TOptions = unknown, TState = Record<string, unknown>> =
+	| CommandFileDefinition<TArgs>
+	| CommandInlineDefinition<TArgs, TOptions, TState>;
 
 /**
  * Context provided to command handlers.
@@ -710,6 +741,8 @@ export interface CommandDefinition<TArgs extends $ZodType = $ZodType> {
  *
  * @example
  * ```ts
+ * import type { Commands } from "./plugin.config.js";
+ *
  * const handler: Commands["lint"] = async ({ args, options, state }) => {
  *   // args: { path: string, fix: boolean } - validated from CLI
  *   // options: { AUTO_ALLOW_ENABLED: boolean, ... } - from schema
@@ -755,10 +788,29 @@ export interface CommandOutput {
 }
 
 /**
+ * Base command definition structure (for type constraints).
+ * Uses union types to allow both file paths and inline handlers.
+ * @public
+ */
+export interface CommandDefinitionBase {
+	description: string;
+	args?: $ZodType;
+	/** File path (string) or inline handler function */
+	pipeline: string | CommandHandlerFn;
+}
+
+/**
+ * Generic command handler function type for base constraints.
+ * Uses `never` in parameters to allow any specific handler signature via contravariance.
+ * @public
+ */
+export type CommandHandlerFn = (ctx: never) => CommandOutput | Promise<CommandOutput>;
+
+/**
  * Map of command names to their definitions.
  * @public
  */
-export type CommandsMap = Record<string, CommandDefinition>;
+export type CommandsMap = Record<string, CommandDefinitionBase>;
 
 /**
  * Base state values provided to setup and handlers.
@@ -852,7 +904,7 @@ export interface PluginConfig<
 	TOptionsSchema extends $ZodType,
 	// Use function type constraint directly to avoid default type parameter issues
 	TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
-	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 > {
 	/**
 	 * Environment variable prefix for this plugin.
@@ -968,15 +1020,19 @@ export interface PluginConfig<
  * - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)
  *
  * **Type Inference:**
- * Use the namespace utilities to extract types from plugin instances:
- * - `ClaudeBinaryPlugin.InferOptions<typeof plugin>` - Options type from schema
- * - `ClaudeBinaryPlugin.InferState<typeof plugin>` - State type from setup()
- * - `ClaudeBinaryPlugin.InferPipeline<typeof plugin>` - Handler types for hooks
- * - `ClaudeBinaryPlugin.InferCommands<typeof plugin>` - Handler types for commands
+ * Use the standalone utility types to extract types from plugin instances:
+ * - `InferPluginOptions<typeof plugin>` - Options type from schema
+ * - `InferPluginState<typeof plugin>` - State type from setup()
+ * - `InferPluginPipeline<typeof plugin>` - Handler types for hooks
+ * - `InferPluginCommands<typeof plugin>` - Handler types for commands
  *
  * @example
  * ```ts
  * // plugin.config.ts
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginPipeline } from "claude-binary-plugin";
+ * import { z } from "zod";
+ *
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   options: z.object({
@@ -997,7 +1053,7 @@ export interface PluginConfig<
  *   }
  * });
  *
- * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
+ * export type Pipeline = InferPluginPipeline<typeof plugin>;
  * export default plugin;
  * ```
  *
@@ -1022,7 +1078,7 @@ export interface PluginConfig<
 export class ClaudeBinaryPlugin<
 	TOptionsSchema extends $ZodType,
 	TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
-	TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 > {
 	/**
 	 * The plugin configuration.
@@ -1073,7 +1129,7 @@ export class ClaudeBinaryPlugin<
 	static create<
 		TOptionsSchema extends $ZodType,
 		TSetup extends ((ctx: SetupContext<z.infer<TOptionsSchema>>) => unknown) | undefined = undefined,
-		TCommands extends Record<string, CommandDefinition> = Record<string, never>,
+		TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 	>(config: PluginConfig<TOptionsSchema, TSetup, TCommands>): ClaudeBinaryPlugin<TOptionsSchema, TSetup, TCommands> {
 		return new ClaudeBinaryPlugin(config);
 	}
@@ -1270,23 +1326,90 @@ export interface PluginBuildOptions {
 }
 
 // =============================================================================
-// TYPE INFERENCE UTILITIES (Zod-like pattern)
+// TYPE INFERENCE UTILITIES
 // =============================================================================
 
 /**
- * Namespace for type inference utilities.
- * Merges with the ClaudeBinaryPlugin class to enable Zod-like patterns.
+ * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+
+/**
+ * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, infer TSetup, any> ? TSetup : undefined;
+
+/**
+ * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TCommands> ? TCommands : never;
+
+/**
+ * Extract the inferred Options type from a plugin configuration.
+ *
+ * @remarks
+ * Extracts the TypeScript type from the plugin's Zod options schema.
+ * Use this to get typed access to plugin options in handlers.
  *
  * @example
  * ```ts
- * // In plugin.config.ts
- * const plugin = ClaudeBinaryPlugin.create({
- *   prefix: "MY_PLUGIN",
- *   options: z.object({ DEBUG: z.boolean().default(false) }),
- *   hooks: { ... }
- * });
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginOptions } from "claude-binary-plugin";
  *
- * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * type Options = InferPluginOptions<typeof plugin>;
+ * ```
+ * @public
+ */
+export type InferPluginOptions<T> = z.infer<ExtractOptionsSchema<T>>;
+
+/**
+ * Extract the inferred State type from a plugin's setup function.
+ *
+ * @remarks
+ * State is merged with BaseState to form the full PluginState passed to handlers.
+ * If no setup function is defined, returns `Record<string, unknown>`.
+ *
+ * @example
+ * ```ts
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginState } from "claude-binary-plugin";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * type State = InferPluginState<typeof plugin>;
+ * // { packageManager: string; typeChecker: string; ... }
+ * ```
+ * @public
+ */
+export type InferPluginState<T> =
+	ExtractSetup<T> extends undefined ? Record<string, unknown> : ExtractSetupReturn<NonNullable<ExtractSetup<T>>>;
+
+/**
+ * Infer all pipeline and handler types from a plugin configuration.
+ *
+ * @remarks
+ * Returns an interface with typed handlers for each hook event.
+ * This is the primary type for defining hook handlers in plugin projects.
+ *
+ * The interface includes both pipeline handlers (pure transformation functions)
+ * and raw handlers (full event access):
+ *
+ * - `Pipeline["PreToolUse"]` - Pipeline handler receiving `{ input, options, state }`
+ * - `Pipeline["PreToolUseRaw"]` - Raw handler receiving `{ event, options, state }`
+ *
+ * @example
+ * ```ts
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginPipeline } from "claude-binary-plugin";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * export type Pipeline = InferPluginPipeline<typeof plugin>;
  * export default plugin;
  *
  * // In hooks/my-hook.hook.ts
@@ -1294,156 +1417,186 @@ export interface PluginBuildOptions {
  *
  * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
  *   // input, options, and state are fully typed!
- *   return { permissionDecision: "allow" };
+ *   return { status: "executed", action: "allow", summary: "allowed" };
  * };
  * export default handler;
  * ```
  * @public
  */
-export namespace ClaudeBinaryPlugin {
+export interface InferPluginPipeline<T> {
 	/**
-	 * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.
-	 * @public
+	 * Handler for session initialization. Runs when Claude Code starts a new session.
+	 * Use to add system context, run detection logic, or initialize state.
+	 * @see {@link SessionStartPipeline}
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+	SessionStart: SessionStartPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
-	 * @public
+	 * Handler for session cleanup. Runs when a Claude Code session ends.
+	 * Use for cleanup tasks or final logging.
+	 * @see {@link SessionEndPipeline}
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, infer TSetup, any> ? TSetup : undefined;
+	SessionEnd: SessionEndPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
-	 * @public
+	 * Handler for tool pre-execution. Runs before Claude executes a tool.
+	 * Can allow, deny, or modify the tool input before execution.
+	 * @see {@link PreToolUsePipeline}
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-	export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TCommands> ? TCommands : never;
+	PreToolUse: PreToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Extract the inferred Options type from a plugin.
-	 *
-	 * @example
-	 * ```ts
-	 * type Options = ClaudeBinaryPlugin.InferOptions<typeof plugin>;
-	 * ```
-	 * @public
+	 * Handler for tool post-execution. Runs after Claude executes a tool.
+	 * Can add context based on tool results or block continuation.
+	 * @see {@link PostToolUsePipeline}
 	 */
-	export type InferOptions<T> = z.infer<ExtractOptionsSchema<T>>;
+	PostToolUse: PostToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Extract the inferred State type from a plugin's setup function.
-	 * State is merged with BaseState to form the full PluginState passed to handlers.
-	 *
-	 * @example
-	 * ```ts
-	 * type State = ClaudeBinaryPlugin.InferState<typeof plugin>;
-	 * // { packageManager: string; typeChecker: string; ... }
-	 * ```
-	 * @public
+	 * Handler for agent stop events. Runs when Claude is about to stop.
+	 * Can block the stop with a reason to continue the conversation.
+	 * @see {@link StopPipeline}
 	 */
-	export type InferState<T> =
-		ExtractSetup<T> extends undefined ? Record<string, unknown> : ExtractSetupReturn<NonNullable<ExtractSetup<T>>>;
+	Stop: StopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Infer all pipeline and handler types from a plugin.
-	 * Returns an interface with typed handlers for each hook event.
-	 *
-	 * @example
-	 * ```ts
-	 * export type Pipeline = ClaudeBinaryPlugin.InferPipeline<typeof plugin>;
-	 *
-	 * // Pipeline handlers (pure transformation)
-	 * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => { ... };
-	 *
-	 * // Raw handlers (full event access)
-	 * const handler: Pipeline["PreToolUseRaw"] = ({ event, options, state }) => { ... };
-	 * ```
+	 * Handler for subagent stop events. Runs when a subagent is about to stop.
+	 * Can block the subagent stop with a reason.
+	 * @see {@link SubagentStopPipeline}
 	 */
-	export interface InferPipeline<T> {
-		// Pipeline handlers (pure transformation functions)
-		SessionStart: SessionStartPipeline<InferOptions<T>, InferState<T>>;
-		SessionEnd: SessionEndPipeline<InferOptions<T>, InferState<T>>;
-		PreToolUse: PreToolUsePipeline<InferOptions<T>, InferState<T>>;
-		PostToolUse: PostToolUsePipeline<InferOptions<T>, InferState<T>>;
-		Stop: StopPipeline<InferOptions<T>, InferState<T>>;
-		SubagentStop: SubagentStopPipeline<InferOptions<T>, InferState<T>>;
-		UserPromptSubmit: UserPromptSubmitPipeline<InferOptions<T>, InferState<T>>;
-		PreCompact: PreCompactPipeline<InferOptions<T>, InferState<T>>;
-		Notification: NotificationPipeline<InferOptions<T>, InferState<T>>;
-		PermissionRequest: PermissionRequestPipeline<InferOptions<T>, InferState<T>>;
-
-		// Raw handlers (full event access)
-		SessionStartRaw: SessionStartRawHandler<InferOptions<T>, InferState<T>>;
-		SessionEndRaw: SessionEndRawHandler<InferOptions<T>, InferState<T>>;
-		PreToolUseRaw: PreToolUseRawHandler<InferOptions<T>, InferState<T>>;
-		PostToolUseRaw: PostToolUseRawHandler<InferOptions<T>, InferState<T>>;
-		StopRaw: StopRawHandler<InferOptions<T>, InferState<T>>;
-		SubagentStopRaw: SubagentStopRawHandler<InferOptions<T>, InferState<T>>;
-		UserPromptSubmitRaw: UserPromptSubmitRawHandler<InferOptions<T>, InferState<T>>;
-		PreCompactRaw: PreCompactRawHandler<InferOptions<T>, InferState<T>>;
-		NotificationRaw: NotificationRawHandler<InferOptions<T>, InferState<T>>;
-		PermissionRequestRaw: PermissionRequestRawHandler<InferOptions<T>, InferState<T>>;
-	}
+	SubagentStop: SubagentStopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Extract the commands map from a plugin.
-	 * @public
+	 * Handler for user prompt submission. Runs when the user submits a prompt.
+	 * Can add context or block the submission.
+	 * @see {@link UserPromptSubmitPipeline}
 	 */
-	export type InferCommandsMap<T> = ExtractCommands<T>;
+	UserPromptSubmit: UserPromptSubmitPipeline<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
-	 * Infer command handler types from a plugin.
-	 * Returns an interface with typed handlers for each command.
-	 *
-	 * @example
-	 * ```ts
-	 * export type Commands = ClaudeBinaryPlugin.InferCommands<typeof plugin>;
-	 *
-	 * // In commands/lint.cmd.ts
-	 * const handler: Commands["lint"] = async ({ args, options, state }) => {
-	 *   // args, options, and state are fully typed!
-	 *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
-	 * };
-	 * ```
+	 * Handler for context compaction. Runs before Claude compacts conversation history.
+	 * Passthrough-only hook for observability.
+	 * @see {@link PreCompactPipeline}
 	 */
-	export type InferCommands<T> = {
-		[K in keyof InferCommandsMap<T>]: InferCommandsMap<T>[K] extends CommandDefinition<infer TArgs>
-			? CommandHandler<z.infer<TArgs>, InferOptions<T>, InferState<T>>
-			: never;
-	};
+	PreCompact: PreCompactPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for notification events. Runs when Claude sends a notification.
+	 * Passthrough-only hook for observability.
+	 * @see {@link NotificationPipeline}
+	 */
+	Notification: NotificationPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Handler for permission requests. Runs when Claude requests user permission.
+	 * Can auto-allow or auto-deny permission requests.
+	 * @see {@link PermissionRequestPipeline}
+	 */
+	PermissionRequest: PermissionRequestPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+
+	// =========================================================================
+	// Raw handlers (full event access)
+	// =========================================================================
+
+	/**
+	 * Raw handler for session initialization with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link SessionStartRawHandler}
+	 */
+	SessionStartRaw: SessionStartRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for session cleanup with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link SessionEndRawHandler}
+	 */
+	SessionEndRaw: SessionEndRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for tool pre-execution with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PreToolUseRawHandler}
+	 */
+	PreToolUseRaw: PreToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for tool post-execution with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PostToolUseRawHandler}
+	 */
+	PostToolUseRaw: PostToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for agent stop events with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link StopRawHandler}
+	 */
+	StopRaw: StopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for subagent stop events with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link SubagentStopRawHandler}
+	 */
+	SubagentStopRaw: SubagentStopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for user prompt submission with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link UserPromptSubmitRawHandler}
+	 */
+	UserPromptSubmitRaw: UserPromptSubmitRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for context compaction with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PreCompactRawHandler}
+	 */
+	PreCompactRaw: PreCompactRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for notification events with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link NotificationRawHandler}
+	 */
+	NotificationRaw: NotificationRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
+
+	/**
+	 * Raw handler for permission requests with full event access.
+	 * Use when you need direct access to the HookEvent object.
+	 * @see {@link PermissionRequestRawHandler}
+	 */
+	PermissionRequestRaw: PermissionRequestRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
 }
-
-// =============================================================================
-// HELPER FUNCTIONS FOR BUILDER
-// =============================================================================
 
 /**
- * Check if a hook definition uses pipeline mode.
+ * Infer command handler types from a plugin configuration.
+ *
+ * @remarks
+ * Returns an interface with typed handlers for each command defined in the plugin.
+ * Use this to define command handlers with full type safety for args, options, and state.
+ *
+ * @example
+ * ```ts
+ * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import type { InferPluginCommands } from "claude-binary-plugin";
+ *
+ * const plugin = ClaudeBinaryPlugin.create({ ... });
+ * export type Commands = InferPluginCommands<typeof plugin>;
+ *
+ * // In commands/lint.cmd.ts
+ * import type { Commands } from "../plugin.config.js";
+ *
+ * const handler: Commands["lint"] = async ({ args, options, state }) => {
+ *   // args, options, and state are fully typed!
+ *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
+ * };
+ * export default handler;
+ * ```
  * @public
  */
-export function isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
-	hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
-): hook is PipelineHookDefinition<TInput, TOutput, TOptions> {
-	return "pipeline" in hook && hook.pipeline !== undefined;
-}
-
-/**
- * Check if a hook definition uses raw handler mode.
- * @public
- */
-export function isRawHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
-	hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
-): hook is RawHookDefinition<TEvent, TOptions, TState> {
-	return "handler" in hook && hook.handler !== undefined;
-}
-
-/**
- * Get the output schema for a hook event type.
- * @public
- */
-export function getOutputSchema(hookType: keyof typeof OutputSchemas): $ZodType {
-	return OutputSchemas[hookType];
-}
+export type InferPluginCommands<T> = {
+	[K in keyof ExtractCommands<T>]: ExtractCommands<T>[K] extends CommandDefinition<infer TArgs>
+		? CommandHandler<z.infer<TArgs>, InferPluginOptions<T>, InferPluginState<T>>
+		: never;
+};

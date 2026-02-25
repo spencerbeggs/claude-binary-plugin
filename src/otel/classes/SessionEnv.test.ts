@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { DEFAULTS } from "../constants.js";
+import { OtelConfig } from "./OtelConfig.js";
 import { SessionEnv } from "./SessionEnv.js";
 
 describe("SessionEnv", () => {
@@ -79,7 +79,7 @@ describe("SessionEnv", () => {
 		test("returns default when env var not set", () => {
 			delete process.env.OTEL_SIDECAR_IDLE_TIMEOUT_MS;
 
-			expect(SessionEnv.getIdleTimeout()).toBe(DEFAULTS.IDLE_TIMEOUT_MS);
+			expect(SessionEnv.getIdleTimeout()).toBe(OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS);
 		});
 
 		test("parses valid timeout value", () => {
@@ -91,19 +91,19 @@ describe("SessionEnv", () => {
 		test("returns default for invalid value", () => {
 			process.env.OTEL_SIDECAR_IDLE_TIMEOUT_MS = "invalid";
 
-			expect(SessionEnv.getIdleTimeout()).toBe(DEFAULTS.IDLE_TIMEOUT_MS);
+			expect(SessionEnv.getIdleTimeout()).toBe(OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS);
 		});
 
 		test("returns default for zero", () => {
 			process.env.OTEL_SIDECAR_IDLE_TIMEOUT_MS = "0";
 
-			expect(SessionEnv.getIdleTimeout()).toBe(DEFAULTS.IDLE_TIMEOUT_MS);
+			expect(SessionEnv.getIdleTimeout()).toBe(OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS);
 		});
 
 		test("returns default for negative value", () => {
 			process.env.OTEL_SIDECAR_IDLE_TIMEOUT_MS = "-1000";
 
-			expect(SessionEnv.getIdleTimeout()).toBe(DEFAULTS.IDLE_TIMEOUT_MS);
+			expect(SessionEnv.getIdleTimeout()).toBe(OtelConfig.DEFAULTS.IDLE_TIMEOUT_MS);
 		});
 	});
 });

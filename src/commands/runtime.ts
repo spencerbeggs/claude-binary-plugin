@@ -1,52 +1,7 @@
-/**
- * Runtime support for command-based plugins.
- *
- * @remarks
- * This module provides the execution environment for CLI commands exposed
- * by plugins. Commands are invoked via `--cmd=name` and return markdown
- * output for Claude to process.
- *
- * **Key Functions:**
- * - {@link runCommand} - Main entry point for executing commands
- * - {@link parseRawArgs} - Parse CLI arguments into an object
- * - {@link parseCommandArgs} - Parse and validate args against Zod schema
- *
- * **Execution Flow:**
- * 1. Parse CLI arguments from `--cmd=name` invocation
- * 2. Validate arguments against command's Zod schema
- * 3. Load environment via `PluginEnv.forContext("command")`
- * 4. Call command handler with `{ args, options, state }`
- * 5. Write markdown output to stdout
- * 6. Exit with appropriate code (0=success, 1=issues found, 2=error)
- *
- * **State Access:**
- * Commands can access computed state from SessionStart by using the
- * session registry to locate persisted hook-*.sh files.
- *
- * @example
- * ```typescript
- * import { runCommand, emptyArgsSchema } from "claude-binary-plugin";
- *
- * await runCommand({
- *   name: "lint",
- *   argsSchema: emptyArgsSchema,
- *   handler: async ({ args, options, state }) => ({
- *     exitCode: 0,
- *     output: "# Lint Results\n\nAll checks passed!",
- *   }),
- *   stateClass: MyPluginState,
- * });
- * ```
- *
- * @see {@link CommandOutput} - Output format for command handlers
- * @see {@link CommandHandler} - Handler function signature
- * @module
- */
-
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { BaseState, CommandHandler, CommandOutput, PluginState } from "../pipeline/config.js";
-import { PluginEnv } from "../state/plugin-state.js";
+import { PluginEnv } from "../state/classes/PluginEnv.js";
 
 // =============================================================================
 // INTERNAL SCHEMA UTILITIES
@@ -197,12 +152,26 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 
 /**
  * Empty args schema for commands that don't accept arguments.
- * @public
+ *
+ * @remarks
+ * Use `Commands.emptySchema` to access this schema. This internal export
+ * is used by generated entrypoint code.
+ *
+ * @internal
  */
 export const emptyArgsSchema = z.object({});
 
-/** @public */
-export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
+/**
+ * Type for commands that accept no arguments.
+ *
+ * @remarks
+ * Represents an empty object type. Use with `Commands.emptySchema`
+ * when defining commands that don't accept any arguments.
+ *
+ * @public
+ */
+// biome-ignore lint/complexity/noBannedTypes: Empty object type is intentional for commands with no args
+export type EmptyArgs = {};
 
 // =============================================================================
 // COMMANDS CLASS
@@ -255,6 +224,7 @@ export type EmptyArgs = z.infer<typeof emptyArgsSchema>;
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
  * @public
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class Commands {
 	// =========================================================================
 	// EXECUTION
