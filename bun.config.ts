@@ -1,7 +1,11 @@
 import { BunLibraryBuilder } from "@savvy-web/bun-builder";
 
 export default BunLibraryBuilder.create({
-	transform({ pkg }) {
+	bundle: true,
+	transform({ pkg, target }) {
+		if (target?.registry === "https://npm.pkg.github.com/") {
+			pkg.name = "@spencerbeggs/claude-binary-plugin";
+		}
 		delete pkg.devDependencies;
 		delete pkg.bundleDependencies;
 		delete pkg.scripts;
