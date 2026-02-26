@@ -1,6 +1,6 @@
 {
 	"name": "claude-binary-plugin",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Toolkit for compiling complex single-file executable Claude Code plugins",
 	"keywords": ["claude", "claude-code", "plugin", "cli", "effect", "typescript", "bun", "anthropic"],
 	"homepage": "https://github.com/spencerbeggs/claude-binary-plugin#documentation",
