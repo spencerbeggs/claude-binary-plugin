@@ -69,7 +69,7 @@
 		"type-fest": "5.4.4"
 	},
 	"devDependencies": {
-		"@savvy-web/bun-builder": "^0.6.0",
+		"@savvy-web/bun-builder": "^0.6.2",
 		"@savvy-web/changesets": "^0.3.0",
 		"@savvy-web/commitlint": "^0.3.4",
 		"@savvy-web/lint-staged": "^0.4.6",
