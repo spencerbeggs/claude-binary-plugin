@@ -27,15 +27,17 @@ shims. Remove old code entirely rather than maintaining aliases.
 
 ## Key References
 
-For detailed architecture and schema information, reference these docs:
+Load these docs on-demand when working on the relevant subsystem.
+Do NOT load unless the task specifically requires the details within.
 
-- @.claude/design/architecture.md - System architecture, data flow, build
+- `.claude/design/architecture.md` - System architecture, data flow, build
   system, command runtime, OTEL sidecar spawning and handshake
-- @.claude/design/cli.md - CLI binary usage, zero-config builds
-- @.claude/design/scaffold.md - Scaffold templates, interactive flow
-- @.claude/design/schema.md - OTEL telemetry schema, event types, metrics
-- @.claude/design/testing.md - Testing utilities and fluent API
-- @docs/README.md - User-facing SDK documentation and guides
+- `.claude/design/cli.md` - CLI binary usage, zero-config builds
+- `.claude/design/scaffold.md` - Scaffold templates, interactive flow
+- `.claude/design/schema.md` - OTEL telemetry schema, event types, metrics
+- `.claude/design/testing.md` - Testing utilities and fluent API
+- `docs/README.md` - User-facing SDK documentation and guides.
+  Load when writing or reviewing end-user documentation.
 
 ## Development Commands
 
@@ -78,9 +80,16 @@ bun run build
 - Type-only imports must use `import type`
 - Uses `tsgo` (native TypeScript) for type checking
 
+### Testing
+
+- Use `plugin.test()` fluent API for hook and command tests
+- Always call `ctx.dispose()` in `afterEach` to prevent test pollution
+- Use `mockBunShell()` + `withShell()`/`withShellMatching()` for shell mocks
+- See `.claude/design/testing.md` for full PluginTester API
+
 ### Type Safety Utilities
 
-The SDK uses `type-fest` for enhanced type safety. See @.claude/design/architecture.md
+The SDK uses `type-fest` for enhanced type safety. See `.claude/design/architecture.md`
 for detailed examples.
 
 - **JSON Types** - `JsonObject`, `JsonValue` for tool inputs/outputs
