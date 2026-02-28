@@ -4,12 +4,10 @@ import { SidecarProviders } from "./SidecarProviders.js";
 import { SpanHandler } from "./SpanHandler.js";
 
 describe("SpanHandler", () => {
-	test("SpanHandler is exported", () => {
-		expect(SpanHandler).toBeDefined();
-	});
-
-	test("handle is a static method", () => {
-		expect(typeof SpanHandler.handle).toBe("function");
+	test("can be instantiated", () => {
+		// @ts-expect-error: Private constructor - testing for coverage
+		const instance = new SpanHandler();
+		expect(instance).toBeInstanceOf(SpanHandler);
 	});
 
 	describe("handle", () => {

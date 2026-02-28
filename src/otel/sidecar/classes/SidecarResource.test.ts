@@ -6,6 +6,12 @@ import type { ResourceConfig } from "./SidecarResource.js";
 import { SidecarResource } from "./SidecarResource.js";
 
 describe("SidecarResource", () => {
+	test("can be instantiated", () => {
+		// @ts-expect-error: Private constructor - testing for coverage
+		const instance = new SidecarResource();
+		expect(instance).toBeInstanceOf(SidecarResource);
+	});
+
 	let originalEnv: Record<string, string | undefined>;
 
 	beforeEach(() => {
