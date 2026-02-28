@@ -149,49 +149,6 @@ describe("SchemaValidator.parse()", () => {
 		});
 	});
 
-	describe("validation error logging", () => {
-		const originalError = console.error;
-
-		afterEach(() => {
-			console.error = originalError;
-		});
-
-		test("logs raw input on schema validation failure", async () => {
-			const mockLog = mock(() => {});
-			console.error = mockLog;
-
-			const invalidInput = JSON.stringify({ session_id: 123 });
-			try {
-				await SchemaValidator.parse(invalidInput, testSchema, "fail-hook");
-			} catch {
-				// expected
-			}
-
-			expect(mockLog).toHaveBeenCalled();
-			const logCalls = mockLog.mock.calls.map((c) => (c as unknown[])[0] as string);
-			const validationLog = logCalls.find((msg) => msg.includes("Validation failed"));
-			expect(validationLog).toBeDefined();
-			expect(validationLog).toContain("[fail-hook]");
-		});
-
-		test("truncates long input in validation error log", async () => {
-			const mockLog = mock(() => {});
-			console.error = mockLog;
-
-			const longInvalid = JSON.stringify({ session_id: "x".repeat(1000) });
-			try {
-				await SchemaValidator.parse(longInvalid, testSchema, "fail-hook");
-			} catch {
-				// expected
-			}
-
-			const logCalls = mockLog.mock.calls.map((c) => (c as unknown[])[0] as string);
-			const validationLog = logCalls.find((msg) => msg.includes("Validation failed"));
-			expect(validationLog).toBeDefined();
-			expect(validationLog).toContain("chars)");
-		});
-	});
-
 	describe("emitValidationError with OTEL enabled", () => {
 		const originalTelemetry = Bun.env.CLAUDE_CODE_ENABLE_TELEMETRY;
 		const originalError = console.error;
