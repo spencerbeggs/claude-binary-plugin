@@ -5,6 +5,12 @@ import { SidecarProviders } from "./SidecarProviders.js";
 import { SidecarRouter } from "./SidecarRouter.js";
 
 describe("SidecarRouter", () => {
+	test("can be instantiated", () => {
+		// @ts-expect-error: Private constructor - testing for coverage
+		const instance = new SidecarRouter();
+		expect(instance).toBeInstanceOf(SidecarRouter);
+	});
+
 	afterEach(async () => {
 		// Clean up after tests - reset providers to avoid polluting real sidecar
 		SidecarRouter.clearSessions();

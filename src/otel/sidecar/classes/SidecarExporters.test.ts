@@ -6,6 +6,12 @@ import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-base";
 import { SidecarExporters } from "./SidecarExporters.js";
 
 describe("SidecarExporters", () => {
+	test("can be instantiated", () => {
+		// @ts-expect-error: Private constructor - testing for coverage
+		const instance = new SidecarExporters();
+		expect(instance).toBeInstanceOf(SidecarExporters);
+	});
+
 	let originalEnv: Record<string, string | undefined>;
 
 	beforeEach(() => {

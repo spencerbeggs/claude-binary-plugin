@@ -156,6 +156,75 @@ describe("GitInfo.parseRemoteUrl", () => {
 	});
 });
 
+describe("GitInfo.isValid", () => {
+	test("returns true when all fields are present", () => {
+		const info = new GitInfo({
+			branch: "main",
+			provider: "github",
+			owner: "anthropics",
+			repo: "claude-code",
+		});
+		expect(info.isValid).toBe(true);
+	});
+
+	test("returns true when only branch is present", () => {
+		const info = new GitInfo({ branch: "main" });
+		expect(info.isValid).toBe(true);
+	});
+
+	test("returns true when only provider is present", () => {
+		const info = new GitInfo({ provider: "github" });
+		expect(info.isValid).toBe(true);
+	});
+
+	test("returns true when only owner is present", () => {
+		const info = new GitInfo({ owner: "anthropics" });
+		expect(info.isValid).toBe(true);
+	});
+
+	test("returns true when only repo is present", () => {
+		const info = new GitInfo({ repo: "claude-code" });
+		expect(info.isValid).toBe(true);
+	});
+
+	test("returns false when no fields are present", () => {
+		const info = new GitInfo({});
+		expect(info.isValid).toBe(false);
+	});
+
+	test("returns false for default constructor", () => {
+		const info = new GitInfo();
+		expect(info.isValid).toBe(false);
+	});
+});
+
+describe("GitInfo.displayName", () => {
+	test("returns owner/repo when both are present", () => {
+		const info = new GitInfo({ owner: "anthropics", repo: "claude-code" });
+		expect(info.displayName).toBe("anthropics/claude-code");
+	});
+
+	test("returns 'unknown' when only owner is present", () => {
+		const info = new GitInfo({ owner: "anthropics" });
+		expect(info.displayName).toBe("unknown");
+	});
+
+	test("returns 'unknown' when only repo is present", () => {
+		const info = new GitInfo({ repo: "claude-code" });
+		expect(info.displayName).toBe("unknown");
+	});
+
+	test("returns 'unknown' when neither owner nor repo is present", () => {
+		const info = new GitInfo({ branch: "main", provider: "github" });
+		expect(info.displayName).toBe("unknown");
+	});
+
+	test("returns 'unknown' for empty GitInfo", () => {
+		const info = new GitInfo({});
+		expect(info.displayName).toBe("unknown");
+	});
+});
+
 describe("GitInfo.toAttributes", () => {
 	test("converts full git info to attributes", () => {
 		const info = new GitInfo({

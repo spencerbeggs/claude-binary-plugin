@@ -28,8 +28,10 @@ import { SidecarProviders } from "./SidecarProviders.js";
  *
  * @public
  */
-// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class MetricHandler {
+	// Private constructor prevents instantiation
+	private constructor() {}
+
 	/**
 	 * Cache for counter instruments.
 	 */

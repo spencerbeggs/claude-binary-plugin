@@ -46,8 +46,10 @@ const SEVERITY_TEXT_MAP: Record<NonNullable<EventData["severity"]>, string> = {
  *
  * @public
  */
-// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class EventHandler {
+	// Private constructor prevents instantiation
+	private constructor() {}
+
 	/**
 	 * Handle an event message from a hook.
 	 *

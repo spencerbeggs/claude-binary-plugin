@@ -6,6 +6,64 @@ describe("ClaudeAccountInfo", () => {
 		ClaudeAccountInfo.clearCache();
 	});
 
+	describe("isValid", () => {
+		test("returns true when both accountUuid and organizationUuid are present", () => {
+			const info = new ClaudeAccountInfo({
+				accountUuid: "user-123",
+				organizationUuid: "org-456",
+				emailAddress: null,
+				displayName: null,
+				organizationName: null,
+			});
+			expect(info.isValid).toBe(true);
+		});
+
+		test("returns true when only accountUuid is present", () => {
+			const info = new ClaudeAccountInfo({
+				accountUuid: "user-123",
+				organizationUuid: null,
+				emailAddress: null,
+				displayName: null,
+				organizationName: null,
+			});
+			expect(info.isValid).toBe(true);
+		});
+
+		test("returns true when only organizationUuid is present", () => {
+			const info = new ClaudeAccountInfo({
+				accountUuid: null,
+				organizationUuid: "org-456",
+				emailAddress: null,
+				displayName: null,
+				organizationName: null,
+			});
+			expect(info.isValid).toBe(true);
+		});
+
+		test("returns false when both accountUuid and organizationUuid are null", () => {
+			const info = new ClaudeAccountInfo({
+				accountUuid: null,
+				organizationUuid: null,
+				emailAddress: "test@example.com",
+				displayName: "Test User",
+				organizationName: "Test Org",
+			});
+			expect(info.isValid).toBe(false);
+		});
+	});
+
+	describe("clearCache", () => {
+		test("causes detect() to re-read environment on next call", () => {
+			const info1 = ClaudeAccountInfo.detect();
+			ClaudeAccountInfo.clearCache();
+			const info2 = ClaudeAccountInfo.detect();
+
+			// After clearing cache, detect() returns a new instance (not the same reference)
+			// They may have the same values but should not be the same object
+			expect(info1).not.toBe(info2);
+		});
+	});
+
 	describe("detect", () => {
 		test("returns account info from ~/.claude.json when file exists", () => {
 			ClaudeAccountInfo.clearCache();

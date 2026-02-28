@@ -321,6 +321,7 @@ export class PipelineRuntime {
 				stdout: io.stdout,
 				stderr: io.stderr,
 				inputText: io.inputText,
+				exit: io.exit,
 				stateClass,
 			});
 			event = result.event;

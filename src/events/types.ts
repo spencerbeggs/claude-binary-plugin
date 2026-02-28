@@ -17,6 +17,11 @@ export interface IO {
 	 * Useful for testing without mocking Bun.stdin.
 	 */
 	inputText?: string;
+	/**
+	 * Custom exit function, bypasses process.exit().
+	 * Useful for testing without terminating the process.
+	 */
+	exit?: (code: number) => never;
 }
 
 /**

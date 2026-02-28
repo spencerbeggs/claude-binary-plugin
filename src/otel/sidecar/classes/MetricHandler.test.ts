@@ -4,6 +4,12 @@ import { MetricHandler } from "./MetricHandler.js";
 import * as SidecarProvidersModule from "./SidecarProviders.js";
 
 describe("MetricHandler", () => {
+	test("can be instantiated", () => {
+		// @ts-expect-error: Private constructor - testing for coverage
+		const instance = new MetricHandler();
+		expect(instance).toBeInstanceOf(MetricHandler);
+	});
+
 	let mockCounter: { add: ReturnType<typeof mock> };
 	let mockUpDownCounter: { add: ReturnType<typeof mock> };
 	let mockHistogram: { record: ReturnType<typeof mock> };

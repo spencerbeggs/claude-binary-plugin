@@ -87,10 +87,6 @@ export class SchemaValidator {
 		const result = schema.safeParse(data);
 
 		if (!result.success) {
-			// Log the raw input that failed validation
-			const truncated = rawJson.length > 500 ? `${rawJson.slice(0, 500)}... (${rawJson.length} chars)` : rawJson;
-			console.error(`[${hookName}] Validation failed. Raw input: ${truncated}`);
-
 			// Emit and flush validation error to OTEL before throwing
 			await SchemaValidator.emitValidationError(sessionId, hookName, result.error);
 			throw result.error;

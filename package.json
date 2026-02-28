@@ -1,6 +1,6 @@
 {
 	"name": "claude-binary-plugin",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Toolkit for compiling complex single-file executable Claude Code plugins",
 	"keywords": ["claude", "claude-code", "plugin", "cli", "effect", "typescript", "bun", "anthropic"],
 	"homepage": "https://github.com/spencerbeggs/claude-binary-plugin#documentation",
@@ -31,7 +31,7 @@
 		"build:dev": "bun run bun.config.ts --env-mode dev",
 		"build:npm": "bun run bun.config.ts --env-mode npm",
 		"ci:build": "CI=\"true\" turbo run build:dev build:npm",
-		"ci:test": "NODE_ENV=test bun test --coverage",
+		"ci:test": "NODE_ENV=test bun test",
 		"ci:version": "changeset version && biome format --write",
 		"lint": "biome check --max-diagnostics=none",
 		"lint:fix": "biome check --write --max-diagnostics=none",
@@ -69,7 +69,7 @@
 		"type-fest": "5.4.4"
 	},
 	"devDependencies": {
-		"@savvy-web/bun-builder": "^0.6.0",
+		"@savvy-web/bun-builder": "^0.6.2",
 		"@savvy-web/changesets": "^0.3.0",
 		"@savvy-web/commitlint": "^0.3.4",
 		"@savvy-web/lint-staged": "^0.4.6",

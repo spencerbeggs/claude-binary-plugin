@@ -102,6 +102,11 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 	 * @internal
 	 */
 	private telemetryEmitted = false;
+	/**
+	 * Exit function that can be overridden for testing.
+	 * @internal
+	 */
+	private readonly exitFn: (code: number) => never;
 
 	constructor(params: HookEventBase, options: HookEventOptions<TState>, state?: TState) {
 		this.name = options.name ?? params.hook_event_name;
@@ -116,6 +121,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		this.startTime = performance.now();
 		this.pluginName = options.pluginName ?? "unknown";
 		this.pluginVersion = options.pluginVersion ?? "0.0.0";
+		this.exitFn = options.exit ?? ((code: number) => process.exit(code));
 		this.log = DebugLogger.create(options.name ?? params.hook_event_name, {
 			pluginName: options.pluginName,
 			sessionId: params.session_id,
@@ -254,7 +260,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		if (builderOrCode === undefined || typeof builderOrCode === "number") {
 			this.log.debug(`✓ completed ${timing}`);
 			this.emitTelemetry(Math.round(elapsedMs), true);
-			process.exit(builderOrCode ?? 0);
+			this.exitFn(builderOrCode ?? 0);
 		}
 
 		const summary = builderOrCode.getSummary();
@@ -273,7 +279,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		this.emitTelemetry(Math.round(elapsedMs), !isError, builderOrCode);
 
 		this.out.write(builderOrCode.toJSON());
-		process.exit(code);
+		this.exitFn(code);
 	}
 
 	/**
@@ -370,7 +376,7 @@ export class HookEvent<TState = unknown> implements HookEventBase {
 		this.log.info(`✗ error: ${shortMsg} ${timing}`);
 		this.emitTelemetryError(Math.round(elapsedMs), message);
 		this.err.write(message);
-		process.exit(2);
+		this.exitFn(2);
 	}
 
 	/**

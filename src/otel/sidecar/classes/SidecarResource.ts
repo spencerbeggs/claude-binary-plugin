@@ -35,8 +35,10 @@ export interface ResourceConfig extends OtelProtocolConfig {
  *
  * @public
  */
-// biome-ignore lint/complexity/noStaticOnlyClass: Static class used as public API namespace
 export class SidecarResource {
+	// Private constructor prevents instantiation
+	private constructor() {}
+
 	/**
 	 * Standard OTEL resource attributes.
 	 * Following semantic conventions for service identification.
