@@ -94,6 +94,7 @@ export class SidecarLifecycle {
 	 * Record activity (resets idle timer).
 	 */
 	recordActivity(): void {
+		if (this.state.shuttingDown) return;
 		this.state.lastActivity = Date.now();
 		this.resetIdleTimer();
 	}

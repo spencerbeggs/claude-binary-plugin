@@ -148,4 +148,86 @@ describe("OtelConfig", () => {
 		// Note: pluginName/marketplaceName are now set via setPluginInfo() at startup,
 		// not parsed from env vars. See otel/index.ts for the module-level state.
 	});
+
+	describe("effectiveEndpoint", () => {
+		test("returns configured endpoint when set", () => {
+			const config = new OtelConfig({ endpoint: "http://collector:4318" });
+			expect(config.effectiveEndpoint).toBe("http://collector:4318");
+		});
+
+		test("returns default when endpoint is not set", () => {
+			const config = new OtelConfig({});
+			expect(config.effectiveEndpoint).toBe("http://localhost:4318");
+		});
+	});
+
+	describe("effectiveProtocol", () => {
+		test("returns configured protocol when set to http", () => {
+			const config = new OtelConfig({ protocol: "http" });
+			expect(config.effectiveProtocol).toBe("http");
+		});
+
+		test("returns configured protocol when set to grpc", () => {
+			const config = new OtelConfig({ protocol: "grpc" });
+			expect(config.effectiveProtocol).toBe("grpc");
+		});
+
+		test("returns default 'http' when protocol is not set", () => {
+			const config = new OtelConfig({});
+			expect(config.effectiveProtocol).toBe("http");
+		});
+	});
+
+	describe("effectiveServiceName", () => {
+		test("returns configured service name when set", () => {
+			const config = new OtelConfig({ serviceName: "my-plugin" });
+			expect(config.effectiveServiceName).toBe("my-plugin");
+		});
+
+		test("returns default 'claude-code' when service name is not set", () => {
+			const config = new OtelConfig({});
+			expect(config.effectiveServiceName).toBe("claude-code");
+		});
+	});
+
+	describe("toJSON", () => {
+		test("serializes all fields", () => {
+			const config = new OtelConfig({
+				endpoint: "http://collector:4318",
+				protocol: "grpc",
+				serviceName: "my-service",
+				pluginName: "my-plugin",
+				marketplaceName: "my-marketplace",
+				resourceAttributes: { "custom.attr": "value" },
+				headers: { Authorization: "Bearer token" },
+				exportTimeoutMs: 5000,
+			});
+
+			const json = config.toJSON();
+			expect(json).toEqual({
+				endpoint: "http://collector:4318",
+				protocol: "grpc",
+				serviceName: "my-service",
+				pluginName: "my-plugin",
+				marketplaceName: "my-marketplace",
+				resourceAttributes: { "custom.attr": "value" },
+				headers: { Authorization: "Bearer token" },
+				exportTimeoutMs: 5000,
+			});
+		});
+
+		test("serializes empty config with undefined fields", () => {
+			const config = new OtelConfig({});
+			const json = config.toJSON();
+
+			expect(json.endpoint).toBeUndefined();
+			expect(json.protocol).toBeUndefined();
+			expect(json.serviceName).toBeUndefined();
+			expect(json.pluginName).toBeUndefined();
+			expect(json.marketplaceName).toBeUndefined();
+			expect(json.resourceAttributes).toBeUndefined();
+			expect(json.headers).toBeUndefined();
+			expect(json.exportTimeoutMs).toBeUndefined();
+		});
+	});
 });

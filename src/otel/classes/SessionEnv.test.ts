@@ -55,6 +55,39 @@ describe("SessionEnv", () => {
 		});
 	});
 
+	describe("extractSessionId", () => {
+		test("returns valid UUID from session env directory path", () => {
+			const result = SessionEnv.extractSessionId("/Users/x/.claude/session-env/a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+			expect(result).toBe("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+		});
+
+		test("returns null for non-UUID last path segment", () => {
+			const result = SessionEnv.extractSessionId("/Users/x/.claude/session-env/not-a-uuid");
+			expect(result).toBeNull();
+		});
+
+		test("returns null for empty string", () => {
+			const result = SessionEnv.extractSessionId("");
+			expect(result).toBeNull();
+		});
+
+		test("returns null for path without UUID-like segment", () => {
+			const result = SessionEnv.extractSessionId("/Users/x/.claude/session-env/12345");
+			expect(result).toBeNull();
+		});
+
+		test("handles uppercase UUID", () => {
+			const result = SessionEnv.extractSessionId("/Users/x/.claude/session-env/A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
+			expect(result).toBe("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
+		});
+
+		test("handles path with trailing slash", () => {
+			// filter(Boolean) removes empty strings from trailing slash
+			const result = SessionEnv.extractSessionId("/Users/x/.claude/session-env/a1b2c3d4-e5f6-7890-abcd-ef1234567890/");
+			expect(result).toBe("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+		});
+	});
+
 	describe("shouldIncludeSessionId", () => {
 		test("returns true when OTEL_INCLUDE_SESSION_ID is 'true'", () => {
 			process.env.OTEL_INCLUDE_SESSION_ID = "true";

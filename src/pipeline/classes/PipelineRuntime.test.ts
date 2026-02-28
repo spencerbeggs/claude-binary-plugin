@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Writable } from "node:stream";
 import { z } from "zod";
 import { PluginEnv } from "../../state/classes/PluginEnv.js";
@@ -930,6 +930,8 @@ describe("runPipeline", () => {
 	beforeEach(() => {
 		env = TestFixtures.createEnv({
 			CLAUDE_CODE_ENABLE_TELEMETRY: "0", // Disable OTEL during tests
+			CLAUDE_PLUGIN_ROOT: "/tmp/test-plugin", // Required for state loading
+			CLAUDE_PROJECT_DIR: "/tmp/test-project", // Required for SessionStart
 		});
 	});
 
@@ -994,8 +996,7 @@ describe("runPipeline", () => {
 		expect(stderr.output.join("")).toContain("Input validation failed");
 	});
 
-	// Skip: These tests require mocking the session registry (SQLite) which causes hangs
-	test.skip("executes pipeline handler and writes response for PreToolUse", async () => {
+	test("executes pipeline handler and writes response for PreToolUse", async () => {
 		const stdout = createMockWritable();
 		const stderr = createMockWritable();
 
@@ -1042,7 +1043,7 @@ describe("runPipeline", () => {
 		expect(output).toContain("permissionDecision");
 	});
 
-	test.skip("skips hook when tool does not match filter", async () => {
+	test("skips hook when tool does not match filter", async () => {
 		const stdout = createMockWritable();
 		const stderr = createMockWritable();
 
@@ -1088,12 +1089,12 @@ describe("runPipeline", () => {
 		// Pipeline should not have been called
 		expect(pipelineCalled).toBe(false);
 
-		// Response should indicate skipped
+		// Response should be an empty passthrough (tool filter skip produces {})
 		const output = stdout.output.join("");
-		expect(output).toContain("skipped");
+		expect(JSON.parse(output)).toEqual({});
 	});
 
-	test.skip("handles SessionStart hook with setup function", async () => {
+	test("handles SessionStart hook with setup function", async () => {
 		const stdout = createMockWritable();
 		const stderr = createMockWritable();
 
@@ -1148,7 +1149,7 @@ describe("runPipeline", () => {
 		expect(output.length).toBeGreaterThan(0);
 	});
 
-	test.skip("handles pipeline returning non-pipeline output with error", async () => {
+	test("handles pipeline returning non-pipeline output with error", async () => {
 		const stdout = createMockWritable();
 		const stderr = createMockWritable();
 
@@ -1187,7 +1188,7 @@ describe("runPipeline", () => {
 		).rejects.toThrow();
 	});
 
-	test.skip("handles PostToolUse with block action", async () => {
+	test("handles PostToolUse with block action", async () => {
 		const stdout = createMockWritable();
 		const stderr = createMockWritable();
 
@@ -1234,7 +1235,368 @@ describe("runPipeline", () => {
 		expect(output).toContain("block");
 	});
 
-	test.skip("handles Stop hook with continue action", async () => {
+	test("handles UserPromptSubmit hook with context action", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const userPromptInput = {
+			...baseEventFields,
+			hook_event_name: "UserPromptSubmit" as const,
+			prompt: "Help me write some tests",
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(userPromptInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "context" as const,
+			summary: "added prompt context",
+			claudeContext: "User is working on test coverage",
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "UserPromptSubmit",
+				hookName: "prompt-handler",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		const output = stdout.output.join("");
+		expect(output).toContain("additionalContext");
+		expect(output).toContain("User is working on test coverage");
+	});
+
+	test("handles UserPromptSubmit hook with block action", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const userPromptInput = {
+			...baseEventFields,
+			hook_event_name: "UserPromptSubmit" as const,
+			prompt: "delete everything",
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(userPromptInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "block" as const,
+			summary: "blocked prompt",
+			reason: "Prompt seems dangerous",
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "UserPromptSubmit",
+				hookName: "prompt-handler",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		const output = stdout.output.join("");
+		expect(output).toContain("block");
+		expect(output).toContain("Prompt seems dangerous");
+	});
+
+	test("handles PermissionRequest hook with allow action", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const permissionInput = {
+			...baseEventFields,
+			hook_event_name: "PermissionRequest" as const,
+			message: "Allow filesystem access?",
+			notification_type: "permission",
+			tool_name: "Read",
+			tool_input: { file_path: "/test.txt" },
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(permissionInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "allow" as const,
+			summary: "allowed permission",
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "PermissionRequest",
+				hookName: "permission-handler",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		const output = stdout.output.join("");
+		expect(output).toContain("behavior");
+		expect(output).toContain("allow");
+	});
+
+	test("handles PermissionRequest hook with deny action", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const permissionInput = {
+			...baseEventFields,
+			hook_event_name: "PermissionRequest" as const,
+			message: "Allow dangerous operation?",
+			notification_type: "permission",
+			tool_name: "Bash",
+			tool_input: { command: "rm -rf /" },
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(permissionInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "deny" as const,
+			summary: "denied permission",
+			reason: "Too dangerous",
+			interrupt: true,
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "PermissionRequest",
+				hookName: "permission-handler",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		const output = stdout.output.join("");
+		expect(output).toContain("behavior");
+		expect(output).toContain("deny");
+	});
+
+	test("handles SessionEnd hook (passthrough)", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const sessionEndInput = {
+			...baseEventFields,
+			hook_event_name: "SessionEnd" as const,
+			reason: "logout" as const,
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(sessionEndInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "none" as const,
+			summary: "session ended",
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "SessionEnd",
+				hookName: "end-handler",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		// Passthrough hooks return empty object
+		const output = stdout.output.join("");
+		expect(output.length).toBeGreaterThan(0);
+	});
+
+	test("handles SubagentStop hook with block action", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const subagentStopInput = {
+			...baseEventFields,
+			hook_event_name: "SubagentStop" as const,
+			stop_hook_active: true,
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(subagentStopInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "block" as const,
+			summary: "blocked subagent stop",
+			reason: "Not done yet",
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "SubagentStop",
+				hookName: "subagent-guard",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		const output = stdout.output.join("");
+		expect(output).toContain("block");
+	});
+
+	test("handles PreToolUse with modify action", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const preToolUseInput = {
+			...baseEventFields,
+			hook_event_name: "PreToolUse" as const,
+			tool_name: "Bash",
+			tool_use_id: "tool-use-789",
+			tool_input: { command: "npm test" },
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(preToolUseInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => ({
+			status: "executed" as const,
+			action: "modify" as const,
+			summary: "modified command",
+			updatedInput: { command: "bun test" },
+		});
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "PreToolUse",
+				hookName: "pre-bash",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow(ExitError);
+
+		const output = stdout.output.join("");
+		expect(output).toContain("permissionDecision");
+		expect(output).toContain("updatedInput");
+	});
+
+	test("handles pipeline throwing an error", async () => {
+		const stdout = createMockWritable();
+		const stderr = createMockWritable();
+
+		const preToolUseInput = {
+			...baseEventFields,
+			hook_event_name: "PreToolUse" as const,
+			tool_name: "Bash",
+			tool_use_id: "tool-use-456",
+			tool_input: { command: "ls" },
+		};
+
+		const mockIO: IODependencies = {
+			inputText: toInputText(preToolUseInput),
+			stdout: stdout.stream,
+			stderr: stderr.stream,
+			exit: createMockExit(),
+			cwd: () => "/test",
+		};
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST", schema);
+
+		const handler = async () => {
+			throw new Error("Pipeline internal error");
+		};
+
+		await expect(
+			PipelineRuntime.run({
+				hookType: "PreToolUse",
+				hookName: "pre-bash",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				pipeline: handler,
+				stateClass: EnvClass,
+				io: mockIO,
+			}),
+		).rejects.toThrow();
+	});
+
+	test("handles Stop hook with continue action", async () => {
 		const stdout = createMockWritable();
 		const stderr = createMockWritable();
 
@@ -1276,5 +1638,300 @@ describe("runPipeline", () => {
 		// Response should be written
 		const output = stdout.output.join("");
 		expect(output.length).toBeGreaterThan(0);
+	});
+});
+
+// =============================================================================
+// handleUnknown() TESTS
+// =============================================================================
+
+describe("PipelineRuntime.handleUnknown", () => {
+	let exitSpy: ReturnType<typeof spyOn>;
+	let stderrSpy: ReturnType<typeof spyOn>;
+	let stdinSpy: ReturnType<typeof spyOn>;
+
+	beforeEach(() => {
+		exitSpy = spyOn(process, "exit").mockImplementation((() => {
+			throw new ExitError(2);
+		}) as never);
+		stderrSpy = spyOn(process.stderr, "write").mockImplementation(() => true);
+		stdinSpy = spyOn(Bun.stdin, "text").mockResolvedValue("");
+	});
+
+	afterEach(() => {
+		exitSpy.mockRestore();
+		stderrSpy.mockRestore();
+		stdinSpy.mockRestore();
+	});
+
+	test("exits with code 2 for invalid hook key format (no slash)", async () => {
+		await expect(PipelineRuntime.handleUnknown("InvalidKey", ["PreToolUse/security"])).rejects.toThrow(ExitError);
+
+		expect(exitSpy).toHaveBeenCalledWith(2);
+		expect(stderrSpy).toHaveBeenCalled();
+		const writeArg = (stderrSpy.mock.calls[0] as string[])[0];
+		expect(writeArg).toContain("Invalid hook key format");
+		expect(writeArg).toContain("InvalidKey");
+	});
+
+	test("exits with code 2 for valid hook key with error message listing valid hooks", async () => {
+		stdinSpy.mockResolvedValue(JSON.stringify({ session_id: "test-session-123" }));
+
+		await expect(
+			PipelineRuntime.handleUnknown("PreToolUse/unknown-hook", ["PreToolUse/security", "SessionStart/context"]),
+		).rejects.toThrow(ExitError);
+
+		expect(exitSpy).toHaveBeenCalledWith(2);
+		// The last stderr.write call should contain the error message with valid hooks
+		const calls = stderrSpy.mock.calls as string[][];
+		const lastWriteArg = calls[calls.length - 1]?.[0];
+		expect(lastWriteArg).toContain("Unknown hook: PreToolUse/unknown-hook");
+		expect(lastWriteArg).toContain("PreToolUse/security");
+		expect(lastWriteArg).toContain("SessionStart/context");
+	});
+
+	test("handles stdin parsing errors gracefully", async () => {
+		stdinSpy.mockResolvedValue("not valid json {{{");
+
+		await expect(PipelineRuntime.handleUnknown("PreToolUse/bad", ["PreToolUse/security"])).rejects.toThrow(ExitError);
+
+		expect(exitSpy).toHaveBeenCalledWith(2);
+		const calls = stderrSpy.mock.calls as string[][];
+		const lastWriteArg = calls[calls.length - 1]?.[0];
+		expect(lastWriteArg).toContain("Unknown hook: PreToolUse/bad");
+	});
+
+	test("handles empty stdin gracefully", async () => {
+		stdinSpy.mockResolvedValue("");
+
+		await expect(PipelineRuntime.handleUnknown("Stop/guard", ["Stop/guard-real"])).rejects.toThrow(ExitError);
+
+		expect(exitSpy).toHaveBeenCalledWith(2);
+		const calls = stderrSpy.mock.calls as string[][];
+		const lastWriteArg = calls[calls.length - 1]?.[0];
+		expect(lastWriteArg).toContain("Unknown hook: Stop/guard");
+	});
+});
+
+// =============================================================================
+// runRaw() TESTS
+// =============================================================================
+
+describe("PipelineRuntime.runRaw", () => {
+	let exitSpy: ReturnType<typeof spyOn>;
+	let consoleErrorSpy: ReturnType<typeof spyOn>;
+	let stdinSpy: ReturnType<typeof spyOn>;
+
+	beforeEach(() => {
+		exitSpy = spyOn(process, "exit").mockImplementation((() => {
+			throw new ExitError(2);
+		}) as never);
+		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+		stdinSpy = spyOn(Bun.stdin, "text").mockResolvedValue("");
+	});
+
+	afterEach(() => {
+		exitSpy.mockRestore();
+		consoleErrorSpy.mockRestore();
+		stdinSpy.mockRestore();
+	});
+
+	test("exits with code 2 for unknown hook type", async () => {
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST_RAW", schema);
+
+		await expect(
+			PipelineRuntime.runRaw({
+				// biome-ignore lint/suspicious/noExplicitAny: Testing invalid hook type
+				hookType: "NonExistentHookType" as any,
+				hookName: "test-hook",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				handler: async () => {},
+				stateClass: EnvClass,
+			}),
+		).rejects.toThrow(ExitError);
+
+		expect(exitSpy).toHaveBeenCalledWith(2);
+		expect(consoleErrorSpy).toHaveBeenCalledWith("Unknown hook type: NonExistentHookType");
+	});
+
+	test("exits with code 2 on ZodError from invalid stdin input", async () => {
+		// Provide invalid JSON that will fail Zod schema validation
+		stdinSpy.mockResolvedValue(JSON.stringify({ invalid: "data" }));
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST_RAW_ZOD", schema);
+
+		await expect(
+			PipelineRuntime.runRaw({
+				hookType: "PreToolUse",
+				hookName: "zod-fail-hook",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				handler: async () => {},
+				stateClass: EnvClass,
+			}),
+		).rejects.toThrow(ExitError);
+
+		expect(exitSpy).toHaveBeenCalledWith(2);
+		expect(consoleErrorSpy).toHaveBeenCalledWith("[zod-fail-hook] Input validation failed:");
+	});
+
+	test("re-throws non-ZodError from EventClass.create()", async () => {
+		// Provide stdin that will cause a non-Zod error (e.g., empty string causes parse fail)
+		stdinSpy.mockRejectedValue(new Error("stdin read failure"));
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST_RAW_ERR", schema);
+
+		await expect(
+			PipelineRuntime.runRaw({
+				hookType: "PreToolUse",
+				hookName: "error-hook",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				handler: async () => {},
+				stateClass: EnvClass,
+			}),
+		).rejects.toThrow("stdin read failure");
+	});
+
+	test("calls handler with event, options, and state on successful create", async () => {
+		const validInput = {
+			session_id: "550e8400-e29b-41d4-a716-446655440000",
+			transcript_path: "/tmp/transcript.json",
+			cwd: "/home/user/project",
+			permission_mode: "default",
+			hook_event_name: "PreToolUse",
+			tool_name: "Bash",
+			tool_use_id: "tool-use-test-123",
+			tool_input: { command: "echo hello" },
+		};
+		stdinSpy.mockResolvedValue(JSON.stringify(validInput));
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST_RAW_OK", schema);
+
+		const handlerMock = mock(async (_ctx: { event: unknown; options: unknown; state: unknown }) => {});
+
+		// Spy on process.stdout.write to prevent actual output
+		const stdoutSpy = spyOn(process.stdout, "write").mockImplementation(() => true);
+
+		try {
+			await PipelineRuntime.runRaw({
+				hookType: "PreToolUse",
+				hookName: "success-hook",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				handler: handlerMock,
+				stateClass: EnvClass,
+			});
+
+			expect(handlerMock).toHaveBeenCalledTimes(1);
+			const callArgs = (handlerMock.mock.calls[0] as unknown[])[0] as {
+				event: unknown;
+				options: unknown;
+				state: unknown;
+			};
+			expect(callArgs.event).toBeDefined();
+			expect(callArgs.options).toBeDefined();
+			expect(callArgs.state).toBeDefined();
+			// State should include base state fields
+			const state = callArgs.state as Record<string, unknown>;
+			expect(state.projectDir).toBeDefined();
+		} finally {
+			stdoutSpy.mockRestore();
+		}
+	});
+});
+
+// =============================================================================
+// PipelineRuntime.handleUnknown
+// =============================================================================
+
+describe("PipelineRuntime.handleUnknown", () => {
+	const originalExit = process.exit;
+	const originalStderrWrite = process.stderr.write;
+
+	afterEach(() => {
+		process.exit = originalExit;
+		process.stderr.write = originalStderrWrite;
+	});
+
+	test("rejects invalid hook key format (no slash)", async () => {
+		const stderrOutput: string[] = [];
+		process.stderr.write = ((chunk: string) => {
+			stderrOutput.push(chunk.toString());
+			return true;
+		}) as typeof process.stderr.write;
+
+		process.exit = ((code: number) => {
+			throw new ExitError(code);
+		}) as typeof process.exit;
+
+		await expect(PipelineRuntime.handleUnknown("InvalidKeyNoSlash", ["PreToolUse/test"])).rejects.toThrow(ExitError);
+
+		expect(stderrOutput.some((s) => s.includes("Invalid hook key format"))).toBe(true);
+	});
+
+	test("rejects unknown hook key and writes error to stderr", async () => {
+		const stderrOutput: string[] = [];
+		process.stderr.write = ((chunk: string) => {
+			stderrOutput.push(chunk.toString());
+			return true;
+		}) as typeof process.stderr.write;
+
+		process.exit = ((code: number) => {
+			throw new ExitError(code);
+		}) as typeof process.exit;
+
+		await expect(
+			PipelineRuntime.handleUnknown("PreToolUse/nonexistent", ["PreToolUse/test", "SessionStart/init"]),
+		).rejects.toThrow(ExitError);
+
+		expect(stderrOutput.some((s) => s.includes("Unknown hook"))).toBe(true);
+		expect(stderrOutput.some((s) => s.includes("PreToolUse/nonexistent"))).toBe(true);
+	});
+});
+
+// =============================================================================
+// PipelineRuntime.runRaw - unknown hook type
+// =============================================================================
+
+describe("PipelineRuntime.runRaw", () => {
+	const originalExit = process.exit;
+	const originalConsoleError = console.error;
+
+	afterEach(() => {
+		process.exit = originalExit;
+		console.error = originalConsoleError;
+	});
+
+	test("exits with code 2 for unknown hook type", async () => {
+		const errorOutput: string[] = [];
+		console.error = (...args: unknown[]) => {
+			errorOutput.push(args.map(String).join(" "));
+		};
+
+		process.exit = ((code: number) => {
+			throw new ExitError(code);
+		}) as typeof process.exit;
+
+		const schema = z.object({});
+		const EnvClass = PluginEnv.create("TEST_RAW", schema);
+
+		await expect(
+			PipelineRuntime.runRaw({
+				hookType: "InvalidType" as "PreToolUse",
+				hookName: "test-raw",
+				pluginName: "test-plugin",
+				pluginVersion: "1.0.0",
+				handler: async () => {},
+				stateClass: EnvClass,
+			}),
+		).rejects.toThrow(ExitError);
+
+		expect(errorOutput.some((s) => s.includes("Unknown hook type"))).toBe(true);
 	});
 });

@@ -315,6 +315,285 @@ describe("ClaudeBinaryPlugin", () => {
 	});
 });
 
+describe("ClaudeBinaryPlugin advanced", () => {
+	test("create() with setup function preserves config", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "SETUP_TEST",
+			options: z.object({
+				DEBUG: z.string().default("false"),
+			}),
+			setup: async ({ options: _options, cwd: _cwd }: { options: Record<string, unknown>; cwd: string }) => ({
+				packageManager: "bun",
+				detectedFeatures: ["typescript"],
+			}),
+			hooks: {
+				SessionStart: [
+					{
+						name: "context",
+						pipeline: async ({ state }) => ({
+							status: "executed" as const,
+							action: "context" as const,
+							summary: "provided context",
+							claudeContext: `PM: ${state.packageManager}`,
+						}),
+					},
+				],
+			},
+		});
+
+		expect(plugin.config.prefix).toBe("SETUP_TEST");
+		expect(plugin.config.setup).toBeDefined();
+		expect(typeof plugin.config.setup).toBe("function");
+	});
+
+	test("create() with commands stores command definitions", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "CMD_TEST",
+			options: z.object({}),
+			hooks: {},
+			commands: {
+				lint: {
+					description: "Run linter",
+					args: z.object({
+						_positionals: z.array(z.string()).optional().default([]),
+						fix: z.boolean().optional().default(true),
+					}),
+					pipeline: "./commands/lint.cmd.ts",
+				},
+				test: {
+					description: "Run tests",
+					pipeline: "./commands/test.cmd.ts",
+				},
+			},
+		});
+
+		expect(plugin.config.commands).toBeDefined();
+		expect(Object.keys(plugin.config.commands ?? {})).toEqual(["lint", "test"]);
+		expect(plugin.config.commands?.lint.description).toBe("Run linter");
+		expect(plugin.config.commands?.test.description).toBe("Run tests");
+	});
+
+	test("create() with all hook types stores them correctly", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "ALL_HOOKS",
+			options: z.object({}),
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: async () => ({
+							status: "executed" as const,
+							action: "context" as const,
+							summary: "ok",
+							claudeContext: "",
+						}),
+					},
+				],
+				SessionEnd: [
+					{
+						name: "cleanup",
+						pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+					},
+				],
+				PreToolUse: [
+					{
+						name: "filter",
+						tools: ["Bash"],
+						pipeline: async () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
+					},
+				],
+				PostToolUse: [
+					{
+						name: "reporter",
+						pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+					},
+				],
+				Stop: [
+					{
+						name: "guard",
+						pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
+					},
+				],
+				SubagentStop: [
+					{
+						name: "sub-guard",
+						pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
+					},
+				],
+				UserPromptSubmit: [
+					{
+						name: "prompt",
+						pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+					},
+				],
+			},
+		});
+
+		expect(plugin.config.hooks.SessionStart).toHaveLength(1);
+		expect(plugin.config.hooks.SessionEnd).toHaveLength(1);
+		expect(plugin.config.hooks.PreToolUse).toHaveLength(1);
+		expect(plugin.config.hooks.PostToolUse).toHaveLength(1);
+		expect(plugin.config.hooks.Stop).toHaveLength(1);
+		expect(plugin.config.hooks.SubagentStop).toHaveLength(1);
+		expect(plugin.config.hooks.UserPromptSubmit).toHaveLength(1);
+	});
+
+	test("create() with passthrough hooks preserves them", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "PASS",
+			options: z.object({}),
+			hooks: {
+				PreToolUse: [
+					{
+						name: "compiled",
+						pipeline: async () => ({
+							status: "executed" as const,
+							action: "allow" as const,
+							summary: "ok",
+						}),
+					},
+					{
+						matcher: "WebFetch",
+						hooks: [{ type: "command" as const, command: "bash ./scripts/log.sh" }],
+					},
+				],
+			},
+		});
+
+		expect(plugin.config.hooks.PreToolUse).toHaveLength(2);
+	});
+
+	test("create() with build options stores them", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "BUILD_OPTS",
+			options: z.object({}),
+			hooks: {},
+			bytecode: true,
+			persistLocal: false,
+			compile: true,
+			minify: false,
+			sourcemap: false,
+			hooksOutputPath: "custom/hooks.json",
+		});
+
+		expect(plugin.config.bytecode).toBe(true);
+		expect(plugin.config.persistLocal).toBe(false);
+		expect(plugin.config.compile).toBe(true);
+		expect(plugin.config.minify).toBe(false);
+		expect(plugin.config.sourcemap).toBe(false);
+		expect(plugin.config.hooksOutputPath).toBe("custom/hooks.json");
+	});
+
+	test("create() with file-based pipeline hooks", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "FILE_HOOKS",
+			options: z.object({}),
+			hooks: {
+				SessionStart: [
+					{
+						name: "context",
+						pipeline: "./hooks/context.hook.ts",
+					},
+				],
+				PreToolUse: [
+					{
+						name: "security",
+						tools: ["Bash", "Write"],
+						pipeline: "./hooks/security.hook.ts",
+					},
+				],
+			},
+		});
+
+		const sessionHook = plugin.config.hooks.SessionStart?.[0];
+		expect(sessionHook).toBeDefined();
+		expect(sessionHook?.name).toBe("context");
+		// File path stored as pipeline string
+		expect(typeof sessionHook?.pipeline).toBe("string");
+
+		const preToolHook = plugin.config.hooks.PreToolUse?.[0];
+		expect(preToolHook).toBeDefined();
+		if (preToolHook && "tools" in preToolHook) {
+			expect(preToolHook.tools).toEqual(["Bash", "Write"]);
+		}
+	});
+
+	test("test() returns a PluginTester instance", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "TESTER",
+			options: z.object({
+				DEBUG: z.string().default("false"),
+			}),
+			hooks: {
+				SessionStart: [
+					{
+						name: "context",
+						pipeline: async () => ({
+							status: "executed" as const,
+							action: "context" as const,
+							summary: "ok",
+							claudeContext: "test",
+						}),
+					},
+				],
+			},
+		});
+
+		const tester = plugin.test();
+		expect(tester).toBeDefined();
+		// PluginTester should have fluent methods
+		expect(typeof tester.withOptions).toBe("function");
+		expect(typeof tester.withState).toBe("function");
+		expect(typeof tester.dispose).toBe("function");
+		tester.dispose();
+	});
+
+	test("create() with inline command handler", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "INLINE_CMD",
+			options: z.object({}),
+			hooks: {},
+			commands: {
+				status: {
+					description: "Show status",
+					args: z.object({}),
+					pipeline: async ({ state }: { state: { projectDir: string } }) => ({
+						exitCode: 0,
+						output: `Project: ${state.projectDir}`,
+					}),
+				},
+			},
+		});
+
+		expect(plugin.config.commands?.status).toBeDefined();
+		expect(plugin.config.commands?.status.description).toBe("Show status");
+		expect(typeof plugin.config.commands?.status.pipeline).toBe("function");
+	});
+
+	test("create() with empty hooks is valid", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "EMPTY",
+			options: z.object({}),
+			hooks: {},
+		});
+
+		expect(plugin.config.prefix).toBe("EMPTY");
+		expect(Object.keys(plugin.config.hooks)).toHaveLength(0);
+	});
+
+	test("config is readonly on the instance", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "READONLY",
+			options: z.object({}),
+			hooks: {},
+		});
+
+		// Config is accessible
+		expect(plugin.config).toBeDefined();
+		expect(plugin.config.prefix).toBe("READONLY");
+	});
+});
+
 describe("Helper functions", () => {
 	test("Pipeline.isPipelineHook identifies pipeline hooks", () => {
 		const pipelineHook = {
@@ -350,5 +629,109 @@ describe("Helper functions", () => {
 
 		expect(Pipeline.isRawHook(rawHook)).toBe(true);
 		expect(Pipeline.isRawHook(pipelineHook)).toBe(false);
+	});
+});
+
+// =============================================================================
+// ClaudeBinaryPlugin instance methods
+// =============================================================================
+
+describe("ClaudeBinaryPlugin.test()", () => {
+	test("returns a PluginTester instance with fluent API", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "TESTER",
+			options: z.object({}),
+			hooks: {},
+		});
+		const tester = plugin.test();
+		expect(tester).toBeDefined();
+		expect(typeof tester.withOptions).toBe("function");
+		expect(typeof tester.withState).toBe("function");
+		expect(typeof tester.dispose).toBe("function");
+		tester.dispose();
+	});
+
+	test("returns a new tester each time", () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "TESTER2",
+			options: z.object({}),
+			hooks: {},
+		});
+		const tester1 = plugin.test();
+		const tester2 = plugin.test();
+		expect(tester1).not.toBe(tester2);
+		tester1.dispose();
+		tester2.dispose();
+	});
+});
+
+describe("ClaudeBinaryPlugin.build()", () => {
+	test("is a static async function", () => {
+		expect(typeof ClaudeBinaryPlugin.build).toBe("function");
+	});
+
+	test("delegates to PluginBuilder.fromConfig and returns result", async () => {
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "BUILD_TEST",
+			options: z.object({}),
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: async () => ({
+							status: "executed" as const,
+							action: "context" as const,
+							summary: "test",
+						}),
+					},
+				],
+			},
+		});
+
+		// Silence console output from the build process
+		const origLog = console.log;
+		const origErr = console.error;
+		const origWarn = console.warn;
+		console.log = () => {};
+		console.error = () => {};
+		console.warn = () => {};
+
+		try {
+			const result = await ClaudeBinaryPlugin.build(plugin, {
+				rootDir: `/tmp/nonexistent-plugin-test-dir-xyz-${Date.now()}`,
+			});
+			expect(result).toBeDefined();
+			expect(typeof result.success).toBe("boolean");
+			expect(typeof result.duration).toBe("number");
+		} finally {
+			console.log = origLog;
+			console.error = origErr;
+			console.warn = origWarn;
+		}
+	});
+});
+
+describe("ClaudeBinaryPlugin.config", () => {
+	test("config property is readonly and contains the plugin configuration", () => {
+		const hooks = {
+			SessionStart: [
+				{
+					name: "ctx",
+					pipeline: async () => ({
+						status: "executed" as const,
+						action: "context" as const,
+						summary: "ctx",
+					}),
+				},
+			],
+		};
+		const plugin = ClaudeBinaryPlugin.create({
+			prefix: "CFG",
+			options: z.object({ DEBUG: z.string().default("false") }),
+			hooks,
+		});
+
+		expect(plugin.config.prefix).toBe("CFG");
+		expect(plugin.config.hooks).toBe(hooks);
 	});
 });

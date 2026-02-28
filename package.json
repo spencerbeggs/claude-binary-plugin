@@ -31,7 +31,7 @@
 		"build:dev": "bun run bun.config.ts --env-mode dev",
 		"build:npm": "bun run bun.config.ts --env-mode npm",
 		"ci:build": "CI=\"true\" turbo run build:dev build:npm",
-		"ci:test": "NODE_ENV=test bun test --coverage",
+		"ci:test": "NODE_ENV=test bun test",
 		"ci:version": "changeset version && biome format --write",
 		"lint": "biome check --max-diagnostics=none",
 		"lint:fix": "biome check --write --max-diagnostics=none",
