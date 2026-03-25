@@ -2,73 +2,176 @@
 
 ## Overview
 
-Testing uses Effect layers to swap production implementations with test
-doubles. No global mocking of `Bun.$`, `process.stdout`, or `Bun.env`.
+Testing uses Effect's layer system to replace services with in-memory
+implementations. No global mocking of `Bun.env`, `process.exit`, etc.
 
-## Test Layer Factories
+## Test Factory Functions
 
-Each service has a test factory in `src/layers/`:
-
-| Factory | What it provides |
-| --- | --- |
-| `makeStdinReaderTest(input)` | Returns pre-canned stdin string |
-| `EnvLoaderTest` | No-op (skips file I/O) |
-| `makeEnvPersisterTest()` | Records writes to array |
-| `makeSessionStoreTest()` | In-memory Map instead of SQLite |
-| `makeTelemetryTest()` | Captures events/errors to arrays |
-| `makeShellExecutorTest(responses?)` | Pattern-matching mock shell |
-| `makeCommandRunnerTest()` | Records runs, returns success |
-| `makePluginEnvTest(vars?)` | In-memory env vars |
-| `makePluginBuilderTest()` | Records build calls |
-
-## Using Test Layers
+All test factories are exported from `claude-binary-plugin/testing`:
 
 ```typescript
-import { Effect, Layer } from "effect";
-import { StdinReader } from "../src/services/StdinReader.js";
-import { makeStdinReaderTest } from "../src/layers/StdinReaderTest.js";
+import {
+  makeStdinReaderTest,
+  makeSessionStoreTest,
+  makeShellExecutorTest,
+  makeTelemetryTest,
+  makePluginLoggerTest,
+  makeEnvPersisterTest,
+  makePluginEnvTest,
+  makeOtelConfigTest,
+  makeCommandRunnerTest,
+  makeSidecarConnectionTest,
+  EnvLoaderTest,
+} from "claude-binary-plugin/testing";
+```
 
-test("reads input", async () => {
-  const program = Effect.flatMap(StdinReader, (s) => s.read());
+### Factory Signatures
+
+| Factory | Arguments | Returns |
+| --------- | ----------- | --------- |
+ | `makeStdinReaderTest(json)` | JSON string | Layer providing `StdinReader` |
+| `makeSessionStoreTest()` | none | Layer with in-memory session map |
+| `makeShellExecutorTest(results)` | Pre-configured shell results | Layer providing `ShellExecutor` |
+| `makeTelemetryTest()` | none | Layer providing no-op `Telemetry` |
+| `makePluginLoggerTest()` | none | `{ layer, getLogs(), clear() }` |
+| `makeEnvPersisterTest()` | none | Layer recording persisted vars |
+| `makePluginEnvTest()` | none | Layer providing `PluginEnvService` |
+| `makeOtelConfigTest(overrides?)` | Optional config overrides | Layer providing `OtelConfig` |
+| `makeCommandRunnerTest()` | none | Layer providing `CommandRunner` |
+| `makeSidecarConnectionTest()` | none | Layer providing no-op `SidecarConnection` |
+| `EnvLoaderTest` | (constant layer) | Layer providing no-op `EnvLoader` |
+
+### Example: Testing a Pipeline Handler
+
+```typescript
+import { describe, test, expect } from "bun:test";
+import { Effect, Layer } from "effect";
+import { makeStdinReaderTest, makeTelemetryTest } from "claude-binary-plugin/testing";
+
+test("handler denies dangerous tool", async () => {
+  const stdinLayer = makeStdinReaderTest(JSON.stringify({
+    hook_event_name: "PreToolUse",
+    session_id: "550e8400-e29b-41d4-a716-446655440000",
+    tool_name: "Bash",
+    tool_input: { command: "rm -rf /" },
+    tool_use_id: "tu_123",
+  }));
+
+  const testLayer = Layer.mergeAll(stdinLayer, makeTelemetryTest());
+
   const result = await Effect.runPromise(
-    program.pipe(Effect.provide(makeStdinReaderTest('{"hook_event_name":"PreToolUse"}')))
+    myHandler.pipe(Effect.provide(testLayer))
   );
-  expect(result).toContain("PreToolUse");
+
+  expect(result.action).toBe("deny");
 });
 ```
 
-## Test Utilities Entry Point
+## I/O Injection in PipelineRuntime
 
-`src/testing.ts` exports all test factories:
-
-```typescript
-import { makeStdinReaderTest, makeTelemetryTest } from "claude-binary-plugin/testing";
-```
-
-## Legacy PluginTester
-
-`src/testing/builder.ts` provides a fluent API:
+`PipelineRuntime.run()` accepts an `io` parameter for testing without
+mocking process globals:
 
 ```typescript
-const result = await plugin.test()
-  .withOptions({ apiKey: "test-key" })
-  .withPreToolUseInput({ tool_name: "Bash", tool_input: { command: "ls" } })
-  .runHook("validate-tool");
-expect(result.action).toBe("allow");
+interface IODependencies {
+  stdin?: NodeJS.ReadableStream;
+  stdout?: NodeJS.WritableStream;
+  stderr?: NodeJS.WritableStream;
+  exit?: (code: number) => never;
+  cwd?: () => string;
+  inputText?: string;  // Pre-loaded input, bypasses stdin reading
+}
 ```
 
-This is being phased out in favor of direct layer composition. It still
-works but uses global mocking internally.
+The `inputText` field is the primary mechanism for test injection -- it
+provides the raw JSON string directly without reading from stdin.
 
-## Test Files
+## PluginTester Fluent API
 
-All tests live in `__tests__/` mirroring `src/`:
+The `PluginTester` class (`src/testing/builder.ts`) provides a fluent API for
+integration testing of full plugin configurations. It is still functional but
+being phased out in favor of direct layer-based testing.
+
+```typescript
+import { PluginTester } from "claude-binary-plugin";
+
+const tester = PluginTester.from(plugin);
+
+const result = await tester.hook("PreToolUse", {
+  tool_name: "Bash",
+  tool_input: { command: "echo hello" },
+});
+
+expect(result.output.action).toBe("allow");
+```
+
+`PluginTester` handles:
+
+- Constructing the full stdin JSON with default base fields
+- Creating the I/O injection
+- Running `PipelineRuntime.run()` with test I/O
+- Capturing stdout/stderr output
+- Parsing the response
+
+### Test Input Types
+
+Simplified input interfaces for each hook type (optional base fields):
+
+- `PreToolUseTestInput` -- `tool_name`, `tool_input`, `tool_use_id?`
+- `PostToolUseTestInput` -- `tool_name`, `tool_input`, `tool_response`, `tool_use_id?`
+- `SessionStartTestInput` -- `source`
+- `SessionEndTestInput` -- `reason`
+- `StopTestInput` -- `stop_hook_active?`
+- `SubagentStopTestInput` -- `stop_hook_active?`
+- `UserPromptSubmitTestInput` -- `prompt?`
+- `PreCompactTestInput` -- `trigger?`, `custom_instructions?`
+- `NotificationTestInput` -- `message?`, `notification_type?`
+- `PermissionRequestTestInput` -- `message?`, `notification_type?`
+
+## Testing Effect-Returning Handlers
+
+When handlers return Effects, provide the test layer stack:
+
+```typescript
+const testLayer = Layer.mergeAll(
+  makeStdinReaderTest(inputJson),
+  makeSessionStoreTest(),
+  makeShellExecutorTest([{ exitCode: 0, stdout: "ok", stderr: "" }]),
+  makeTelemetryTest(),
+);
+
+const result = await Effect.runPromise(
+  Effect.scoped(handler.pipe(Effect.provide(testLayer)))
+);
+```
+
+## Test File Organization
+
+Test files live in `package/__tests__/` mirroring `package/src/`:
 
 ```text
-__tests__/schemas/hook-events.test.ts
-__tests__/layers/PipelineRuntime.test.ts
-__tests__/otel/OtelConfig.test.ts
-__tests__/plugin/config.test.ts
+__tests__/
+  build/
+    builder.test.ts
+    HookExtractor.test.ts
+    ...
+  layers/
+    PipelineRuntime.test.ts
+    SessionRegistry.test.ts
+    ...
+  schemas/
+    hook-events.test.ts
+    pipeline-outputs.test.ts
+    ...
+  services/
+    PluginEnv.test.ts
+    ...
 ```
 
-Test runner: `bun test` (discovers `__tests__/**/*.test.ts`)
+## Mock Utilities (`testing/mocks.ts`)
+
+- `MockExitError` -- Thrown by mock exit functions to halt execution
+- `BufferShellResult` -- Shell result with buffer support
+- `InMemoryShellExecutor` -- Configurable mock shell
+- `MockEnvContext` / `MockCommandContext` -- Pre-built test contexts
+- `createMockFn()` -- Creates tracked mock functions for assertions

@@ -1,165 +1,227 @@
-# Effect Services
+# Services
 
 ## Overview
 
-The SDK uses 14 Effect services following the Context.Tag + Layer pattern.
-Service tags live in `src/services/`, implementations in `src/layers/`.
+All services follow the Effect pattern: a `Context.Tag` interface in
+`src/services/` with Live and Test implementations in `src/layers/`.
 
-## Services
+## Service Catalog
 
 ### StdinReader
 
-Read hook input from stdin.
+Reads raw JSON text from stdin.
 
-- Tag: `src/services/StdinReader.ts`
-- `read(): Effect<string, StdinError>`
-- Live: `Bun.stdin.text()`
-- Test: `makeStdinReaderTest(input)` — returns pre-canned string
+```typescript
+class StdinReader extends Context.Tag("StdinReader")<StdinReader, {
+  readonly read: () => Effect.Effect<string, StdinError>;
+}>() {}
+```
+
+- **Live** (`StdinReaderLive`): Reads from `Bun.stdin.text()`
+- **Test** (`makeStdinReaderTest(json: string)`): Returns the provided string
 
 ### SchemaValidator
 
-Validate JSON against Effect Schema.
+Decodes raw JSON strings against Effect Schemas.
 
-- Tag: `src/services/SchemaValidator.ts`
-- `decode<A, I>(raw, schema): Effect<A, SchemaValidationError>`
-- Live: `Schema.decodeUnknownSync` with JSON.parse
-- No test double (reuse Live — validation logic is pure)
+```typescript
+class SchemaValidator extends Context.Tag("SchemaValidator")<SchemaValidator, {
+  readonly decode: <A, I>(raw: string, schema: Schema<A, I>) => Effect.Effect<A, SchemaValidationError>;
+}>() {}
+```
+
+- **Live** (`SchemaValidatorLive`): Parses JSON and runs `Schema.decodeUnknownSync`
+- **Test**: Not provided separately; `SchemaValidatorLive` is stateless and used directly
 
 ### EnvLoader
 
-Load environment variables from disk.
+Loads environment variables from files and session state.
 
-- Tag: `src/services/EnvLoader.ts`
-- `loadUserEnv(projectRoot)`, `loadHookFiles(dir)`, `loadSessionEnv(prefix)`
-- Live: reads `.env` files and hook shell scripts via `Bun.file()`
-- Test: `EnvLoaderTest` — no-op
+```typescript
+class EnvLoader extends Context.Tag("EnvLoader")<EnvLoader, {
+  readonly loadUserEnv: (projectRoot: string) => Effect.Effect<void, EnvLoadError>;
+  readonly loadHookFiles: (dir: string) => Effect.Effect<void, EnvLoadError>;
+  readonly loadSessionEnv: (prefix: string) => Effect.Effect<void, EnvLoadError>;
+}>() {}
+```
+
+- **Live** (`EnvLoaderLive`): Reads `.env` files and `hook-*.sh` files from disk
+- **Test** (`EnvLoaderTest`): No-op layer (all methods succeed without side effects)
 
 ### EnvPersister
 
-Write environment variables to session files.
+Persists environment variables to session env files.
 
-- Tag: `src/services/EnvPersister.ts`
-- `persist(vars, path): Effect<void, EnvPersistError>`
-- Live: writes shell export scripts with `chmod 600`
-- Test: `makeEnvPersisterTest()` — records writes to array
+```typescript
+class EnvPersister extends Context.Tag("EnvPersister")<EnvPersister, {
+  readonly persist: (vars: Record<string, string>, path: string) => Effect.Effect<void, EnvPersistError>;
+}>() {}
+```
+
+- **Live** (`EnvPersisterLive`): Writes `export KEY="value"` lines to a shell file
+- **Test** (`makeEnvPersisterTest()`): Records persisted vars in memory for assertion
 
 ### SessionStore
 
-SQLite-backed session registry.
+Looks up and registers session-to-env-dir mappings.
 
-- Tag: `src/services/SessionStore.ts`
-- `lookup(sessionId): Effect<string, SessionLookupError>`
-- `register(sessionId, dir): Effect<void>`
-- Live: delegates to `SessionRegistry` class (SQLite)
-- Test: `makeSessionStoreTest()` — in-memory Map
+```typescript
+class SessionStore extends Context.Tag("SessionStore")<SessionStore, {
+  readonly lookup: (sessionId: SessionId) => Effect.Effect<string, SessionLookupError>;
+  readonly register: (sessionId: SessionId, dir: string) => Effect.Effect<void>;
+}>() {}
+```
 
-### Telemetry
-
-Emit OTEL hook execution events.
-
-- Tag: `src/services/Telemetry.ts`
-- `emitHookExecution(data): Effect<void>`
-- `emitError(error): Effect<void>`
-- `emitFatalError(error): Effect<void>` — for unrecoverable errors
-- `preconnect(): Effect<void>` — eagerly open socket before first event
-- `flush(): Effect<void>` — drain queue before process exit
-- Live: depends on `SidecarConnection` + `OtelConfig`
-- Test: `makeTelemetryTest()` — captures events/errors to arrays
-- `withErrorTelemetry<A, E, R>(effect)` — auto-emits errors via `Effect.tapError`
-- `HookExecutionData` — Schema.Class for telemetry payloads
+- **Live** (`SessionStoreLive`): Delegates to `SessionRegistry` (SQLite)
+- **Test** (`makeSessionStoreTest()`): In-memory `Map<string, string>`
 
 ### ShellExecutor
 
-Execute shell commands.
+Executes shell commands.
 
-- Tag: `src/services/ShellExecutor.ts`
-- `exec(cmd): Effect<ShellResult, ShellError>`
-- Live: `Bun.$` with exit code mapping
-- Test: `makeShellExecutorTest(responses?)` — pattern-matching mock
-- `ShellResult` — Schema.Class (exitCode, stdout, stderr)
+```typescript
+class ShellResult extends Schema.Class<ShellResult>("ShellResult")({
+  exitCode: Schema.Number,
+  stdout: Schema.String,
+  stderr: Schema.String,
+}) {}
 
-### CommandRunner
+class ShellExecutor extends Context.Tag("ShellExecutor")<ShellExecutor, {
+  readonly exec: (cmd: string) => Effect.Effect<ShellResult, ShellError>;
+}>() {}
+```
 
-Parse and run CLI commands.
+- **Live** (`ShellExecutorLive`): Runs via `Bun.$`
+- **Test** (`makeShellExecutorTest(results)`): Returns pre-configured results
 
-- Tag: `src/services/CommandRunner.ts`
-- `run(options): Effect<CommandOutput, CommandParseError>`
-- `parse<TArgs>(schema, args): Effect<TArgs, CommandParseError>`
-- Live: Effect Schema decoding with markdown error formatting
-- Test: `makeCommandRunnerTest()` — records runs
+### Telemetry
 
-### PluginBuilder
+Emits OTEL telemetry events for hook execution.
 
-Compile plugins to executables.
+```typescript
+class Telemetry extends Context.Tag("Telemetry")<Telemetry, {
+  readonly emitHookExecution: (data: HookExecutionData) => Effect.Effect<void>;
+  readonly emitError: (error: unknown) => Effect.Effect<void>;
+  readonly emitFatalError: (data: FatalErrorData) => Effect.Effect<boolean>;
+  readonly preconnect: Effect.Effect<void>;
+  readonly flush: (timeoutMs?: number) => Effect.Effect<boolean>;
+}>() {}
+```
 
-- Tag: `src/services/PluginBuilder.ts`
-- `build(config): Effect<PluginBuildResult, ShellError>`
-- Live: wraps `PluginBuilder.fromConfig()` static method
-- Test: `makePluginBuilderTest()` — records build calls
-
-### PluginEnvService
-
-Load and persist plugin environment state.
-
-- Tag: `src/services/PluginEnvService.ts`
-- `forSessionStart(params)`, `forHook(params)`, `forCommand(params)`
-- `persistVars(schema, vars, path)`
-- Live: wraps `PluginEnv.forContext()` static methods
-- Test: `makePluginEnvTest(vars?)` — in-memory env vars
+- **Live** (`TelemetryLive`): Routes telemetry through `SidecarConnection` IPC.
+  Also installs an Effect Tracer that bridges `Effect.withSpan` to the sidecar.
+- **Test** (`makeTelemetryTest()`): No-op implementation, records calls for assertion
 
 ### OtelConfig
 
-Client OTEL configuration with enabled flag.
+Provides OTEL configuration from environment variables.
 
-- Tag: `src/services/OtelConfig.ts`
-- `Schema.Class` combining type + schema in one declaration
-- `isEnabled(): boolean` — returns `true` when OTLP endpoint is configured
-- Live: reads `OTEL_EXPORTER_OTLP_ENDPOINT` and related env vars
-- Test: `makeOtelConfigTest(overrides)` — pre-canned config values
+```typescript
+class OtelConfigData extends Schema.Class<OtelConfigData>("OtelConfigData")({
+  enabled: Schema.Boolean,
+  endpoint: Schema.optional(Schema.String),
+  protocol: Schema.optional(Schema.Literal("http", "grpc")),
+  serviceName: Schema.optional(Schema.String),
+  headers: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  socketPath: Schema.optional(Schema.String),
+}) {}
 
-### SidecarConnection (internal)
+class OtelConfig extends Context.Tag("OtelConfig")<OtelConfig, OtelConfigData>() {}
+```
 
-Socket lifecycle management. Internal service, not part of the public API.
+- **Live** (`OtelConfigLive`): Reads from `CLAUDE_CODE_ENABLE_TELEMETRY`,
+  `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, etc.
+- **Test** (`makeOtelConfigTest(overrides)`): Returns config with provided overrides
 
-- Tag: `src/services/SidecarConnection.ts`
-- Live: scoped layer using `Effect.acquireRelease` with `Queue.sliding`
-- Spawns sidecar process on acquire, flushes and closes on release
-- Test: `makeSidecarConnectionTest()` — in-memory queue, no socket
+### SidecarConnection
 
-### OtelProviders (sidecar-side)
+Manages the Unix socket connection to the OTEL sidecar process.
 
-OTEL SDK provider lifecycle inside the sidecar process.
+```typescript
+class SidecarConnection extends Context.Tag("SidecarConnection")<SidecarConnection, {
+  readonly emit: (message: SidecarProtocolMessage) => Effect.Effect<void>;
+  readonly preconnect: Effect.Effect<void>;
+  readonly flush: (timeoutMs?: number) => Effect.Effect<boolean>;
+}>() {}
+```
 
-- Tag: `src/services/OtelProviders.ts`
-- Live: scoped layer using `Effect.acquireRelease` wrapping OTEL SDK setup
-- Manages `NodeTracerProvider`, `MeterProvider`, `LoggerProvider` lifecycle
-- Guaranteed flush and shutdown on release
+- **Live** (`SidecarConnectionLive`): Scoped layer with socket lifecycle, sliding
+  queue (1024 messages), auto-reconnect, and sidecar spawning. No-op when OTEL disabled.
+- **Test** (`makeSidecarConnectionTest()`): No-op implementation
 
-### SidecarTransport (sidecar-side)
+### CommandRunner
 
-Unix socket server for receiving IPC messages inside the sidecar process.
+Runs plugin commands and parses CLI arguments.
 
-- Tag: `src/services/SidecarTransport.ts`
-- Live: `makeSidecarTransportLive(lastActivity)` — scoped socket server layer
-- `lastActivity` is a `Ref` updated on each received message (idle timeout)
+```typescript
+class CommandRunner extends Context.Tag("CommandRunner")<CommandRunner, {
+  readonly run: (options: RunCommandOptions) => Effect.Effect<CommandOutput, CommandParseError>;
+  readonly parse: <TArgs>(schema: Schema<TArgs>, args: string[]) => Effect.Effect<TArgs, CommandParseError>;
+}>() {}
+```
 
-## Composed Layers
+- **Live** (`CommandRunnerLive`): Runs commands from plugin config
+- **Test** (`makeCommandRunnerTest()`): Returns pre-configured command outputs
 
-### PipelineLive (`src/layers/PipelineLive.ts`)
+### PluginEnvService
 
-`Layer.mergeAll` of all core Live layers (StdinReader, SchemaValidator,
-EnvLoader, EnvPersister, SessionStore, Telemetry, ShellExecutor) plus
-`OtelClientLive` (OtelConfig + SidecarConnection + Telemetry).
+Effect-friendly interface over the `PluginEnv` abstract class.
 
-### PluginLoggerLive (`src/layers/PluginLoggerLive.ts`)
+```typescript
+class PluginEnvService extends Context.Tag("PluginEnvService")<PluginEnvService, {
+  readonly forSessionStart: <T>(cls: new () => T, params) => Effect.Effect<T, EnvLoadError>;
+  readonly forHook: <T>(cls: new () => T, params) => Effect.Effect<T, EnvLoadError>;
+  readonly forCommand: <T, TArgs>(cls: new () => T, params) => Effect.Effect<CommandContextResult<T, TArgs>, EnvLoadError>;
+  readonly persistVars: (sessionId, vars, fs?) => Effect.Effect<PersistResult, EnvPersistError>;
+}>() {}
+```
 
-Effect-native NDJSON file logger for plugin execution:
+- **Live** (`PluginEnvLive`): Delegates to `PluginEnv` methods with real file system
+- **Test** (`makePluginEnvTest()`): In-memory implementation
 
-- `makePluginLoggerLive(pluginName, logLevel?)` — returns a `Logger.replace` layer
-- Writes structured NDJSON to `{pluginName}.log` in the session env dir
-- Uses `Logger.make` for controlled NDJSON field names (timestamp, level, message, annotations)
-- Channel annotations via `Effect.annotateLogs("channel", "...")` throughout the pipeline
-- Falls back to `Logger.none` on file open failure or when logging is disabled
-- `CLAUDE_LOG_STDERR=1` environment variable enables stderr output instead of file
-- `resolveLogLevel(option?)` — resolves log level from a string option or `CLAUDE_DEBUG` env var
-- Test: `makePluginLoggerTest()` (from `claude-binary-plugin/testing`) — `Logger.none` layer, silences all output in tests
+### PluginBuilderService
+
+Effect service for the build system.
+
+```typescript
+class PluginBuilderService extends Context.Tag("PluginBuilder")<PluginBuilderService, {
+  readonly build: (options?) => Effect.Effect<PluginBuildResult, ShellError>;
+  readonly fromConfig: (plugin, options?) => Effect.Effect<PluginBuildResult, ShellError>;
+}>() {}
+```
+
+- **Live** (`PluginBuilderLive`): Delegates to `PluginBuilder` static methods
+- **Test** (`makePluginBuilderTest()`): Returns mock build results
+
+## Logger Layers
+
+These are not services but Effect logger replacements.
+
+### PluginLoggerLive
+
+`makePluginLoggerLive(pluginName, logLevel?)` -- Replaces the default Effect
+logger with an NDJSON file logger. Writes to `{sessionDir}/{pluginName}.log`.
+Enabled by `CLAUDE_DEBUG` env var. Falls back to `Logger.none` on failure.
+
+### PluginLoggerTest
+
+`makePluginLoggerTest()` -- Returns `{ layer, getLogs(), clear() }`. Captures
+log entries in an array for test assertions.
+
+### SidecarLoggerLive
+
+`makeSidecarLoggerLive(logPath)` -- Structured JSON file logger for the
+sidecar process. Uses `PlatformLogger.toFile` with `BunFileSystem`.
+
+## PipelineLive (Composed Layer)
+
+```typescript
+const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive), Layer.provide(OtelConfigLive));
+
+export const PipelineLive = Layer.mergeAll(
+  StdinReaderLive, SchemaValidatorLive, EnvLoaderLive,
+  EnvPersisterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
+);
+```
+
+Provides all services needed for `PipelineRuntime.run()` in production.
