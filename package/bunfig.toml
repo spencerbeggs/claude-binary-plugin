@@ -7,10 +7,6 @@ coveragePathIgnorePatterns = [
 	"src/otel/classes/Sidecar.ts",
 	"src/otel/sidecar/classes/SidecarServer.ts",
 	"src/otel/sidecar/classes/SidecarProviders.ts",
-	"src/cli/index.ts",
-	"src/cli/init/scaffold.ts",
-	"src/cli/init/index.ts",
-	"src/cli/init/detect-defaults.ts",
 	"src/testing/builder.ts",
 ]
 coverageReporter  = ["text", "lcov"]
