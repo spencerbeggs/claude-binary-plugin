@@ -42,9 +42,9 @@
  */
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
-import type { PassthroughHookEntry } from "../pipeline/config.js";
-import type { GenerateProxyScriptOptions } from "./proxy-template.js";
-import { generateProxyScript } from "./proxy-template.js";
+import type { PassthroughHookEntry } from "../plugin/config.js";
+import type { GenerateProxyScriptOptions } from "./ProxyTemplate.js";
+import { generateProxyScript } from "./ProxyTemplate.js";
 
 /**
  * Result of a shell command execution.
@@ -156,7 +156,7 @@ export interface GeneratePipelinePluginOptions {
 	pluginVersion: string;
 	/** Array of hook configurations extracted from the plugin definition */
 	hooks: PipelineHookEntry[];
-	/** Pipeline-style commands with Zod arg schemas */
+	/** Pipeline-style commands with Effect Schema arg schemas */
 	pipelineCommands?: PipelineCommandEntry[];
 }
 
@@ -164,7 +164,7 @@ export interface GeneratePipelinePluginOptions {
  * Generates the TypeScript source code for a pipeline-based plugin entrypoint.
  *
  * The generated code imports the plugin definition and uses the pipeline-runtime
- * module to execute hooks with proper Zod validation.
+ * module to execute hooks with proper Effect Schema validation.
  *
  * @param options - Generation options
  * @returns Generated TypeScript source code
@@ -475,7 +475,7 @@ function isPassthroughHook(hook: unknown): hook is PassthroughHookEntry {
 	);
 }
 
-// PassthroughHookEntry is imported from pipeline/config.ts
+// PassthroughHookEntry is imported from plugin/config.ts
 
 /**
  * Extracted passthrough entries grouped by hook type.

@@ -1,7 +1,7 @@
 import { mock, spyOn } from "bun:test";
 import { rmSync } from "node:fs";
+import { Schema } from "effect";
 import type { PartialDeep } from "type-fest";
-import type { z } from "zod";
 import type { ShellResult } from "../build/builder.js";
 import type {
 	BaseState,
@@ -11,9 +11,10 @@ import type {
 	PipelineHandler,
 	PluginConfig,
 	PluginState,
-} from "../pipeline/config.js";
-import type { AnyPipelineOutput, HookAction } from "../pipeline/types.js";
-import { isPipelineOutput } from "../pipeline/types.js";
+} from "../plugin/config.js";
+import type { HookAction } from "../schemas/pipeline-outputs.js";
+import type { AnyPipelineOutput } from "../types/pipeline.js";
+import { isPipelineOutput } from "../types/pipeline.js";
 import type { BufferShellResult } from "./mocks.js";
 
 // =============================================================================
@@ -450,7 +451,7 @@ interface BuilderState<TOptions, TState> {
 	useTempProject?: boolean;
 	/** Temp project directory path (created on demand) */
 	tempProjectDir?: string;
-	/** Files to create in temp project: path -> content */
+	/** Files to create in temp project: path -\> content */
 	tempProjectFiles: Map<string, string | Uint8Array>;
 	shellResponses: Map<string, ShellResult>;
 	shellMocks: Map<string, ShellMockConfig>;
@@ -1527,8 +1528,8 @@ export class PluginTester<
 	async runCommand<K extends keyof TCommands>(
 		command: K,
 		args?: TCommands[K] extends { args?: infer TArgs }
-			? TArgs extends z.ZodType
-				? Partial<z.infer<TArgs>>
+			? TArgs extends Schema.Schema.Any
+				? Partial<Schema.Schema.Type<TArgs>>
 				: unknown
 			: unknown,
 	): Promise<CommandTestResult> {
@@ -1879,10 +1880,6 @@ export class PluginTester<
 			projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? "/test/project",
 			pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "/test/plugin",
 			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
-			// Provide no-op logger methods for testing
-			log: () => {},
-			info: () => {},
-			debug: () => {},
 		};
 
 		// Merge base state with user-provided state
@@ -2023,21 +2020,15 @@ export class PluginTester<
 			return args;
 		}
 
-		// Cast to z.ZodType for proper method access
-		const zodSchema = schema as z.ZodType<unknown>;
+		// Cast to Effect Schema for decoding
+		const effectSchema = schema as Schema.Schema<unknown>;
 
-		// Use safeParseAsync for async validation
-		const result = await zodSchema.safeParseAsync(args);
-
-		if (!result.success) {
-			const issues = result.error.issues
-				// biome-ignore lint/suspicious/noExplicitAny: Zod issue type varies between versions
-				.map((issue: any) => `${(issue.path || []).join(".")}: ${issue.message}`)
-				.join(", ");
-			throw new Error(`Argument validation failed: ${issues}`);
+		try {
+			return Schema.decodeUnknownSync(effectSchema)(args);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			throw new Error(`Argument validation failed: ${message}`);
 		}
-
-		return result.data;
 	}
 
 	/**
@@ -2054,10 +2045,6 @@ export class PluginTester<
 			projectDir: Bun.env.CLAUDE_PROJECT_DIR ?? "/test/project",
 			pluginDir: Bun.env.CLAUDE_PLUGIN_ROOT ?? "/test/plugin",
 			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
-			// Provide no-op logger methods for testing
-			log: () => {},
-			info: () => {},
-			debug: () => {},
 		};
 
 		// Merge base state with user-provided state
@@ -2088,31 +2075,4 @@ export class PluginTester<
 			throw new Error(`Command "${commandName}" returned invalid exitCode: must be 0-255`);
 		}
 	}
-}
-
-// =============================================================================
-// FACTORY FUNCTION
-// =============================================================================
-
-/**
- * Create a test builder for a plugin configuration.
- *
- * @remarks
- * This is typically called via `plugin.test()` rather than directly.
- *
- * @param config - Plugin configuration
- * @returns A new PluginTester instance
- *
- * @internal
- */
-export function createTestBuilder<
-	TOptions,
-	TState,
-	THooks extends Record<string, unknown[]>,
-	TCommands extends Record<string, CommandDefinition>,
->(
-	// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin config
-	config: PluginConfig<any, any, any>,
-): PluginTester<TOptions, TState, THooks, TCommands> {
-	return new PluginTester(config);
 }

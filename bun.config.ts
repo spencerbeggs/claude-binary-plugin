@@ -13,6 +13,7 @@ export default BunLibraryBuilder.create({
 		return pkg;
 	},
 	apiModel: {
+		suppressWarnings: [{ messageId: "ae-forgotten-export", pattern: "_base" }],
 		enabled: true,
 		tsdoc: {
 			tagDefinitions: [

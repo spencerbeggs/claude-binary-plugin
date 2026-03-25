@@ -21,11 +21,10 @@
 import { dirname, resolve } from "node:path";
 import { Args, Command, Options } from "@effect/cli";
 import { BunContext, BunRuntime } from "@effect/platform-bun";
+import type { Schema } from "effect";
 import { Console, Effect } from "effect";
-import type { z } from "zod";
 import { PluginBuilder } from "../build/builder.js";
-import type { ClaudeBinaryPlugin } from "../pipeline/config.js";
-import { initCommand } from "./init/index.js";
+import type { ClaudeBinaryPlugin } from "../plugin/config.js";
 import { getPackageVersion } from "./macros.js";
 
 // Package version - works both at runtime and when bundled
@@ -74,7 +73,7 @@ const buildCommand = Command.make(
 			const pluginDefinition = yield* Effect.tryPromise({
 				try: async () => {
 					const module = await import(absolutePluginFile);
-					const definition = module.default as ClaudeBinaryPlugin<z.ZodTypeAny>;
+					const definition = module.default as ClaudeBinaryPlugin<Schema.Schema.Any>;
 					if (!definition?.config) {
 						throw new Error("Plugin file must export a default ClaudeBinaryPlugin.create() result");
 					}
@@ -215,8 +214,8 @@ const buildCommand = Command.make(
 
 // Root command (just shows help when called without subcommand)
 const rootCommand = Command.make("claude-binary-plugin", {}, () =>
-	Console.log("Use 'claude-binary-plugin build' or 'init'. Run with --help for more information."),
-).pipe(Command.withSubcommands([buildCommand, initCommand]));
+	Console.log("Use 'claude-binary-plugin build'. Run with --help for more information."),
+).pipe(Command.withSubcommands([buildCommand]));
 
 // Create and run the CLI
 const cli = Command.run(rootCommand, {

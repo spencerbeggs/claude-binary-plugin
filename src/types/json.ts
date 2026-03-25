@@ -72,19 +72,19 @@ export type {
  * Type-safe JSON parsing with schema validation.
  *
  * @remarks
- * This is a type-only utility. The actual parsing should use Zod for runtime
- * validation. This type helps document the expected shape after parsing.
+ * This is a type-only utility. Use Effect Schema for runtime validation.
+ * This type helps document the expected shape after parsing.
  *
  * @example
  * ```typescript
  * import type { ParsedJson } from "claude-binary-plugin";
- * import { z } from "zod";
+ * import { Schema } from "effect";
  *
- * const schema = z.object({ name: z.string() });
- * type Config = ParsedJson<z.infer<typeof schema>>;
+ * const schema = Schema.Struct({ name: Schema.String });
+ * type Config = ParsedJson<typeof schema.Type>;
  *
  * function loadConfig(json: string): Config {
- *   return schema.parse(JSON.parse(json));
+ *   return Schema.decodeUnknownSync(schema)(JSON.parse(json));
  * }
  * ```
  *
@@ -145,55 +145,3 @@ export type OtelAttributes = Record<string, OtelAttributeValue>;
  * @public
  */
 export type OtelHeaders = Record<string, string>;
-
-// =============================================================================
-// ZOD SCHEMAS FOR JSON TYPES (INTERNAL)
-// =============================================================================
-
-import { z } from "zod";
-
-/**
- * Zod schema for JSON primitive values.
- *
- * @remarks
- * Matches: `string`, `number`, `boolean`, `null`.
- * Does not match: `undefined`, `bigint`, `symbol`, `function`.
- *
- * @internal
- */
-export const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-
-/**
- * Zod schema for any valid JSON value (recursive).
- *
- * @remarks
- * This schema validates that a value is JSON-serializable. It uses Zod's
- * lazy evaluation to handle recursive structures (arrays and objects
- * containing other JSON values).
- *
- * @internal
- */
-export const JsonValueSchema: z.ZodType<import("type-fest").JsonValue> = z.lazy(() =>
-	z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), z.record(z.string(), JsonValueSchema)]),
-);
-
-/**
- * Zod schema for JSON objects.
- *
- * @remarks
- * A JSON object has string keys and JsonValue values. Used internally for
- * `tool_input` and `tool_response` fields which are always JSON objects.
- *
- * @internal
- */
-export const JsonObjectSchema: z.ZodType<import("type-fest").JsonObject> = z.record(z.string(), JsonValueSchema);
-
-/**
- * Zod schema for JSON arrays.
- *
- * @remarks
- * A JSON array contains only JsonValue elements.
- *
- * @internal
- */
-export const JsonArraySchema: z.ZodType<import("type-fest").JsonArray> = z.array(JsonValueSchema);

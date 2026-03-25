@@ -55,6 +55,7 @@
 	},
 	"enableAllProjectMcpServers": false,
 	"enabledPlugins": {
-		"workflow@savvy-web-claude-tools": true
+		"workflow@savvy-web-claude-tools": true,
+		"changesets@savvy-web-systems": true
 	}
 }

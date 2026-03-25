@@ -7,9 +7,9 @@ with code in this repository.
 
 `claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
 that compile to single-file Bun executables. It provides a declarative
-pipeline system for defining hooks and commands with Zod-validated
-inputs/outputs, OpenTelemetry observability, and type-safe state
-management.
+pipeline system for defining hooks and commands with Effect Schema-validated
+inputs/outputs, Effect services with layers for testability, OpenTelemetry
+observability, and type-safe state management.
 
 ## Release Status
 
@@ -17,7 +17,6 @@ management.
 
 - **Feature complete** - Core functionality is implemented and stable
 - **API refinement phase** - Focusing on API ergonomics and consistency
-- **Documentation focus** - Improving docs to help users understand usage
 - **Not yet public** - No external users or published packages
 - **No backward compatibility concerns** - Make clean API changes freely
   without deprecation warnings or migration guides
@@ -30,14 +29,17 @@ shims. Remove old code entirely rather than maintaining aliases.
 Load these docs on-demand when working on the relevant subsystem.
 Do NOT load unless the task specifically requires the details within.
 
-- `.claude/design/architecture.md` - System architecture, data flow, build
-  system, command runtime, OTEL sidecar spawning and handshake
-- `.claude/design/cli.md` - CLI binary usage, zero-config builds
-- `.claude/design/scaffold.md` - Scaffold templates, interactive flow
-- `.claude/design/schema.md` - OTEL telemetry schema, event types, metrics
-- `.claude/design/testing.md` - Testing utilities and fluent API
-- `docs/README.md` - User-facing SDK documentation and guides.
-  Load when writing or reviewing end-user documentation.
+- `.claude/design/architecture.md` - System architecture, directory structure,
+  service/layer pattern, pipeline execution flow, build system
+- `.claude/design/services.md` - All 10 Effect services, their interfaces,
+  Live/Test layers, PipelineLive, LoggerLive
+- `.claude/design/schema.md` - Effect Schema usage, Schema.Class pattern,
+  hook event schemas, pipeline output schemas, branded types
+- `.claude/design/testing.md` - Layer-based testing, test factories,
+  PluginTester fluent API, test file organization
+- `.claude/design/cli.md` - CLI build command, artifact generation
+- `.claude/design/otel.md` - OTEL telemetry, sidecar architecture, IPC
+  protocol (imperative, planned for Effect conversion)
 
 ## Development Commands
 
@@ -45,14 +47,9 @@ Do NOT load unless the task specifically requires the details within.
 # Install dependencies
 bun install
 
-# Scaffold a new plugin project
-claude-binary-plugin init [directory]
-
-# Run tests (LLM-formatted output)
-bun run test:ai
-
-# Run tests (verbose)
-bun run test
+# Run tests
+bun run test:ai       # LLM-formatted output
+bun run test          # verbose
 
 # Type check
 bun run typecheck
@@ -71,7 +68,7 @@ bun run build
 - Use `bun` instead of `node` for all runtime operations
 - Use `Bun.file()` for file I/O, `Bun.$` for shell commands
 - Use `bun:test` for testing, not jest or vitest
-- Bun auto-loads `.env` files - don't use dotenv
+- Bun auto-loads `.env` files — don't use dotenv
 
 ### TypeScript
 
@@ -80,21 +77,22 @@ bun run build
 - Type-only imports must use `import type`
 - Uses `tsgo` (native TypeScript) for type checking
 
+### Effect Patterns
+
+- Services use `Context.Tag` in `src/services/`, implementations in `src/layers/`
+- Errors use `Data.TaggedError`, one per file in `src/errors/`
+- Hook event types use `Schema.Class` (type + schema + instanceof)
+- Pipeline outputs use `Schema.Union` discriminated on `status`
+- No barrel files — import directly from source files
+- Two entry points: `src/index.ts` (public), `src/testing.ts` (test utils)
+- Test layers replace global mocking (no `Bun.env` mutation, no `process.exit` mocking)
+
 ### Testing
 
-- Use `plugin.test()` fluent API for hook and command tests
-- Always call `ctx.dispose()` in `afterEach` to prevent test pollution
-- Use `mockBunShell()` + `withShell()`/`withShellMatching()` for shell mocks
-- See `.claude/design/testing.md` for full PluginTester API
-
-### Type Safety Utilities
-
-The SDK uses `type-fest` for enhanced type safety. See `.claude/design/architecture.md`
-for detailed examples.
-
-- **JSON Types** - `JsonObject`, `JsonValue` for tool inputs/outputs
-- **Branded Types** - `SessionId`, `ToolUseId`, `TranscriptPath`, `HookName`
-- **Immutable Context** - Handler params use `ReadonlyDeep<T>`
+- All tests in `__tests__/` mirroring `src/` structure
+- Use test layer factories for service mocking
+- Legacy `plugin.test()` fluent API still works but is being phased out
+- Always call `ctx.dispose()` in `afterEach` when using legacy PluginTester
 
 ## Key Exports
 
@@ -104,24 +102,38 @@ All exports are from the main entry point:
 import {
   // Plugin definition
   ClaudeBinaryPlugin,
-  Pipeline,
-  PipelineRuntime,
+
+  // Schema.Class event types (type + schema)
+  PreToolUseEvent,
+  PostToolUseEvent,
+  SessionStartEvent,
+
+  // Services
+  StdinReader,
+  SchemaValidator,
+  EnvLoader,
+
+  // Layers
+  PipelineLive,
+  LoggerLive,
+
+  // Errors
+  PipelineError,
+  SchemaValidationError,
 
   // State management
   PluginEnv,
-  SessionRegistry,
-
-  // Testing
-  PluginTester,
-  TestFixtures,
-  MockState,
 
   // OTEL
   OtelConfig,
-  TelemetryEmitter,
-  TelemetryMetrics,
-  TelemetrySpan,
 } from "claude-binary-plugin";
+
+// Test utilities (separate entry point)
+import {
+  makeStdinReaderTest,
+  makeTelemetryTest,
+  makeShellExecutorTest,
+} from "claude-binary-plugin/testing";
 ```
 
 ## Core Source Files
@@ -130,26 +142,20 @@ Load these files as needed for deeper context:
 
 | File | Purpose |
 | ---- | ------- |
-| `src/pipeline/config.ts` | `ClaudeBinaryPlugin.create()` factory |
-| `src/pipeline/classes/PipelineRuntime.ts` | `PipelineRuntime.run()` |
-| `src/pipeline/classes/Pipeline.ts` | `Pipeline` utilities |
-| `src/pipeline/types.ts` | Output schemas per hook type |
+| `src/plugin/config.ts` | `ClaudeBinaryPlugin.create()` factory |
+| `src/layers/PipelineRuntime.ts` | `PipelineRuntime.run()` |
+| `src/layers/PipelineLive.ts` | Composed service layer |
+| `src/schemas/hook-events.ts` | Schema.Class event definitions |
+| `src/schemas/pipeline-outputs.ts` | Output schemas per hook type |
+| `src/services/PluginEnv.ts` | `PluginEnv` base class |
+| `src/layers/SessionRegistry.ts` | SQLite session lookup |
 | `src/build/builder.ts` | `PluginBuilder` class |
-| `src/state/classes/PluginEnv.ts` | `PluginEnv` base class |
-| `src/state/classes/SessionRegistry.ts` | SQLite session lookup |
-| `src/commands/runtime.ts` | `Commands` class |
-| `src/core/schemas.ts` | Input Zod schemas |
-| `src/core/tool-inputs.ts` | Typed tool inputs |
-| `src/testing/builder.ts` | `PluginTester` class |
-| `src/testing/mocks.ts` | `TestFixtures`, `MockState` |
-| `src/cli/init/index.ts` | `init` command definition |
-| `src/cli/init/ink/App.tsx` | Interactive Ink wizard |
-| `src/cli/init/scaffold.ts` | Template engine |
-| `src/cli/init/detect-defaults.ts` | Git/GitHub default detection |
+| `src/types/tool-inputs.ts` | Typed tool inputs |
+| `src/types/hook-events.ts` | Hook type enums and interfaces |
 
 ### OTEL Classes
 
-Located in `src/otel/classes/` unless noted:
+All in `src/otel/`:
 
 | Class | Purpose |
 | ----- | ------- |
@@ -157,12 +163,9 @@ Located in `src/otel/classes/` unless noted:
 | `TelemetryEmitter` | Event emission |
 | `TelemetryMetrics` | Metric recording |
 | `TelemetrySpan` | Span instrumentation |
-| `Platform` | Platform detection |
-| `GitInfo` | Git repo detection |
-| `PluginInfo` | Plugin metadata |
 | `SidecarLauncher` | Sidecar spawning |
-| `SidecarClientPool` | Client lifecycle |
-| `SidecarClient` | IPC client (`src/otel/classes/SidecarClient.ts`) |
+| `SidecarClient` | IPC client |
+| `SidecarServer` | Unix socket server |
 
 ## Environment Variables
 
@@ -170,7 +173,7 @@ Located in `src/otel/classes/` unless noted:
 
 - `CLAUDE_PLUGIN_ROOT` - Plugin directory path
 - `CLAUDE_PROJECT_DIR` - User's project directory
-- `CLAUDE_ENV_FILE` - Session env file path (for persisted vars)
+- `CLAUDE_ENV_FILE` - Session env file path
 - `CLAUDE_SESSION_ID` - Session UUID
 
 ### OTEL Configuration

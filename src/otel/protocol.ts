@@ -1,3 +1,174 @@
+import { Schema } from "effect";
+
+// =============================================================================
+// EFFECT SCHEMA DEFINITIONS
+// Schema.Class definitions for runtime validation, type-safe serialization,
+// and TypeScript types (single source of truth).
+// BigInt fields encode as strings for JSON wire format.
+// =============================================================================
+
+/**
+ * Instrumentation scope metadata.
+ * @public
+ */
+export class ScopeData extends Schema.Class<ScopeData>("ScopeData")({
+	name: Schema.String,
+	version: Schema.optional(Schema.String),
+}) {}
+
+/**
+ * Schema for attribute maps (key-value pairs of primitive values).
+ * @internal
+ */
+const AttributesSchema = Schema.optional(
+	Schema.Record({ key: Schema.String, value: Schema.Union(Schema.String, Schema.Number, Schema.Boolean) }),
+);
+
+/**
+ * Standalone event data (not attached to a span).
+ * BigInt timeNs encodes as string for JSON wire format.
+ * @public
+ */
+export class EventData extends Schema.Class<EventData>("EventData")({
+	name: Schema.String,
+	timeNs: Schema.BigInt,
+	severity: Schema.optional(Schema.Literal("trace", "debug", "info", "warn", "error", "fatal")),
+	body: Schema.optional(Schema.String),
+	attributes: AttributesSchema,
+	scope: Schema.optional(ScopeData),
+}) {}
+
+/**
+ * Span status.
+ * @public
+ */
+export class SpanStatus extends Schema.Class<SpanStatus>("SpanStatus")({
+	code: Schema.Literal("unset", "ok", "error"),
+	message: Schema.optional(Schema.String),
+}) {}
+
+/**
+ * An event within a span timeline.
+ * BigInt timeNs encodes as string for JSON wire format.
+ * @public
+ */
+export class SpanEvent extends Schema.Class<SpanEvent>("SpanEvent")({
+	name: Schema.String,
+	timeNs: Schema.BigInt,
+	attributes: AttributesSchema,
+}) {}
+
+/**
+ * Span data (a single unit of work in a distributed trace).
+ * BigInt startTimeNs and endTimeNs encode as strings for JSON wire format.
+ * @public
+ */
+export class SpanData extends Schema.Class<SpanData>("SpanData")({
+	spanId: Schema.String,
+	traceId: Schema.String,
+	parentSpanId: Schema.optional(Schema.String),
+	name: Schema.String,
+	kind: Schema.Literal("client", "server", "producer", "consumer", "internal"),
+	startTimeNs: Schema.BigInt,
+	endTimeNs: Schema.optional(Schema.BigInt),
+	attributes: AttributesSchema,
+	status: Schema.optional(SpanStatus),
+	events: Schema.optional(Schema.Array(SpanEvent)),
+}) {}
+
+/**
+ * Metric type discriminated union variants.
+ * Discriminated on the `kind` field.
+ * @public
+ */
+export const MetricType = Schema.Union(
+	Schema.Struct({ kind: Schema.Literal("counter"), value: Schema.Number, monotonic: Schema.optional(Schema.Boolean) }),
+	Schema.Struct({ kind: Schema.Literal("gauge"), value: Schema.Number }),
+	Schema.Struct({
+		kind: Schema.Literal("histogram"),
+		value: Schema.Number,
+		buckets: Schema.optional(Schema.Array(Schema.Number)),
+	}),
+);
+
+/**
+ * Metric data point (counter, gauge, or histogram).
+ * BigInt timeNs encodes as string for JSON wire format.
+ * @public
+ */
+export class MetricData extends Schema.Class<MetricData>("MetricData")({
+	name: Schema.String,
+	description: Schema.optional(Schema.String),
+	unit: Schema.optional(Schema.String),
+	type: MetricType,
+	attributes: AttributesSchema,
+	timeNs: Schema.BigInt,
+}) {}
+
+/**
+ * Ping message (sent at session start to establish connection).
+ * The config field uses Schema.Unknown since OtelProtocolConfig is complex
+ * and stays as a plain interface.
+ * @public
+ */
+export class PingMessage extends Schema.Class<PingMessage>("PingMessage")({
+	type: Schema.Literal("ping"),
+	sessionId: Schema.String,
+	config: Schema.Unknown,
+}) {}
+
+/**
+ * Span message containing trace data.
+ * @public
+ */
+export class SpanMessage extends Schema.Class<SpanMessage>("SpanMessage")({
+	type: Schema.Literal("span"),
+	sessionId: Schema.String,
+	data: SpanData,
+}) {}
+
+/**
+ * Event message containing log/event data.
+ * @public
+ */
+export class EventMessage extends Schema.Class<EventMessage>("EventMessage")({
+	type: Schema.Literal("event"),
+	sessionId: Schema.String,
+	data: EventData,
+}) {}
+
+/**
+ * Metric message containing metric data.
+ * @public
+ */
+export class MetricMessage extends Schema.Class<MetricMessage>("MetricMessage")({
+	type: Schema.Literal("metric"),
+	sessionId: Schema.String,
+	data: MetricData,
+}) {}
+
+/**
+ * Shutdown message (gracefully terminates the sidecar).
+ * @public
+ */
+export class ShutdownMessage extends Schema.Class<ShutdownMessage>("ShutdownMessage")({
+	type: Schema.Literal("shutdown"),
+	sessionId: Schema.optional(Schema.String),
+}) {}
+
+/**
+ * Discriminated union schema for all sidecar IPC message types.
+ * Discriminated on the `type` literal field.
+ * @public
+ */
+export const SidecarProtocolMessage = Schema.Union(
+	PingMessage,
+	SpanMessage,
+	EventMessage,
+	MetricMessage,
+	ShutdownMessage,
+);
+
 /**
  * OTEL exporter configuration sent from hooks to sidecar.
  * The sidecar uses this to configure its OTEL providers.
@@ -50,198 +221,6 @@ export interface OtelProtocolConfig {
 	 */
 	exportTimeoutMs?: number | undefined;
 }
-
-/**
- * Span data for tracing.
- * Represents a single unit of work in a distributed trace.
- * @public
- */
-export interface SpanData {
-	/** Unique identifier for this span (hex-encoded 16 bytes) */
-	spanId: string;
-
-	/** Trace ID this span belongs to (hex-encoded 32 bytes) */
-	traceId: string;
-
-	/** Parent span ID, if this span has a parent */
-	parentSpanId?: string | undefined;
-
-	/** Human-readable name for this span */
-	name: string;
-
-	/** Span kind (client, server, producer, consumer, internal) */
-	kind: "client" | "server" | "producer" | "consumer" | "internal";
-
-	/** Start time in Unix nanoseconds */
-	startTimeNs: bigint;
-
-	/** End time in Unix nanoseconds (if span is complete) */
-	endTimeNs?: bigint | undefined;
-
-	/** Span attributes (key-value pairs) */
-	attributes?: Record<string, string | number | boolean> | undefined;
-
-	/** Span status */
-	status?:
-		| {
-				code: "unset" | "ok" | "error";
-				message?: string | undefined;
-		  }
-		| undefined;
-
-	/** Events attached to this span */
-	events?: SpanEvent[] | undefined;
-}
-
-/**
- * An event within a span timeline.
- * @public
- */
-export interface SpanEvent {
-	/** Event name */
-	name: string;
-
-	/** Event time in Unix nanoseconds */
-	timeNs: bigint;
-
-	/** Event attributes */
-	attributes?: Record<string, string | number | boolean> | undefined;
-}
-
-/**
- * Instrumentation scope for telemetry.
- * @public
- */
-export interface ScopeData {
-	/** Scope name (e.g., "systems.savvyweb.claude_code.events") */
-	name: string;
-	/** Scope version (e.g., plugin version) */
-	version?: string | undefined;
-}
-
-/**
- * Standalone event data (not attached to a span).
- * Used for logging notable occurrences.
- * @public
- */
-export interface EventData {
-	/** Event name */
-	name: string;
-
-	/** Event time in Unix nanoseconds */
-	timeNs: bigint;
-
-	/** Event attributes */
-	attributes?: Record<string, string | number | boolean> | undefined;
-
-	/** Severity level */
-	severity?: "trace" | "debug" | "info" | "warn" | "error" | "fatal" | undefined;
-
-	/** Human-readable message */
-	body?: string | undefined;
-
-	/** Instrumentation scope metadata */
-	scope?: ScopeData | undefined;
-}
-
-/**
- * Metric data point.
- * Supports counters, gauges, and histograms.
- * @public
- */
-export interface MetricData {
-	/** Metric name */
-	name: string;
-
-	/** Metric description */
-	description?: string | undefined;
-
-	/** Metric unit (e.g., "ms", "bytes", "1") */
-	unit?: string | undefined;
-
-	/** Metric type and value */
-	type: MetricType;
-
-	/** Metric attributes (dimensions) */
-	attributes?: Record<string, string | number | boolean> | undefined;
-
-	/** Timestamp in Unix nanoseconds */
-	timeNs: bigint;
-}
-
-/**
- * Metric type discriminated union.
- * @public
- */
-export type MetricType =
-	| { kind: "counter"; value: number; monotonic?: boolean }
-	| { kind: "gauge"; value: number }
-	| { kind: "histogram"; value: number; buckets?: number[] };
-
-/**
- * Ping message to verify sidecar is alive and configure it.
- * Sent at session start to establish connection.
- * @public
- */
-export interface PingMessage {
-	type: "ping";
-	/** Session ID for correlation */
-	sessionId: string;
-	/** OTEL configuration for this session */
-	config: OtelProtocolConfig;
-}
-
-/**
- * Span message containing trace data.
- * @public
- */
-export interface SpanMessage {
-	type: "span";
-	/** Session ID for correlation */
-	sessionId: string;
-	/** Span data to export */
-	data: SpanData;
-}
-
-/**
- * Event message containing log/event data.
- * @public
- */
-export interface EventMessage {
-	type: "event";
-	/** Session ID for correlation */
-	sessionId: string;
-	/** Event data to export */
-	data: EventData;
-}
-
-/**
- * Metric message containing metric data.
- * @public
- */
-export interface MetricMessage {
-	type: "metric";
-	/** Session ID for correlation */
-	sessionId: string;
-	/** Metric data to export */
-	data: MetricData;
-}
-
-/**
- * Shutdown message to gracefully terminate the sidecar.
- * @public
- */
-export interface ShutdownMessage {
-	type: "shutdown";
-	/** Optional session ID if shutting down a specific session */
-	sessionId?: string | undefined;
-}
-
-/**
- * Union of all sidecar message types.
- * @public
- */
-export type SidecarProtocolMessage = PingMessage | SpanMessage | EventMessage | MetricMessage | ShutdownMessage;
 
 /**
  * Response from sidecar to client.

@@ -1,62 +1,88 @@
 import { dirname } from "node:path";
-import { z } from "zod";
-import type { BaseState, CommandHandler, CommandOutput, PluginState } from "../pipeline/config.js";
-import { PluginEnv } from "../state/classes/PluginEnv.js";
+import { ParseResult, Schema } from "effect";
+import type { BaseState, CommandHandler, CommandOutput, PluginState } from "../plugin/config.js";
+import { PluginEnv } from "../services/PluginEnv.js";
 
 // =============================================================================
 // INTERNAL SCHEMA UTILITIES
 // =============================================================================
 
+const DescriptionAnnotationId = Symbol.for("effect/annotation/Description");
+
 /**
- * Extract the shape from a Zod schema for documentation.
+ * Extract the fields from an Effect Schema.Struct for documentation.
  * @internal
  */
-function extractSchemaShape(schema: z.ZodType): Record<string, z.ZodType> {
-	if (schema instanceof z.ZodObject) {
-		return schema.shape as Record<string, z.ZodType>;
-	}
-	// Handle wrapped schemas (default, optional, etc.)
-	if ("_def" in schema) {
-		const def = schema._def as { innerType?: z.ZodType };
-		if (def.innerType) {
-			return extractSchemaShape(def.innerType);
+function extractSchemaFields(schema: Schema.Schema<unknown>): Record<string, Schema.Schema<unknown>> {
+	const ast = schema.ast;
+	if (ast && ast.constructor?.name === "TypeLiteral") {
+		const typeLiteral = ast as {
+			propertySignatures?: Array<{ name: PropertyKey; type: unknown; isOptional?: boolean }>;
+		};
+		if (typeLiteral.propertySignatures) {
+			// Access the fields via the schema itself if it is a Struct
+			if ("fields" in schema) {
+				const fields = (schema as unknown as { fields: Record<string, Schema.Schema<unknown>> }).fields;
+				return fields;
+			}
 		}
+	}
+	// Try direct fields access for Schema.Struct instances
+	if ("fields" in schema) {
+		const fields = (schema as unknown as { fields: Record<string, Schema.Schema<unknown>> }).fields;
+		return fields;
 	}
 	return {};
 }
 
 /**
- * Extract description from a Zod schema field.
+ * Extract description from an Effect Schema field.
  * @internal
  */
-function extractDescription(schema: z.ZodType): string | undefined {
-	if ("_def" in schema) {
-		const def = schema._def as { description?: string; innerType?: z.ZodType };
-		if (def.description) return def.description;
-		if (def.innerType) return extractDescription(def.innerType);
+function extractDescription(fieldSchema: Schema.Schema<unknown>): string | undefined {
+	const ast = fieldSchema.ast;
+	if (!ast) return undefined;
+	// Check direct annotations
+	const desc = (ast.annotations as Record<symbol, unknown>)?.[DescriptionAnnotationId];
+	if (typeof desc === "string") return desc;
+	// Check nested for PropertySignatureDeclaration
+	if (ast.constructor?.name === "PropertySignatureDeclaration") {
+		const psd = ast as unknown as { type?: { annotations?: Record<symbol, unknown> } };
+		const nestedDesc = psd.type?.annotations?.[DescriptionAnnotationId];
+		if (typeof nestedDesc === "string") return nestedDesc;
 	}
 	return undefined;
 }
 
 /**
- * Check if a Zod schema field is optional.
+ * Check if an Effect Schema field is optional (optional or has a default).
  * @internal
  */
-function isSchemaOptional(schema: z.ZodType): boolean {
-	if (schema instanceof z.ZodOptional) return true;
-	if (schema instanceof z.ZodDefault) return true;
-	if ("_def" in schema) {
-		const def = schema._def as { innerType?: z.ZodType };
-		if (def.innerType) return isSchemaOptional(def.innerType);
+function isSchemaOptional(fieldSchema: Schema.Schema<unknown>): boolean {
+	const ast = fieldSchema.ast;
+	if (!ast) return false;
+	const name = ast.constructor?.name;
+	// PropertySignatureDeclaration with isOptional flag
+	if (name === "PropertySignatureDeclaration") {
+		return (ast as unknown as { isOptional?: boolean }).isOptional === true;
+	}
+	// PropertySignatureTransformation means it has a default (optionalWith)
+	if (name === "PropertySignatureTransformation") {
+		return true;
 	}
 	return false;
 }
 
 /**
- * Format a Zod validation error as LLM-friendly markdown.
+ * Format an Effect ParseError as LLM-friendly markdown.
  * @internal
  */
-function formatArgumentError(rawArgs: string[], schema: z.ZodType, error: z.ZodError): string {
+function formatArgumentError(
+	rawArgs: string[],
+	// biome-ignore lint/suspicious/noExplicitAny: Accepts any Schema variant (Struct, Class, etc.)
+	schema: Schema.Schema<any, any, never>,
+	error: ParseResult.ParseError,
+): string {
 	const lines = [
 		"# Argument Validation Error",
 		"",
@@ -72,20 +98,13 @@ function formatArgumentError(rawArgs: string[], schema: z.ZodType, error: z.ZodE
 		"",
 	];
 
-	for (const issue of error.issues) {
-		const path = issue.path.join(".");
-		lines.push(`- **${path || "(root)"}**: ${issue.message}`);
-
-		// Add expected values for enum errors (Zod v4 uses "invalid_value" with expected array)
-		if ("expected" in issue && Array.isArray(issue.expected)) {
-			lines.push(`  - Valid options: ${issue.expected.join(", ")}`);
-		}
-	}
+	const formatted = ParseResult.TreeFormatter.formatErrorSync(error);
+	lines.push(formatted);
 
 	// Generate usage from schema
 	lines.push("", "## Expected Arguments", "");
-	const shape = extractSchemaShape(schema);
-	for (const [key, fieldSchema] of Object.entries(shape)) {
+	const fields = extractSchemaFields(schema);
+	for (const [key, fieldSchema] of Object.entries(fields)) {
 		if (key.startsWith("_")) continue; // Skip internal keys
 		const desc = extractDescription(fieldSchema);
 		const required = !isSchemaOptional(fieldSchema);
@@ -115,7 +134,8 @@ function formatArgumentError(rawArgs: string[], schema: z.ZodType, error: z.ZodE
 export class CommandArgumentError extends Error {
 	readonly exitCode = 2;
 
-	constructor(rawArgs: string[], schema: z.ZodType, error: z.ZodError) {
+	// biome-ignore lint/suspicious/noExplicitAny: Accepts any Schema variant (Struct, Class, etc.)
+	constructor(rawArgs: string[], schema: Schema.Schema<any, any, never>, error: ParseResult.ParseError) {
 		super(formatArgumentError(rawArgs, schema, error));
 		this.name = "CommandArgumentError";
 	}
@@ -140,8 +160,9 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 	handler: CommandHandler<TArgs, TOptions, TState>;
 	/** Raw CLI arguments */
 	rawArgs: string[];
-	/** Zod schema for validating arguments */
-	argsSchema: z.ZodType<TArgs>;
+	/** Effect Schema for validating arguments */
+	// biome-ignore lint/suspicious/noExplicitAny: Encoded type varies by Schema.Struct shape
+	argsSchema: Schema.Schema<TArgs, any, never>;
 	/** State class for loading env vars */
 	stateClass: new () => PluginEnv<TOptions>;
 }
@@ -149,17 +170,6 @@ export interface RunCommandOptions<TArgs, TOptions, TState> {
 // =============================================================================
 // EMPTY ARGS SCHEMA
 // =============================================================================
-
-/**
- * Empty args schema for commands that don't accept arguments.
- *
- * @remarks
- * Use `Commands.emptySchema` to access this schema. This internal export
- * is used by generated entrypoint code.
- *
- * @internal
- */
-export const emptyArgsSchema = z.object({});
 
 /**
  * Type for commands that accept no arguments.
@@ -207,7 +217,7 @@ export type EmptyArgs = {};
  *     output: "# Results\n\nAll checks passed!",
  *   }),
  *   rawArgs: ["--fix", "src/"],
- *   argsSchema: z.object({ fix: z.boolean().default(false) }),
+ *   argsSchema: Schema.Struct({ fix: Schema.Boolean }),
  *   stateClass: MyState,
  * });
  *
@@ -269,8 +279,8 @@ export class Commands {
 		const { commandName, handler, rawArgs, argsSchema, stateClass } = options;
 
 		try {
-			// Parse and validate arguments (async for path validation)
-			const args = await Commands.parse(rawArgs, argsSchema);
+			// Parse and validate arguments
+			const args = Commands.parse(rawArgs, argsSchema);
 
 			// Load session env files (must be done before creating state instance)
 			// This is required - if we can't find session env, the command won't have state
@@ -319,41 +329,42 @@ export class Commands {
 	// =========================================================================
 
 	/**
-	 * Parse and validate CLI arguments against a Zod schema.
+	 * Parse and validate CLI arguments against an Effect Schema.
 	 *
 	 * @remarks
 	 * Parses raw CLI arguments and validates them against the provided schema.
-	 * Supports async validation (e.g., file existence checks).
 	 *
 	 * @param rawArgs - Raw CLI arguments array
-	 * @param schema - Zod schema for validation
+	 * @param schema - Effect Schema for validation
 	 * @returns Validated and typed arguments
 	 * @throws {@link CommandArgumentError} if validation fails
 	 *
 	 * @example
 	 * ```typescript
-	 * const schema = z.object({
-	 *   fix: z.boolean().default(false),
-	 *   path: z.string().default("."),
+	 * const schema = Schema.Struct({
+	 *   fix: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+	 *   path: Schema.optionalWith(Schema.String, { default: () => "." }),
 	 * });
 	 *
-	 * const args = await Commands.parse(["--fix", "--path=src/"], schema);
+	 * const args = Commands.parse(["--fix", "--path=src/"], schema);
 	 * // args: { fix: true, path: "src/" }
 	 * ```
 	 *
 	 * @public
 	 */
-	static async parse<T extends z.ZodType>(rawArgs: string[], schema: T): Promise<z.infer<T>> {
+	// biome-ignore lint/suspicious/noExplicitAny: Encoded type varies by Schema.Struct shape
+	static parse<T>(rawArgs: string[], schema: Schema.Schema<T, any, never>): T {
 		const parsed = Commands.parseRaw(rawArgs);
 
-		// Use safeParseAsync for async validation (path existence, etc.)
-		const result = await schema.safeParseAsync(parsed);
-
-		if (!result.success) {
-			throw new CommandArgumentError(rawArgs, schema, result.error);
+		try {
+			return Schema.decodeUnknownSync(schema)(parsed);
+		} catch (err) {
+			if (ParseResult.isParseError(err)) {
+				// biome-ignore lint/suspicious/noExplicitAny: narrowing to any for CommandArgumentError constructor
+				throw new CommandArgumentError(rawArgs, schema as Schema.Schema<any, any, never>, err);
+			}
+			throw err;
 		}
-
-		return result.data;
 	}
 
 	/**
@@ -444,13 +455,13 @@ export class Commands {
 	 * Error class for argument validation failures.
 	 *
 	 * @remarks
-	 * Thrown when CLI arguments fail Zod validation. The error message is
+	 * Thrown when CLI arguments fail Effect Schema validation. The error message is
 	 * formatted as LLM-friendly markdown with validation errors and usage hints.
 	 *
 	 * @example
 	 * ```typescript
 	 * try {
-	 *   await Commands.parse(args, schema);
+	 *   Commands.parse(args, schema);
 	 * } catch (error) {
 	 *   if (error instanceof Commands.ArgumentError) {
 	 *     console.log(error.message); // Markdown error
@@ -568,7 +579,7 @@ export class Commands {
 	 *
 	 * @public
 	 */
-	static emptySchema = emptyArgsSchema;
+	static emptySchema = Schema.Struct({});
 
 	// =========================================================================
 	// INTERNAL UTILITIES
@@ -590,16 +601,13 @@ export class Commands {
 	 * Create the base state object.
 	 * @internal
 	 */
-	private static createBaseState(stateInstance: PluginEnv<unknown>): BaseState {
+	// biome-ignore lint/suspicious/noExplicitAny: Schema invariance requires `any` for generic PluginEnv instances
+	private static createBaseState(stateInstance: PluginEnv<any>): BaseState {
 		const prefix = stateInstance.getPrefix() ?? "";
 		return {
 			projectDir: Bun.env[`${prefix}_PROJECT_DIR`] ?? Bun.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 			pluginDir: Bun.env[`${prefix}_PLUGIN_DIR`] ?? Bun.env.CLAUDE_PLUGIN_ROOT ?? "",
 			pluginEnvFile: Bun.env[`${prefix}_PLUGIN_ENV_FILE`] ?? Bun.env.CLAUDE_ENV_FILE ?? "",
-			// Bind logger methods from state instance
-			log: stateInstance.log.bind(stateInstance),
-			info: stateInstance.info.bind(stateInstance),
-			debug: stateInstance.debug.bind(stateInstance),
 		};
 	}
 
@@ -611,7 +619,8 @@ export class Commands {
 	 * @returns State object parsed from `PREFIX_PLUGIN_STATE`
 	 * @internal
 	 */
-	private static extractPersistedState(stateInstance: PluginEnv<unknown>): Record<string, unknown> {
+	// biome-ignore lint/suspicious/noExplicitAny: Schema invariance requires `any` for generic PluginEnv instances
+	private static extractPersistedState(stateInstance: PluginEnv<any>): Record<string, unknown> {
 		const prefix = stateInstance.getPrefix();
 		if (!prefix) {
 			return {};
