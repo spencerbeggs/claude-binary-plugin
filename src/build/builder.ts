@@ -1329,6 +1329,7 @@ async function buildPluginFromConfig(
 	},
 	options: {
 		rootDir?: string;
+		configPath?: string;
 		plugin?: string;
 		marketplace?: string;
 		outputName?: string;
@@ -1428,8 +1429,8 @@ async function buildPluginFromConfig(
 
 	// We need a plugin path for the import - use a relative path from entrypoint
 	// This assumes the plugin definition is in a file that exports the plugin
-	// For now, we'll create an entrypoint that imports from "./plugin.ts" by default
-	const pluginImportPath = "./plugin.ts";
+	const configFile = options.configPath ?? "./plugin.config.ts";
+	const pluginImportPath = configFile.replace(/\.ts$/, ".js");
 
 	const entrypointSource = generatePipelinePluginEntrypoint({
 		pluginPath: pluginImportPath,

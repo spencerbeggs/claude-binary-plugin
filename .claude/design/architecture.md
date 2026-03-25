@@ -18,7 +18,6 @@ src/
   build/        Plugin compilation (decomposed into focused modules)
   otel/         OpenTelemetry telemetry (Effect-based services and layers)
   types/        Pure TypeScript types (pipeline, plugin-state, tool-inputs)
-  cli/          @effect/cli build command
   commands/     Legacy command runtime (being phased out)
   testing/      Legacy PluginTester (being phased out)
   utils/        Legacy utilities (DebugLogger removed; use makePluginLoggerLive)

@@ -1245,6 +1245,13 @@ export interface PluginBuildOptions {
 	rootDir?: string;
 
 	/**
+	 * Path to the plugin config file, relative to rootDir.
+	 * Used as the import path in the generated entrypoint.
+	 * @defaultValue "./plugin.config.ts"
+	 */
+	configPath?: string;
+
+	/**
 	 * Path to plugin.json manifest file or directory containing .claude-plugin/plugin.json.
 	 * Used to discover plugin name and version.
 	 * @defaultValue `${rootDir}/.claude-plugin/plugin.json`
