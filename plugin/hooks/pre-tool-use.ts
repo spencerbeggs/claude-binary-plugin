@@ -5,8 +5,9 @@ const handler: PreToolUsePipeline<Record<string, never>> = ({ input }) => {
 	const toolName = input.tool_name;
 
 	return {
-		status: "executed" as const,
-		action: "allow" as const,
+		foo: 1,
+		status: "executed",
+		action: "allow",
 		summary: `test-plugin observed ${toolName}`,
 		additionalContext: `[test-plugin ${timestamp}] Tool: ${toolName}`,
 	};
