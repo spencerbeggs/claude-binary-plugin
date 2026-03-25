@@ -1,6 +1,13 @@
 {
-	"name": "claude-binary-plugin-test",
-	"version": "0.0.0",
+	"name": "test-plugin",
+	"version": "0.0.1",
 	"private": true,
-	"type": "module"
+	"type": "module",
+	"scripts": {
+		"build": "bun run plugin.build.ts",
+		"typecheck": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"claude-binary-plugin": "workspace:*"
+	}
 }
