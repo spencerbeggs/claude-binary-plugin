@@ -11,6 +11,11 @@ pipeline system for defining hooks and commands with Effect Schema-validated
 inputs/outputs, Effect services with layers for testability, OpenTelemetry
 observability, and type-safe state management.
 
+This is a Bun workspace monorepo with two packages:
+
+- `package/` — the `claude-binary-plugin` SDK (source, tests, build)
+- `plugin/` — a test plugin that dogfoods the SDK
+
 ## Release Status
 
 **Target: 1.0.0** - This module is working toward its initial public release.
@@ -44,21 +49,29 @@ Do NOT load unless the task specifically requires the details within.
 ## Development Commands
 
 ```bash
-# Install dependencies
+# Install all workspace dependencies
 bun install
 
-# Run tests
-bun run test:ai       # LLM-formatted output
-bun run test          # verbose
+# Run SDK tests
+cd package && bun test
 
-# Type check
+# Run all tests via turbo
+bun run test
+
+# Type check all workspaces
 bun run typecheck
 
 # Lint and format
 bun run lint:fix
 
-# Build (compiles the package)
-bun run build
+# Build SDK (compiles the package)
+cd package && bun run build
+
+# Build test plugin
+cd plugin && bun run build
+
+# Test plugin live
+claude --plugin-dir ./plugin
 ```
 
 ## Code Conventions
