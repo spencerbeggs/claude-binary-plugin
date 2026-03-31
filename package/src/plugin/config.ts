@@ -1086,125 +1086,8 @@ export interface PluginConfigOptions<
 }
 
 // =============================================================================
-// PLUGIN CLASS (removed - use Plugin() factory instead)
+// PLUGIN BUILD OPTIONS
 // =============================================================================
-
-// =============================================================================
-// PLUGIN() FACTORY
-// =============================================================================
-
-/**
- * Configuration object passed to `Plugin()` factory.
- *
- * @typeParam TOptionsSchema - Effect Schema for plugin options validation
- * @typeParam TStateSchema - Optional Effect Schema.Class for typed state
- *
- * @public
- */
-export interface PluginDefinition<
-	TOptionsSchema extends Schema.Schema.Any,
-	TStateSchema extends Schema.Schema.Any | undefined = undefined,
-> {
-	/** Environment variable prefix. Set automatically by Plugin() factory. */
-	prefix?: string;
-	options: TOptionsSchema;
-	state?: TStateSchema;
-	setup?: TStateSchema extends Schema.Schema.Any
-		? (
-				ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>,
-			) => Schema.Schema.Type<TStateSchema> | Promise<Schema.Schema.Type<TStateSchema>>
-		: (
-				ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>,
-			) => Record<string, unknown> | Promise<Record<string, unknown>>;
-	hooks: HooksMap<Schema.Schema.Type<TOptionsSchema>>;
-	commands?: Record<string, CommandDefinitionBase>;
-	bytecode?: boolean;
-	persistLocal?: boolean;
-	compile?: boolean;
-	minify?: boolean;
-	sourcemap?: boolean;
-	hooksOutputPath?: string;
-}
-
-/**
- * Describes instances created by `Plugin()`.
- *
- * @typeParam TOptionsSchema - Effect Schema for plugin options validation
- * @typeParam TStateSchema - Optional Effect Schema.Class for typed state
- *
- * @public
- */
-export interface ClaudePluginInstance<
-	TOptionsSchema extends Schema.Schema.Any,
-	TStateSchema extends Schema.Schema.Any | undefined = undefined,
-> {
-	readonly config: PluginDefinition<TOptionsSchema, TStateSchema>;
-	readonly prefix: string;
-	build(options?: PluginBuildOptions): Promise<PluginBuildResult>;
-	test(): PluginTester<
-		Schema.Schema.Type<TOptionsSchema>,
-		TStateSchema extends Schema.Schema.Any ? Schema.Schema.Type<TStateSchema> : Record<string, unknown>,
-		HooksMap<Schema.Schema.Type<TOptionsSchema>>,
-		Record<string, CommandDefinitionBase>
-	>;
-}
-
-/**
- * Factory that returns an extendable base class constructor for defining Claude Code plugins.
- *
- * @remarks
- * Use `Plugin()` to create a base class, then extend it to define your plugin.
- * This pattern enables class-based extensibility while keeping configuration declarative.
- *
- * @param prefix - Environment variable prefix for this plugin
- * @param definition - Plugin configuration (options, hooks, commands, etc.)
- * @returns A class constructor that can be extended
- *
- * @example
- * ```ts
- * import { Plugin } from "claude-binary-plugin";
- * import { Schema } from "effect";
- *
- * class MyPlugin extends Plugin("MY_PLUGIN", {
- *   options: Schema.Struct({ DEBUG: Schema.Boolean }),
- *   hooks: {
- *     PreToolUse: [{ name: "guard", pipeline: "./hooks/guard.hook.ts" }],
- *   },
- * }) {}
- *
- * export default new MyPlugin();
- * ```
- *
- * @public
- */
-export function Plugin<
-	TOptionsSchema extends Schema.Schema.Any,
-	TStateSchema extends Schema.Schema.Any | undefined = undefined,
->(
-	prefix: string,
-	definition: PluginDefinition<TOptionsSchema, TStateSchema>,
-): new () => ClaudePluginInstance<TOptionsSchema, TStateSchema> {
-	const config = { ...definition, prefix };
-
-	class ClaudePluginBase {
-		readonly config = config;
-		readonly prefix = prefix;
-
-		async build(options: PluginBuildOptions = {}): Promise<PluginBuildResult> {
-			const { PluginBuilder } = await import("../build/builder.js");
-			// biome-ignore lint/suspicious/noExplicitAny: PluginBuilder.fromConfig uses structural typing
-			return PluginBuilder.fromConfig(this as any, options);
-		}
-
-		test() {
-			// biome-ignore lint/suspicious/noExplicitAny: Runtime creation doesn't need strict types
-			const { PluginTester: Tester } = require("../testing/builder.js") as any;
-			return new Tester(config);
-		}
-	}
-
-	return ClaudePluginBase as unknown as new () => ClaudePluginInstance<TOptionsSchema, TStateSchema>;
-}
 
 /**
  * Options for building a plugin via `plugin.build()`.
@@ -1303,78 +1186,48 @@ export interface PluginBuildOptions {
 // =============================================================================
 
 /**
- * Helper type to resolve a class constructor to its instance type.
- * @internal
- */
-// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-type ResolvePlugin<T> = T extends new () => infer I ? I : T;
-
-/**
- * Extract the options Schema from either:
- * - A PluginConfig subclass with static `options` property (new API)
- * - A ClaudePluginInstance (old Plugin() factory API)
+ * Extract the options Schema from a PluginConfig subclass with static `options` property.
  * @public
  */
-// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractOptionsSchema<T> =
-	// New API: static options on PluginConfig subclass
-	T extends { options: infer S }
-		? S extends Schema.Schema.Any
-			? S
-			: never
-		: // Old API: ClaudePluginInstance<TSchema, ...>
-			ResolvePlugin<T> extends ClaudePluginInstance<infer TSchema, any>
-			? TSchema
-			: never;
+export type ExtractOptionsSchema<T> = T extends { options: infer S }
+	? S extends Schema.Schema.Any
+		? S
+		: never
+	: never;
 
 /**
  * Extract the state Schema from either:
  * - A PluginConfig subclass with static `state` property (new API)
- * - Falls back to never (old API uses ClaudePluginInstance path in InferPluginState)
+ * - Falls back to never if no state schema is defined
  * @public
  */
 export type ExtractStateSchema<T> = T extends { state: infer S } ? (S extends Schema.Schema.Any ? S : never) : never;
 
 /**
- * Extract the setup function type from either:
- * - A PluginConfig subclass with static `setup` property (new API)
- * - A ClaudePluginInstance (old Plugin() factory API)
+ * Extract the setup function type from a PluginConfig subclass with static `setup` property.
  * @public
  */
-// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractSetup<T> = T extends { setup: infer F }
-	? F
-	: ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
-		? TState extends Schema.Schema.Any
-			? (ctx: SetupContext<any>) => Schema.Schema.Type<TState>
-			: undefined
-		: undefined;
+export type ExtractSetup<T> = T extends { setup: infer F } ? F : undefined;
 
 /**
- * Helper type to extract commands map from a ClaudePlugin instance.
+ * Helper type to extract commands map from a ClaudePlugin or config class.
  * @public
  */
-export type ExtractCommands<T> =
-	ResolvePlugin<T> extends { config: { commands?: infer C } }
-		? C extends Record<string, CommandDefinitionBase>
-			? C
-			: Record<string, CommandDefinitionBase>
-		: Record<string, CommandDefinitionBase>;
+export type ExtractCommands<T> = T extends { commands: infer C }
+	? C extends Record<string, CommandDefinitionBase>
+		? C
+		: Record<string, CommandDefinitionBase>
+	: Record<string, CommandDefinitionBase>;
 
 /**
  * Extract the inferred Options type from a plugin configuration.
  *
  * @remarks
- * Extracts the TypeScript type from the plugin's Effect options schema.
- * Works with both the new PluginConfig.extend() API (static `options`)
- * and the old Plugin() factory API (ClaudePluginInstance).
+ * Extracts the TypeScript type from the PluginConfig subclass's static `options` schema.
  *
  * @example
  * ```ts
- * // New API
  * type Options = InferPluginOptions<typeof MyConfig>;
- * // Old API
- * type Options = InferPluginOptions<MyPlugin>;
  * ```
  * @public
  */
@@ -1387,30 +1240,17 @@ export type InferPluginOptions<T> =
  * Extract the inferred State type from a plugin configuration.
  *
  * @remarks
- * Works with both the new PluginConfig.extend() API (static `state`)
- * and the old Plugin() factory API (ClaudePluginInstance).
+ * Reads from the PluginConfig subclass's static `state` property.
  * If no state schema is defined, returns `Record<string, unknown>`.
  *
  * @example
  * ```ts
- * // New API
  * type State = InferPluginState<typeof MyConfig>;
- * // Old API
- * type State = InferPluginState<MyPlugin>;
  * ```
  * @public
  */
-// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type InferPluginState<T> =
-	// New API: static state on PluginConfig subclass
-	ExtractStateSchema<T> extends Schema.Schema.Any
-		? Schema.Schema.Type<ExtractStateSchema<T>>
-		: // Old API: from ClaudePluginInstance
-			ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
-			? TState extends Schema.Schema.Any
-				? Schema.Schema.Type<TState>
-				: Record<string, unknown>
-			: Record<string, unknown>;
+	ExtractStateSchema<T> extends Schema.Schema.Any ? Schema.Schema.Type<ExtractStateSchema<T>> : Record<string, unknown>;
 
 /**
  * Infer all pipeline and handler types from a plugin configuration.
@@ -1427,17 +1267,20 @@ export type InferPluginState<T> =
  *
  * @example
  * ```ts
- * import { Plugin } from "claude-binary-plugin";
+ * import { PluginConfig } from "claude-binary-plugin";
  * import type { InferHandlers } from "claude-binary-plugin";
  *
- * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
- * export type Pipeline = InferHandlers<MyPlugin>;
- * export default new MyPlugin();
+ * class MyConfig extends PluginConfig.extend<MyConfig>("MyConfig")({
+ *   prefix: Schema.Literal("MY_PLUGIN"),
+ * }) {
+ *   static readonly options = Schema.Struct({ DEBUG: Schema.Boolean });
+ * }
+ * export type Handlers = InferHandlers<typeof MyConfig>;
  *
  * // In hooks/my-hook.hook.ts
- * import type { Pipeline } from "../plugin.config.js";
+ * import type { Handlers } from "../plugin.config.js";
  *
- * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
+ * const handler: Handlers["PreToolUse"] = ({ input, options, state }) => {
  *   // input, options, and state are fully typed!
  *   return { status: "executed", action: "allow", summary: "allowed" };
  * };

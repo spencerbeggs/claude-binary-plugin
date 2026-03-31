@@ -13,25 +13,27 @@
  * - SQLite-based session state persistence
  *
  * **Core Exports:**
- * - {@link Plugin} - Factory for creating plugin base classes
+ * - {@link PluginConfig} - Schema.Class base for plugin configuration
+ * - {@link ClaudePlugin} - Runtime orchestrator binding config to hooks
  * - {@link PluginEnv} - Base class for environment management
  * - {@link PluginBuilder} - Compile plugins to executables
  * - Effect Schema-validated hook event parsing
  *
  * @example
  * ```typescript
- * import { Plugin } from "claude-binary-plugin";
+ * import { PluginConfig, ClaudePlugin } from "claude-binary-plugin";
  * import { Schema } from "effect";
  *
- * class MyPlugin extends Plugin("MY_PLUGIN", {
- *   options: Schema.Struct({ TIMEOUT_MS: Schema.Number.pipe(Schema.withConstructorDefault(() => 30000)) }),
- *   setup: async ({ cwd }) => ({ detected: true }),
- *   hooks: {
- *     PreToolUse: [{ name: "security", pipeline: "./hooks/security.ts" }],
- *   },
- * }) {}
+ * class MyConfig extends PluginConfig.extend<MyConfig>("MyConfig")({
+ *   prefix: Schema.Literal("MY_PLUGIN"),
+ * }) {
+ *   static readonly options = Schema.Struct({ TIMEOUT_MS: Schema.Number });
+ *   static readonly setup = async ({ cwd }) => ({ detected: true });
+ * }
  *
- * export default new MyPlugin();
+ * export default new ClaudePlugin(MyConfig, {
+ *   PreToolUse: [{ name: "security", handler: "./hooks/security.ts" }],
+ * });
  * ```
  *
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
@@ -371,7 +373,6 @@ export type { HookEventType, IODependencies, PipelineConfig, RunRawHandlerOption
 export { PipelineRuntime } from "./layers/PipelineRuntime.js";
 export type {
 	BaseState,
-	ClaudePluginInstance,
 	CmdContext,
 	CommandDefinition,
 	CommandDefinitionBase,
@@ -405,8 +406,6 @@ export type {
 	PermissionRequestRawHandler,
 	PipelineHandler,
 	PluginBuildOptions,
-	PluginConfigOptions,
-	PluginDefinition,
 	PluginState,
 	PostToolUseHandler,
 	PostToolUseHookDefinition,
@@ -439,7 +438,7 @@ export type {
 	UserPromptSubmitHookDefinition,
 	UserPromptSubmitRawHandler,
 } from "./plugin/config.js";
-export { ClaudePlugin, Plugin, PluginConfig } from "./plugin/config.js";
+export { ClaudePlugin, PluginConfig } from "./plugin/config.js";
 // Pipeline output schemas
 export type {
 	ExecutionQuality,
