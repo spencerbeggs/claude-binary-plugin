@@ -754,3 +754,93 @@ describe("ClaudeBinaryPlugin.config", () => {
 		expect(plugin.config.hooks).toBe(hooks);
 	});
 });
+
+// =============================================================================
+// Plugin() factory
+// =============================================================================
+
+import { Plugin } from "../../src/plugin/config.js";
+
+describe("Plugin() factory", () => {
+	test("returns a class constructor", () => {
+		const Base = Plugin("TEST", {
+			options: Schema.Struct({ MODE: Schema.String }),
+			hooks: {},
+		});
+		expect(typeof Base).toBe("function");
+	});
+
+	test("returned class can be extended", () => {
+		class MyPlugin extends Plugin("TEST", {
+			options: Schema.Struct({}),
+			hooks: {},
+		}) {}
+		const instance = new MyPlugin();
+		expect(instance).toBeInstanceOf(MyPlugin);
+	});
+
+	test("instance has config with all fields", () => {
+		class MyPlugin extends Plugin("TEST", {
+			options: Schema.Struct({ FOO: Schema.String }),
+			hooks: {},
+		}) {}
+		const instance = new MyPlugin();
+		expect(instance.config).toBeDefined();
+		expect(instance.config.options).toBeDefined();
+		expect(instance.prefix).toBe("TEST");
+	});
+
+	test("state is preserved on config (not tree-shaken)", () => {
+		class TestState extends Schema.Class<TestState>("TestState")({
+			git: Schema.Boolean,
+		}) {}
+
+		class MyPlugin extends Plugin("TEST", {
+			options: Schema.Struct({}),
+			state: TestState,
+			hooks: {},
+		}) {}
+		expect(new MyPlugin().config.state).toBe(TestState);
+	});
+
+	test("setup is preserved on config", () => {
+		const setupFn = () => ({ detected: true });
+		class MyPlugin extends Plugin("TEST", {
+			options: Schema.Struct({}),
+			setup: setupFn,
+			hooks: {},
+		}) {}
+		expect(new MyPlugin().config.setup).toBe(setupFn);
+	});
+
+	test("hooks are preserved on config", () => {
+		const handler = () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" });
+		class MyPlugin extends Plugin("TEST", {
+			options: Schema.Struct({}),
+			hooks: {
+				PreToolUse: [{ name: "guard", pipeline: handler }],
+			},
+		}) {}
+		const hooks = new MyPlugin().config.hooks;
+		expect(hooks.PreToolUse).toHaveLength(1);
+	});
+
+	test("instance has build method", () => {
+		class MyPlugin extends Plugin("TEST", { options: Schema.Struct({}), hooks: {} }) {}
+		expect(typeof new MyPlugin().build).toBe("function");
+	});
+
+	test("instance has test method", () => {
+		class MyPlugin extends Plugin("TEST", { options: Schema.Struct({}), hooks: {} }) {}
+		expect(typeof new MyPlugin().test).toBe("function");
+	});
+
+	test("user can add methods to extended class", () => {
+		class MyPlugin extends Plugin("TEST", { options: Schema.Struct({}), hooks: {} }) {
+			getVersion() {
+				return "1.0.0";
+			}
+		}
+		expect(new MyPlugin().getVersion()).toBe("1.0.0");
+	});
+});

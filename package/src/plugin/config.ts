@@ -1253,6 +1253,121 @@ export class ClaudeBinaryPlugin<
 	}
 }
 
+// =============================================================================
+// PLUGIN() FACTORY
+// =============================================================================
+
+/**
+ * Configuration object passed to `Plugin()` factory.
+ *
+ * @typeParam TOptionsSchema - Effect Schema for plugin options validation
+ * @typeParam TStateSchema - Optional Effect Schema.Class for typed state
+ *
+ * @public
+ */
+export interface PluginDefinition<
+	TOptionsSchema extends Schema.Schema.Any,
+	TStateSchema extends Schema.Schema.Any | undefined = undefined,
+> {
+	options: TOptionsSchema;
+	state?: TStateSchema;
+	setup?: TStateSchema extends Schema.Schema.Any
+		? (
+				ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>,
+			) => Schema.Schema.Type<TStateSchema> | Promise<Schema.Schema.Type<TStateSchema>>
+		: (
+				ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>,
+			) => Record<string, unknown> | Promise<Record<string, unknown>>;
+	hooks: HooksMap<Schema.Schema.Type<TOptionsSchema>>;
+	commands?: Record<string, CommandDefinitionBase>;
+	bytecode?: boolean;
+	persistLocal?: boolean;
+	compile?: boolean;
+	minify?: boolean;
+	sourcemap?: boolean;
+	hooksOutputPath?: string;
+}
+
+/**
+ * Describes instances created by `Plugin()`.
+ *
+ * @typeParam TOptionsSchema - Effect Schema for plugin options validation
+ * @typeParam TStateSchema - Optional Effect Schema.Class for typed state
+ *
+ * @public
+ */
+export interface ClaudePlugin<
+	TOptionsSchema extends Schema.Schema.Any,
+	TStateSchema extends Schema.Schema.Any | undefined = undefined,
+> {
+	readonly config: PluginDefinition<TOptionsSchema, TStateSchema>;
+	readonly prefix: string;
+	build(options?: PluginBuildOptions): Promise<PluginBuildResult>;
+	test(): PluginTester<
+		Schema.Schema.Type<TOptionsSchema>,
+		TStateSchema extends Schema.Schema.Any ? Schema.Schema.Type<TStateSchema> : Record<string, unknown>,
+		HooksMap<Schema.Schema.Type<TOptionsSchema>>,
+		Record<string, CommandDefinitionBase>
+	>;
+}
+
+/**
+ * Factory that returns an extendable base class constructor for defining Claude Code plugins.
+ *
+ * @remarks
+ * Use `Plugin()` to create a base class, then extend it to define your plugin.
+ * This pattern enables class-based extensibility while keeping configuration declarative.
+ *
+ * @param prefix - Environment variable prefix for this plugin
+ * @param definition - Plugin configuration (options, hooks, commands, etc.)
+ * @returns A class constructor that can be extended
+ *
+ * @example
+ * ```ts
+ * import { Plugin } from "claude-binary-plugin";
+ * import { Schema } from "effect";
+ *
+ * class MyPlugin extends Plugin("MY_PLUGIN", {
+ *   options: Schema.Struct({ DEBUG: Schema.Boolean }),
+ *   hooks: {
+ *     PreToolUse: [{ name: "guard", pipeline: "./hooks/guard.hook.ts" }],
+ *   },
+ * }) {}
+ *
+ * export default new MyPlugin();
+ * ```
+ *
+ * @public
+ */
+export function Plugin<
+	TOptionsSchema extends Schema.Schema.Any,
+	TStateSchema extends Schema.Schema.Any | undefined = undefined,
+>(
+	prefix: string,
+	definition: PluginDefinition<TOptionsSchema, TStateSchema>,
+): new () => ClaudePlugin<TOptionsSchema, TStateSchema> {
+	const config = { ...definition };
+
+	class ClaudePluginBase {
+		readonly config = config;
+		readonly prefix = prefix;
+
+		async build(options: PluginBuildOptions = {}): Promise<PluginBuildResult> {
+			const { PluginBuilder } = await import("../build/builder.js");
+			// biome-ignore lint/suspicious/noExplicitAny: PluginBuilder.fromConfig uses structural typing
+			return PluginBuilder.fromConfig(this as any, options);
+		}
+
+		test() {
+			// biome-ignore lint/suspicious/noExplicitAny: Runtime creation doesn't need strict types
+			const { PluginTester: Tester } = require("../testing/builder.js") as any;
+			return new Tester(config);
+		}
+	}
+
+	return ClaudePluginBase as unknown as new () => ClaudePlugin<TOptionsSchema, TStateSchema>;
+}
+
 /**
  * Options for building a plugin via `ClaudeBinaryPlugin.build()`.
  *

@@ -372,6 +372,7 @@ export type { HookEventType, IODependencies, PipelineConfig, RunRawHandlerOption
 export { PipelineRuntime } from "./layers/PipelineRuntime.js";
 export type {
 	BaseState,
+	ClaudePlugin,
 	CmdContext,
 	CommandDefinition,
 	CommandDefinitionBase,
@@ -405,6 +406,7 @@ export type {
 	PipelineHandler,
 	PluginBuildOptions,
 	PluginConfig,
+	PluginDefinition,
 	PluginState,
 	PostToolUseHandler,
 	PostToolUseHookDefinition,
@@ -437,7 +439,7 @@ export type {
 	UserPromptSubmitHookDefinition,
 	UserPromptSubmitRawHandler,
 } from "./plugin/config.js";
-export { ClaudeBinaryPlugin } from "./plugin/config.js";
+export { ClaudeBinaryPlugin, Plugin } from "./plugin/config.js";
 // Pipeline output schemas
 export type {
 	ExecutionQuality,
