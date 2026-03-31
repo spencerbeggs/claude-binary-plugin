@@ -1443,23 +1443,22 @@ describe("PluginBuilder.fromConfig", () => {
 
 		// Create a minimal plugin config object
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "context",
-							pipeline: "./hooks/context.hook.ts",
-						},
-					],
-					PreToolUse: [
-						{
-							name: "security",
-							tools: ["Bash"],
-							pipeline: "./hooks/security.hook.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "context",
+						pipeline: "./hooks/context.hook.ts",
+					},
+				],
+				PreToolUse: [
+					{
+						name: "security",
+						tools: ["Bash"],
+						pipeline: "./hooks/security.hook.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1480,20 +1479,19 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: async () => ({
-								status: "executed" as const,
-								action: "context" as const,
-								summary: "ok",
-							}),
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: async () => ({
+							status: "executed" as const,
+							action: "context" as const,
+							summary: "ok",
+						}),
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1525,16 +1523,15 @@ describe("PluginBuilder.fromConfig", () => {
 		);
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1560,23 +1557,22 @@ describe("PluginBuilder.fromConfig", () => {
 		await Bun.write(join(testDir, "plugin.ts"), "export default {};");
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "context",
-							pipeline: "./hooks/context.ts",
-						},
-					],
-					PreToolUse: [
-						{
-							name: "filter",
-							tools: ["Bash", "Edit"],
-							pipeline: "./hooks/filter.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "context",
+						pipeline: "./hooks/context.ts",
+					},
+				],
+				PreToolUse: [
+					{
+						name: "filter",
+						tools: ["Bash", "Edit"],
+						pipeline: "./hooks/filter.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1613,16 +1609,15 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1639,16 +1634,15 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1671,16 +1665,15 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		// Test with clean: false
@@ -1704,14 +1697,6 @@ describe("PluginBuilder.fromConfig", () => {
 
 		const pluginConfig = {
 			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 				commands: {
 					lint: {
 						description: "Run linter",
@@ -1724,6 +1709,14 @@ describe("PluginBuilder.fromConfig", () => {
 					},
 				},
 			},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1741,23 +1734,22 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-					PreToolUse: [
-						// Passthrough hook entry (has hooks array, no name)
-						{
-							matcher: "WebFetch",
-							hooks: [{ type: "command" as const, command: "bash ./scripts/log.sh" }],
-						},
-					],
-				} as Record<string, unknown[]>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+				PreToolUse: [
+					// Passthrough hook entry (has hooks array, no name)
+					{
+						matcher: "WebFetch",
+						hooks: [{ type: "command" as const, command: "bash ./scripts/log.sh" }],
+					},
+				],
+			} as Record<string, unknown[]>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1783,16 +1775,16 @@ describe("PluginBuilder.fromConfig", () => {
 
 		const pluginConfig = {
 			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 				hooksOutputPath: "custom/path/hooks.json",
 			},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1823,17 +1815,16 @@ describe("PluginBuilder.fromConfig", () => {
 		};
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					PreToolUse: [
-						{
-							name: "filter",
-							tools: ["Bash"],
-							pipeline: "./hooks/filter.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				PreToolUse: [
+					{
+						name: "filter",
+						tools: ["Bash"],
+						pipeline: "./hooks/filter.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1867,16 +1858,15 @@ describe("PluginBuilder.fromConfig", () => {
 		};
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1900,19 +1890,6 @@ describe("PluginBuilder.fromConfig", () => {
 
 		const pluginConfig = {
 			config: {
-				hooks: {
-					PreToolUse: [
-						{
-							name: "security",
-							tools: ["Bash"],
-							pipeline: "./hooks/security.hook.ts",
-						},
-						{
-							name: "absolute",
-							pipeline: "/absolute/path/hook.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
 				commands: {
 					lint: {
 						description: "Lint",
@@ -1924,6 +1901,19 @@ describe("PluginBuilder.fromConfig", () => {
 					},
 				},
 			},
+			hooks: {
+				PreToolUse: [
+					{
+						name: "security",
+						tools: ["Bash"],
+						pipeline: "./hooks/security.hook.ts",
+					},
+					{
+						name: "absolute",
+						pipeline: "/absolute/path/hook.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -1942,16 +1932,15 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		// Default compile: true
@@ -1975,16 +1964,15 @@ describe("PluginBuilder.fromConfig", () => {
 		);
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/nonexistent.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/nonexistent.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
@@ -2005,16 +1993,15 @@ describe("PluginBuilder.fromConfig", () => {
 		await mkdir(testDir, { recursive: true });
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		await PluginBuilder.fromConfig(pluginConfig, {
@@ -2035,16 +2022,15 @@ describe("PluginBuilder.fromConfig", () => {
 		await Bun.write(join(testDir, ".claude-plugin/plugin.json"), JSON.stringify({ name: "no-version-plugin" }));
 
 		const pluginConfig = {
-			config: {
-				hooks: {
-					SessionStart: [
-						{
-							name: "init",
-							pipeline: "./hooks/init.ts",
-						},
-					],
-				} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
-			},
+			config: {},
+			hooks: {
+				SessionStart: [
+					{
+						name: "init",
+						pipeline: "./hooks/init.ts",
+					},
+				],
+			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
 		};
 
 		const result = await PluginBuilder.fromConfig(pluginConfig, {
