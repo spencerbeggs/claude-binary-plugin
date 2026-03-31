@@ -7,7 +7,7 @@ with code in this repository.
 
 `claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
 that compile to single-file Bun executables. It provides a declarative
-pipeline system for defining hooks and commands with Effect Schema-validated
+handler system for defining hooks and commands with Effect Schema-validated
 inputs/outputs, Effect services with layers for testability, OpenTelemetry
 observability, and type-safe state management.
 
@@ -35,7 +35,7 @@ Load these docs on-demand when working on the relevant subsystem.
 Do NOT load unless the task specifically requires the details within.
 
 - `.claude/design/architecture.md` - System architecture, directory structure,
-  service/layer pattern, pipeline execution flow, build system
+  service/layer pattern, handler execution flow, build system
 - `.claude/design/services.md` - All 10 Effect services, their interfaces,
   Live/Test layers, PipelineLive, LoggerLive
 - `.claude/design/schema.md` - Effect Schema usage, Schema.Class pattern,
@@ -107,32 +107,98 @@ claude --plugin-dir ./plugin
 - Legacy `plugin.test()` fluent API still works but is being phased out
 - Always call `ctx.dispose()` in `afterEach` when using legacy PluginTester
 
-## Key Exports
+## Plugin Definition API
 
-All exports are from the main entry point:
+Define plugins using the `Plugin()` factory with `Schema.Class`-based options and state:
+
+```typescript
+import { Plugin } from "claude-binary-plugin";
+import { Schema } from "effect";
+
+class MyPlugin extends Plugin("MY_PLUGIN", {
+  options: Schema.Struct({ TIMEOUT_MS: Schema.Number }),
+  state: MyState,        // Schema.Class with methods
+  setup: async ({ cwd }) => new MyState({ ... }),
+  hooks: {
+    PreToolUse: [{ name: "guard", handler: "./hooks/guard.ts" }],
+  },
+}) {}
+export default new MyPlugin();
+```
+
+State can be a `Schema.Class` with methods:
+
+```typescript
+class MyState extends Schema.Class<MyState>("MyState")({
+  git: Schema.Boolean,
+}) {
+  canUseGit() { return this.git; }
+}
+```
+
+### Outcomes System
+
+Handlers return `Outcome` class instances instead of raw objects:
+
+- **PreToolUse**: `Allow`, `Deny`, `Ask`, `Modify`, `Skip`
+- **PostToolUse**: `Block`, `Continue`, `AddContext`, `NoAction`, `Skip`
+- **SessionStart**: `AddContext`, `NoAction`
+- **Stop**: `Block`, `Continue`, `Skip`
+- **UserPromptSubmit**: `Block`, `Continue`, `AddContext`, `NoAction`, `Skip`
+- **PermissionRequest**: `Allow`, `Deny`
+- **Passthrough hooks**: `NoAction`
+
+Extend outcomes with domain fields:
+
+```typescript
+class LintDeny extends Deny.extend<LintDeny>("LintDeny")({ ... }) {}
+```
+
+Use `ContextBuilder`, `MarkdownContext`, `XmlContext` for composing `additionalContext`.
+
+### Handler Types
+
+All `*Pipeline` types have been renamed to `*Handler`:
+
+- `SessionStartHandler`, `PreToolUseHandler`, `PostToolUseHandler`, etc.
+- `InferHandlers` (was `InferPluginPipeline`) — infer handler types from plugin config
+
+## Hook Types (25 total)
+
+PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, Notification,
+UserPromptSubmit, Stop, StopFailure, SubagentStart, SubagentStop,
+TaskCreated, TaskCompleted, TeammateIdle, InstructionsLoaded, ConfigChange,
+CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, PreCompact,
+PostCompact, Elicitation, ElicitationResult, SessionStart, SessionEnd
+
+## Key Exports
 
 ```typescript
 import {
   // Plugin definition
-  ClaudeBinaryPlugin,
+  Plugin,
+
+  // Outcomes
+  Allow, Deny, Ask, Modify, Block, Continue,
+  AddContext, NoAction, Skip, Outcome,
+  ContextBuilder, MarkdownContext, XmlContext,
 
   // Schema.Class event types (type + schema)
-  PreToolUseEvent,
-  PostToolUseEvent,
-  SessionStartEvent,
+  PreToolUseEvent, PostToolUseEvent, SessionStartEvent,
+  // ... all 25 hook event types
+
+  // Schema.Class input types
+  PreToolUseInput, PostToolUseInput, SessionStartInput,
+  // ... all 25 hook input types
 
   // Services
-  StdinReader,
-  SchemaValidator,
-  EnvLoader,
+  StdinReader, EnvLoader, SchemaValidatorService,
 
   // Layers
   PipelineLive,
-  LoggerLive,
 
   // Errors
-  PipelineError,
-  SchemaValidationError,
+  PipelineError, SchemaValidationError,
 
   // State management
   PluginEnv,
@@ -155,16 +221,19 @@ Load these files as needed for deeper context:
 
 | File | Purpose |
 | ---- | ------- |
-| `src/plugin/config.ts` | `ClaudeBinaryPlugin.create()` factory |
+| `src/plugin/config.ts` | `Plugin()` factory, handler types |
 | `src/layers/PipelineRuntime.ts` | `PipelineRuntime.run()` |
 | `src/layers/PipelineLive.ts` | Composed service layer |
 | `src/schemas/hook-events.ts` | Schema.Class event definitions |
+| `src/schemas/hook-inputs.ts` | Schema.Class input definitions |
 | `src/schemas/pipeline-outputs.ts` | Output schemas per hook type |
+| `src/schemas/hook-responses.ts` | Response schemas (outcome to JSON) |
+| `src/outcomes/` | Outcome classes (Allow, Deny, etc.) |
 | `src/services/PluginEnv.ts` | `PluginEnv` base class |
 | `src/layers/SessionRegistry.ts` | SQLite session lookup |
 | `src/build/builder.ts` | `PluginBuilder` class |
 | `src/types/tool-inputs.ts` | Typed tool inputs |
-| `src/types/hook-events.ts` | Hook type enums and interfaces |
+| `src/schemas/hook-literals.ts` | Hook type enums and literals |
 
 ### OTEL Classes
 
@@ -179,6 +248,12 @@ All in `src/otel/`:
 | `SidecarLauncher` | Sidecar spawning |
 | `SidecarClient` | IPC client |
 | `SidecarServer` | Unix socket server |
+
+## Known Issues
+
+- **Bun tree-shaking strips Schema.Class methods**: State methods defined on
+  `Schema.Class` subclasses work in dev (`bun test`, `bun run`) but are stripped
+  from compiled `.plugin` binaries. Under investigation.
 
 ## Environment Variables
 

@@ -225,3 +225,25 @@ export const PipelineLive = Layer.mergeAll(
 ```
 
 Provides all services needed for `PipelineRuntime.run()` in production.
+
+## Outcomes Subsystem
+
+The outcomes system (`src/outcomes/`) is not an Effect service but a core
+subsystem that interacts with services:
+
+- **Telemetry integration**: Each outcome's `toTelemetry()` provides structured
+  data for the `Telemetry` service's `emitHookExecution()` call. Extended
+  outcomes automatically expose domain-specific fields as OTEL metrics.
+
+- **ContextBuilder OTEL metrics**: `MarkdownContext` and `XmlContext` track
+  section/rule/tag counts via their `.metrics` getter, which are included
+  in telemetry emission when used with `AddContext`.
+
+- **PipelineRuntime interaction**: `PipelineRuntime` checks
+  `Outcome.isOutcome(output)` before the legacy `isPipelineOutput()` path.
+  It calls `isValidOutcomeForHook()` for runtime validation, then
+  `outcome.toResponse()` for serialization and `outcome.toTelemetry()` for
+  the telemetry service.
+
+See `architecture.md` for full outcome class details and the hook-to-outcome
+mapping table.

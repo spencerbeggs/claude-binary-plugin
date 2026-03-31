@@ -191,7 +191,10 @@ const pluginConfig = pluginDefinition.config;
 const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
 
 // State schema for typed decode/encode (undefined if plugin doesn't define state)
+// Note: Assigned to a module-level variable and used in a side-effect to prevent
+// Bun's bundler from tree-shaking the Schema.Class constructor and its methods.
 const StateSchema = pluginConfig.state;
+if (StateSchema) Object.defineProperty(globalThis, "__PLUGIN_STATE_SCHEMA__", { value: StateSchema });
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {

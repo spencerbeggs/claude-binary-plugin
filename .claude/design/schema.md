@@ -11,15 +11,19 @@ an `instanceof` check in a single declaration.
 Data flows through four schema layers from Claude Code to response:
 
 ```text
-stdin JSON -> Input Schema.Class -> Event Schema.Class -> PipelineOutput -> Response Schema.Class -> stdout JSON
+stdin JSON -> Input Schema.Class -> Event Schema.Class -> Outcome (or PipelineOutput) -> Response -> stdout JSON
 ```
 
 | Layer | Location | Purpose |
 | ------- | ---------- | --------- |
  | Input | `schemas/hook-inputs.ts` | Wire format from Claude Code stdin |
 | Event | `schemas/hook-events.ts` | Enriched event with `fromInput()` factory |
-| PipelineOutput | `schemas/pipeline-outputs.ts` | Handler return value (discriminated on `status`) |
+| Outcome | `outcomes/*.ts` | Typed handler return value (new pattern) |
+| PipelineOutput | `schemas/pipeline-outputs.ts` | Legacy handler return (discriminated on `status`) |
 | Response | `schemas/hook-responses.ts` | Wire format for Claude Code stdout |
+
+Handlers can return either an Outcome class instance (preferred) or a legacy
+PipelineOutput object. `PipelineRuntime` handles both paths.
 
 ## Input Schema Classes (`hook-inputs.ts`)
 
@@ -33,27 +37,40 @@ const HookInputBaseFields = {
   cwd: Schema.optional(Schema.String),
   permission_mode: Schema.optional(HookPermissionsModeSchema),
   hook_event_name: HookTypeSchema,       // Overridden per class with literal
+  agent_id: Schema.optional(Schema.String),
+  agent_type: Schema.optional(Schema.String),
 };
 ```
 
-Input classes: `PreToolUseInput`, `PostToolUseInput`, `SessionStartInput`,
-`SessionEndInput`, `StopInput`, `SubagentStopInput`, `UserPromptSubmitInput`,
-`PreCompactInput`, `NotificationInput`, `PermissionRequestInput`.
+### All 25 Input Classes
 
-Hook-specific fields:
-
-| Input Class | Extra Fields |
-| ------------- | ------------- |
- | PreToolUseInput | `tool_name`, `tool_input`, `tool_use_id` |
-| PostToolUseInput | `tool_name`, `tool_input`, `tool_response`, `tool_use_id` |
-| SessionStartInput | `source` |
-| SessionEndInput | `reason` |
-| StopInput | `stop_hook_active` |
-| SubagentStopInput | `stop_hook_active` |
-| UserPromptSubmitInput | `prompt` |
-| PreCompactInput | `trigger`, `custom_instructions` |
-| NotificationInput | `message`, `notification_type` |
-| PermissionRequestInput | `message`, `notification_type` |
+| Input Class | Hook-Specific Fields |
+| ------------- | -------------------- |
+| `PreToolUseInput` | `tool_name`, `tool_input`, `tool_use_id` |
+| `PostToolUseInput` | `tool_name`, `tool_input`, `tool_response`, `tool_use_id` |
+| `PostToolUseFailureInput` | `tool_name`, `tool_input`, `tool_use_id`, `error` |
+| `PermissionRequestInput` | `tool_name`, `tool_input`, `permission_suggestions` |
+| `NotificationInput` | `message`, `notification_type` |
+| `UserPromptSubmitInput` | `prompt` |
+| `StopInput` | `stop_hook_active`, `last_assistant_message` |
+| `StopFailureInput` | `error_type`, `error_message`, `last_assistant_message` |
+| `SubagentStartInput` | _(base fields only)_ |
+| `SubagentStopInput` | `stop_hook_active`, `last_assistant_message` |
+| `TaskCreatedInput` | `task_id`, `task_name`, `description`, `parent_task_id` |
+| `TaskCompletedInput` | `task_id`, `task_name`, `status`, `result`, `error` |
+| `TeammateIdleInput` | _(base fields only)_ |
+| `InstructionsLoadedInput` | `reason`, `files`, `memory_type`, `paths` |
+| `ConfigChangeInput` | `source`, `changed_keys` |
+| `CwdChangedInput` | `old_cwd`, `new_cwd` |
+| `FileChangedInput` | `file_path`, `event_type` |
+| `WorktreeCreateInput` | `worktree_path` |
+| `WorktreeRemoveInput` | `worktree_path` |
+| `PreCompactInput` | `trigger`, `custom_instructions` |
+| `PostCompactInput` | `compacted_tokens`, `remaining_tokens` |
+| `ElicitationInput` | `action`, `elicitation_id`, `values`, `schema` |
+| `ElicitationResultInput` | `action`, `elicitation_id`, `values` |
+| `SessionStartInput` | `source`, `model` |
+| `SessionEndInput` | `reason` |
 
 ## Event Schema Classes (`hook-events.ts`)
 
@@ -90,10 +107,27 @@ const PreToolUseEventAnnotated = PreToolUseEvent.annotations({
 
 Retrieved via `HookEventSchemas.getMetadata(schema)` or `getSchemaMetadata(schema)`.
 
-## Pipeline Output Schemas (`pipeline-outputs.ts`)
+## Outcome Schema Classes (`outcomes/*.ts`)
 
-Pipeline outputs are discriminated unions on `status`. Each hook type has its
-own output schema constraining valid `action` values.
+Outcomes are the preferred return type for hook handlers. Each is a `Schema.Class`
+extending the abstract `Outcome` base. See `architecture.md` for full details.
+
+| Outcome | Wire Response | Telemetry Label |
+| ------- | ------------- | --------------- |
+| `Allow` | `{ permissionDecision: "allow" }` | `"allowed"` |
+| `Deny` | `{ permissionDecision: "deny", reason }` | `"denied"` |
+| `Ask` | `{ permissionDecision: "ask", message }` | `"asked"` |
+| `Modify` | `{ permissionDecision: "allow", updatedInput }` | `"modified"` |
+| `Block` | `{ decision: "block", reason }` | `"blocked"` |
+| `Continue` | `{}` | `"continued"` |
+| `AddContext` | `{ additionalContext }` | `"context_added"` |
+| `NoAction` | `{}` | `"no_action"` |
+| `Skip` | `{}` | `"skipped"` |
+
+## Pipeline Output Schemas (`pipeline-outputs.ts`) [Legacy]
+
+Pipeline outputs are the legacy return format, discriminated unions on `status`.
+Each hook type has its own output schema constraining valid `action` values.
 
 ### Base Fields
 
@@ -122,7 +156,7 @@ PipelineOutputBaseSchema = Schema.Struct({
 | `StopOutputSchema` / `SubagentStopOutputSchema` | block, continue |
 | `UserPromptSubmitOutputSchema` | block, continue, context, none |
 | `PermissionRequestOutputSchema` | allow, deny |
-| `PassthroughOutputSchema` | none (SessionEnd, PreCompact, Notification) |
+| `PassthroughOutputSchema` | none (SessionEnd, PreCompact, Notification, etc.) |
 
 ### HookAction Values
 
@@ -150,6 +184,9 @@ functions translate pipeline outputs to responses:
 | `toPermissionRequestResponse()` | `action` -> `behavior` |
 | `toPassthroughResponse()` | Always returns `{}` |
 
+Note: When outcomes are used, `toResponse()` is called directly on the
+outcome instance, bypassing these converter functions.
+
 ## Branded Types (`branded.ts`)
 
 Three branded types ensure type safety for identifiers:
@@ -169,12 +206,81 @@ type TranscriptPath = Branded<string, "TranscriptPath">;
 
 Shared literal union schemas extracted to prevent circular imports:
 
-- `HookTypeSchema` -- All 10 hook type names
-- `HookPermissionsModeSchema` -- `"default" | "plan" | "acceptEdits" | "bypassPermissions"`
+- `HookTypeSchema` -- All 25 hook type names (see HookType enum below)
+- `HookPermissionsModeSchema` -- `"default" | "plan" | "acceptEdits" | "auto" | "dontAsk" | "bypassPermissions"`
 - `PreToolUseDecisionSchema` -- `"allow" | "deny" | "ask"`
+- `PermissionRequestBehaviorSchema` -- `"allow" | "deny"`
 - `SessionStartSourceSchema` -- `"startup" | "resume" | "clear" | "compact"`
-- `SessionEndReasonSchema` -- `"clear" | "logout" | "prompt_input_exit" | "other"`
-- `PreCompactTriggerSchema` -- compact trigger types
+- `SessionEndReasonSchema` -- `"clear" | "resume" | "logout" | "prompt_input_exit" | "bypass_permissions_disabled" | "other"`
+- `PreCompactTriggerSchema` -- `"manual" | "auto"`
+- `StopFailureErrorSchema` -- `"rate_limit" | "authentication_failed" | "billing_error" | "invalid_request" | "server_error" | "max_output_tokens" | "unknown"`
+- `InstructionsLoadedReasonSchema` -- `"session_start" | "nested_traversal" | "path_glob_match" | "include" | "compact"`
+- `InstructionsMemoryTypeSchema` -- `"User" | "Project" | "Local" | "Managed"`
+- `ConfigChangeSourceSchema` -- `"user_settings" | "project_settings" | "local_settings" | "policy_settings" | "skills"`
+- `FileChangeEventSchema` -- `"change" | "add" | "unlink"`
+- `NotificationTypeSchema` -- `"permission_prompt" | "idle_prompt" | "auth_success" | "elicitation_dialog"`
+- `ElicitationActionSchema` -- `"accept" | "decline" | "cancel"`
+
+### HookType Enum
+
+```typescript
+enum HookType {
+  PreToolUse, PostToolUse, PostToolUseFailure,
+  PermissionRequest, Notification, UserPromptSubmit,
+  Stop, StopFailure, SubagentStart, SubagentStop,
+  TaskCreated, TaskCompleted, TeammateIdle,
+  InstructionsLoaded, ConfigChange, CwdChanged, FileChanged,
+  WorktreeCreate, WorktreeRemove,
+  PreCompact, PostCompact,
+  Elicitation, ElicitationResult,
+  SessionStart, SessionEnd,
+}
+```
+
+### ToolName Type
+
+Known tool names plus extensibility for custom/MCP tools:
+
+```typescript
+type ToolName =
+  | "Task" | "Bash" | "Glob" | "Grep" | "Read"
+  | "Edit" | "Write" | "WebFetch" | "WebSearch"
+  | "NotebookEdit" | "TodoRead" | "TodoWrite"
+  | (string & {});  // Allow custom/MCP tool names
+```
+
+## State as Schema.Class
+
+Plugin state can be declared as a `Schema.Class`, enabling typed serialization
+and prototype method preservation across hook invocations.
+
+```typescript
+class MyState extends Schema.Class<MyState>("MyState")({
+  git: Schema.Boolean,
+  packageManager: Schema.Literal("npm", "bun"),
+}) {
+  getPmExec() { return this.packageManager === "bun" ? "bunx" : "npx"; }
+}
+
+// In plugin definition:
+Plugin("MY_PLUGIN", {
+  options: Schema.Struct({ ... }),
+  state: MyState,
+  setup: async () => new MyState({ git: true, packageManager: "bun" }),
+  hooks: { ... },
+});
+```
+
+**Encoding/decoding flow:**
+
+1. SessionStart: `setup()` returns a `MyState` instance
+2. SDK encodes via `Schema.encodeUnknownSync(MyState)` before persisting
+3. Subsequent hooks: SDK decodes via `Schema.decodeUnknownSync(MyState)`
+4. Prototype restored via `Object.assign(Object.create(MyState.prototype), decoded, baseState)`
+5. Handlers receive a fully typed state with working methods
+
+**Known issue:** Bun's tree-shaker strips prototype methods from compiled
+binaries. See `architecture.md` for details.
 
 ## Usage in PipelineRuntime
 
@@ -182,6 +288,9 @@ Shared literal union schemas extracted to prevent circular imports:
 
 1. **Parse**: `Schema.decodeUnknownSync(InputSchema)(rawJson)` validates stdin
 2. **Convert**: `EventClass.fromInput(decodedInput)` creates typed event
-3. **Validate**: Pipeline output checked against hook-specific output schema
-4. **Respond**: `toResponse()` functions convert output to response class
-5. **Serialize**: Response is JSON-stringified and written to stdout
+3. **State decode**: If `stateSchema` is set, decode persisted state through it
+4. **Handler**: Call pipeline handler, receive Outcome or PipelineOutput
+5. **Validate outcome**: If Outcome, `isValidOutcomeForHook()` checks validity
+6. **Validate legacy**: If PipelineOutput, check against hook-specific output schema
+7. **Respond**: Outcome's `toResponse()` or legacy `toResponse()` functions
+8. **Serialize**: Response is JSON-stringified and written to stdout

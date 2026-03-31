@@ -8,15 +8,28 @@ the build is now purely programmatic via `PluginBuilder`.
 
 ## Entry Point
 
-`PluginBuilder.fromConfig(plugin, options)` is the recommended build API:
+`PluginBuilder.fromConfig(plugin, options)` is the recommended build API.
+Plugins call `plugin.build()` on their instance (which delegates to
+`PluginBuilder.fromConfig`):
 
 ```typescript
-import { ClaudeBinaryPlugin, PluginBuilder } from "claude-binary-plugin";
+import plugin from "./plugin.config.js";
 
-const plugin = ClaudeBinaryPlugin.create({ ... });
+await plugin.build({
+  rootDir: import.meta.dir,
+  compile: true,
+  minify: true,
+});
+```
 
-const result = await PluginBuilder.fromConfig(plugin, {
-  rootDir: ".",
+Or use `PluginBuilder` directly:
+
+```typescript
+import { PluginBuilder } from "claude-binary-plugin";
+import plugin from "./plugin.config.js";
+
+await PluginBuilder.fromConfig(plugin, {
+  rootDir: import.meta.dir,
   compile: true,
   minify: true,
 });
@@ -34,6 +47,8 @@ const result = await PluginBuilder.fromConfig(plugin, {
 3. **Generate entrypoint** (`EntrypointGenerator`) -- Generates a TypeScript
    source file that imports the plugin definition and dispatches based on CLI
    arguments. Handles hook type routing, command routing, and `--sidecar` mode.
+   Passes `stateSchema: pluginConfig.state` and `handlerLayer: PipelineLive`
+   to `PipelineRuntime.run()`.
 
 4. **Compile** -- Runs `Bun.build()` to compile the generated entrypoint into a
    single-file executable. Supports cross-compilation via `target` option.
@@ -49,9 +64,10 @@ const result = await PluginBuilder.fromConfig(plugin, {
 ## Build Options
 
 ```typescript
-interface BuildPluginOptions {
+interface PluginBuildOptions {
   rootDir?: string;       // Plugin root directory
-  plugin?: string;        // Path to plugin config file
+  configPath?: string;    // Path to plugin config file
+  plugin?: string;        // Path to plugin.json manifest
   marketplace?: string;   // Marketplace manifest path
   outputName?: string;    // Output binary name
   compile?: boolean;      // Whether to compile (default: true)
@@ -92,10 +108,9 @@ The build system is decomposed into focused modules:
 Plugins define a build script (e.g., `plugin/plugin.build.ts`):
 
 ```typescript
-import { ClaudeBinaryPlugin, PluginBuilder } from "claude-binary-plugin";
 import plugin from "./plugin.config.js";
 
-await PluginBuilder.fromConfig(plugin, {
+await plugin.build({
   rootDir: import.meta.dir,
   compile: true,
   minify: true,
@@ -116,6 +131,8 @@ The generated entrypoint code:
 
 1. Parses CLI args to determine mode (hook, command, or sidecar)
 2. For hooks: reads `--hook-type` and `--hook-name` args, dispatches to
-   `PipelineRuntime.run()` with the correct handler
+   `PipelineRuntime.run()` with the correct handler. Passes `stateSchema`
+   (from `pluginConfig.state`) and `handlerLayer` (`PipelineLive`) so the
+   runtime can decode state and provide services.
 3. For commands: reads `--command` arg, dispatches to `Commands.run()`
 4. For sidecar: calls `Sidecar.main()` to start the OTEL sidecar process

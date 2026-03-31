@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
-import { Effect, Layer, ParseResult, Schema } from "effect";
+import type { Layer } from "effect";
+import { Effect, ParseResult, Schema } from "effect";
 import type { ReadonlyDeep } from "type-fest";
 import { Outcome } from "../outcomes/Outcome.js";
 import { isValidOutcomeForHook } from "../outcomes/types.js";
@@ -475,10 +476,6 @@ export class PipelineRuntime {
 				if (sessionEnvDir) {
 					yield* Effect.tryPromise(() => PluginEnv.loadAllHookFiles(sessionEnvDir));
 				}
-				const debugStateSchema = (msg: string) => {
-					if (PipelineRuntime.isDebugEnabled()) console.error(`[stateSchema] ${msg}`);
-				};
-				debugStateSchema(`stateSchema=${stateSchema ? "defined" : "undefined"}, type=${typeof stateSchema}`);
 				state = PipelineRuntime.extractPersistedState(stateInstance, stateSchema) as TState;
 
 				yield* Effect.log("loaded persisted state").pipe(

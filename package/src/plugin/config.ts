@@ -1130,7 +1130,7 @@ export function Plugin<
 }
 
 /**
- * Options for building a plugin via `ClaudeBinaryPlugin.build()`.
+ * Options for building a plugin via `plugin.build()`.
  *
  * @remarks
  * These options control the build process. The plugin configuration

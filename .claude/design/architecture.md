@@ -43,13 +43,26 @@ src/
     *Live.ts            # Production implementations
     *Test.ts            # Test factory functions
   otel/                 # OpenTelemetry subsystem (sidecar, protocol, handlers)
+  outcomes/             # Outcome system (typed hook return values)
+    Outcome.ts          # Abstract base class with isOutcome(), resolveContext()
+    Allow.ts            # PreToolUse/PermissionRequest: permit action
+    Deny.ts             # PreToolUse/PermissionRequest: reject action
+    Ask.ts              # PreToolUse: prompt user for confirmation
+    Modify.ts           # PreToolUse: change tool input before execution
+    Block.ts            # PostToolUse/Stop: halt continuation
+    Continue.ts         # PostToolUse/Stop: allow continuation
+    AddContext.ts       # SessionStart/PostToolUse: inject additionalContext
+    NoAction.ts         # Passthrough: no-op response
+    Skip.ts             # Any actionable hook: skip without acting
+    ContextBuilder.ts   # MarkdownContext, XmlContext for composing context
+    types.ts            # HookOutcomeMap, isValidOutcomeForHook(), outcome unions
   plugin/               # Plugin configuration factory
-    config.ts           # ClaudeBinaryPlugin.create(), type definitions
+    config.ts           # Plugin() factory, PluginDefinition, ClaudePlugin, InferHandlers
   schemas/              # Effect Schema definitions
     branded.ts          # Branded types (SessionId, ToolUseId, TranscriptPath)
     hook-events.ts      # Schema.Class event types + HookEventSchemas class
     hook-inputs.ts      # Schema.Class input types (wire format from stdin)
-    hook-literals.ts    # Literal union schemas (HookType, permissions, etc.)
+    hook-literals.ts    # Literal union schemas (HookType enum, permissions, etc.)
     hook-responses.ts   # Schema.Class response types + toResponse converters
     json.ts             # JSON schema utilities
     pipeline-outputs.ts # Pipeline output schemas (discriminated on status)
@@ -64,6 +77,136 @@ src/
     plugin-state.ts     # Validation error types
     tool-inputs.ts      # Typed tool input interfaces
 ```
+
+## Plugin() Factory
+
+Plugins are defined via the `Plugin()` factory function, which returns a
+typed base class constructor. Users extend the returned class to define
+their plugin.
+
+```typescript
+import { Plugin } from "claude-binary-plugin";
+import { Schema } from "effect";
+
+class MyPlugin extends Plugin("MY_PLUGIN", {
+  options: Schema.Struct({
+    MODE: Schema.optionalWith(Schema.Literal("strict", "lenient"), {
+      default: () => "strict" as const,
+    }),
+  }),
+  state: MyState,
+  setup: async ({ options, cwd }) => {
+    return new MyState({ git: true, packageManager: "bun" });
+  },
+  hooks: {
+    PreToolUse: [{ name: "guard", pipeline: "./hooks/guard.hook.ts" }],
+  },
+}) {}
+
+export type Handlers = InferHandlers<MyPlugin>;
+export default new MyPlugin();
+```
+
+### How Plugin() Works
+
+- `Plugin(prefix, definition)` captures the `PluginDefinition` config in
+  a closure and returns a class constructor
+- Users extend the returned class (can add methods, properties)
+- Instance properties: `.config`, `.prefix`, `.build()`, `.test()`
+- `PluginDefinition` interface replaces the old `PluginConfig` (which still
+  exists internally but `PluginDefinition` is the user-facing API)
+- `ClaudePlugin` interface describes what instances look like
+- Zero explicit generics -- types for `options`, `state`, `hooks`, and
+  `commands` are inferred from the definition fields
+
+### Key Interfaces
+
+| Interface | Purpose |
+| --------- | ------- |
+| `PluginDefinition<TOptionsSchema, TStateSchema>` | Config object passed to `Plugin()` |
+| `ClaudePlugin<TOptionsSchema, TStateSchema>` | Shape of plugin instances |
+| `InferHandlers<T>` | Extract typed handler signatures from a plugin class |
+| `InferPluginOptions<T>` | Extract options type from a plugin |
+| `InferPluginState<T>` | Extract state type from a plugin |
+| `InferPluginCommands<T>` | Extract command handler types from a plugin |
+
+## Outcomes System
+
+Outcomes are typed return values from hook handlers. Each outcome is a
+`Schema.Class` that extends an abstract `Outcome` base class. Outcomes
+replace the legacy `{ status, action, summary }` pipeline output objects
+with a cleaner, type-safe API.
+
+### Outcome Classes
+
+| Class | Hook Types | Wire Response |
+| ----- | ---------- | ------------- |
+| `Allow` | PreToolUse, PermissionRequest | `{ permissionDecision: "allow" }` |
+| `Deny` | PreToolUse, PermissionRequest | `{ permissionDecision: "deny", reason }` |
+| `Ask` | PreToolUse | `{ permissionDecision: "ask", message }` |
+| `Modify` | PreToolUse | `{ permissionDecision: "allow", updatedInput }` |
+| `Block` | PostToolUse, Stop, SubagentStop | `{ decision: "block", reason }` |
+| `Continue` | PostToolUse, Stop, SubagentStop | `{}` |
+| `AddContext` | SessionStart, PostToolUse, UserPromptSubmit | `{ additionalContext }` |
+| `NoAction` | Any (passthrough) | `{}` |
+| `Skip` | Any actionable hook | `{}` |
+
+### Outcome Architecture
+
+Each outcome class:
+
+- Is a `Schema.Class` with named fields (e.g., `summary`, `reason`)
+- Has `toResponse()` returning the Claude Code wire format
+- Has `toTelemetry()` returning OTEL span attributes
+- Has a static `_tag` for identification (e.g., `"Allow"`, `"Deny"`)
+- Extends `Outcome` via `Object.setPrototypeOf` (not class inheritance,
+  because `Schema.Class` controls the prototype chain)
+- Supports extension via `Schema.Class.extend()` for custom telemetry fields
+
+### Extending Outcomes
+
+Users can add domain-specific fields that automatically become OTEL metrics:
+
+```typescript
+class SecurityAllow extends Allow.extend<SecurityAllow>("SecurityAllow")({
+  riskLevel: Schema.Literal("none", "low"),
+  scannedPatterns: Schema.Number,
+}) {}
+
+// Domain fields (riskLevel, scannedPatterns) are emitted as telemetry metrics
+return new SecurityAllow({
+  summary: "tool is safe",
+  riskLevel: "none",
+  scannedPatterns: 42,
+});
+```
+
+### ContextBuilder
+
+`ContextBuilder` is an abstract base for composing `additionalContext` strings.
+Two concrete implementations are provided:
+
+- `MarkdownContext` -- fluent API with `.heading()`, `.paragraph()`, `.list()`,
+  `.codeBlock()`, `.rule()`. Tracks section and rule counts for OTEL metrics.
+- `XmlContext` -- fluent API with `.tag()`, `.cdata()`. Tracks tag counts.
+
+Both expose a `.metrics` getter returning `Record<string, number>` for OTEL.
+`AddContext` accepts either a raw string or a `ContextBuilder` instance as
+its `context` field. The SDK resolves it to a string at response time.
+
+### Outcome Validation
+
+`isValidOutcomeForHook(hookType, outcome)` validates at runtime that a
+handler returned a valid outcome for its hook type. The mapping is defined
+in `VALID_OUTCOME_TAGS` in `outcomes/types.ts`. `PipelineRuntime` calls
+this before serializing the response; invalid outcomes cause an error exit.
+
+### Backward Compatibility
+
+`PipelineRuntime` checks `Outcome.isOutcome(output)` first (new path),
+then falls back to `isPipelineOutput(output)` (legacy path). Both paths
+work -- existing handlers returning `{ status, action, summary }` objects
+continue to function unchanged.
 
 ## Effect Service/Layer Pattern
 
@@ -112,11 +255,32 @@ export const PipelineLive = Layer.mergeAll(
 6. Load environment via `PluginEnv.forContext()`
 7. Run `setup()` and persist state if SessionStart
 8. Call pipeline handler with `{ input, options, state }`
-9. Validate output matches hook-type-specific output schema
-10. Emit OTEL telemetry (hook execution event)
-11. Convert pipeline output to response via `toResponse()` functions
+9. **Check if output is an Outcome** (via `Outcome.isOutcome()`):
+   - Validate outcome for hook type via `isValidOutcomeForHook()`
+   - Extract telemetry via `outcome.toTelemetry()`
+   - Convert to response via `outcome.toResponse()`
+10. **Else check if output is a legacy PipelineOutput** (via `isPipelineOutput()`):
+    - Validate against hook-type-specific output schema
+    - Map status/action to telemetry outcome label
+    - Convert via `toResponse()` functions
+11. Emit OTEL telemetry (hook execution event)
 12. Write JSON response to stdout
 13. Exit process
+
+### State Schema.Class Support
+
+When `PluginConfig.state` is a `Schema.Class`, the pipeline:
+
+- **SessionStart**: Encodes state via `Schema.encodeUnknownSync(stateSchema)`
+  before persisting to env files
+- **Subsequent hooks**: Decodes via `Schema.decodeUnknownSync(stateSchema)`
+  to reconstruct a typed instance with methods
+- **Prototype preservation**: Uses `Object.assign(Object.create(proto), state, baseState)`
+  to ensure decoded state retains `Schema.Class` prototype methods
+
+`PipelineConfig` carries `stateSchema` and `handlerLayer` fields.
+`EntrypointGenerator` passes `stateSchema: pluginConfig.state` and
+`handlerLayer: PipelineLive` when generating the entrypoint code.
 
 ## PluginLoggerLive
 
@@ -155,61 +319,61 @@ so non-SessionStart hooks can find their session's env directory.
 
 ## Two Entry Points
 
-- `src/index.ts` -- All public SDK exports (services, layers, schemas, types, errors)
+- `src/index.ts` -- All public SDK exports (services, layers, schemas, types, errors, outcomes)
 - `src/testing.ts` -- Test factory functions only (imported as `claude-binary-plugin/testing`)
 
-## Future Work: Plugin-as-Class Pattern
+## Hook Types (25 Total)
 
-**Status:** Idea captured. Not blocking current work. Revisit during API
-refinement phase before 1.0.
+Claude Code supports 25 hook event types. The SDK provides Input, Event,
+and Output schemas for all of them.
 
-### Current Factory Pattern
+### Original 10
 
-Plugins are currently defined via `ClaudeBinaryPlugin.create()`:
+`PreToolUse`, `PostToolUse`, `PermissionRequest`, `Notification`,
+`UserPromptSubmit`, `Stop`, `SubagentStop`, `PreCompact`, `SessionStart`,
+`SessionEnd`
 
-```typescript
-const plugin = ClaudeBinaryPlugin.create({
-  prefix: "MY_PLUGIN",
-  options: Schema.Struct({...}),
-  state: MyState,
-  setup: () => new MyState({...}),
-  hooks: {...},
-});
-```
+### Added 15
 
-### Proposed Class Extension Pattern
+`PostToolUseFailure`, `StopFailure`, `SubagentStart`, `TaskCreated`,
+`TaskCompleted`, `TeammateIdle`, `InstructionsLoaded`, `ConfigChange`,
+`CwdChanged`, `FileChanged`, `WorktreeCreate`, `WorktreeRemove`,
+`PostCompact`, `Elicitation`, `ElicitationResult`
 
-Replace the factory with a typed base class that users extend:
+See `schema.md` for field details on each type.
 
-```typescript
-class MyPlugin extends Plugin("MY_PLUGIN", {
-  options: Schema.Struct({ MODE: Schema.String }),
-  state: MyState,
-}) {
-  setup({ options }) {
-    return new MyState({ git: true, packageManager: "bun" });
-  }
-  hooks = {
-    PreToolUse: [{ name: "guard", pipeline: ({ input, state }) => new Allow({ summary: "ok" }) }],
-  };
-}
-```
+## Handler Type Aliases
 
-### Benefits
+All handler type aliases use the `*Handler` suffix (renamed from the
+previous `*Pipeline` names):
 
-- Types for `setup`, `hooks`, and handler contexts flow from the
-  `options`/`state` declarations without explicit generics
-- Single class declaration = one plugin (no separate config object)
-- Eliminates 4-param generic threading on `ClaudeBinaryPlugin`
-- Plugin methods can be referenced as handler pipelines
-- `instanceof` works
+- `SessionStartHandler`, `SessionEndHandler`
+- `PreToolUseHandler`, `PostToolUseHandler`
+- `StopHandler`, `SubagentStopHandler`
+- `UserPromptSubmitHandler`, `PreCompactHandler`
+- `NotificationHandler`, `PermissionRequestHandler`
+- `InferHandlers` (was `InferPluginPipeline`)
+- `HandlerHookDefinition` (was `PipelineHookDefinition`)
 
-### Design Considerations
+## Known Issue: Bun Tree-Shaking
 
-- **Not `Schema.Class`** -- plugin config is not serialized data, so
-  `encode`/`decode` semantics are irrelevant
-- `Plugin()` returns a typed base class (similar to `Schema.Class` internals
-  but without schema machinery)
-- This is an **API surface change** for v1.0, not a plumbing change -- the
-  internal outcome/state/pipeline runtime stays the same
-- Should be designed **after** the outcome/state pipeline is proven out
+**Status:** Active blocker for state methods in compiled binaries.
+
+State `Schema.Class` methods (like `getPmExec()`, `canUseGit()`) are stripped
+from compiled `.plugin` binaries by Bun's bundler tree-shaking. They work
+correctly in dev mode (`bun run`) but disappear in the compiled output.
+
+**Root cause:** `Schema.decodeUnknownSync` creates instances internally via
+the constructor, but Bun's static analysis cannot trace that the constructor's
+prototype methods are needed. Since no direct code references the methods,
+Bun considers them dead code.
+
+**Impact:** Any `Schema.Class` state with prototype methods will have those
+methods stripped in production. The data fields survive (they are assigned
+in the constructor), but prototype methods do not.
+
+**Workarounds under investigation:**
+
+- Bun build flags to disable tree-shaking for specific classes
+- Explicit method references to prevent removal
+- Alternative state patterns that avoid prototype methods

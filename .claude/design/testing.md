@@ -67,6 +67,81 @@ test("handler denies dangerous tool", async () => {
 });
 ```
 
+## Testing Outcomes
+
+Handlers returning Outcome instances can be tested directly without
+running through the full pipeline:
+
+```typescript
+import { Allow, Deny, Modify, Outcome } from "claude-binary-plugin";
+
+test("handler returns Deny for destructive command", () => {
+  const result = myHandler({
+    input: { tool_name: "Bash", tool_input: { command: "rm -rf /" } },
+    options: { MODE: "strict" },
+    state: { projectDir: "/tmp", pluginDir: "/tmp", pluginEnvFile: "/tmp/env" },
+  });
+
+  // Check outcome type
+  expect(Outcome.isOutcome(result)).toBe(true);
+  expect(result).toBeInstanceOf(Deny);
+
+  // Check response wire format
+  expect(result.toResponse()).toEqual({
+    permissionDecision: "deny",
+    reason: expect.any(String),
+  });
+
+  // Check telemetry data
+  const telemetry = result.toTelemetry();
+  expect(telemetry.outcome).toBe("denied");
+  expect(telemetry.success).toBe(true);
+  expect(telemetry.summary).toContain("blocked");
+});
+```
+
+### Testing Extended Outcomes
+
+When outcomes are extended with domain fields, test the custom metrics:
+
+```typescript
+class SecurityAllow extends Allow.extend<SecurityAllow>("SecurityAllow")({
+  riskLevel: Schema.Literal("none", "low"),
+  scannedPatterns: Schema.Number,
+}) {}
+
+test("extended outcome includes domain metrics", () => {
+  const result = new SecurityAllow({
+    summary: "safe",
+    riskLevel: "none",
+    scannedPatterns: 42,
+  });
+
+  const telemetry = result.toTelemetry();
+  expect(telemetry.metrics).toEqual({
+    riskLevel: "none",
+    scannedPatterns: 42,
+  });
+});
+```
+
+### Testing ContextBuilder
+
+```typescript
+import { MarkdownContext, XmlContext } from "claude-binary-plugin";
+
+test("MarkdownContext renders correctly", () => {
+  const ctx = new MarkdownContext()
+    .heading(2, "Rules")
+    .rule("No force push")
+    .list(["item 1", "item 2"]);
+
+  expect(ctx.toString()).toContain("## Rules");
+  expect(ctx.metrics.sections).toBe(1);
+  expect(ctx.metrics.rules).toBe(1);
+});
+```
+
 ## I/O Injection in PipelineRuntime
 
 `PipelineRuntime.run()` accepts an `io` parameter for testing without
@@ -112,6 +187,15 @@ expect(result.output.action).toBe("allow");
 - Running `PipelineRuntime.run()` with test I/O
 - Capturing stdout/stderr output
 - Parsing the response
+
+### PluginTester Outcome Support
+
+When a handler returns an Outcome, `PluginTester` captures both the
+response wire format and the telemetry data:
+
+- `result.response` -- The JSON object written to stdout (from `toResponse()`)
+- `result.outcome` -- The raw outcome label (from `toTelemetry().outcome`)
+- `result.telemetry` -- Full telemetry data (outcome, summary, success, metrics)
 
 ### Test Input Types
 
