@@ -76,16 +76,16 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
         pipeline: ${fileHookImport},
         stateClass: EnvClass,
         tools: ${toolsArg},
-        optionsSchema: pluginConfig.options,
+        optionsSchema: PluginConfigClass.options,
         stateSchema: StateSchema,
-        setup: pluginConfig.setup,
+        setup: PluginConfigClass.setup,
         handlerLayer: PipelineLive,
       });
     }`);
 				} else {
 					// Inline pipeline hook
 					hookCases.push(`    case "${hookKey}": {
-      const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
+      const hookDef = configInstance.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("pipeline" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       return PipelineRuntime.run({
         hookType: "${hookType}",
@@ -95,9 +95,9 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
         pipeline: hookDef.pipeline,
         stateClass: EnvClass,
         tools: ${toolsArg},
-        optionsSchema: pluginConfig.options,
+        optionsSchema: PluginConfigClass.options,
         stateSchema: StateSchema,
-        setup: pluginConfig.setup,
+        setup: PluginConfigClass.setup,
         handlerLayer: PipelineLive,
       });
     }`);
@@ -118,7 +118,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 				} else {
 					// Inline handler hook
 					hookCases.push(`    case "${hookKey}": {
-      const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
+      const hookDef = configInstance.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       return PipelineRuntime.runRaw({
         hookType: "${hookType}",
@@ -138,7 +138,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 	const commandCases = pipelineCommands
 		.map((c) => {
 			const importName = commandImportMap.get(c.name);
-			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Commands.emptySchema";
+			const argsSchemaAccess = c.hasArgsSchema ? `configInstance.commands["${c.name}"].args` : "Commands.emptySchema";
 			return `    case "${c.name}": {
       return Commands.run({
         commandName: "${c.name}",
@@ -174,7 +174,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
  */
 
 import { parseArgs } from "node:util";
-import pluginDefinition from "${pluginPath}";
+import PluginConfigClass from "${pluginPath}";
 import { PipelineLive, PipelineRuntime, PluginEnv, PluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
@@ -184,17 +184,10 @@ ${commandImports.length > 0 ? commandImports.join("\n") : ""}
 const PLUGIN_NAME = "${pluginName}";
 const PLUGIN_VERSION = "${pluginVersion}";
 
-// Extract config from plugin definition
-const pluginConfig = pluginDefinition.config;
-
-// Create environment class from plugin options schema (with pluginName for logging)
-const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
-
-// State schema for typed decode/encode (undefined if plugin doesn't define state)
-// Note: Assigned to a module-level variable and used in a side-effect to prevent
-// Bun's bundler from tree-shaking the Schema.Class constructor and its methods.
-const StateSchema = pluginConfig.state;
-if (StateSchema) Object.defineProperty(globalThis, "__PLUGIN_STATE_SCHEMA__", { value: StateSchema });
+// Read statics from the config class — they survive Bun tree-shaking
+const configInstance = new PluginConfigClass();
+const EnvClass = PluginEnv.create(configInstance.prefix, PluginConfigClass.options, PLUGIN_NAME);
+const StateSchema = PluginConfigClass.state;
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
