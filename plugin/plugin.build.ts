@@ -1,7 +1,6 @@
-import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-import { plugin } from "./plugin.config.js";
+import plugin from "./plugin.config.js";
 
-const result = await ClaudeBinaryPlugin.build(plugin, {
+const result = await plugin.build({
 	rootDir: import.meta.dir,
 });
 
