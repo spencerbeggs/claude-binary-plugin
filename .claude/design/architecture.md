@@ -56,8 +56,8 @@ src/
     Skip.ts             # Any actionable hook: skip without acting
     ContextBuilder.ts   # MarkdownContext, XmlContext for composing context
     types.ts            # HookOutcomeMap, isValidOutcomeForHook(), outcome unions
-  plugin/               # Plugin configuration factory
-    config.ts           # Plugin() factory, PluginDefinition, ClaudePlugin, InferHandlers
+  plugin/               # Plugin configuration and orchestration
+    config.ts           # PluginConfig Schema.Class, ClaudePlugin orchestrator, InferHandlers
   schemas/              # Effect Schema definitions
     branded.ts          # Branded types (SessionId, ToolUseId, TranscriptPath)
     hook-events.ts      # Schema.Class event types + HookEventSchemas class
@@ -78,57 +78,89 @@ src/
     tool-inputs.ts      # Typed tool input interfaces
 ```
 
-## Plugin() Factory
+## Three-File Pattern (PluginConfig + ClaudePlugin)
 
-Plugins are defined via the `Plugin()` factory function, which returns a
-typed base class constructor. Users extend the returned class to define
-their plugin.
+Plugins use a three-file pattern with clear separation of concerns:
+
+1. **`plugin.config.ts`** -- Schema declarations via `PluginConfig.extend()`
+2. **`hooks/*.ts`** -- Handler files typed via `InferHandlers<typeof MyConfig>`
+3. **`plugin.build.ts`** -- Wires handlers to config via `ClaudePlugin`, builds
+
+### plugin.config.ts -- declares what the plugin is
 
 ```typescript
-import { Plugin } from "claude-binary-plugin";
+import { PluginConfig } from "claude-binary-plugin";
+import type { InferHandlers } from "claude-binary-plugin";
 import { Schema } from "effect";
 
-class MyPlugin extends Plugin("MY_PLUGIN", {
-  options: Schema.Struct({
+class MyConfig extends PluginConfig.extend<MyConfig>("MyConfig")({
+  prefix: Schema.Literal("MY_PLUGIN"),
+}) {
+  static readonly options = Schema.Struct({
     MODE: Schema.optionalWith(Schema.Literal("strict", "lenient"), {
       default: () => "strict" as const,
     }),
-  }),
-  state: MyState,
-  setup: async ({ options, cwd }) => {
-    return new MyState({ git: true, packageManager: "bun" });
-  },
-  hooks: {
-    PreToolUse: [{ name: "guard", pipeline: "./hooks/guard.hook.ts" }],
-  },
-}) {}
+  });
+  static readonly state = MyState;
+  static readonly setup = async () => new MyState({ git: true });
+}
 
-export type Handlers = InferHandlers<MyPlugin>;
-export default new MyPlugin();
+export type Handlers = InferHandlers<typeof MyConfig>;
+export default MyConfig;
 ```
 
-### How Plugin() Works
+### hooks/*.ts -- typed handlers
 
-- `Plugin(prefix, definition)` captures the `PluginDefinition` config in
-  a closure and returns a class constructor
-- Users extend the returned class (can add methods, properties)
-- Instance properties: `.config`, `.prefix`, `.build()`, `.test()`
-- `PluginDefinition` interface replaces the old `PluginConfig` (which still
-  exists internally but `PluginDefinition` is the user-facing API)
-- `ClaudePlugin` interface describes what instances look like
-- Zero explicit generics -- types for `options`, `state`, `hooks`, and
-  `commands` are inferred from the definition fields
+```typescript
+import type { Handlers } from "../plugin.config.js";
+import { Allow, Deny } from "claude-binary-plugin";
 
-### Key Interfaces
+const handler: Handlers["PreToolUse"] = ({ input, options, state }) => {
+  if (options.MODE === "strict" && input.tool_name === "Bash") {
+    return new Deny({ summary: "blocked", reason: "strict mode" });
+  }
+  return new Allow({ summary: "ok" });
+};
+export default handler;
+```
 
-| Interface | Purpose |
+### plugin.build.ts -- wires handlers and builds
+
+```typescript
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+
+const plugin = new ClaudePlugin(MyConfig, {
+  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+});
+await plugin.build({ rootDir: import.meta.dir });
+```
+
+### How It Works
+
+- `PluginConfig` is a `Schema.Class` with an empty base. Users call
+  `.extend()` to add Schema fields (like `prefix` via `Schema.Literal`)
+- Meta-level schemas (`options`, `state`, `setup`) go as `static readonly`
+  properties -- these survive Bun's tree-shaking
+- `ClaudePlugin` is a runtime orchestrator that takes a config class +
+  hooks map and provides `.build()` and `.test()` methods
+- Config describes *what the plugin is*; `ClaudePlugin` describes
+  *what it does* (which handlers run for which hooks)
+- Zero explicit generics -- types are inferred from statics
+
+### Key Classes and Types
+
+| Type | Purpose |
 | --------- | ------- |
-| `PluginDefinition<TOptionsSchema, TStateSchema>` | Config object passed to `Plugin()` |
-| `ClaudePlugin<TOptionsSchema, TStateSchema>` | Shape of plugin instances |
-| `InferHandlers<T>` | Extract typed handler signatures from a plugin class |
-| `InferPluginOptions<T>` | Extract options type from a plugin |
-| `InferPluginState<T>` | Extract state type from a plugin |
-| `InferPluginCommands<T>` | Extract command handler types from a plugin |
+| `PluginConfig` | Schema.Class base for config subclasses |
+| `ClaudePlugin<TConfig>` | Runtime orchestrator (config + hooks) |
+| `InferHandlers<T>` | Extract typed handler signatures from config statics |
+| `InferPluginOptions<T>` | Extract options type from config statics |
+| `InferPluginState<T>` | Extract state type from config statics |
+| `InferPluginCommands<T>` | Extract command handler types |
+| `ExtractOptionsSchema<T>` | Read `options` static property |
+| `ExtractStateSchema<T>` | Read `state` static property |
 
 ## Outcomes System
 
@@ -355,25 +387,20 @@ previous `*Pipeline` names):
 - `InferHandlers` (was `InferPluginPipeline`)
 - `HandlerHookDefinition` (was `PipelineHookDefinition`)
 
-## Known Issue: Bun Tree-Shaking
+## Bun Tree-Shaking (SOLVED)
 
-**Status:** Active blocker for state methods in compiled binaries.
+**Status:** Solved via `PluginConfig.extend()` with `static readonly` properties.
 
-State `Schema.Class` methods (like `getPmExec()`, `canUseGit()`) are stripped
-from compiled `.plugin` binaries by Bun's bundler tree-shaking. They work
-correctly in dev mode (`bun run`) but disappear in the compiled output.
+Bun's bundler aggressively tree-shakes Schema.Class constructors stored as
+plain object properties or instance properties. The solution: store meta-level
+schemas (`options`, `state`, `setup`) as `static readonly` properties on the
+PluginConfig subclass. Static class properties are proven to survive
+`bun build --compile`.
 
-**Root cause:** `Schema.decodeUnknownSync` creates instances internally via
-the constructor, but Bun's static analysis cannot trace that the constructor's
-prototype methods are needed. Since no direct code references the methods,
-Bun considers them dead code.
+The `PluginConfig` base is itself a Schema.Class, creating a real runtime
+constructor/prototype chain that the bundler must preserve. Handler functions
+are value-imported in `plugin.build.ts`, giving the bundler a clear dependency
+graph with no dynamic resolution needed.
 
-**Impact:** Any `Schema.Class` state with prototype methods will have those
-methods stripped in production. The data fields survive (they are assigned
-in the constructor), but prototype methods do not.
-
-**Workarounds under investigation:**
-
-- Bun build flags to disable tree-shaking for specific classes
-- Explicit method references to prevent removal
-- Alternative state patterns that avoid prototype methods
+Type inference uses two-step inference (not constrained `infer`) for
+compatibility with `tsgo` (native TypeScript).

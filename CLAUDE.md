@@ -104,26 +104,50 @@ claude --plugin-dir ./plugin
 
 - All tests in `__tests__/` mirroring `src/` structure
 - Use test layer factories for service mocking
-- Legacy `plugin.test()` fluent API still works but is being phased out
-- Always call `ctx.dispose()` in `afterEach` when using legacy PluginTester
+- `ClaudePlugin.test()` provides fluent PluginTester API
+- Always call `tester.dispose()` in `afterEach`
 
 ## Plugin Definition API
 
-Define plugins using the `Plugin()` factory with `Schema.Class`-based options and state:
+Plugins use a three-file pattern: config, hooks, build.
+
+### Config (`plugin.config.ts`)
 
 ```typescript
-import { Plugin } from "claude-binary-plugin";
+import { PluginConfig } from "claude-binary-plugin";
+import type { InferHandlers } from "claude-binary-plugin";
 import { Schema } from "effect";
 
-class MyPlugin extends Plugin("MY_PLUGIN", {
-  options: Schema.Struct({ TIMEOUT_MS: Schema.Number }),
-  state: MyState,        // Schema.Class with methods
-  setup: async ({ cwd }) => new MyState({ ... }),
-  hooks: {
-    PreToolUse: [{ name: "guard", handler: "./hooks/guard.ts" }],
-  },
-}) {}
-export default new MyPlugin();
+class MyConfig extends PluginConfig.extend<MyConfig>("MyConfig")({
+  prefix: Schema.Literal("MY_PLUGIN"),
+}) {
+  static readonly options = Schema.Struct({ TIMEOUT_MS: Schema.Number });
+  static readonly state = MyState;
+  static readonly setup = async ({ cwd }) => new MyState({ ... });
+}
+export type Handlers = InferHandlers<typeof MyConfig>;
+export default MyConfig;
+```
+
+### Hooks (`hooks/*.ts`)
+
+```typescript
+import type { Handlers } from "../plugin.config.js";
+const handler: Handlers["PreToolUse"] = ({ input, options, state }) => { ... };
+export default handler;
+```
+
+### Build (`plugin.build.ts`)
+
+```typescript
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+
+const plugin = new ClaudePlugin(MyConfig, {
+  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+});
+await plugin.build({ rootDir: import.meta.dir });
 ```
 
 State can be a `Schema.Class` with methods:
@@ -158,10 +182,9 @@ Use `ContextBuilder`, `MarkdownContext`, `XmlContext` for composing `additionalC
 
 ### Handler Types
 
-All `*Pipeline` types have been renamed to `*Handler`:
-
 - `SessionStartHandler`, `PreToolUseHandler`, `PostToolUseHandler`, etc.
-- `InferHandlers` (was `InferPluginPipeline`) — infer handler types from plugin config
+- `InferHandlers<typeof MyConfig>` — infer typed handler signatures from config statics
+- `InferPluginOptions<T>`, `InferPluginState<T>` — extract types from statics
 
 ## Hook Types (25 total)
 
@@ -176,7 +199,7 @@ PostCompact, Elicitation, ElicitationResult, SessionStart, SessionEnd
 ```typescript
 import {
   // Plugin definition
-  Plugin,
+  PluginConfig, ClaudePlugin,
 
   // Outcomes
   Allow, Deny, Ask, Modify, Block, Continue,
@@ -221,7 +244,7 @@ Load these files as needed for deeper context:
 
 | File | Purpose |
 | ---- | ------- |
-| `src/plugin/config.ts` | `Plugin()` factory, handler types |
+| `src/plugin/config.ts` | `PluginConfig` Schema.Class, `ClaudePlugin` orchestrator, `InferHandlers` |
 | `src/layers/PipelineRuntime.ts` | `PipelineRuntime.run()` |
 | `src/layers/PipelineLive.ts` | Composed service layer |
 | `src/schemas/hook-events.ts` | Schema.Class event definitions |
@@ -251,9 +274,9 @@ All in `src/otel/`:
 
 ## Known Issues
 
-- **Bun tree-shaking strips Schema.Class methods**: State methods defined on
-  `Schema.Class` subclasses work in dev (`bun test`, `bun run`) but are stripped
-  from compiled `.plugin` binaries. Under investigation.
+- **Bun tree-shaking (SOLVED)**: State Schema.Class methods previously got
+  stripped from compiled binaries. Solved by `PluginConfig.extend()` with
+  `static readonly` properties — statics survive `bun build --compile`.
 
 ## Environment Variables
 

@@ -8,12 +8,17 @@ the build is now purely programmatic via `PluginBuilder`.
 
 ## Entry Point
 
-`PluginBuilder.fromConfig(plugin, options)` is the recommended build API.
-Plugins call `plugin.build()` on their instance (which delegates to
-`PluginBuilder.fromConfig`):
+`ClaudePlugin.build()` is the recommended build API. Create a `ClaudePlugin`
+instance with a config class and hooks map, then call `.build()`:
 
 ```typescript
-import plugin from "./plugin.config.js";
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+
+const plugin = new ClaudePlugin(MyConfig, {
+  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+});
 
 await plugin.build({
   rootDir: import.meta.dir,
@@ -26,13 +31,11 @@ Or use `PluginBuilder` directly:
 
 ```typescript
 import { PluginBuilder } from "claude-binary-plugin";
-import plugin from "./plugin.config.js";
 
-await PluginBuilder.fromConfig(plugin, {
-  rootDir: import.meta.dir,
-  compile: true,
-  minify: true,
-});
+await PluginBuilder.fromConfig(
+  { config: MyConfig, hooks: { PreToolUse: [...] } },
+  { rootDir: import.meta.dir },
+);
 ```
 
 ## Build Pipeline Steps
@@ -45,9 +48,10 @@ await PluginBuilder.fromConfig(plugin, {
    map, extracting command name, description, file path, and args schema presence.
 
 3. **Generate entrypoint** (`EntrypointGenerator`) -- Generates a TypeScript
-   source file that imports the plugin definition and dispatches based on CLI
-   arguments. Handles hook type routing, command routing, and `--sidecar` mode.
-   Passes `stateSchema: pluginConfig.state` and `handlerLayer: PipelineLive`
+   source file that imports the PluginConfig class and dispatches based on CLI
+   arguments. Reads statics (`PluginConfigClass.options`, `.state`, `.setup`)
+   directly from the config class. Handles hook type routing, command routing,
+   and `--sidecar` mode. Passes `stateSchema` and `handlerLayer: PipelineLive`
    to `PipelineRuntime.run()`.
 
 4. **Compile** -- Runs `Bun.build()` to compile the generated entrypoint into a
@@ -105,19 +109,24 @@ The build system is decomposed into focused modules:
 
 ## Consumer Pattern
 
-Plugins define a build script (e.g., `plugin/plugin.build.ts`):
+Plugins define a build script (e.g., `plugin/plugin.build.ts`) that wires
+handlers to config and builds:
 
 ```typescript
-import plugin from "./plugin.config.js";
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+import initHandler from "./hooks/session-start.js";
 
-await plugin.build({
-  rootDir: import.meta.dir,
-  compile: true,
-  minify: true,
+const plugin = new ClaudePlugin(MyConfig, {
+  SessionStart: [{ name: "init", pipeline: initHandler }],
+  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
 });
+
+await plugin.build({ rootDir: import.meta.dir });
 ```
 
-Run with `bun run build` (configured in the plugin's `package.json`).
+Run with `bun run build:prod` (configured in the plugin's `package.json`).
 
 ## Effect Service
 

@@ -164,38 +164,53 @@ provides the raw JSON string directly without reading from stdin.
 ## PluginTester Fluent API
 
 The `PluginTester` class (`src/testing/builder.ts`) provides a fluent API for
-integration testing of full plugin configurations. It is still functional but
-being phased out in favor of direct layer-based testing.
+integration testing of full plugin configurations. Access it via
+`ClaudePlugin.test()`:
 
 ```typescript
-import { PluginTester } from "claude-binary-plugin";
+import { ClaudePlugin, Deny } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+import { MyState } from "./state.js";
 
-const tester = PluginTester.from(plugin);
-
-const result = await tester.hook("PreToolUse", {
-  tool_name: "Bash",
-  tool_input: { command: "echo hello" },
+const plugin = new ClaudePlugin(MyConfig, {
+  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
 });
 
-expect(result.output.action).toBe("allow");
+const result = await plugin.test()
+  .withOptions({ MODE: "strict" })
+  .withState(new MyState({ git: true }))
+  .withPreToolUseInput({ tool_name: "Bash", tool_input: { command: "rm -rf /" } })
+  .runHook("PreToolUse", "guard");
+
+expect(result.outcome).toBeInstanceOf(Deny);
+expect(result.action).toBe("deny");
+expect(result.reason).toContain("destructive");
 ```
+
+`PluginTester` constructor takes `(configClass, hooks)` where `configClass`
+is a `PluginConfig.extend()` subclass and `hooks` is the hooks map. State
+prototype methods are preserved via `Object.assign(Object.create(proto), ...)`.
 
 `PluginTester` handles:
 
 - Constructing the full stdin JSON with default base fields
-- Creating the I/O injection
-- Running `PipelineRuntime.run()` with test I/O
-- Capturing stdout/stderr output
-- Parsing the response
+- Building handler context with merged BaseState + user state
+- Running handlers directly (pipeline or raw)
+- Parsing Outcome instances into test results
+- Preserving Schema.Class prototype methods on state
 
 ### PluginTester Outcome Support
 
 When a handler returns an Outcome, `PluginTester` captures both the
 response wire format and the telemetry data:
 
-- `result.response` -- The JSON object written to stdout (from `toResponse()`)
-- `result.outcome` -- The raw outcome label (from `toTelemetry().outcome`)
+- `result.outcome` -- The Outcome instance (for `instanceof` checks)
+- `result.action` -- Convenience accessor (allow/deny/block/etc)
+- `result.context` -- Convenience accessor for additionalContext
+- `result.reason` -- Convenience accessor for reason
 - `result.telemetry` -- Full telemetry data (outcome, summary, success, metrics)
+- `result.output` -- Raw JSON response (from `toResponse()`)
 
 ### Test Input Types
 
