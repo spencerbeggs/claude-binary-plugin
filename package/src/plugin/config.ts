@@ -1,6 +1,8 @@
-import type { Effect, Schema } from "effect";
+import type { Effect } from "effect";
+import { Schema } from "effect";
 import type { ReadonlyDeep } from "type-fest";
 import type { PluginBuildResult } from "../build/builder.js";
+import type { AnyOutcome } from "../outcomes/types.js";
 import type {
 	NotificationInput,
 	PermissionRequestInput,
@@ -28,6 +30,34 @@ import type {
 	UserPromptSubmitPipelineOutput,
 } from "../schemas/pipeline-outputs.js";
 import type { PluginTester } from "../testing/builder.js";
+
+// =============================================================================
+// PLUGIN CONFIG BASE CLASS
+// =============================================================================
+
+/**
+ * Base class for plugin configuration using Schema.Class.
+ *
+ * @remarks
+ * Users extend this via `.extend()` to define their plugin config.
+ * Schema fields (like `prefix`) go through `.extend()`.
+ * Meta-level schemas (`options`, `state`, `setup`) go as static readonly
+ * properties on the subclass — these survive Bun's tree-shaking.
+ *
+ * @example
+ * ```ts
+ * class MyConfig extends PluginConfig.extend<MyConfig>("MyConfig")({
+ *   prefix: Schema.Literal("MY_PLUGIN"),
+ * }) {
+ *   static readonly options = Schema.Struct({ MODE: Schema.String });
+ *   static readonly state = MyState;
+ *   static readonly setup = async () => new MyState({ git: true });
+ * }
+ * ```
+ *
+ * @public
+ */
+export class PluginConfig extends Schema.Class<PluginConfig>("PluginConfig")({}) {}
 
 // =============================================================================
 // I/O TYPES
@@ -133,7 +163,7 @@ export interface HandlerContext<TInput, TOptions, TState = Record<string, unknow
  */
 export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, unknown>> = (
 	ctx: HandlerContext<TInput, TOptions, TState>,
-) => TOutput | Promise<TOutput> | Effect.Effect<TOutput>;
+) => TOutput | AnyOutcome | Promise<TOutput | AnyOutcome> | Effect.Effect<TOutput | AnyOutcome>;
 
 /**
  * Raw handler: full access to event object for advanced use cases.
@@ -888,7 +918,7 @@ export type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions
  * @typeParam TCommands - Map of command names to their definitions
  * @public
  */
-export interface PluginConfig<
+export interface PluginConfigOptions<
 	TOptionsSchema extends Schema.Schema.Any,
 	TStateSchema extends Schema.Schema.Any | undefined = undefined,
 	// Use function type constraint directly to avoid default type parameter issues
@@ -1230,7 +1260,10 @@ export interface PluginBuildOptions {
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractOptionsSchema<T> = T extends ClaudePlugin<infer TSchema, any> ? TSchema : never;
+type ResolvePlugin<T> = T extends new () => infer I ? I : T;
+
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractOptionsSchema<T> = ResolvePlugin<T> extends ClaudePlugin<infer TSchema, any> ? TSchema : never;
 
 /**
  * Helper type to extract setup function type from a ClaudePlugin instance.
@@ -1238,7 +1271,7 @@ export type ExtractOptionsSchema<T> = T extends ClaudePlugin<infer TSchema, any>
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type ExtractSetup<T> =
-	T extends ClaudePlugin<any, infer TState>
+	ResolvePlugin<T> extends ClaudePlugin<any, infer TState>
 		? TState extends Schema.Schema.Any
 			? (ctx: SetupContext<any>) => Schema.Schema.Type<TState>
 			: undefined
@@ -1248,11 +1281,12 @@ export type ExtractSetup<T> =
  * Helper type to extract commands map from a ClaudePlugin instance.
  * @public
  */
-export type ExtractCommands<T> = T extends { config: { commands?: infer C } }
-	? C extends Record<string, CommandDefinitionBase>
-		? C
-		: Record<string, CommandDefinitionBase>
-	: Record<string, CommandDefinitionBase>;
+export type ExtractCommands<T> =
+	ResolvePlugin<T> extends { config: { commands?: infer C } }
+		? C extends Record<string, CommandDefinitionBase>
+			? C
+			: Record<string, CommandDefinitionBase>
+		: Record<string, CommandDefinitionBase>;
 
 /**
  * Extract the inferred Options type from a plugin configuration.
@@ -1292,7 +1326,7 @@ export type InferPluginOptions<T> = Schema.Schema.Type<ExtractOptionsSchema<T>>;
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type InferPluginState<T> =
-	T extends ClaudePlugin<any, infer TState>
+	ResolvePlugin<T> extends ClaudePlugin<any, infer TState>
 		? TState extends Schema.Schema.Any
 			? Schema.Schema.Type<TState>
 			: Record<string, unknown>

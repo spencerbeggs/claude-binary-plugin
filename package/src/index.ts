@@ -404,7 +404,7 @@ export type {
 	PermissionRequestRawHandler,
 	PipelineHandler,
 	PluginBuildOptions,
-	PluginConfig,
+	PluginConfigOptions,
 	PluginDefinition,
 	PluginState,
 	PostToolUseHandler,
@@ -438,7 +438,7 @@ export type {
 	UserPromptSubmitHookDefinition,
 	UserPromptSubmitRawHandler,
 } from "./plugin/config.js";
-export { Plugin } from "./plugin/config.js";
+export { Plugin, PluginConfig } from "./plugin/config.js";
 // Pipeline output schemas
 export type {
 	ExecutionQuality,
