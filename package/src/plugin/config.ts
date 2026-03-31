@@ -77,7 +77,8 @@ export class PluginConfig extends Schema.Class<PluginConfig>("PluginConfig")({})
  *
  * @public
  */
-export class ClaudePlugin<TConfig extends typeof PluginConfig = typeof PluginConfig> {
+// biome-ignore lint/suspicious/noExplicitAny: Schema.Class statics are complex; structural constraint suffices
+export class ClaudePlugin<TConfig extends abstract new (...args: any[]) => any = typeof PluginConfig> {
 	constructor(
 		readonly config: TConfig,
 		readonly hooks: HooksMap<unknown>,
@@ -95,7 +96,8 @@ export class ClaudePlugin<TConfig extends typeof PluginConfig = typeof PluginCon
 		return new Tester(this.config, this.hooks);
 	}
 
-	static async build<T extends typeof PluginConfig>(
+	// biome-ignore lint/suspicious/noExplicitAny: Schema.Class statics are complex; structural constraint suffices
+	static async build<T extends abstract new (...args: any[]) => any>(
 		config: T,
 		hooks: HooksMap<unknown>,
 		options: PluginBuildOptions = {},
