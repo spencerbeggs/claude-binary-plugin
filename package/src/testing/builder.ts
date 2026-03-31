@@ -11,7 +11,6 @@ import type {
 	CommandHandler,
 	CommandOutput,
 	PipelineHandler,
-	PluginDefinition,
 	PluginState,
 } from "../plugin/config.js";
 import type { HookAction } from "../schemas/pipeline-outputs.js";
@@ -510,19 +509,27 @@ export class PluginTester<
 	private originalBunShell: any = null;
 
 	/**
-	 * Plugin configuration reference for type inference.
+	 * Config class (typeof PluginConfig subclass) with static properties.
 	 * @internal
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Store plugin config for reference
-	private readonly pluginConfig: PluginDefinition<any, any>;
+	// biome-ignore lint/suspicious/noExplicitAny: Accept any config class with statics
+	private readonly configClass: any;
+
+	/**
+	 * Hooks map from ClaudePlugin instance.
+	 * @internal
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Accept any hooks map shape
+	private readonly hooksMap: Record<string, any[]>;
 
 	/**
 	 * Create a new test builder for a plugin.
 	 * @internal - Use `plugin.test()` instead
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin config
-	constructor(pluginConfig: PluginDefinition<any, any>) {
-		this.pluginConfig = pluginConfig;
+	// biome-ignore lint/suspicious/noExplicitAny: Accept any config class
+	constructor(configClass: any, hooks: Record<string, any[]> = {}) {
+		this.configClass = configClass;
+		this.hooksMap = hooks;
 	}
 
 	// =========================================================================
@@ -1427,7 +1434,7 @@ export class PluginTester<
 
 			async blob(): Promise<Blob> {
 				const result = await shellPromise.nothrow();
-				return new Blob([result.stdout]);
+				return new Blob([new Uint8Array(result.stdout)]);
 			},
 
 			async lines(): Promise<string[]> {
@@ -1466,7 +1473,7 @@ export class PluginTester<
 		try {
 			// Find the hook definition
 			// biome-ignore lint/suspicious/noExplicitAny: Dynamic hook type access requires runtime type checking
-			const hookDefinitions = (this.pluginConfig.hooks as any)[hookType as string];
+			const hookDefinitions = (this.hooksMap as any)[hookType as string];
 			if (!hookDefinitions || !Array.isArray(hookDefinitions)) {
 				throw new Error(`No hooks defined for type "${String(hookType)}"`);
 			}
@@ -1566,7 +1573,7 @@ export class PluginTester<
 
 		try {
 			// Find the command definition
-			const commands = this.pluginConfig.commands as Record<string, CommandDefinition> | undefined;
+			const commands = (this.configClass as any).commands as Record<string, CommandDefinition> | undefined;
 			if (!commands) {
 				throw new Error("No commands defined in plugin configuration");
 			}
@@ -1715,7 +1722,7 @@ export class PluginTester<
 	 */
 	private async setupMocks(): Promise<void> {
 		// Save and set environment variables
-		const prefix = this.pluginConfig.prefix;
+		const prefix = (this.configClass as any).prefix;
 
 		// Create temp project directory if requested
 		if (this.state.useTempProject && !this.state.tempProjectDir) {
