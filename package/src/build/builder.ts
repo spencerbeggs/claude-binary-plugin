@@ -1321,11 +1321,8 @@ function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
  */
 async function buildPluginFromConfig(
 	plugin: {
-		config: {
-			hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
-			commands?: Record<string, ExtractableCommand>;
-			hooksOutputPath?: string;
-		};
+		config: any;
+		hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
 	},
 	options: {
 		rootDir?: string;
@@ -1390,9 +1387,9 @@ async function buildPluginFromConfig(
 	}
 
 	// Extract hooks and commands from plugin config
-	const hookEntries = extractPipelineHookEntries(plugin.config);
-	const commandEntries = extractPipelineCommandEntries(plugin.config);
-	const passthroughHooks = extractPassthroughHookEntries(plugin.config);
+	const hookEntries = extractPipelineHookEntries({ hooks: plugin.hooks });
+	const commandEntries = extractPipelineCommandEntries({ commands: (plugin.config as any).commands });
+	const passthroughHooks = extractPassthroughHookEntries({ hooks: plugin.hooks });
 
 	// Resolve file paths for file-based handlers using import.meta.resolve
 	const resolvedHooks: PipelineHookEntry[] = hookEntries.map((hook) => {
@@ -1554,7 +1551,7 @@ async function buildPluginFromConfig(
 		});
 
 		// Write hooks.json
-		const hooksOutputPath = plugin.config.hooksOutputPath ?? "hooks/hooks.json";
+		const hooksOutputPath = (plugin.config as any).hooksOutputPath ?? "hooks/hooks.json";
 		const hooksJsonPath = resolve(absoluteRootDir, hooksOutputPath);
 
 		// Ensure directory exists
@@ -1726,11 +1723,8 @@ export class PluginBuilder {
 	 */
 	static fromConfig(
 		plugin: {
-			config: {
-				hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
-				commands?: Record<string, ExtractableCommand>;
-				hooksOutputPath?: string;
-			};
+			config: any;
+			hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
 		},
 		options: {
 			rootDir?: string;
