@@ -157,3 +157,59 @@ so non-SessionStart hooks can find their session's env directory.
 
 - `src/index.ts` -- All public SDK exports (services, layers, schemas, types, errors)
 - `src/testing.ts` -- Test factory functions only (imported as `claude-binary-plugin/testing`)
+
+## Future Work: Plugin-as-Class Pattern
+
+**Status:** Idea captured. Not blocking current work. Revisit during API
+refinement phase before 1.0.
+
+### Current Factory Pattern
+
+Plugins are currently defined via `ClaudeBinaryPlugin.create()`:
+
+```typescript
+const plugin = ClaudeBinaryPlugin.create({
+  prefix: "MY_PLUGIN",
+  options: Schema.Struct({...}),
+  state: MyState,
+  setup: () => new MyState({...}),
+  hooks: {...},
+});
+```
+
+### Proposed Class Extension Pattern
+
+Replace the factory with a typed base class that users extend:
+
+```typescript
+class MyPlugin extends Plugin("MY_PLUGIN", {
+  options: Schema.Struct({ MODE: Schema.String }),
+  state: MyState,
+}) {
+  setup({ options }) {
+    return new MyState({ git: true, packageManager: "bun" });
+  }
+  hooks = {
+    PreToolUse: [{ name: "guard", pipeline: ({ input, state }) => new Allow({ summary: "ok" }) }],
+  };
+}
+```
+
+### Benefits
+
+- Types for `setup`, `hooks`, and handler contexts flow from the
+  `options`/`state` declarations without explicit generics
+- Single class declaration = one plugin (no separate config object)
+- Eliminates 4-param generic threading on `ClaudeBinaryPlugin`
+- Plugin methods can be referenced as handler pipelines
+- `instanceof` works
+
+### Design Considerations
+
+- **Not `Schema.Class`** -- plugin config is not serialized data, so
+  `encode`/`decode` semantics are irrelevant
+- `Plugin()` returns a typed base class (similar to `Schema.Class` internals
+  but without schema machinery)
+- This is an **API surface change** for v1.0, not a plumbing change -- the
+  internal outcome/state/pipeline runtime stays the same
+- Should be designed **after** the outcome/state pipeline is proven out

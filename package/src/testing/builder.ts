@@ -1,8 +1,10 @@
 import { mock, spyOn } from "bun:test";
 import { rmSync } from "node:fs";
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import type { PartialDeep } from "type-fest";
 import type { ShellResult } from "../build/builder.js";
+import { Outcome } from "../outcomes/Outcome.js";
+import type { OutcomeTelemetry } from "../outcomes/Outcome.js";
 import type {
 	BaseState,
 	CommandDefinition,
@@ -30,7 +32,7 @@ export interface HookInputBase {
 	session_id?: string;
 	transcript_path?: string;
 	cwd?: string;
-	permission_mode?: "default" | "plan" | "acceptEdits" | "bypassPermissions";
+	permission_mode?: "default" | "plan" | "acceptEdits" | "auto" | "dontAsk" | "bypassPermissions";
 }
 
 /**
@@ -127,8 +129,9 @@ export interface NotificationTestInput extends HookInputBase {
  * @public
  */
 export interface PermissionRequestTestInput extends HookInputBase {
-	message: string;
-	notification_type: string;
+	tool_name: string;
+	tool_input: Record<string, unknown>;
+	permission_suggestions?: Record<string, unknown>[];
 }
 
 // =============================================================================
@@ -154,6 +157,10 @@ export interface HookTestResult {
 	context?: string | undefined;
 	/** Convenience accessor for reason */
 	reason?: string | undefined;
+	/** The Outcome instance if the handler returned one (for instanceof checks) */
+	outcome?: Outcome | undefined;
+	/** Telemetry data from the outcome */
+	telemetry?: OutcomeTelemetry | undefined;
 }
 
 /**
@@ -507,14 +514,14 @@ export class PluginTester<
 	 * @internal
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Store plugin config for reference
-	private readonly pluginConfig: PluginConfig<any, any, any>;
+	private readonly pluginConfig: PluginConfig<any, any, any, any>;
 
 	/**
 	 * Create a new test builder for a plugin.
 	 * @internal - Use `plugin.test()` instead
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin config
-	constructor(pluginConfig: PluginConfig<any, any, any>) {
+	constructor(pluginConfig: PluginConfig<any, any, any, any>) {
 		this.pluginConfig = pluginConfig;
 	}
 
@@ -1493,7 +1500,14 @@ export class PluginTester<
 
 			// Call the handler - cast context to match handler signature
 			// biome-ignore lint/suspicious/noExplicitAny: Handler context types are verified at runtime
-			const output = await handler(context as any);
+			let output = handler(context as any);
+
+			// Handle Effect, Promise, or sync return
+			if (Effect.isEffect(output)) {
+				output = await Effect.runPromise(output as Effect.Effect<unknown>);
+			} else if (output instanceof Promise) {
+				output = await output;
+			}
 
 			// Build and return the result
 			return this.buildHookResultFromOutput(output);
@@ -1900,7 +1914,30 @@ export class PluginTester<
 	 * @internal
 	 */
 	private buildHookResultFromOutput(output: unknown): HookTestResult {
-		// Check if it's a valid pipeline output
+		// Check if it's an Outcome instance (new pattern)
+		if (Outcome.isOutcome(output)) {
+			const response = output.toResponse();
+			const telemetry = output.toTelemetry();
+
+			// Extract convenience fields from response
+			const action = (response.permissionDecision ?? response.decision ?? undefined) as HookAction | undefined;
+			const context = response.additionalContext as string | undefined;
+			const reason = response.reason as string | undefined;
+
+			return {
+				exitCode: 0,
+				stdout: JSON.stringify(response),
+				stderr: this.stderrBuffer,
+				output: response,
+				action,
+				context,
+				reason,
+				outcome: output,
+				telemetry,
+			};
+		}
+
+		// Check if it's a valid pipeline output (legacy pattern)
 		if (!isPipelineOutput(output)) {
 			return {
 				exitCode: 1,

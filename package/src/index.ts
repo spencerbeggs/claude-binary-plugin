@@ -40,6 +40,35 @@
  */
 
 // =============================================================================
+// OUTCOMES
+// =============================================================================
+
+export { ContextBuilder, MarkdownContext, XmlContext } from "./outcomes/ContextBuilder.js";
+export { Outcome } from "./outcomes/Outcome.js";
+export type { HookOutcomeLabel, OutcomeTelemetry, ContextValue } from "./outcomes/Outcome.js";
+export { Allow } from "./outcomes/Allow.js";
+export { Deny } from "./outcomes/Deny.js";
+export { Ask } from "./outcomes/Ask.js";
+export { Modify } from "./outcomes/Modify.js";
+export { Block } from "./outcomes/Block.js";
+export { Continue } from "./outcomes/Continue.js";
+export { AddContext } from "./outcomes/AddContext.js";
+export { NoAction } from "./outcomes/NoAction.js";
+export { Skip } from "./outcomes/Skip.js";
+export type {
+	PreToolUseOutcome,
+	PostToolUseOutcome,
+	SessionStartOutcome,
+	StopOutcome,
+	UserPromptSubmitOutcome,
+	PermissionRequestOutcome,
+	PassthroughOutcome,
+	AnyOutcome,
+	HookOutcomeMap,
+} from "./outcomes/types.js";
+export { isValidOutcomeForHook } from "./outcomes/types.js";
+
+// =============================================================================
 // ERRORS
 // =============================================================================
 
@@ -97,26 +126,48 @@ export type { SessionId, ToolUseId, TranscriptPath } from "./schemas/branded.js"
 export type { HookEventBase } from "./schemas/hook-inputs.js";
 // Input Schema.Classes (each is both a type and a runtime schema)
 export {
+	ConfigChangeInput,
+	CwdChangedInput,
+	ElicitationInput,
+	ElicitationResultInput,
+	FileChangedInput,
+	InstructionsLoadedInput,
 	NotificationInput,
 	PermissionRequestInput,
+	PostCompactInput,
+	PostToolUseFailureInput,
 	PostToolUseInput,
 	PreCompactInput,
 	PreToolUseInput,
 	SessionEndInput,
 	SessionStartInput,
+	StopFailureInput,
 	StopInput,
+	SubagentStartInput,
 	SubagentStopInput,
+	TaskCompletedInput,
+	TaskCreatedInput,
+	TeammateIdleInput,
 	UserPromptSubmitInput,
+	WorktreeCreateInput,
+	WorktreeRemoveInput,
 } from "./schemas/hook-inputs.js";
 // Hook literal types and enum
 export type {
+	ConfigChangeSource,
+	ElicitationAction,
+	FileChangeEvent,
 	HookPermissionsMode,
 	HookTypeName,
+	InstructionsLoadedReason,
+	InstructionsMemoryType,
+	NotificationType,
 	PermissionRequestBehavior,
 	PreCompactTrigger,
 	PreToolUseDecision,
 	SessionEndReason,
 	SessionStartSource,
+	StopFailureError,
 	ToolName,
 } from "./schemas/hook-literals.js";
 export { HookType } from "./schemas/hook-literals.js";
@@ -182,19 +233,34 @@ export type {
 export type { HookEventParsed, HookEventSchemaMetadata } from "./schemas/hook-events.js";
 // Hook event Schema.Class types and schemas with annotation metadata
 export {
+	ConfigChangeEvent,
+	CwdChangedEvent,
+	ElicitationEvent,
+	ElicitationResultEvent,
+	FileChangedEvent,
 	HookEventSchema,
 	HookEventSchemas,
+	InstructionsLoadedEvent,
 	// Schema.Class event classes (each is both a type and a schema)
 	NotificationEvent,
 	PermissionRequestEvent,
+	PostCompactEvent,
 	PostToolUseEvent,
+	PostToolUseFailureEvent,
 	PreCompactEvent,
 	PreToolUseEvent,
 	SessionEndEvent,
 	SessionStartEvent,
 	StopEvent,
+	StopFailureEvent,
+	SubagentStartEvent,
 	SubagentStopEvent,
+	TaskCompletedEvent,
+	TaskCreatedEvent,
+	TeammateIdleEvent,
 	UserPromptSubmitEvent,
+	WorktreeCreateEvent,
+	WorktreeRemoveEvent,
 	getSchemaMetadata,
 } from "./schemas/hook-events.js";
 

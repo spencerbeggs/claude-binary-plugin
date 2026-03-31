@@ -1,23 +1,44 @@
 import { Schema } from "effect";
 import { SessionIdSchema, ToolUseIdSchema, TranscriptPathSchema } from "./branded.js";
 import type {
+	ConfigChangeInput,
+	CwdChangedInput,
+	ElicitationInput,
+	ElicitationResultInput,
+	FileChangedInput,
+	InstructionsLoadedInput,
 	NotificationInput,
 	PermissionRequestInput,
+	PostCompactInput,
+	PostToolUseFailureInput,
 	PostToolUseInput,
 	PreCompactInput,
 	PreToolUseInput,
 	SessionEndInput,
 	SessionStartInput,
+	StopFailureInput,
 	StopInput,
+	SubagentStartInput,
 	SubagentStopInput,
+	TaskCompletedInput,
+	TaskCreatedInput,
+	TeammateIdleInput,
 	UserPromptSubmitInput,
+	WorktreeCreateInput,
+	WorktreeRemoveInput,
 } from "./hook-inputs.js";
 import {
+	ConfigChangeSourceSchema,
+	ElicitationActionSchema,
+	FileChangeEventSchema,
 	HookPermissionsModeSchema,
 	HookTypeSchema,
+	InstructionsLoadedReasonSchema,
+	InstructionsMemoryTypeSchema,
 	PreCompactTriggerSchema,
 	SessionEndReasonSchema,
 	SessionStartSourceSchema,
+	StopFailureErrorSchema,
 } from "./hook-literals.js";
 import { JsonObjectSchema } from "./json.js";
 
@@ -86,6 +107,10 @@ const HookEventBaseSchema = Schema.Struct({
 	permission_mode: Schema.optional(HookPermissionsModeSchema),
 	/** The type of hook event */
 	hook_event_name: HookTypeSchema,
+	/** Unique identifier for the subagent (present when hook fires inside a subagent) */
+	agent_id: Schema.optional(Schema.String),
+	/** Agent name (present when session uses --agent or hook fires inside a subagent) */
+	agent_type: Schema.optional(Schema.String),
 });
 
 // =============================================================================
@@ -118,6 +143,8 @@ export class PreToolUseEvent extends Schema.Class<PreToolUseEvent>("PreToolUseEv
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			tool_name: input.tool_name,
 			tool_input: input.tool_input,
 			tool_use_id: input.tool_use_id,
@@ -153,6 +180,8 @@ export class PostToolUseEvent extends Schema.Class<PostToolUseEvent>("PostToolUs
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			tool_name: input.tool_name,
 			tool_input: input.tool_input,
 			tool_response: input.tool_response,
@@ -173,10 +202,12 @@ export class PostToolUseEvent extends Schema.Class<PostToolUseEvent>("PostToolUs
 export class PermissionRequestEvent extends Schema.Class<PermissionRequestEvent>("PermissionRequestEvent")({
 	...HookEventBaseSchema.fields,
 	hook_event_name: Schema.Literal("PermissionRequest"),
-	/** The permission message being shown */
-	message: Schema.String,
-	/** Type of notification/permission being requested */
-	notification_type: Schema.String,
+	/** Name of the tool requesting permission */
+	tool_name: Schema.String,
+	/** Input parameters for the tool */
+	tool_input: JsonObjectSchema,
+	/** Permission suggestions (always-allow options) */
+	permission_suggestions: Schema.optional(Schema.Array(JsonObjectSchema)),
 }) {
 	static fromInput(input: typeof PermissionRequestInput.Type): PermissionRequestEvent {
 		return new PermissionRequestEvent({
@@ -185,8 +216,11 @@ export class PermissionRequestEvent extends Schema.Class<PermissionRequestEvent>
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
-			message: input.message,
-			notification_type: input.notification_type,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
+			tool_name: input.tool_name,
+			tool_input: input.tool_input,
+			permission_suggestions: input.permission_suggestions,
 		});
 	}
 }
@@ -205,6 +239,8 @@ export class NotificationEvent extends Schema.Class<NotificationEvent>("Notifica
 	hook_event_name: Schema.Literal("Notification"),
 	/** The notification message */
 	message: Schema.String,
+	/** Optional title for the notification */
+	title: Schema.optional(Schema.String),
 	/** Type of notification */
 	notification_type: Schema.String,
 }) {
@@ -215,7 +251,10 @@ export class NotificationEvent extends Schema.Class<NotificationEvent>("Notifica
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			message: input.message,
+			title: input.title,
 			notification_type: input.notification_type,
 		});
 	}
@@ -243,6 +282,8 @@ export class UserPromptSubmitEvent extends Schema.Class<UserPromptSubmitEvent>("
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			prompt: input.prompt,
 		});
 	}
@@ -262,6 +303,8 @@ export class StopEvent extends Schema.Class<StopEvent>("StopEvent")({
 	hook_event_name: Schema.Literal("Stop"),
 	/** Whether a stop hook is currently active */
 	stop_hook_active: Schema.Boolean,
+	/** Text content of Claude's final response */
+	last_assistant_message: Schema.optional(Schema.String),
 }) {
 	static fromInput(input: typeof StopInput.Type): StopEvent {
 		return new StopEvent({
@@ -270,7 +313,10 @@ export class StopEvent extends Schema.Class<StopEvent>("StopEvent")({
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			stop_hook_active: input.stop_hook_active,
+			last_assistant_message: input.last_assistant_message,
 		});
 	}
 }
@@ -289,6 +335,14 @@ export class SubagentStopEvent extends Schema.Class<SubagentStopEvent>("Subagent
 	hook_event_name: Schema.Literal("SubagentStop"),
 	/** Whether a stop hook is currently active */
 	stop_hook_active: Schema.Boolean,
+	/** Unique identifier for the subagent */
+	agent_id: Schema.optional(Schema.String),
+	/** Agent type name */
+	agent_type: Schema.optional(Schema.String),
+	/** Path to the subagent's own transcript */
+	agent_transcript_path: Schema.optional(Schema.String),
+	/** Text content of the subagent's final response */
+	last_assistant_message: Schema.optional(Schema.String),
 }) {
 	static fromInput(input: typeof SubagentStopInput.Type): SubagentStopEvent {
 		return new SubagentStopEvent({
@@ -297,7 +351,11 @@ export class SubagentStopEvent extends Schema.Class<SubagentStopEvent>("Subagent
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			stop_hook_active: input.stop_hook_active,
+			agent_transcript_path: input.agent_transcript_path,
+			last_assistant_message: input.last_assistant_message,
 		});
 	}
 }
@@ -326,6 +384,8 @@ export class PreCompactEvent extends Schema.Class<PreCompactEvent>("PreCompactEv
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			trigger: input.trigger,
 			custom_instructions: input.custom_instructions,
 		});
@@ -346,6 +406,8 @@ export class SessionStartEvent extends Schema.Class<SessionStartEvent>("SessionS
 	hook_event_name: Schema.Literal("SessionStart"),
 	/** What triggered the session start */
 	source: SessionStartSourceSchema,
+	/** Model identifier */
+	model: Schema.optional(Schema.String),
 }) {
 	static fromInput(input: typeof SessionStartInput.Type): SessionStartEvent {
 		return new SessionStartEvent({
@@ -354,7 +416,10 @@ export class SessionStartEvent extends Schema.Class<SessionStartEvent>("SessionS
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			source: input.source,
+			model: input.model,
 		});
 	}
 }
@@ -381,8 +446,213 @@ export class SessionEndEvent extends Schema.Class<SessionEndEvent>("SessionEndEv
 			cwd: input.cwd,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
 			reason: input.reason,
 		});
+	}
+}
+
+// =============================================================================
+// NEW EVENT SCHEMA CLASSES
+// =============================================================================
+
+/** @public */
+export class PostToolUseFailureEvent extends Schema.Class<PostToolUseFailureEvent>("PostToolUseFailureEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("PostToolUseFailure"),
+	tool_name: Schema.String,
+	tool_input: JsonObjectSchema,
+	tool_use_id: ToolUseIdSchema,
+	error: Schema.String,
+	is_interrupt: Schema.optional(Schema.Boolean),
+}) {
+	static fromInput(input: typeof PostToolUseFailureInput.Type): PostToolUseFailureEvent {
+		return new PostToolUseFailureEvent({ ...input });
+	}
+}
+
+/** @public */
+export class StopFailureEvent extends Schema.Class<StopFailureEvent>("StopFailureEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("StopFailure"),
+	error: StopFailureErrorSchema,
+	error_details: Schema.optional(Schema.String),
+	last_assistant_message: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof StopFailureInput.Type): StopFailureEvent {
+		return new StopFailureEvent({ ...input });
+	}
+}
+
+/** @public */
+export class SubagentStartEvent extends Schema.Class<SubagentStartEvent>("SubagentStartEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("SubagentStart"),
+	agent_id: Schema.optional(Schema.String),
+	agent_type: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof SubagentStartInput.Type): SubagentStartEvent {
+		return new SubagentStartEvent({ ...input });
+	}
+}
+
+/** @public */
+export class TaskCreatedEvent extends Schema.Class<TaskCreatedEvent>("TaskCreatedEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("TaskCreated"),
+	task_id: Schema.String,
+	task_subject: Schema.String,
+	task_description: Schema.optional(Schema.String),
+	teammate_name: Schema.optional(Schema.String),
+	team_name: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof TaskCreatedInput.Type): TaskCreatedEvent {
+		return new TaskCreatedEvent({ ...input });
+	}
+}
+
+/** @public */
+export class TaskCompletedEvent extends Schema.Class<TaskCompletedEvent>("TaskCompletedEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("TaskCompleted"),
+	task_id: Schema.String,
+	task_subject: Schema.String,
+	task_description: Schema.optional(Schema.String),
+	teammate_name: Schema.optional(Schema.String),
+	team_name: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof TaskCompletedInput.Type): TaskCompletedEvent {
+		return new TaskCompletedEvent({ ...input });
+	}
+}
+
+/** @public */
+export class TeammateIdleEvent extends Schema.Class<TeammateIdleEvent>("TeammateIdleEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("TeammateIdle"),
+	teammate_name: Schema.String,
+	team_name: Schema.String,
+}) {
+	static fromInput(input: typeof TeammateIdleInput.Type): TeammateIdleEvent {
+		return new TeammateIdleEvent({ ...input });
+	}
+}
+
+/** @public */
+export class InstructionsLoadedEvent extends Schema.Class<InstructionsLoadedEvent>("InstructionsLoadedEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("InstructionsLoaded"),
+	file_path: Schema.String,
+	memory_type: InstructionsMemoryTypeSchema,
+	load_reason: InstructionsLoadedReasonSchema,
+	globs: Schema.optional(Schema.Array(Schema.String)),
+	trigger_file_path: Schema.optional(Schema.String),
+	parent_file_path: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof InstructionsLoadedInput.Type): InstructionsLoadedEvent {
+		return new InstructionsLoadedEvent({ ...input });
+	}
+}
+
+/** @public */
+export class ConfigChangeEvent extends Schema.Class<ConfigChangeEvent>("ConfigChangeEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("ConfigChange"),
+	source: ConfigChangeSourceSchema,
+	file_path: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof ConfigChangeInput.Type): ConfigChangeEvent {
+		return new ConfigChangeEvent({ ...input });
+	}
+}
+
+/** @public */
+export class CwdChangedEvent extends Schema.Class<CwdChangedEvent>("CwdChangedEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("CwdChanged"),
+	old_cwd: Schema.String,
+	new_cwd: Schema.String,
+}) {
+	static fromInput(input: typeof CwdChangedInput.Type): CwdChangedEvent {
+		return new CwdChangedEvent({ ...input });
+	}
+}
+
+/** @public */
+export class FileChangedEvent extends Schema.Class<FileChangedEvent>("FileChangedEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("FileChanged"),
+	file_path: Schema.String,
+	event: FileChangeEventSchema,
+}) {
+	static fromInput(input: typeof FileChangedInput.Type): FileChangedEvent {
+		return new FileChangedEvent({ ...input });
+	}
+}
+
+/** @public */
+export class WorktreeCreateEvent extends Schema.Class<WorktreeCreateEvent>("WorktreeCreateEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("WorktreeCreate"),
+	name: Schema.String,
+}) {
+	static fromInput(input: typeof WorktreeCreateInput.Type): WorktreeCreateEvent {
+		return new WorktreeCreateEvent({ ...input });
+	}
+}
+
+/** @public */
+export class WorktreeRemoveEvent extends Schema.Class<WorktreeRemoveEvent>("WorktreeRemoveEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("WorktreeRemove"),
+	worktree_path: Schema.String,
+}) {
+	static fromInput(input: typeof WorktreeRemoveInput.Type): WorktreeRemoveEvent {
+		return new WorktreeRemoveEvent({ ...input });
+	}
+}
+
+/** @public */
+export class PostCompactEvent extends Schema.Class<PostCompactEvent>("PostCompactEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("PostCompact"),
+	trigger: PreCompactTriggerSchema,
+	compact_summary: Schema.String,
+}) {
+	static fromInput(input: typeof PostCompactInput.Type): PostCompactEvent {
+		return new PostCompactEvent({ ...input });
+	}
+}
+
+/** @public */
+export class ElicitationEvent extends Schema.Class<ElicitationEvent>("ElicitationEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("Elicitation"),
+	mcp_server_name: Schema.String,
+	message: Schema.String,
+	mode: Schema.optional(Schema.Literal("form", "url")),
+	url: Schema.optional(Schema.String),
+	elicitation_id: Schema.optional(Schema.String),
+	requested_schema: Schema.optional(JsonObjectSchema),
+}) {
+	static fromInput(input: typeof ElicitationInput.Type): ElicitationEvent {
+		return new ElicitationEvent({ ...input });
+	}
+}
+
+/** @public */
+export class ElicitationResultEvent extends Schema.Class<ElicitationResultEvent>("ElicitationResultEvent")({
+	...HookEventBaseSchema.fields,
+	hook_event_name: Schema.Literal("ElicitationResult"),
+	mcp_server_name: Schema.String,
+	action: ElicitationActionSchema,
+	content: Schema.optional(JsonObjectSchema),
+	mode: Schema.optional(Schema.Literal("form", "url")),
+	elicitation_id: Schema.optional(Schema.String),
+}) {
+	static fromInput(input: typeof ElicitationResultInput.Type): ElicitationResultEvent {
+		return new ElicitationResultEvent({ ...input });
 	}
 }
 
@@ -450,6 +720,81 @@ const SessionEndEventAnnotated = SessionEndEvent.annotations({
 	[CapabilitiesAnnotation]: ["cleanup"],
 });
 
+const PostToolUseFailureEventAnnotated = PostToolUseFailureEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a tool execution fails.",
+	[CapabilitiesAnnotation]: ["context"],
+});
+
+const StopFailureEventAnnotated = StopFailureEvent.annotations({
+	[DescriptionAnnotation]: "Fired when the turn ends due to an API error.",
+	[CapabilitiesAnnotation]: ["passthrough"],
+});
+
+const SubagentStartEventAnnotated = SubagentStartEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a subagent is spawned.",
+	[CapabilitiesAnnotation]: ["context"],
+});
+
+const TaskCreatedEventAnnotated = TaskCreatedEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a task is being created.",
+	[CapabilitiesAnnotation]: ["block"],
+});
+
+const TaskCompletedEventAnnotated = TaskCompletedEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a task is being marked as completed.",
+	[CapabilitiesAnnotation]: ["block"],
+});
+
+const TeammateIdleEventAnnotated = TeammateIdleEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a teammate is about to go idle.",
+	[CapabilitiesAnnotation]: ["block"],
+});
+
+const InstructionsLoadedEventAnnotated = InstructionsLoadedEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a CLAUDE.md or rules file is loaded.",
+	[CapabilitiesAnnotation]: ["passthrough"],
+});
+
+const ConfigChangeEventAnnotated = ConfigChangeEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a configuration file changes.",
+	[CapabilitiesAnnotation]: ["block"],
+});
+
+const CwdChangedEventAnnotated = CwdChangedEvent.annotations({
+	[DescriptionAnnotation]: "Fired when the working directory changes.",
+	[CapabilitiesAnnotation]: ["watchPaths"],
+});
+
+const FileChangedEventAnnotated = FileChangedEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a watched file changes on disk.",
+	[CapabilitiesAnnotation]: ["watchPaths"],
+});
+
+const WorktreeCreateEventAnnotated = WorktreeCreateEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a worktree is being created.",
+	[CapabilitiesAnnotation]: ["path"],
+});
+
+const WorktreeRemoveEventAnnotated = WorktreeRemoveEvent.annotations({
+	[DescriptionAnnotation]: "Fired when a worktree is being removed.",
+	[CapabilitiesAnnotation]: ["passthrough"],
+});
+
+const PostCompactEventAnnotated = PostCompactEvent.annotations({
+	[DescriptionAnnotation]: "Fired after context compaction completes.",
+	[CapabilitiesAnnotation]: ["passthrough"],
+});
+
+const ElicitationEventAnnotated = ElicitationEvent.annotations({
+	[DescriptionAnnotation]: "Fired when an MCP server requests user input.",
+	[CapabilitiesAnnotation]: ["accept", "decline", "cancel"],
+});
+
+const ElicitationResultEventAnnotated = ElicitationResultEvent.annotations({
+	[DescriptionAnnotation]: "Fired after a user responds to an MCP elicitation.",
+	[CapabilitiesAnnotation]: ["accept", "decline", "cancel"],
+});
+
 // =============================================================================
 // DISCRIMINATED UNION
 // =============================================================================
@@ -466,12 +811,27 @@ const SessionEndEventAnnotated = SessionEndEvent.annotations({
 export const HookEventSchema = Schema.Union(
 	PreToolUseEvent,
 	PostToolUseEvent,
+	PostToolUseFailureEvent,
 	PermissionRequestEvent,
 	NotificationEvent,
 	UserPromptSubmitEvent,
 	StopEvent,
+	StopFailureEvent,
+	SubagentStartEvent,
 	SubagentStopEvent,
+	TaskCreatedEvent,
+	TaskCompletedEvent,
+	TeammateIdleEvent,
+	InstructionsLoadedEvent,
+	ConfigChangeEvent,
+	CwdChangedEvent,
+	FileChangedEvent,
+	WorktreeCreateEvent,
+	WorktreeRemoveEvent,
 	PreCompactEvent,
+	PostCompactEvent,
+	ElicitationEvent,
+	ElicitationResultEvent,
 	SessionStartEvent,
 	SessionEndEvent,
 );
@@ -597,6 +957,51 @@ export class HookEventSchemas {
 	/** Schema for SessionEnd events (cleanup) */
 	static readonly SessionEnd = SessionEndEventAnnotated;
 
+	/** Schema for PostToolUseFailure events (context after tool failure) */
+	static readonly PostToolUseFailure = PostToolUseFailureEventAnnotated;
+
+	/** Schema for StopFailure events (fire-and-forget on API error) */
+	static readonly StopFailure = StopFailureEventAnnotated;
+
+	/** Schema for SubagentStart events (context on subagent spawn) */
+	static readonly SubagentStart = SubagentStartEventAnnotated;
+
+	/** Schema for TaskCreated events (block task creation) */
+	static readonly TaskCreated = TaskCreatedEventAnnotated;
+
+	/** Schema for TaskCompleted events (block task completion) */
+	static readonly TaskCompleted = TaskCompletedEventAnnotated;
+
+	/** Schema for TeammateIdle events (block teammate idle) */
+	static readonly TeammateIdle = TeammateIdleEventAnnotated;
+
+	/** Schema for InstructionsLoaded events (observability) */
+	static readonly InstructionsLoaded = InstructionsLoadedEventAnnotated;
+
+	/** Schema for ConfigChange events (block config changes) */
+	static readonly ConfigChange = ConfigChangeEventAnnotated;
+
+	/** Schema for CwdChanged events (env reload) */
+	static readonly CwdChanged = CwdChangedEventAnnotated;
+
+	/** Schema for FileChanged events (file watch) */
+	static readonly FileChanged = FileChangedEventAnnotated;
+
+	/** Schema for WorktreeCreate events (custom worktree) */
+	static readonly WorktreeCreate = WorktreeCreateEventAnnotated;
+
+	/** Schema for WorktreeRemove events (cleanup) */
+	static readonly WorktreeRemove = WorktreeRemoveEventAnnotated;
+
+	/** Schema for PostCompact events (post-compaction) */
+	static readonly PostCompact = PostCompactEventAnnotated;
+
+	/** Schema for Elicitation events (MCP user input) */
+	static readonly Elicitation = ElicitationEventAnnotated;
+
+	/** Schema for ElicitationResult events (MCP response) */
+	static readonly ElicitationResult = ElicitationResultEventAnnotated;
+
 	/** Union of all hook event schemas */
 	static readonly Any = HookEventSchema;
 
@@ -694,5 +1099,65 @@ export class HookEventSchemas {
 	 */
 	static parseSessionEnd(json: string): SessionEndEvent {
 		return Schema.decodeUnknownSync(SessionEndEvent)(JSON.parse(json));
+	}
+
+	static parsePostToolUseFailure(json: string): PostToolUseFailureEvent {
+		return Schema.decodeUnknownSync(PostToolUseFailureEvent)(JSON.parse(json));
+	}
+
+	static parseStopFailure(json: string): StopFailureEvent {
+		return Schema.decodeUnknownSync(StopFailureEvent)(JSON.parse(json));
+	}
+
+	static parseSubagentStart(json: string): SubagentStartEvent {
+		return Schema.decodeUnknownSync(SubagentStartEvent)(JSON.parse(json));
+	}
+
+	static parseTaskCreated(json: string): TaskCreatedEvent {
+		return Schema.decodeUnknownSync(TaskCreatedEvent)(JSON.parse(json));
+	}
+
+	static parseTaskCompleted(json: string): TaskCompletedEvent {
+		return Schema.decodeUnknownSync(TaskCompletedEvent)(JSON.parse(json));
+	}
+
+	static parseTeammateIdle(json: string): TeammateIdleEvent {
+		return Schema.decodeUnknownSync(TeammateIdleEvent)(JSON.parse(json));
+	}
+
+	static parseInstructionsLoaded(json: string): InstructionsLoadedEvent {
+		return Schema.decodeUnknownSync(InstructionsLoadedEvent)(JSON.parse(json));
+	}
+
+	static parseConfigChange(json: string): ConfigChangeEvent {
+		return Schema.decodeUnknownSync(ConfigChangeEvent)(JSON.parse(json));
+	}
+
+	static parseCwdChanged(json: string): CwdChangedEvent {
+		return Schema.decodeUnknownSync(CwdChangedEvent)(JSON.parse(json));
+	}
+
+	static parseFileChanged(json: string): FileChangedEvent {
+		return Schema.decodeUnknownSync(FileChangedEvent)(JSON.parse(json));
+	}
+
+	static parseWorktreeCreate(json: string): WorktreeCreateEvent {
+		return Schema.decodeUnknownSync(WorktreeCreateEvent)(JSON.parse(json));
+	}
+
+	static parseWorktreeRemove(json: string): WorktreeRemoveEvent {
+		return Schema.decodeUnknownSync(WorktreeRemoveEvent)(JSON.parse(json));
+	}
+
+	static parsePostCompact(json: string): PostCompactEvent {
+		return Schema.decodeUnknownSync(PostCompactEvent)(JSON.parse(json));
+	}
+
+	static parseElicitation(json: string): ElicitationEvent {
+		return Schema.decodeUnknownSync(ElicitationEvent)(JSON.parse(json));
+	}
+
+	static parseElicitationResult(json: string): ElicitationResultEvent {
+		return Schema.decodeUnknownSync(ElicitationResultEvent)(JSON.parse(json));
 	}
 }

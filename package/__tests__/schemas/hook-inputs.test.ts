@@ -155,15 +155,15 @@ describe("PermissionRequestInput", () => {
 	const validData = {
 		...baseInputFields,
 		hook_event_name: "PermissionRequest" as const,
-		message: "Allow bash command?",
-		notification_type: "permission_prompt",
+		tool_name: "Bash",
+		tool_input: { command: "rm -rf node_modules" },
 	};
 
 	test("decodes valid input", () => {
 		const result = decode(PermissionRequestInput, validData);
 		expect(result.hook_event_name).toBe("PermissionRequest");
-		expect(result.message).toBe("Allow bash command?");
-		expect(result.notification_type).toBe("permission_prompt");
+		expect(result.tool_name).toBe("Bash");
+		expect(result.tool_input).toEqual({ command: "rm -rf node_modules" });
 	});
 
 	test("result is instanceof PermissionRequestInput", () => {
@@ -171,8 +171,8 @@ describe("PermissionRequestInput", () => {
 		expect(result).toBeInstanceOf(PermissionRequestInput);
 	});
 
-	test("rejects missing message", () => {
-		const { message: _, ...invalid } = validData;
+	test("rejects missing tool_name", () => {
+		const { tool_name: _, ...invalid } = validData;
 		expect(() => decode(PermissionRequestInput, invalid)).toThrow();
 	});
 });

@@ -77,7 +77,9 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
         stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
+        stateSchema: StateSchema,
         setup: pluginConfig.setup,
+        handlerLayer: PipelineLive,
       });
     }`);
 				} else {
@@ -94,7 +96,9 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
         stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
+        stateSchema: StateSchema,
         setup: pluginConfig.setup,
+        handlerLayer: PipelineLive,
       });
     }`);
 				}
@@ -171,7 +175,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 
 import { parseArgs } from "node:util";
 import pluginDefinition from "${pluginPath}";
-import { PipelineRuntime, PluginEnv, PluginInfo } from "claude-binary-plugin";
+import { PipelineLive, PipelineRuntime, PluginEnv, PluginInfo } from "claude-binary-plugin";
 ${commandRuntimeImport}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
@@ -185,6 +189,9 @@ const pluginConfig = pluginDefinition.config;
 
 // Create environment class from plugin options schema (with pluginName for logging)
 const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
+
+// State schema for typed decode/encode (undefined if plugin doesn't define state)
+const StateSchema = pluginConfig.state;
 
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {

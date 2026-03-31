@@ -1,6 +1,8 @@
 import { dirname } from "node:path";
-import { Effect, ParseResult, Schema } from "effect";
+import { Effect, Layer, ParseResult, Schema } from "effect";
 import type { ReadonlyDeep } from "type-fest";
+import { Outcome } from "../outcomes/Outcome.js";
+import { isValidOutcomeForHook } from "../outcomes/types.js";
 import type { BaseState, PipelineHandler, PluginState, SetupFunction } from "../plugin/config.js";
 import {
 	NotificationEvent,
@@ -102,12 +104,27 @@ const noopTelemetry: TelemetryInterface = {
 export type HookEventType =
 	| "PreToolUse"
 	| "PostToolUse"
+	| "PostToolUseFailure"
 	| "SessionStart"
 	| "SessionEnd"
 	| "Stop"
+	| "StopFailure"
+	| "SubagentStart"
 	| "SubagentStop"
+	| "TaskCreated"
+	| "TaskCompleted"
+	| "TeammateIdle"
+	| "InstructionsLoaded"
+	| "ConfigChange"
+	| "CwdChanged"
+	| "FileChanged"
+	| "WorktreeCreate"
+	| "WorktreeRemove"
 	| "UserPromptSubmit"
 	| "PreCompact"
+	| "PostCompact"
+	| "Elicitation"
+	| "ElicitationResult"
 	| "Notification"
 	| "PermissionRequest";
 
@@ -155,8 +172,19 @@ export interface PipelineConfig<TOptions = unknown, TState = Record<string, stri
 	tools?: string[];
 	/** Effect Schema for validating and persisting plugin options at SessionStart */
 	optionsSchema?: Schema.Schema<TOptions, any, never>;
+	/** Effect Schema.Class for state — enables typed decode on subsequent hooks */
+	stateSchema?: Schema.Schema<TState, any, never>;
 	/** Setup function for computing derived state at SessionStart */
 	setup?: SetupFunction<TOptions>;
+	/**
+	 * Effect Layer provided to handler Effects that require services.
+	 * When a handler returns an Effect with service requirements (e.g., ShellExecutor),
+	 * this layer satisfies those requirements.
+	 * In production, pass PipelineLive. In tests, pass test layers.
+	 * @public
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Layer type is intentionally broad to accept any service requirements
+	handlerLayer?: Layer.Layer<any>;
 	/** I/O dependencies for testing (defaults to process.stdin/stdout/stderr) */
 	io?: IODependencies;
 	/**
@@ -206,6 +234,8 @@ interface PersistSessionEnvOptions {
 	stateInstance: PluginEnv<any>;
 	/** Effect Schema for validating and transforming options before persistence */
 	schema?: Schema.Schema<any, any, never> | undefined;
+	/** Effect Schema for encoding state before persistence */
+	stateSchema?: Schema.Schema<any, any, never> | undefined;
 	/** Computed state from setup() function (will be JSON-stringified and base64-encoded) */
 	state?: Record<string, unknown> | undefined;
 	/** Base state containing projectDir, pluginDir, and pluginEnvFile paths */
@@ -286,8 +316,19 @@ export class PipelineRuntime {
 	static async run<TOptions = unknown, TState = Record<string, string>>(
 		options: PipelineConfig<TOptions, TState>,
 	): Promise<never> {
-		const { hookType, hookName, pluginName, pluginVersion, pipeline, stateClass, tools, optionsSchema, setup } =
-			options;
+		const {
+			hookType,
+			hookName,
+			pluginName,
+			pluginVersion,
+			pipeline,
+			stateClass,
+			tools,
+			optionsSchema,
+			stateSchema,
+			setup,
+			handlerLayer,
+		} = options;
 		const startTime = performance.now();
 
 		// Resolve telemetry service (injected or no-op default)
@@ -434,18 +475,24 @@ export class PipelineRuntime {
 				if (sessionEnvDir) {
 					yield* Effect.tryPromise(() => PluginEnv.loadAllHookFiles(sessionEnvDir));
 				}
-				state = PipelineRuntime.extractPersistedState(stateInstance) as TState;
+				const debugStateSchema = (msg: string) => {
+					if (PipelineRuntime.isDebugEnabled()) console.error(`[stateSchema] ${msg}`);
+				};
+				debugStateSchema(`stateSchema=${stateSchema ? "defined" : "undefined"}, type=${typeof stateSchema}`);
+				state = PipelineRuntime.extractPersistedState(stateInstance, stateSchema) as TState;
 
 				yield* Effect.log("loaded persisted state").pipe(
 					Effect.annotateLogs({ channel: "state", keyCount: Object.keys(state as object).length }),
 				);
 			}
 
-			// Merge base state with computed state to create full plugin state
-			const pluginState = {
-				...baseState,
-				...state,
-			};
+			// Merge base state with computed state to create full plugin state.
+			// If state is a Schema.Class instance (has methods), use Object.assign
+			// to preserve the prototype chain. Otherwise spread into a plain object.
+			const pluginState =
+				state !== null && typeof state === "object" && Object.getPrototypeOf(state) !== Object.prototype
+					? Object.assign(Object.create(Object.getPrototypeOf(state)), state, baseState)
+					: { ...baseState, ...state };
 
 			// Call the pipeline handler with new context shape
 			yield* Effect.log("invoking handler").pipe(Effect.annotateLogs("channel", "pipeline"));
@@ -459,7 +506,13 @@ export class PipelineRuntime {
 			// Handle Effect, Promise, or sync return from handler
 			let output: unknown;
 			if (Effect.isEffect(rawOutput)) {
-				output = yield* rawOutput as Effect.Effect<unknown>;
+				// If handler returns an Effect with service requirements, provide the handler layer
+				if (handlerLayer) {
+					// biome-ignore lint/suspicious/noExplicitAny: Layer satisfies handler's service requirements at runtime
+					output = yield* Effect.provide(rawOutput as Effect.Effect<unknown, unknown, any>, handlerLayer);
+				} else {
+					output = yield* rawOutput as Effect.Effect<unknown>;
+				}
 			} else if (rawOutput instanceof Promise || (rawOutput && typeof (rawOutput as any).then === "function")) {
 				output = yield* Effect.tryPromise(() => rawOutput as Promise<unknown>);
 			} else {
@@ -471,7 +524,60 @@ export class PipelineRuntime {
 			// Calculate duration (rounded to whole ms to match Claude Code)
 			const durationMs = Math.round(performance.now() - startTime);
 
-			// Check if this is a pipeline output
+			// Check if this is an Outcome instance (new pattern)
+			if (Outcome.isOutcome(output)) {
+				// Validate outcome is valid for this hook type
+				if (!isValidOutcomeForHook(hookType, output)) {
+					const tag = (output.constructor as { _tag?: string })._tag ?? "unknown";
+					writeError(`Outcome "${tag}" is not valid for hook type "${hookType}"`);
+					return { _tag: "exit" as const, code: 2 };
+				}
+
+				const outcomeTelemetry = output.toTelemetry();
+
+				// Emit hook execution telemetry
+				yield* Effect.log("emitting hook execution telemetry").pipe(Effect.annotateLogs("channel", "otel"));
+				yield* telemetry
+					.emitHookExecution(
+						new HookExecutionData({
+							hookType,
+							hookName,
+							pluginName,
+							pluginVersion,
+							durationMs,
+							success: outcomeTelemetry.success,
+							outcome: outcomeTelemetry.outcome,
+							summary: outcomeTelemetry.summary,
+							metrics: outcomeTelemetry.metrics as Record<string, number | undefined> | undefined,
+						}),
+					)
+					.pipe(Effect.ignoreLogged);
+
+				// For SessionStart hooks, persist environment variables
+				if (hookType === "SessionStart") {
+					yield* Effect.tryPromise(() =>
+						PipelineRuntime.persistSessionEnv({
+							sessionId: event.session_id,
+							stateInstance: stateInstance as PluginEnv<any>,
+							schema: optionsSchema,
+							stateSchema,
+							state: state as Record<string, unknown>,
+							baseState,
+						}),
+					);
+				}
+
+				// Flush telemetry before exit
+				yield* Effect.log("telemetry flush").pipe(Effect.annotateLogs("channel", "otel"));
+				yield* telemetry.flush(500).pipe(Effect.ignoreLogged);
+
+				// Write response from outcome
+				PipelineRuntime.writeResponse(io, output.toResponse());
+				yield* Effect.log("response written to stdout").pipe(Effect.annotateLogs("channel", "pipeline"));
+				return { _tag: "exit" as const, code: 0 };
+			}
+
+			// Check if this is a pipeline output (legacy pattern)
 			if (isPipelineOutput(output)) {
 				// Extract telemetry from pipeline output
 				const action = "action" in output ? (output.action as HookAction) : undefined;
@@ -519,6 +625,7 @@ export class PipelineRuntime {
 							sessionId: event.session_id,
 							stateInstance: stateInstance as PluginEnv<any>,
 							schema: optionsSchema,
+							stateSchema,
 							state: state as Record<string, unknown>,
 							baseState,
 						}),
@@ -977,7 +1084,10 @@ export class PipelineRuntime {
 	/**
 	 * Extract persisted state from the environment.
 	 */
-	private static extractPersistedState(stateInstance: PluginEnv<any>): Record<string, unknown> {
+	private static extractPersistedState(
+		stateInstance: PluginEnv<any>,
+		stateSchema?: Schema.Schema<any, any, never>,
+	): Record<string, unknown> {
 		const prefix = stateInstance.getPrefix();
 
 		// Debug logging helper
@@ -1010,10 +1120,18 @@ export class PipelineRuntime {
 		try {
 			// Decode from base64 first, then parse JSON
 			const jsonStr = Buffer.from(stateJson, "base64").toString("utf8");
-			const state = JSON.parse(jsonStr);
-			const keys = Object.keys(state);
+			const rawState = JSON.parse(jsonStr);
+
+			// If a state schema is provided, decode through it to get a typed instance
+			if (stateSchema) {
+				const decoded = Schema.decodeUnknownSync(stateSchema)(rawState);
+				debugLog(`Decoded state via schema with keys: ${Object.keys(decoded as object).join(", ")}`);
+				return decoded as Record<string, unknown>;
+			}
+
+			const keys = Object.keys(rawState);
 			debugLog(`Successfully parsed state with ${keys.length} keys: ${keys.join(", ")}`);
-			return typeof state === "object" && state !== null ? state : {};
+			return typeof rawState === "object" && rawState !== null ? rawState : {};
 		} catch (e) {
 			debugLog(`Failed to parse ${stateEnvKey}: ${e}`);
 			return {};
@@ -1040,7 +1158,7 @@ export class PipelineRuntime {
 	 * Persist environment variables for SessionStart hooks.
 	 */
 	private static async persistSessionEnv(options: PersistSessionEnvOptions): Promise<void> {
-		const { sessionId, stateInstance, schema, state, baseState } = options;
+		const { sessionId, stateInstance, schema, stateSchema, state, baseState } = options;
 		const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE;
 		if (!claudeEnvFile) {
 			return; // No env file to write to
@@ -1089,7 +1207,9 @@ export class PipelineRuntime {
 
 		// State (JSON-stringified and base64-encoded)
 		if (state) {
-			const jsonStr = JSON.stringify(state);
+			// If a state schema is provided, encode through it for proper serialization
+			const encoded = stateSchema ? Schema.encodeUnknownSync(stateSchema)(state) : state;
+			const jsonStr = JSON.stringify(encoded);
 			vars[`${prefix}_PLUGIN_STATE`] = Buffer.from(jsonStr).toString("base64");
 		}
 

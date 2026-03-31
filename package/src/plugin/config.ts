@@ -890,6 +890,7 @@ export type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions
  */
 export interface PluginConfig<
 	TOptionsSchema extends Schema.Schema.Any,
+	TStateSchema extends Schema.Schema.Any | undefined = undefined,
 	// Use function type constraint directly to avoid default type parameter issues
 	TSetup extends ((ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>) => unknown) | undefined = undefined,
 	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
@@ -909,15 +910,35 @@ export interface PluginConfig<
 	options: TOptionsSchema;
 
 	/**
+	 * Effect Schema.Class for plugin state.
+	 * When provided, state is encoded through this schema on SessionStart
+	 * and decoded back into a typed instance (with methods) on subsequent hooks.
+	 *
+	 * @example
+	 * ```ts
+	 * class MyState extends Schema.Class<MyState>("MyState")({
+	 *   git: Schema.Boolean,
+	 *   packageManager: Schema.Literal("npm", "bun"),
+	 * }) {
+	 *   getPmExec() { return this.packageManager === "bun" ? "bunx" : "npx"; }
+	 * }
+	 *
+	 * // In plugin config:
+	 * state: MyState,
+	 * setup: () => new MyState({ git: true, packageManager: "bun" }),
+	 * ```
+	 */
+	state?: TStateSchema;
+
+	/**
 	 * Setup function for computing derived environment variables.
 	 * Runs during SessionStart after options are validated.
-	 * Returned variables are prefixed and persisted to CLAUDE_ENV_FILE.
+	 * When `state` is provided, setup should return an instance of the state class.
 	 *
 	 * @example
 	 * ```ts
 	 * setup: async ({ options, cwd }) => {
-	 *   const gitInstalled = await detectGitInstalled();
-	 *   return { GIT_INSTALLED: String(gitInstalled) } as const;
+	 *   return new MyState({ git: await checkGit(), packageManager: "bun" });
 	 * }
 	 * ```
 	 */
@@ -1065,6 +1086,7 @@ export interface PluginConfig<
  */
 export class ClaudeBinaryPlugin<
 	TOptionsSchema extends Schema.Schema.Any,
+	TStateSchema extends Schema.Schema.Any | undefined = undefined,
 	TSetup extends ((ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>) => unknown) | undefined = undefined,
 	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
 > {
@@ -1072,13 +1094,13 @@ export class ClaudeBinaryPlugin<
 	 * The plugin configuration.
 	 * @public
 	 */
-	readonly config: PluginConfig<TOptionsSchema, TSetup, TCommands>;
+	readonly config: PluginConfig<TOptionsSchema, TStateSchema, TSetup, TCommands>;
 
 	/**
 	 * Private constructor - use `ClaudeBinaryPlugin.create()` instead.
 	 * @internal
 	 */
-	private constructor(config: PluginConfig<TOptionsSchema, TSetup, TCommands>) {
+	private constructor(config: PluginConfig<TOptionsSchema, TStateSchema, TSetup, TCommands>) {
 		this.config = config;
 	}
 
@@ -1116,9 +1138,12 @@ export class ClaudeBinaryPlugin<
 	 */
 	static create<
 		TOptionsSchema extends Schema.Schema.Any,
+		TStateSchema extends Schema.Schema.Any | undefined = undefined,
 		TSetup extends ((ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>) => unknown) | undefined = undefined,
 		TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
-	>(config: PluginConfig<TOptionsSchema, TSetup, TCommands>): ClaudeBinaryPlugin<TOptionsSchema, TSetup, TCommands> {
+	>(
+		config: PluginConfig<TOptionsSchema, TStateSchema, TSetup, TCommands>,
+	): ClaudeBinaryPlugin<TOptionsSchema, TStateSchema, TSetup, TCommands> {
 		return new ClaudeBinaryPlugin(config);
 	}
 
@@ -1161,7 +1186,7 @@ export class ClaudeBinaryPlugin<
 	 */
 	static async build(
 		// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin type for build
-		plugin: ClaudeBinaryPlugin<any, any, any>,
+		plugin: ClaudeBinaryPlugin<any, any, any, any>,
 		options: PluginBuildOptions = {},
 	): Promise<PluginBuildResult> {
 		// Dynamic import to avoid circular dependency and enable tree-shaking
@@ -1329,21 +1354,21 @@ export interface PluginBuildOptions {
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any> ? TSchema : never;
+export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any, any> ? TSchema : never;
 
 /**
  * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, infer TSetup, any> ? TSetup : undefined;
+export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, any, infer TSetup, any> ? TSetup : undefined;
 
 /**
  * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, infer TCommands> ? TCommands : never;
+export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, any, infer TCommands> ? TCommands : never;
 
 /**
  * Extract the inferred Options type from a plugin configuration.

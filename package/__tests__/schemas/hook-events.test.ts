@@ -94,8 +94,8 @@ const validPreCompactEvent = {
 const validPermissionRequestEvent = {
 	...baseEventFields,
 	hook_event_name: "PermissionRequest" as const,
-	message: "Allow bash command?",
-	notification_type: "permission_prompt",
+	tool_name: "Bash",
+	tool_input: { command: "rm -rf node_modules" },
 };
 
 const validNotificationEvent = {
@@ -285,7 +285,7 @@ describe("HookEventSchemas.PermissionRequest", () => {
 	test("parses valid event", () => {
 		const result = decode(HookEventSchemas.PermissionRequest, validPermissionRequestEvent);
 		expect(result.hook_event_name).toBe("PermissionRequest");
-		expect(result.message).toBe("Allow bash command?");
+		expect(result.tool_name).toBe("Bash");
 	});
 });
 
@@ -455,7 +455,7 @@ describe("HookEventSchemas.parsePermissionRequest", () => {
 	test("parses valid JSON string", () => {
 		const json = JSON.stringify(validPermissionRequestEvent);
 		const result = HookEventSchemas.parsePermissionRequest(json);
-		expect(result.message).toBe("Allow bash command?");
+		expect(result.tool_name).toBe("Bash");
 	});
 });
 
@@ -504,8 +504,8 @@ describe("PermissionRequestEvent.fromInput", () => {
 		const event = PermissionRequestEvent.fromInput(input);
 		expect(event).toBeInstanceOf(PermissionRequestEvent);
 		expect(event.hook_event_name).toBe("PermissionRequest");
-		expect(event.message).toBe("Allow bash command?");
-		expect(event.notification_type).toBe("permission_prompt");
+		expect(event.tool_name).toBe("Bash");
+		expect(event.tool_input).toEqual({ command: "rm -rf node_modules" });
 		expect(event.session_id).toBe("550e8400-e29b-41d4-a716-446655440000");
 	});
 });

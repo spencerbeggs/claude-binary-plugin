@@ -1,0 +1,14 @@
+# Auto-provisioned dashboards from JSON files
+apiVersion: 1
+
+providers:
+  - name: "Claude Code"
+    orgId: 1
+    folder: "Claude Code"
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false
