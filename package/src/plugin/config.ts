@@ -59,6 +59,51 @@ import type { PluginTester } from "../testing/builder.js";
  */
 export class PluginConfig extends Schema.Class<PluginConfig>("PluginConfig")({}) {}
 
+/**
+ * Runtime orchestrator that takes a config class and hooks map.
+ *
+ * @remarks
+ * Config describes *what the plugin is* (schema, state, setup).
+ * ClaudePlugin describes *what the plugin does* (which handlers run for which hooks).
+ * The same config can be used with different hook sets (e.g., test suite with mock handlers).
+ *
+ * @example
+ * ```ts
+ * const plugin = new ClaudePlugin(MyConfig, {
+ *   PreToolUse: [{ name: "guard", handler: guardHandler }],
+ * });
+ * await plugin.build({ rootDir: import.meta.dir });
+ * ```
+ *
+ * @public
+ */
+export class ClaudePlugin<TConfig extends typeof PluginConfig = typeof PluginConfig> {
+	constructor(
+		readonly config: TConfig,
+		readonly hooks: HooksMap<unknown>,
+	) {}
+
+	async build(options: PluginBuildOptions = {}): Promise<PluginBuildResult> {
+		const { PluginBuilder } = await import("../build/builder.js");
+		// biome-ignore lint/suspicious/noExplicitAny: PluginBuilder.fromConfig uses structural typing
+		return PluginBuilder.fromConfig(this as any, options);
+	}
+
+	test() {
+		// biome-ignore lint/suspicious/noExplicitAny: Runtime creation doesn't need strict types
+		const { PluginTester: Tester } = require("../testing/builder.js") as any;
+		return new Tester(this.config, this.hooks);
+	}
+
+	static async build<T extends typeof PluginConfig>(
+		config: T,
+		hooks: HooksMap<unknown>,
+		options: PluginBuildOptions = {},
+	): Promise<PluginBuildResult> {
+		return new ClaudePlugin(config, hooks).build(options);
+	}
+}
+
 // =============================================================================
 // I/O TYPES
 // =============================================================================
@@ -1087,7 +1132,7 @@ export interface PluginDefinition<
  *
  * @public
  */
-export interface ClaudePlugin<
+export interface ClaudePluginInstance<
 	TOptionsSchema extends Schema.Schema.Any,
 	TStateSchema extends Schema.Schema.Any | undefined = undefined,
 > {
@@ -1136,7 +1181,7 @@ export function Plugin<
 >(
 	prefix: string,
 	definition: PluginDefinition<TOptionsSchema, TStateSchema>,
-): new () => ClaudePlugin<TOptionsSchema, TStateSchema> {
+): new () => ClaudePluginInstance<TOptionsSchema, TStateSchema> {
 	const config = { ...definition, prefix };
 
 	class ClaudePluginBase {
@@ -1156,7 +1201,7 @@ export function Plugin<
 		}
 	}
 
-	return ClaudePluginBase as unknown as new () => ClaudePlugin<TOptionsSchema, TStateSchema>;
+	return ClaudePluginBase as unknown as new () => ClaudePluginInstance<TOptionsSchema, TStateSchema>;
 }
 
 /**
@@ -1263,7 +1308,8 @@ export interface PluginBuildOptions {
 type ResolvePlugin<T> = T extends new () => infer I ? I : T;
 
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractOptionsSchema<T> = ResolvePlugin<T> extends ClaudePlugin<infer TSchema, any> ? TSchema : never;
+export type ExtractOptionsSchema<T> =
+	ResolvePlugin<T> extends ClaudePluginInstance<infer TSchema, any> ? TSchema : never;
 
 /**
  * Helper type to extract setup function type from a ClaudePlugin instance.
@@ -1271,7 +1317,7 @@ export type ExtractOptionsSchema<T> = ResolvePlugin<T> extends ClaudePlugin<infe
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type ExtractSetup<T> =
-	ResolvePlugin<T> extends ClaudePlugin<any, infer TState>
+	ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
 		? TState extends Schema.Schema.Any
 			? (ctx: SetupContext<any>) => Schema.Schema.Type<TState>
 			: undefined
@@ -1326,7 +1372,7 @@ export type InferPluginOptions<T> = Schema.Schema.Type<ExtractOptionsSchema<T>>;
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type InferPluginState<T> =
-	ResolvePlugin<T> extends ClaudePlugin<any, infer TState>
+	ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
 		? TState extends Schema.Schema.Any
 			? Schema.Schema.Type<TState>
 			: Record<string, unknown>
