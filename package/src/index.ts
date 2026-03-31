@@ -385,6 +385,7 @@ export type {
 	ExtractOptionsSchema,
 	ExtractSetup,
 	ExtractSetupReturn,
+	ExtractStateSchema,
 	HandlerContext,
 	HandlerFileHookDefinition,
 	HandlerHookDefinition,

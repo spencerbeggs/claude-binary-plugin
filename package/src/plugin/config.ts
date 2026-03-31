@@ -1303,23 +1303,46 @@ export interface PluginBuildOptions {
 // =============================================================================
 
 /**
- * Helper type to extract the options schema from a ClaudePlugin instance.
- * @public
+ * Helper type to resolve a class constructor to its instance type.
+ * @internal
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 type ResolvePlugin<T> = T extends new () => infer I ? I : T;
 
-// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractOptionsSchema<T> =
-	ResolvePlugin<T> extends ClaudePluginInstance<infer TSchema, any> ? TSchema : never;
-
 /**
- * Helper type to extract setup function type from a ClaudePlugin instance.
+ * Extract the options Schema from either:
+ * - A PluginConfig subclass with static `options` property (new API)
+ * - A ClaudePluginInstance (old Plugin() factory API)
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractSetup<T> =
-	ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
+export type ExtractOptionsSchema<T> =
+	// New API: static options on PluginConfig subclass
+	T extends { options: infer S extends Schema.Schema.Any }
+		? S
+		: // Old API: ClaudePluginInstance<TSchema, ...>
+			ResolvePlugin<T> extends ClaudePluginInstance<infer TSchema, any>
+			? TSchema
+			: never;
+
+/**
+ * Extract the state Schema from either:
+ * - A PluginConfig subclass with static `state` property (new API)
+ * - Falls back to never (old API uses ClaudePluginInstance path in InferPluginState)
+ * @public
+ */
+export type ExtractStateSchema<T> = T extends { state: infer S extends Schema.Schema.Any } ? S : never;
+
+/**
+ * Extract the setup function type from either:
+ * - A PluginConfig subclass with static `setup` property (new API)
+ * - A ClaudePluginInstance (old Plugin() factory API)
+ * @public
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
+export type ExtractSetup<T> = T extends { setup: infer F }
+	? F
+	: ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
 		? TState extends Schema.Schema.Any
 			? (ctx: SetupContext<any>) => Schema.Schema.Type<TState>
 			: undefined
@@ -1341,44 +1364,51 @@ export type ExtractCommands<T> =
  *
  * @remarks
  * Extracts the TypeScript type from the plugin's Effect options schema.
- * Use this to get typed access to plugin options in handlers.
+ * Works with both the new PluginConfig.extend() API (static `options`)
+ * and the old Plugin() factory API (ClaudePluginInstance).
  *
  * @example
  * ```ts
- * import { Plugin } from "claude-binary-plugin";
- * import type { InferPluginOptions } from "claude-binary-plugin";
- *
- * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
+ * // New API
+ * type Options = InferPluginOptions<typeof MyConfig>;
+ * // Old API
  * type Options = InferPluginOptions<MyPlugin>;
  * ```
  * @public
  */
-export type InferPluginOptions<T> = Schema.Schema.Type<ExtractOptionsSchema<T>>;
+export type InferPluginOptions<T> =
+	ExtractOptionsSchema<T> extends Schema.Schema.Any
+		? Schema.Schema.Type<ExtractOptionsSchema<T>>
+		: Record<string, unknown>;
 
 /**
- * Extract the inferred State type from a plugin instance.
+ * Extract the inferred State type from a plugin configuration.
  *
  * @remarks
- * State is merged with BaseState to form the full PluginState passed to handlers.
+ * Works with both the new PluginConfig.extend() API (static `state`)
+ * and the old Plugin() factory API (ClaudePluginInstance).
  * If no state schema is defined, returns `Record<string, unknown>`.
  *
  * @example
  * ```ts
- * import { Plugin } from "claude-binary-plugin";
- * import type { InferPluginState } from "claude-binary-plugin";
- *
- * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
+ * // New API
+ * type State = InferPluginState<typeof MyConfig>;
+ * // Old API
  * type State = InferPluginState<MyPlugin>;
  * ```
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type InferPluginState<T> =
-	ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
-		? TState extends Schema.Schema.Any
-			? Schema.Schema.Type<TState>
-			: Record<string, unknown>
-		: Record<string, unknown>;
+	// New API: static state on PluginConfig subclass
+	ExtractStateSchema<T> extends Schema.Schema.Any
+		? Schema.Schema.Type<ExtractStateSchema<T>>
+		: // Old API: from ClaudePluginInstance
+			ResolvePlugin<T> extends ClaudePluginInstance<any, infer TState>
+			? TState extends Schema.Schema.Any
+				? Schema.Schema.Type<TState>
+				: Record<string, unknown>
+			: Record<string, unknown>;
 
 /**
  * Infer all pipeline and handler types from a plugin configuration.
