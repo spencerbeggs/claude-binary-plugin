@@ -1903,11 +1903,14 @@ export class PluginTester<
 			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
 		};
 
-		// Merge base state with user-provided state
-		const pluginState: PluginState<TState> = {
-			...baseState,
-			...(this.state.state as TState),
-		};
+		// Merge base state with user-provided state, preserving prototype methods
+		// (Schema.Class instances have methods on their prototype that spread strips)
+		const userState = this.state.state as TState;
+		const pluginState = Object.assign(
+			Object.create(userState != null ? Object.getPrototypeOf(userState) : Object.prototype),
+			baseState,
+			userState,
+		) as PluginState<TState>;
 
 		return {
 			input,
@@ -2091,11 +2094,14 @@ export class PluginTester<
 			pluginEnvFile: Bun.env.CLAUDE_ENV_FILE ?? "/tmp/test-env.sh",
 		};
 
-		// Merge base state with user-provided state
-		const pluginState: PluginState<TState> = {
-			...baseState,
-			...(this.state.state as TState),
-		};
+		// Merge base state with user-provided state, preserving prototype methods
+		// (Schema.Class instances have methods on their prototype that spread strips)
+		const userState = this.state.state as TState;
+		const pluginState = Object.assign(
+			Object.create(userState != null ? Object.getPrototypeOf(userState) : Object.prototype),
+			baseState,
+			userState,
+		) as PluginState<TState>;
 
 		return {
 			args,
