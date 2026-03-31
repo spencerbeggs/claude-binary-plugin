@@ -43,28 +43,28 @@
 // OUTCOMES
 // =============================================================================
 
-export { ContextBuilder, MarkdownContext, XmlContext } from "./outcomes/ContextBuilder.js";
-export { Outcome } from "./outcomes/Outcome.js";
-export type { HookOutcomeLabel, OutcomeTelemetry, ContextValue } from "./outcomes/Outcome.js";
-export { Allow } from "./outcomes/Allow.js";
-export { Deny } from "./outcomes/Deny.js";
-export { Ask } from "./outcomes/Ask.js";
-export { Modify } from "./outcomes/Modify.js";
-export { Block } from "./outcomes/Block.js";
-export { Continue } from "./outcomes/Continue.js";
 export { AddContext } from "./outcomes/AddContext.js";
+export { Allow } from "./outcomes/Allow.js";
+export { Ask } from "./outcomes/Ask.js";
+export { Block } from "./outcomes/Block.js";
+export { ContextBuilder, MarkdownContext, XmlContext } from "./outcomes/ContextBuilder.js";
+export { Continue } from "./outcomes/Continue.js";
+export { Deny } from "./outcomes/Deny.js";
+export { Modify } from "./outcomes/Modify.js";
 export { NoAction } from "./outcomes/NoAction.js";
+export type { ContextValue, HookOutcomeLabel, OutcomeTelemetry } from "./outcomes/Outcome.js";
+export { Outcome } from "./outcomes/Outcome.js";
 export { Skip } from "./outcomes/Skip.js";
 export type {
-	PreToolUseOutcome,
+	AnyOutcome,
+	HookOutcomeMap,
+	PassthroughOutcome,
+	PermissionRequestOutcome,
 	PostToolUseOutcome,
+	PreToolUseOutcome,
 	SessionStartOutcome,
 	StopOutcome,
 	UserPromptSubmitOutcome,
-	PermissionRequestOutcome,
-	PassthroughOutcome,
-	AnyOutcome,
-	HookOutcomeMap,
 } from "./outcomes/types.js";
 export { isValidOutcomeForHook } from "./outcomes/types.js";
 
@@ -386,55 +386,55 @@ export type {
 	ExtractSetup,
 	ExtractSetupReturn,
 	HandlerContext,
+	HandlerFileHookDefinition,
+	HandlerHookDefinition,
 	HookDefinition,
 	HookDefinitionBase,
 	HooksMap,
+	InferHandlers,
 	InferPluginCommands,
 	InferPluginOptions,
-	InferPluginPipeline,
 	InferPluginState,
+	NotificationHandler,
 	NotificationHookDefinition,
-	NotificationPipeline,
 	NotificationRawHandler,
 	PassthroughHookEntry,
+	PermissionRequestHandler,
 	PermissionRequestHookDefinition,
-	PermissionRequestPipeline,
 	PermissionRequestRawHandler,
-	PipelineFileHookDefinition,
 	PipelineHandler,
-	PipelineHookDefinition,
 	PluginBuildOptions,
 	PluginConfig,
 	PluginState,
+	PostToolUseHandler,
 	PostToolUseHookDefinition,
-	PostToolUsePipeline,
 	PostToolUseRawHandler,
+	PreCompactHandler,
 	PreCompactHookDefinition,
-	PreCompactPipeline,
 	PreCompactRawHandler,
+	PreToolUseHandler,
 	PreToolUseHookDefinition,
-	PreToolUsePipeline,
 	PreToolUseRawHandler,
 	RawFileHookDefinition,
 	RawHandler,
 	RawHookDefinition,
+	SessionEndHandler,
 	SessionEndHookDefinition,
-	SessionEndPipeline,
 	SessionEndRawHandler,
+	SessionStartHandler,
 	SessionStartHookDefinition,
-	SessionStartPipeline,
 	SessionStartRawHandler,
 	SetupContext,
 	SetupFunction,
+	StopHandler,
 	StopHookDefinition,
-	StopPipeline,
 	StopRawHandler,
+	SubagentStopHandler,
 	SubagentStopHookDefinition,
-	SubagentStopPipeline,
 	SubagentStopRawHandler,
 	ToolFilter,
+	UserPromptSubmitHandler,
 	UserPromptSubmitHookDefinition,
-	UserPromptSubmitPipeline,
 	UserPromptSubmitRawHandler,
 } from "./plugin/config.js";
 export { ClaudeBinaryPlugin } from "./plugin/config.js";

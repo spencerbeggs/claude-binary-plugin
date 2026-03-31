@@ -179,7 +179,7 @@ export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ct
  * ```
  * @public
  */
-export type SessionStartPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type SessionStartHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SessionStartInput,
 	SessionStartPipelineOutput,
 	TOptions,
@@ -190,7 +190,7 @@ export type SessionStartPipeline<TOptions, TState = Record<string, string>> = Pi
  * Typed pipeline handler for SessionEnd hooks.
  * @public
  */
-export type SessionEndPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type SessionEndHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SessionEndInput,
 	SessionEndPipelineOutput,
 	TOptions,
@@ -219,7 +219,7 @@ export type SessionEndPipeline<TOptions, TState = Record<string, string>> = Pipe
  * ```
  * @public
  */
-export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PreToolUseHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PreToolUseInput,
 	PreToolUsePipelineOutput,
 	TOptions,
@@ -230,7 +230,7 @@ export type PreToolUsePipeline<TOptions, TState = Record<string, string>> = Pipe
  * Typed pipeline handler for PostToolUse hooks.
  * @public
  */
-export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PostToolUseHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PostToolUseInput,
 	PostToolUsePipelineOutput,
 	TOptions,
@@ -241,7 +241,7 @@ export type PostToolUsePipeline<TOptions, TState = Record<string, string>> = Pip
  * Typed pipeline handler for Stop hooks.
  * @public
  */
-export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type StopHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	StopInput,
 	StopPipelineOutput,
 	TOptions,
@@ -252,7 +252,7 @@ export type StopPipeline<TOptions, TState = Record<string, string>> = PipelineHa
  * Typed pipeline handler for SubagentStop hooks.
  * @public
  */
-export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type SubagentStopHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	SubagentStopInput,
 	StopPipelineOutput,
 	TOptions,
@@ -263,7 +263,7 @@ export type SubagentStopPipeline<TOptions, TState = Record<string, string>> = Pi
  * Typed pipeline handler for UserPromptSubmit hooks.
  * @public
  */
-export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type UserPromptSubmitHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	UserPromptSubmitInput,
 	UserPromptSubmitPipelineOutput,
 	TOptions,
@@ -274,7 +274,7 @@ export type UserPromptSubmitPipeline<TOptions, TState = Record<string, string>> 
  * Typed pipeline handler for PreCompact hooks.
  * @public
  */
-export type PreCompactPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PreCompactHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PreCompactInput,
 	PassthroughPipelineOutput,
 	TOptions,
@@ -285,7 +285,7 @@ export type PreCompactPipeline<TOptions, TState = Record<string, string>> = Pipe
  * Typed pipeline handler for Notification hooks.
  * @public
  */
-export type NotificationPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type NotificationHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	NotificationInput,
 	NotificationPipelineOutput,
 	TOptions,
@@ -296,7 +296,7 @@ export type NotificationPipeline<TOptions, TState = Record<string, string>> = Pi
  * Typed pipeline handler for PermissionRequest hooks.
  * @public
  */
-export type PermissionRequestPipeline<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PermissionRequestHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
 	PermissionRequestInput,
 	PermissionRequestPipelineOutput,
 	TOptions,
@@ -399,7 +399,7 @@ export interface ToolFilter {
  * Pipeline-based hook definition with inline function.
  * @public
  */
-export interface PipelineHookDefinition<TInput, TOutput, TOptions> extends HookDefinitionBase {
+export interface HandlerHookDefinition<TInput, TOutput, TOptions> extends HookDefinitionBase {
 	/** Pure transformation function */
 	pipeline: PipelineHandler<TInput, TOutput, TOptions>;
 	handler?: never;
@@ -420,7 +420,7 @@ export interface PipelineHookDefinition<TInput, TOutput, TOptions> extends HookD
  * ```
  * @public
  */
-export interface PipelineFileHookDefinition extends HookDefinitionBase {
+export interface HandlerFileHookDefinition extends HookDefinitionBase {
 	/** Relative path to file exporting default pipeline function */
 	pipeline: string;
 	handler?: never;
@@ -487,8 +487,8 @@ export interface PassthroughHookEntry {
  * @public
  */
 export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>> =
-	| PipelineHookDefinition<TInput, TOutput, TOptions>
-	| PipelineFileHookDefinition
+	| HandlerHookDefinition<TInput, TOutput, TOptions>
+	| HandlerFileHookDefinition
 	| RawHookDefinition<TEvent, TOptions, TState>
 	| RawFileHookDefinition
 	| PassthroughHookEntry;
@@ -1032,14 +1032,14 @@ export interface PluginConfig<
  * Use the standalone utility types to extract types from plugin instances:
  * - `InferPluginOptions<typeof plugin>` - Options type from schema
  * - `InferPluginState<typeof plugin>` - State type from setup()
- * - `InferPluginPipeline<typeof plugin>` - Handler types for hooks
+ * - `InferHandlers<typeof plugin>` - Handler types for hooks
  * - `InferPluginCommands<typeof plugin>` - Handler types for commands
  *
  * @example
  * ```ts
  * // plugin.config.ts
  * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
- * import type { InferPluginPipeline } from "claude-binary-plugin";
+ * import type { InferHandlers } from "claude-binary-plugin";
  * import { Schema } from "effect";
  *
  * const plugin = ClaudeBinaryPlugin.create({
@@ -1062,7 +1062,7 @@ export interface PluginConfig<
  *   }
  * });
  *
- * export type Pipeline = InferPluginPipeline<typeof plugin>;
+ * export type Pipeline = InferHandlers<typeof plugin>;
  * export default plugin;
  * ```
  *
@@ -1426,10 +1426,10 @@ export type InferPluginState<T> =
  * @example
  * ```ts
  * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
- * import type { InferPluginPipeline } from "claude-binary-plugin";
+ * import type { InferHandlers } from "claude-binary-plugin";
  *
  * const plugin = ClaudeBinaryPlugin.create({ ... });
- * export type Pipeline = InferPluginPipeline<typeof plugin>;
+ * export type Pipeline = InferHandlers<typeof plugin>;
  * export default plugin;
  *
  * // In hooks/my-hook.hook.ts
@@ -1443,76 +1443,76 @@ export type InferPluginState<T> =
  * ```
  * @public
  */
-export interface InferPluginPipeline<T> {
+export interface InferHandlers<T> {
 	/**
 	 * Handler for session initialization. Runs when Claude Code starts a new session.
 	 * Use to add system context, run detection logic, or initialize state.
-	 * @see {@link SessionStartPipeline}
+	 * @see {@link SessionStartHandler}
 	 */
-	SessionStart: SessionStartPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	SessionStart: SessionStartHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for session cleanup. Runs when a Claude Code session ends.
 	 * Use for cleanup tasks or final logging.
-	 * @see {@link SessionEndPipeline}
+	 * @see {@link SessionEndHandler}
 	 */
-	SessionEnd: SessionEndPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	SessionEnd: SessionEndHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for tool pre-execution. Runs before Claude executes a tool.
 	 * Can allow, deny, or modify the tool input before execution.
-	 * @see {@link PreToolUsePipeline}
+	 * @see {@link PreToolUseHandler}
 	 */
-	PreToolUse: PreToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PreToolUse: PreToolUseHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for tool post-execution. Runs after Claude executes a tool.
 	 * Can add context based on tool results or block continuation.
-	 * @see {@link PostToolUsePipeline}
+	 * @see {@link PostToolUseHandler}
 	 */
-	PostToolUse: PostToolUsePipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PostToolUse: PostToolUseHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for agent stop events. Runs when Claude is about to stop.
 	 * Can block the stop with a reason to continue the conversation.
-	 * @see {@link StopPipeline}
+	 * @see {@link StopHandler}
 	 */
-	Stop: StopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	Stop: StopHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for subagent stop events. Runs when a subagent is about to stop.
 	 * Can block the subagent stop with a reason.
-	 * @see {@link SubagentStopPipeline}
+	 * @see {@link SubagentStopHandler}
 	 */
-	SubagentStop: SubagentStopPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	SubagentStop: SubagentStopHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for user prompt submission. Runs when the user submits a prompt.
 	 * Can add context or block the submission.
-	 * @see {@link UserPromptSubmitPipeline}
+	 * @see {@link UserPromptSubmitHandler}
 	 */
-	UserPromptSubmit: UserPromptSubmitPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	UserPromptSubmit: UserPromptSubmitHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for context compaction. Runs before Claude compacts conversation history.
 	 * Passthrough-only hook for observability.
-	 * @see {@link PreCompactPipeline}
+	 * @see {@link PreCompactHandler}
 	 */
-	PreCompact: PreCompactPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PreCompact: PreCompactHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for notification events. Runs when Claude sends a notification.
 	 * Passthrough-only hook for observability.
-	 * @see {@link NotificationPipeline}
+	 * @see {@link NotificationHandler}
 	 */
-	Notification: NotificationPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	Notification: NotificationHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	/**
 	 * Handler for permission requests. Runs when Claude requests user permission.
 	 * Can auto-allow or auto-deny permission requests.
-	 * @see {@link PermissionRequestPipeline}
+	 * @see {@link PermissionRequestHandler}
 	 */
-	PermissionRequest: PermissionRequestPipeline<InferPluginOptions<T>, InferPluginState<T>>;
+	PermissionRequest: PermissionRequestHandler<InferPluginOptions<T>, InferPluginState<T>>;
 
 	// =========================================================================
 	// Raw handlers (full event access)

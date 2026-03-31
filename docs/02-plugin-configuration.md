@@ -245,16 +245,16 @@ interface CommandOutput {
 
 The SDK provides four utility types for extracting fully typed handler signatures from a plugin instance.
 
-### InferPluginPipeline
+### InferHandlers
 
 Maps every hook type to a typed pipeline handler. This is the type you use in hook handler files:
 
 ```typescript
 import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-import type { InferPluginPipeline } from "claude-binary-plugin";
+import type { InferHandlers } from "claude-binary-plugin";
 
 const plugin = ClaudeBinaryPlugin.create({ /* ... */ });
-export type Pipeline = InferPluginPipeline<typeof plugin>;
+export type Pipeline = InferHandlers<typeof plugin>;
 export default plugin;
 ```
 
@@ -358,7 +358,7 @@ Putting it all together, the scaffolded `plugin.config.ts` for the my-plugin pro
 
 ```typescript
 import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-import type { InferPluginCommands, InferPluginPipeline } from "claude-binary-plugin";
+import type { InferPluginCommands, InferHandlers } from "claude-binary-plugin";
 import { z } from "zod";
 
 const plugin = ClaudeBinaryPlugin.create({
@@ -395,7 +395,7 @@ const plugin = ClaudeBinaryPlugin.create({
   },
 });
 
-export type Pipeline = InferPluginPipeline<typeof plugin>;
+export type Pipeline = InferHandlers<typeof plugin>;
 export type Commands = InferPluginCommands<typeof plugin>;
 
 export default plugin;

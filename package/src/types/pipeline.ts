@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import type { HookDefinition, PipelineHookDefinition, RawHookDefinition } from "../plugin/config.js";
+import type { HandlerHookDefinition, HookDefinition, RawHookDefinition } from "../plugin/config.js";
 import type {
 	ExecutionQuality,
 	NotificationPipelineOutput,
@@ -757,7 +757,7 @@ export class Pipeline {
 	 */
 	static isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
 		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
-	): hook is PipelineHookDefinition<TInput, TOutput, TOptions> {
+	): hook is HandlerHookDefinition<TInput, TOutput, TOptions> {
 		return "pipeline" in hook && hook.pipeline !== undefined;
 	}
 
