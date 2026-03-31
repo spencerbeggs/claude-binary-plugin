@@ -5,10 +5,10 @@ import { describe, expect, test } from "bun:test";
  * This is a smoke test — it imports key exports and verifies they exist.
  */
 describe("Public API exports", () => {
-	test("exports ClaudeBinaryPlugin factory", async () => {
+	test("exports Plugin factory", async () => {
 		const mod = await import("../src/index.js");
-		expect(mod.ClaudeBinaryPlugin).toBeDefined();
-		expect(typeof mod.ClaudeBinaryPlugin.create).toBe("function");
+		expect(mod.Plugin).toBeDefined();
+		expect(typeof mod.Plugin).toBe("function");
 	});
 
 	test("exports error types", async () => {

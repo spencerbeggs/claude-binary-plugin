@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { Schema } from "effect";
 import type { SetupContext } from "../../src/plugin/config.js";
-import { ClaudeBinaryPlugin } from "../../src/plugin/config.js";
+import { Plugin } from "../../src/plugin/config.js";
 import type { MockEnvContext } from "../../src/testing/mocks.js";
 import { TestFixtures } from "../../src/testing/mocks.js";
 
@@ -23,8 +23,7 @@ interface TestState {
 }
 
 // Test plugin with inline handlers for testing runHook
-const testPlugin = ClaudeBinaryPlugin.create({
-	prefix: "TEST_PLUGIN",
+class TestPluginClass extends Plugin("TEST_PLUGIN", {
 	options: testSchema,
 	setup: async (ctx: SetupContext<TestOptions>): Promise<TestState> => {
 		return {
@@ -148,7 +147,8 @@ const testPlugin = ClaudeBinaryPlugin.create({
 			},
 		},
 	},
-});
+}) {}
+const testPlugin = new TestPluginClass();
 
 // =============================================================================
 // TESTS
@@ -443,8 +443,7 @@ describe("PluginTester", () => {
 		test("handler receives correct options from withOptions()", async () => {
 			let receivedOptions: unknown;
 
-			const pluginWithOptionsCheck = ClaudeBinaryPlugin.create({
-				prefix: "OPTIONS_CHECK",
+			class OptionsCheckPlugin extends Plugin("OPTIONS_CHECK", {
 				options: Schema.Struct({
 					API_KEY: Schema.optional(Schema.String),
 					DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
@@ -465,9 +464,9 @@ describe("PluginTester", () => {
 						},
 					],
 				},
-			});
+			}) {}
 
-			const ctx = pluginWithOptionsCheck
+			const ctx = new OptionsCheckPlugin()
 				.test()
 				.withOptions({ API_KEY: "my-secret-key", DEBUG: "true" })
 				.withState({})
@@ -487,8 +486,7 @@ describe("PluginTester", () => {
 			let receivedState: unknown;
 
 			// Create a custom plugin to capture state
-			const pluginWithStateCheck = ClaudeBinaryPlugin.create({
-				prefix: "STATE_CHECK",
+			class StateCheckPlugin extends Plugin("STATE_CHECK", {
 				options: Schema.Struct({}),
 				setup: async (): Promise<{ customField: string; nested: { deep: boolean } }> => ({
 					customField: "",
@@ -510,9 +508,9 @@ describe("PluginTester", () => {
 						},
 					],
 				},
-			});
+			}) {}
 
-			const stateCtx = pluginWithStateCheck
+			const stateCtx = new StateCheckPlugin()
 				.test()
 				.withOptions({})
 				.withState({ customField: "custom-value", nested: { deep: true } })

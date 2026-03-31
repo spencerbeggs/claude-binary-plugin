@@ -1009,249 +1009,8 @@ export interface PluginConfig<
 }
 
 // =============================================================================
-// PLUGIN CLASS
+// PLUGIN CLASS (removed - use Plugin() factory instead)
 // =============================================================================
-
-/**
- * Claude Code plugin with declarative hook definitions.
- *
- * @remarks
- * `ClaudeBinaryPlugin` is the core class for creating Claude Code plugins.
- * Use the static `create()` factory to instantiate plugins with full type inference.
- *
- * **Three-Layer Model:**
- * 1. **Input** - Hook event data from Claude Code (stdin JSON)
- * 2. **Options** - User-configurable settings validated by Effect Schema
- * 3. **State** - Computed values from `setup()` function at SessionStart
- *
- * **Static Methods:**
- * - `ClaudeBinaryPlugin.create()` - Factory for creating plugin instances
- * - `ClaudeBinaryPlugin.build()` - Compile plugin to executable (tree-shakeable)
- *
- * **Type Inference:**
- * Use the standalone utility types to extract types from plugin instances:
- * - `InferPluginOptions<typeof plugin>` - Options type from schema
- * - `InferPluginState<typeof plugin>` - State type from setup()
- * - `InferHandlers<typeof plugin>` - Handler types for hooks
- * - `InferPluginCommands<typeof plugin>` - Handler types for commands
- *
- * @example
- * ```ts
- * // plugin.config.ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
- * import type { InferHandlers } from "claude-binary-plugin";
- * import { Schema } from "effect";
- *
- * const plugin = ClaudeBinaryPlugin.create({
- *   prefix: "MY_PLUGIN",
- *   options: Schema.Struct({
- *     TIMEOUT_MS: Schema.optionalWith(Schema.Number, { default: () => 30000 }),
- *   }),
- *   hooks: {
- *     SessionStart: [{
- *       name: "project-context",
- *       pipeline: async ({ input, state }) => {
- *         return {
- *           status: "executed",
- *           action: "context",
- *           summary: "added context",
- *           claudeContext: "Hello from plugin!",
- *         };
- *       }
- *     }],
- *   }
- * });
- *
- * export type Pipeline = InferHandlers<typeof plugin>;
- * export default plugin;
- * ```
- *
- * @example Building a plugin programmatically
- * ```ts
- * import plugin from "./plugin.config.ts";
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
- *
- * await ClaudeBinaryPlugin.build(plugin, {
- *   rootDir: import.meta.dir,
- *   compile: true,
- * });
- * ```
- *
- * @typeParam TOptionsSchema - Effect Schema for plugin options validation
- * @typeParam TSetup - Setup function type (used to infer state)
- * @typeParam TCommands - Map of command names to their definitions
- *
- * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
- * @public
- */
-export class ClaudeBinaryPlugin<
-	TOptionsSchema extends Schema.Schema.Any,
-	TStateSchema extends Schema.Schema.Any | undefined = undefined,
-	TSetup extends ((ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>) => unknown) | undefined = undefined,
-	TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
-> {
-	/**
-	 * The plugin configuration.
-	 * @public
-	 */
-	readonly config: PluginConfig<TOptionsSchema, TStateSchema, TSetup, TCommands>;
-
-	/**
-	 * Private constructor - use `ClaudeBinaryPlugin.create()` instead.
-	 * @internal
-	 */
-	private constructor(config: PluginConfig<TOptionsSchema, TStateSchema, TSetup, TCommands>) {
-		this.config = config;
-	}
-
-	/**
-	 * Create a new plugin instance.
-	 *
-	 * @remarks
-	 * This is the primary factory for creating Claude Code plugins.
-	 * The returned instance contains the configuration and can be passed
-	 * to `ClaudeBinaryPlugin.build()` for compilation.
-	 *
-	 * @typeParam TOptionsSchema - Effect Schema for plugin options validation
-	 * @typeParam TSetup - Setup function type (inferred from config.setup)
-	 * @typeParam TCommands - Map of command names to their definitions
-	 *
-	 * @param config - Plugin configuration
-	 * @returns Plugin instance ready for building or export
-	 *
-	 * @example
-	 * ```ts
-	 * const plugin = ClaudeBinaryPlugin.create({
-	 *   prefix: "MY_PLUGIN",
-	 *   options: Schema.Struct({ ALLOW_SUDO: Schema.optionalWith(Schema.Boolean, { default: () => false }) }),
-	 *   hooks: {
-	 *     PreToolUse: [{
-	 *       name: "security",
-	 *       tools: ["Bash"],
-	 *       pipeline: "./hooks/security.hook.ts",
-	 *     }],
-	 *   },
-	 * });
-	 * ```
-	 *
-	 * @public
-	 */
-	static create<
-		TOptionsSchema extends Schema.Schema.Any,
-		TStateSchema extends Schema.Schema.Any | undefined = undefined,
-		TSetup extends ((ctx: SetupContext<Schema.Schema.Type<TOptionsSchema>>) => unknown) | undefined = undefined,
-		TCommands extends Record<string, CommandDefinitionBase> = Record<string, CommandDefinitionBase>,
-	>(
-		config: PluginConfig<TOptionsSchema, TStateSchema, TSetup, TCommands>,
-	): ClaudeBinaryPlugin<TOptionsSchema, TStateSchema, TSetup, TCommands> {
-		return new ClaudeBinaryPlugin(config);
-	}
-
-	/**
-	 * Build a plugin to a compiled executable.
-	 *
-	 * @remarks
-	 * This static method compiles a plugin instance to a single-file Bun executable.
-	 * It uses dynamic import to load the build system, making the build code
-	 * tree-shakeable when not used.
-	 *
-	 * **Build Process:**
-	 * 1. Read plugin.json/marketplace.json manifests for name/version
-	 * 2. Extract hooks and commands from plugin configuration
-	 * 3. Generate TypeScript entrypoint
-	 * 4. Compile to single-file executable with Bun.build()
-	 * 5. Generate hooks.json manifest for Claude Code
-	 * 6. Optionally sync to Claude Code plugins cache
-	 *
-	 * @param plugin - The plugin instance to build
-	 * @param options - Build configuration options
-	 * @returns Result of the build operation
-	 *
-	 * @example
-	 * ```ts
-	 * import plugin from "./plugin.config.ts";
-	 * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-	 *
-	 * const result = await ClaudeBinaryPlugin.build(plugin, {
-	 *   rootDir: import.meta.dir,
-	 *   compile: true,
-	 * });
-	 *
-	 * if (result.success) {
-	 *   console.log(`Built: ${result.output}`);
-	 * }
-	 * ```
-	 *
-	 * @public
-	 */
-	static async build(
-		// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin type for build
-		plugin: ClaudeBinaryPlugin<any, any, any, any>,
-		options: PluginBuildOptions = {},
-	): Promise<PluginBuildResult> {
-		// Dynamic import to avoid circular dependency and enable tree-shaking
-		const { PluginBuilder } = await import("../build/builder.js");
-		return PluginBuilder.fromConfig(plugin, options);
-	}
-
-	/**
-	 * Create a test builder for this plugin.
-	 *
-	 * @remarks
-	 * Returns a fluent test builder with full type inference for options, state,
-	 * and hook inputs. Use this in your test files to create type-safe test contexts.
-	 *
-	 * **Lifecycle:**
-	 * 1. Create test context with `plugin.test()`
-	 * 2. Configure with `.withOptions()` and `.withState()` (required)
-	 * 3. Set hook input with hook-specific methods (e.g., `.withPreToolUseInput()`)
-	 * 4. Run test with `.runHook()` or `.runCommand()`
-	 * 5. Clean up with `.dispose()` in `afterEach()`
-	 *
-	 * @returns A new PluginTester instance with full type inference
-	 *
-	 * @example
-	 * ```ts
-	 * import plugin from "../plugin.config.js";
-	 *
-	 * describe("security hook", () => {
-	 *   let ctx: ReturnType<typeof plugin.test>;
-	 *
-	 *   beforeEach(() => {
-	 *     ctx = plugin.test()
-	 *       .withOptions({ ALLOW_SUDO: false, API_KEY: "test" })
-	 *       .withState({ packageManager: "bun", gitRepo: true });
-	 *   });
-	 *
-	 *   afterEach(() => ctx.dispose());
-	 *
-	 *   test("blocks dangerous commands", async () => {
-	 *     const result = await ctx
-	 *       .withPreToolUseInput({
-	 *         tool_name: "Bash",
-	 *         tool_input: { command: "rm -rf /" },
-	 *       })
-	 *       .runHook("PreToolUse", "security");
-	 *
-	 *     expect(result.action).toBe("deny");
-	 *   });
-	 * });
-	 * ```
-	 *
-	 * @public
-	 */
-	test(): PluginTester<
-		Schema.Schema.Type<TOptionsSchema>,
-		ExtractSetupReturn<NonNullable<TSetup>>,
-		HooksMap<Schema.Schema.Type<TOptionsSchema>>,
-		TCommands
-	> {
-		// Dynamic import to enable tree-shaking when test() is not used
-		// biome-ignore lint/suspicious/noExplicitAny: Runtime creation doesn't need strict types
-		const { PluginTester } = require("../testing/builder.js") as any;
-		return new PluginTester(this.config);
-	}
-}
 
 // =============================================================================
 // PLUGIN() FACTORY
@@ -1269,6 +1028,8 @@ export interface PluginDefinition<
 	TOptionsSchema extends Schema.Schema.Any,
 	TStateSchema extends Schema.Schema.Any | undefined = undefined,
 > {
+	/** Environment variable prefix. Set automatically by Plugin() factory. */
+	prefix?: string;
 	options: TOptionsSchema;
 	state?: TStateSchema;
 	setup?: TStateSchema extends Schema.Schema.Any
@@ -1346,7 +1107,7 @@ export function Plugin<
 	prefix: string,
 	definition: PluginDefinition<TOptionsSchema, TStateSchema>,
 ): new () => ClaudePlugin<TOptionsSchema, TStateSchema> {
-	const config = { ...definition };
+	const config = { ...definition, prefix };
 
 	class ClaudePluginBase {
 		readonly config = config;
@@ -1465,25 +1226,33 @@ export interface PluginBuildOptions {
 // =============================================================================
 
 /**
- * Helper type to extract the options schema from a ClaudeBinaryPlugin instance.
+ * Helper type to extract the options schema from a ClaudePlugin instance.
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractOptionsSchema<T> = T extends ClaudeBinaryPlugin<infer TSchema, any, any, any> ? TSchema : never;
+export type ExtractOptionsSchema<T> = T extends ClaudePlugin<infer TSchema, any> ? TSchema : never;
 
 /**
- * Helper type to extract setup function type from a ClaudeBinaryPlugin instance.
+ * Helper type to extract setup function type from a ClaudePlugin instance.
  * @public
  */
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractSetup<T> = T extends ClaudeBinaryPlugin<any, any, infer TSetup, any> ? TSetup : undefined;
+export type ExtractSetup<T> =
+	T extends ClaudePlugin<any, infer TState>
+		? TState extends Schema.Schema.Any
+			? (ctx: SetupContext<any>) => Schema.Schema.Type<TState>
+			: undefined
+		: undefined;
 
 /**
- * Helper type to extract commands map from a ClaudeBinaryPlugin instance.
+ * Helper type to extract commands map from a ClaudePlugin instance.
  * @public
  */
-// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
-export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, any, infer TCommands> ? TCommands : never;
+export type ExtractCommands<T> = T extends { config: { commands?: infer C } }
+	? C extends Record<string, CommandDefinitionBase>
+		? C
+		: Record<string, CommandDefinitionBase>
+	: Record<string, CommandDefinitionBase>;
 
 /**
  * Extract the inferred Options type from a plugin configuration.
@@ -1494,36 +1263,40 @@ export type ExtractCommands<T> = T extends ClaudeBinaryPlugin<any, any, any, inf
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import { Plugin } from "claude-binary-plugin";
  * import type { InferPluginOptions } from "claude-binary-plugin";
  *
- * const plugin = ClaudeBinaryPlugin.create({ ... });
- * type Options = InferPluginOptions<typeof plugin>;
+ * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
+ * type Options = InferPluginOptions<MyPlugin>;
  * ```
  * @public
  */
 export type InferPluginOptions<T> = Schema.Schema.Type<ExtractOptionsSchema<T>>;
 
 /**
- * Extract the inferred State type from a plugin's setup function.
+ * Extract the inferred State type from a plugin instance.
  *
  * @remarks
  * State is merged with BaseState to form the full PluginState passed to handlers.
- * If no setup function is defined, returns `Record<string, unknown>`.
+ * If no state schema is defined, returns `Record<string, unknown>`.
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import { Plugin } from "claude-binary-plugin";
  * import type { InferPluginState } from "claude-binary-plugin";
  *
- * const plugin = ClaudeBinaryPlugin.create({ ... });
- * type State = InferPluginState<typeof plugin>;
- * // { packageManager: string; typeChecker: string; ... }
+ * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
+ * type State = InferPluginState<MyPlugin>;
  * ```
  * @public
  */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type InferPluginState<T> =
-	ExtractSetup<T> extends undefined ? Record<string, unknown> : ExtractSetupReturn<NonNullable<ExtractSetup<T>>>;
+	T extends ClaudePlugin<any, infer TState>
+		? TState extends Schema.Schema.Any
+			? Schema.Schema.Type<TState>
+			: Record<string, unknown>
+		: Record<string, unknown>;
 
 /**
  * Infer all pipeline and handler types from a plugin configuration.
@@ -1540,12 +1313,12 @@ export type InferPluginState<T> =
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import { Plugin } from "claude-binary-plugin";
  * import type { InferHandlers } from "claude-binary-plugin";
  *
- * const plugin = ClaudeBinaryPlugin.create({ ... });
- * export type Pipeline = InferHandlers<typeof plugin>;
- * export default plugin;
+ * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
+ * export type Pipeline = InferHandlers<MyPlugin>;
+ * export default new MyPlugin();
  *
  * // In hooks/my-hook.hook.ts
  * import type { Pipeline } from "../plugin.config.js";
@@ -1713,11 +1486,11 @@ export interface InferHandlers<T> {
  *
  * @example
  * ```ts
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import { Plugin } from "claude-binary-plugin";
  * import type { InferPluginCommands } from "claude-binary-plugin";
  *
- * const plugin = ClaudeBinaryPlugin.create({ ... });
- * export type Commands = InferPluginCommands<typeof plugin>;
+ * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
+ * export type Commands = InferPluginCommands<MyPlugin>;
  *
  * // In commands/lint.cmd.ts
  * import type { Commands } from "../plugin.config.js";

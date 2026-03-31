@@ -3,15 +3,15 @@ import { rmSync } from "node:fs";
 import { Effect, Schema } from "effect";
 import type { PartialDeep } from "type-fest";
 import type { ShellResult } from "../build/builder.js";
-import { Outcome } from "../outcomes/Outcome.js";
 import type { OutcomeTelemetry } from "../outcomes/Outcome.js";
+import { Outcome } from "../outcomes/Outcome.js";
 import type {
 	BaseState,
 	CommandDefinition,
 	CommandHandler,
 	CommandOutput,
 	PipelineHandler,
-	PluginConfig,
+	PluginDefinition,
 	PluginState,
 } from "../plugin/config.js";
 import type { HookAction } from "../schemas/pipeline-outputs.js";
@@ -514,14 +514,14 @@ export class PluginTester<
 	 * @internal
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Store plugin config for reference
-	private readonly pluginConfig: PluginConfig<any, any, any, any>;
+	private readonly pluginConfig: PluginDefinition<any, any>;
 
 	/**
 	 * Create a new test builder for a plugin.
 	 * @internal - Use `plugin.test()` instead
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Accept any plugin config
-	constructor(pluginConfig: PluginConfig<any, any, any, any>) {
+	constructor(pluginConfig: PluginDefinition<any, any>) {
 		this.pluginConfig = pluginConfig;
 	}
 

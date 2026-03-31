@@ -13,26 +13,25 @@
  * - SQLite-based session state persistence
  *
  * **Core Exports:**
- * - {@link ClaudeBinaryPlugin} - Factory for creating plugin configurations
+ * - {@link Plugin} - Factory for creating plugin base classes
  * - {@link PluginEnv} - Base class for environment management
  * - {@link PluginBuilder} - Compile plugins to executables
  * - Effect Schema-validated hook event parsing
  *
  * @example
  * ```typescript
- * import { ClaudeBinaryPlugin } from "claude-binary-plugin";
+ * import { Plugin } from "claude-binary-plugin";
  * import { Schema } from "effect";
  *
- * const plugin = ClaudeBinaryPlugin.create({
- *   prefix: "MY_PLUGIN",
+ * class MyPlugin extends Plugin("MY_PLUGIN", {
  *   options: Schema.Struct({ TIMEOUT_MS: Schema.Number.pipe(Schema.withConstructorDefault(() => 30000)) }),
  *   setup: async ({ cwd }) => ({ detected: true }),
  *   hooks: {
  *     PreToolUse: [{ name: "security", pipeline: "./hooks/security.ts" }],
  *   },
- * });
+ * }) {}
  *
- * export default plugin;
+ * export default new MyPlugin();
  * ```
  *
  * @see {@link https://docs.anthropic.com/en/docs/claude-code/hooks | Claude Code Hooks}
@@ -439,7 +438,7 @@ export type {
 	UserPromptSubmitHookDefinition,
 	UserPromptSubmitRawHandler,
 } from "./plugin/config.js";
-export { ClaudeBinaryPlugin, Plugin } from "./plugin/config.js";
+export { Plugin } from "./plugin/config.js";
 // Pipeline output schemas
 export type {
 	ExecutionQuality,

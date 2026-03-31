@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Either, Schema } from "effect";
-import { ClaudeBinaryPlugin } from "../../src/plugin/config.js";
+import { Plugin } from "../../src/plugin/config.js";
 import type { PreToolUsePipelineOutput, SessionStartPipelineOutput } from "../../src/schemas/pipeline-outputs.js";
 import {
 	PostToolUseOutputSchema,
@@ -206,14 +206,13 @@ describe("Pipeline Output Schemas", () => {
 	});
 });
 
-describe("ClaudeBinaryPlugin", () => {
-	test("create() returns compiled plugin config", () => {
+describe("Plugin() factory (basic)", () => {
+	test("returns compiled plugin config", () => {
 		const envSchema = Schema.Struct({
 			VERBOSE: Schema.optionalWith(Schema.Boolean, { default: () => false }),
 		});
 
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "TEST_PLUGIN",
+		class TestPlugin extends Plugin("TEST_PLUGIN", {
 			options: envSchema,
 			hooks: {
 				SessionStart: [
@@ -230,16 +229,16 @@ describe("ClaudeBinaryPlugin", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new TestPlugin();
 
 		expect(plugin.config).toBeDefined();
-		expect(plugin.config.prefix).toBe("TEST_PLUGIN");
+		expect(plugin.prefix).toBe("TEST_PLUGIN");
 		expect(plugin.config.hooks.SessionStart).toHaveLength(1);
 	});
 
-	test("create() accepts multiple hooks per event type", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "MULTI",
+	test("accepts multiple hooks per event type", () => {
+		class MultiPlugin extends Plugin("MULTI", {
 			options: Schema.Struct({}),
 			hooks: {
 				PreToolUse: [
@@ -263,7 +262,8 @@ describe("ClaudeBinaryPlugin", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new MultiPlugin();
 
 		const hooks = plugin.config.hooks.PreToolUse;
 		expect(hooks).toBeDefined();
@@ -274,9 +274,8 @@ describe("ClaudeBinaryPlugin", () => {
 		expect(second?.name).toBe("security");
 	});
 
-	test("create() accepts raw handler mode", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "RAW",
+	test("accepts raw handler mode", () => {
+		class RawPlugin extends Plugin("RAW", {
 			options: Schema.Struct({}),
 			hooks: {
 				PreToolUse: [
@@ -289,15 +288,15 @@ describe("ClaudeBinaryPlugin", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new RawPlugin();
 
 		expect(plugin.config.hooks.PreToolUse).toHaveLength(1);
 	});
 
 	test("type safety: pipeline return must match output schema", () => {
 		// This is a compile-time test - if types are wrong, this won't compile
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "TYPED",
+		class TypedPlugin extends Plugin("TYPED", {
 			options: Schema.Struct({}),
 			hooks: {
 				SessionStart: [
@@ -328,23 +327,24 @@ describe("ClaudeBinaryPlugin", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new TypedPlugin();
 
 		expect(plugin.config).toBeDefined();
 	});
 });
 
-describe("ClaudeBinaryPlugin advanced", () => {
-	test("create() with setup function preserves config", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "SETUP_TEST",
+describe("Plugin() factory (advanced)", () => {
+	test("with setup function preserves config", () => {
+		const setupFn = async ({ options: _options, cwd: _cwd }: { options: Record<string, unknown>; cwd: string }) => ({
+			packageManager: "bun",
+			detectedFeatures: ["typescript"],
+		});
+		class SetupPlugin extends Plugin("SETUP_TEST", {
 			options: Schema.Struct({
 				DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
 			}),
-			setup: async ({ options: _options, cwd: _cwd }: { options: Record<string, unknown>; cwd: string }) => ({
-				packageManager: "bun",
-				detectedFeatures: ["typescript"],
-			}),
+			setup: setupFn,
 			hooks: {
 				SessionStart: [
 					{
@@ -358,16 +358,16 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new SetupPlugin();
 
-		expect(plugin.config.prefix).toBe("SETUP_TEST");
+		expect(plugin.prefix).toBe("SETUP_TEST");
 		expect(plugin.config.setup).toBeDefined();
 		expect(typeof plugin.config.setup).toBe("function");
 	});
 
-	test("create() with commands stores command definitions", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "CMD_TEST",
+	test("with commands stores command definitions", () => {
+		class CmdPlugin extends Plugin("CMD_TEST", {
 			options: Schema.Struct({}),
 			hooks: {},
 			commands: {
@@ -384,7 +384,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					pipeline: "./commands/test.cmd.ts",
 				},
 			},
-		});
+		}) {}
+		const plugin = new CmdPlugin();
 
 		expect(plugin.config.commands).toBeDefined();
 		expect(Object.keys(plugin.config.commands ?? {})).toEqual(["lint", "test"]);
@@ -392,9 +393,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 		expect(plugin.config.commands?.test.description).toBe("Run tests");
 	});
 
-	test("create() with all hook types stores them correctly", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "ALL_HOOKS",
+	test("with all hook types stores them correctly", () => {
+		class AllHooksPlugin extends Plugin("ALL_HOOKS", {
 			options: Schema.Struct({}),
 			hooks: {
 				SessionStart: [
@@ -446,7 +446,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new AllHooksPlugin();
 
 		expect(plugin.config.hooks.SessionStart).toHaveLength(1);
 		expect(plugin.config.hooks.SessionEnd).toHaveLength(1);
@@ -457,9 +458,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 		expect(plugin.config.hooks.UserPromptSubmit).toHaveLength(1);
 	});
 
-	test("create() with passthrough hooks preserves them", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "PASS",
+	test("with passthrough hooks preserves them", () => {
+		class PassPlugin extends Plugin("PASS", {
 			options: Schema.Struct({}),
 			hooks: {
 				PreToolUse: [
@@ -477,14 +477,14 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new PassPlugin();
 
 		expect(plugin.config.hooks.PreToolUse).toHaveLength(2);
 	});
 
-	test("create() with build options stores them", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "BUILD_OPTS",
+	test("with build options stores them", () => {
+		class BuildOptsPlugin extends Plugin("BUILD_OPTS", {
 			options: Schema.Struct({}),
 			hooks: {},
 			bytecode: true,
@@ -493,7 +493,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 			minify: false,
 			sourcemap: false,
 			hooksOutputPath: "custom/hooks.json",
-		});
+		}) {}
+		const plugin = new BuildOptsPlugin();
 
 		expect(plugin.config.bytecode).toBe(true);
 		expect(plugin.config.persistLocal).toBe(false);
@@ -503,9 +504,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 		expect(plugin.config.hooksOutputPath).toBe("custom/hooks.json");
 	});
 
-	test("create() with file-based pipeline hooks", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "FILE_HOOKS",
+	test("with file-based pipeline hooks", () => {
+		class FileHooksPlugin extends Plugin("FILE_HOOKS", {
 			options: Schema.Struct({}),
 			hooks: {
 				SessionStart: [
@@ -522,7 +522,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new FileHooksPlugin();
 
 		const sessionHook = plugin.config.hooks.SessionStart?.[0];
 		expect(sessionHook).toBeDefined();
@@ -538,8 +539,7 @@ describe("ClaudeBinaryPlugin advanced", () => {
 	});
 
 	test("test() returns a PluginTester instance", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "TESTER",
+		class TesterPlugin extends Plugin("TESTER", {
 			options: Schema.Struct({
 				DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
 			}),
@@ -556,7 +556,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new TesterPlugin();
 
 		const tester = plugin.test();
 		expect(tester).toBeDefined();
@@ -567,9 +568,8 @@ describe("ClaudeBinaryPlugin advanced", () => {
 		tester.dispose();
 	});
 
-	test("create() with inline command handler", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "INLINE_CMD",
+	test("with inline command handler", () => {
+		class InlineCmdPlugin extends Plugin("INLINE_CMD", {
 			options: Schema.Struct({}),
 			hooks: {},
 			commands: {
@@ -582,34 +582,35 @@ describe("ClaudeBinaryPlugin advanced", () => {
 					}),
 				},
 			},
-		});
+		}) {}
+		const plugin = new InlineCmdPlugin();
 
 		expect(plugin.config.commands?.status).toBeDefined();
 		expect(plugin.config.commands?.status.description).toBe("Show status");
 		expect(typeof plugin.config.commands?.status.pipeline).toBe("function");
 	});
 
-	test("create() with empty hooks is valid", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "EMPTY",
+	test("with empty hooks is valid", () => {
+		class EmptyPlugin extends Plugin("EMPTY", {
 			options: Schema.Struct({}),
 			hooks: {},
-		});
+		}) {}
+		const plugin = new EmptyPlugin();
 
-		expect(plugin.config.prefix).toBe("EMPTY");
+		expect(plugin.prefix).toBe("EMPTY");
 		expect(Object.keys(plugin.config.hooks)).toHaveLength(0);
 	});
 
 	test("config is readonly on the instance", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "READONLY",
+		class ReadonlyPlugin extends Plugin("READONLY", {
 			options: Schema.Struct({}),
 			hooks: {},
-		});
+		}) {}
+		const plugin = new ReadonlyPlugin();
 
 		// Config is accessible
 		expect(plugin.config).toBeDefined();
-		expect(plugin.config.prefix).toBe("READONLY");
+		expect(plugin.prefix).toBe("READONLY");
 	});
 });
 
@@ -652,16 +653,16 @@ describe("Helper functions", () => {
 });
 
 // =============================================================================
-// ClaudeBinaryPlugin instance methods
+// Plugin() instance methods
 // =============================================================================
 
-describe("ClaudeBinaryPlugin.test()", () => {
+describe("Plugin().test()", () => {
 	test("returns a PluginTester instance with fluent API", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "TESTER",
+		class TestPlugin extends Plugin("TESTER", {
 			options: Schema.Struct({}),
 			hooks: {},
-		});
+		}) {}
+		const plugin = new TestPlugin();
 		const tester = plugin.test();
 		expect(tester).toBeDefined();
 		expect(typeof tester.withOptions).toBe("function");
@@ -671,11 +672,11 @@ describe("ClaudeBinaryPlugin.test()", () => {
 	});
 
 	test("returns a new tester each time", () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "TESTER2",
+		class TestPlugin extends Plugin("TESTER2", {
 			options: Schema.Struct({}),
 			hooks: {},
-		});
+		}) {}
+		const plugin = new TestPlugin();
 		const tester1 = plugin.test();
 		const tester2 = plugin.test();
 		expect(tester1).not.toBe(tester2);
@@ -684,14 +685,18 @@ describe("ClaudeBinaryPlugin.test()", () => {
 	});
 });
 
-describe("ClaudeBinaryPlugin.build()", () => {
-	test("is a static async function", () => {
-		expect(typeof ClaudeBinaryPlugin.build).toBe("function");
+describe("Plugin().build()", () => {
+	test("is an async function", () => {
+		class TestPlugin extends Plugin("BUILD_TEST", {
+			options: Schema.Struct({}),
+			hooks: {},
+		}) {}
+		const plugin = new TestPlugin();
+		expect(typeof plugin.build).toBe("function");
 	});
 
 	test("delegates to PluginBuilder.fromConfig and returns result", async () => {
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "BUILD_TEST",
+		class TestPlugin extends Plugin("BUILD_TEST", {
 			options: Schema.Struct({}),
 			hooks: {
 				SessionStart: [
@@ -705,7 +710,8 @@ describe("ClaudeBinaryPlugin.build()", () => {
 					},
 				],
 			},
-		});
+		}) {}
+		const plugin = new TestPlugin();
 
 		// Silence console output from the build process
 		const origLog = console.log;
@@ -716,7 +722,7 @@ describe("ClaudeBinaryPlugin.build()", () => {
 		console.warn = () => {};
 
 		try {
-			const result = await ClaudeBinaryPlugin.build(plugin, {
+			const result = await plugin.build({
 				rootDir: `/tmp/nonexistent-plugin-test-dir-xyz-${Date.now()}`,
 			});
 			expect(result).toBeDefined();
@@ -730,7 +736,7 @@ describe("ClaudeBinaryPlugin.build()", () => {
 	});
 });
 
-describe("ClaudeBinaryPlugin.config", () => {
+describe("Plugin().config", () => {
 	test("config property is readonly and contains the plugin configuration", () => {
 		const hooks = {
 			SessionStart: [
@@ -744,24 +750,22 @@ describe("ClaudeBinaryPlugin.config", () => {
 				},
 			],
 		};
-		const plugin = ClaudeBinaryPlugin.create({
-			prefix: "CFG",
+		class TestPlugin extends Plugin("CFG", {
 			options: Schema.Struct({ DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }) }),
 			hooks,
-		});
+		}) {}
+		const plugin = new TestPlugin();
 
-		expect(plugin.config.prefix).toBe("CFG");
+		expect(plugin.prefix).toBe("CFG");
 		expect(plugin.config.hooks).toBe(hooks);
 	});
 });
 
 // =============================================================================
-// Plugin() factory
+// Plugin() factory (extended)
 // =============================================================================
 
-import { Plugin } from "../../src/plugin/config.js";
-
-describe("Plugin() factory", () => {
+describe("Plugin() factory (extended)", () => {
 	test("returns a class constructor", () => {
 		const Base = Plugin("TEST", {
 			options: Schema.Struct({ MODE: Schema.String }),
