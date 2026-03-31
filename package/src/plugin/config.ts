@@ -1318,8 +1318,10 @@ type ResolvePlugin<T> = T extends new () => infer I ? I : T;
 // biome-ignore lint/suspicious/noExplicitAny: Need any for type matching
 export type ExtractOptionsSchema<T> =
 	// New API: static options on PluginConfig subclass
-	T extends { options: infer S extends Schema.Schema.Any }
-		? S
+	T extends { options: infer S }
+		? S extends Schema.Schema.Any
+			? S
+			: never
 		: // Old API: ClaudePluginInstance<TSchema, ...>
 			ResolvePlugin<T> extends ClaudePluginInstance<infer TSchema, any>
 			? TSchema
@@ -1331,7 +1333,7 @@ export type ExtractOptionsSchema<T> =
  * - Falls back to never (old API uses ClaudePluginInstance path in InferPluginState)
  * @public
  */
-export type ExtractStateSchema<T> = T extends { state: infer S extends Schema.Schema.Any } ? S : never;
+export type ExtractStateSchema<T> = T extends { state: infer S } ? (S extends Schema.Schema.Any ? S : never) : never;
 
 /**
  * Extract the setup function type from either:
