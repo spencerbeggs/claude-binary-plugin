@@ -3,7 +3,7 @@ import { AddContext, Allow, ClaudePlugin, Deny, Modify } from "claude-binary-plu
 import preToolUseHandler from "../hooks/pre-tool-use.js";
 import sessionStartHandler from "../hooks/session-start.js";
 import TestConfig from "../plugin.config.js";
-import { PluginState } from "../state.js";
+import { PluginState } from "../plugin.state.js";
 
 const plugin = new ClaudePlugin(TestConfig, {
 	SessionStart: [{ name: "init", pipeline: sessionStartHandler }],

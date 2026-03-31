@@ -1,16 +1,7 @@
 import { Allow, Deny, Modify } from "claude-binary-plugin";
-import type { PreToolUseInput } from "claude-binary-plugin";
-import type { PluginState } from "../state.js";
+import type { Handlers } from "../plugin.config.js";
 
-const handler = ({
-	input,
-	options,
-	state,
-}: {
-	input: PreToolUseInput;
-	options: { MODE: "strict" | "lenient"; MAX_RETRIES: number };
-	state: PluginState;
-}) => {
+const handler: Handlers["PreToolUse"] = ({ input, options, state }) => {
 	// In strict mode, deny destructive bash commands
 	if (options.MODE === "strict" && input.tool_name === "Bash") {
 		const command = (input.tool_input as { command?: string }).command ?? "";

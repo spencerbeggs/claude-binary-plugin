@@ -1,7 +1,7 @@
 import type { InferHandlers } from "claude-binary-plugin";
 import { PluginConfig } from "claude-binary-plugin";
 import { Schema } from "effect";
-import { PluginState } from "./state.js";
+import { PluginState } from "./plugin.state.js";
 
 class TestConfig extends PluginConfig.extend<TestConfig>("TestConfig")({
 	prefix: Schema.Literal("TEST_PLUGIN"),

@@ -81,7 +81,8 @@ export class PluginConfig extends Schema.Class<PluginConfig>("PluginConfig")({})
 export class ClaudePlugin<TConfig extends abstract new (...args: any[]) => any = typeof PluginConfig> {
 	constructor(
 		readonly config: TConfig,
-		readonly hooks: HooksMap<unknown>,
+		// biome-ignore lint/suspicious/noExplicitAny: HooksMap needs to accept typed handlers from InferHandlers
+		readonly hooks: HooksMap<any, any>,
 	) {}
 
 	async build(options: PluginBuildOptions = {}): Promise<PluginBuildResult> {
@@ -99,7 +100,8 @@ export class ClaudePlugin<TConfig extends abstract new (...args: any[]) => any =
 	// biome-ignore lint/suspicious/noExplicitAny: Schema.Class statics are complex; structural constraint suffices
 	static async build<T extends abstract new (...args: any[]) => any>(
 		config: T,
-		hooks: HooksMap<unknown>,
+		// biome-ignore lint/suspicious/noExplicitAny: HooksMap needs to accept typed handlers from InferHandlers
+		hooks: HooksMap<any>,
 		options: PluginBuildOptions = {},
 	): Promise<PluginBuildResult> {
 		return new ClaudePlugin(config, hooks).build(options);
@@ -476,9 +478,10 @@ export interface ToolFilter {
  * Pipeline-based hook definition with inline function.
  * @public
  */
-export interface HandlerHookDefinition<TInput, TOutput, TOptions> extends HookDefinitionBase {
+export interface HandlerHookDefinition<TInput, TOutput, TOptions, TState = Record<string, unknown>>
+	extends HookDefinitionBase {
 	/** Pure transformation function */
-	pipeline: PipelineHandler<TInput, TOutput, TOptions>;
+	pipeline: PipelineHandler<TInput, TOutput, TOptions, TState>;
 	handler?: never;
 }
 
@@ -563,8 +566,8 @@ export interface PassthroughHookEntry {
  * Hook definition: either pipeline, handler, file path, or passthrough.
  * @public
  */
-export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>> =
-	| HandlerHookDefinition<TInput, TOutput, TOptions>
+export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<string, unknown>> =
+	| HandlerHookDefinition<TInput, TOutput, TOptions, TState>
 	| HandlerFileHookDefinition
 	| RawHookDefinition<TEvent, TOptions, TState>
 	| RawFileHookDefinition
@@ -578,33 +581,36 @@ export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<st
  * SessionStart hook definition
  * @public
  */
-export type SessionStartHookDefinition<TOptions> = HookDefinition<
+export type SessionStartHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	SessionStartInput,
 	SessionStartPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 /**
  * SessionEnd hook definition
  * @public
  */
-export type SessionEndHookDefinition<TOptions> = HookDefinition<
+export type SessionEndHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	SessionEndInput,
 	SessionEndPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 /**
  * PreToolUse hook definition with tool filter
  * @public
  */
-export type PreToolUseHookDefinition<TOptions> = HookDefinition<
+export type PreToolUseHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PreToolUseInput,
 	PreToolUsePipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 > &
 	ToolFilter;
 
@@ -612,11 +618,12 @@ export type PreToolUseHookDefinition<TOptions> = HookDefinition<
  * PostToolUse hook definition with tool filter
  * @public
  */
-export type PostToolUseHookDefinition<TOptions> = HookDefinition<
+export type PostToolUseHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PostToolUseInput,
 	PostToolUsePipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 > &
 	ToolFilter;
 
@@ -624,61 +631,72 @@ export type PostToolUseHookDefinition<TOptions> = HookDefinition<
  * Stop hook definition
  * @public
  */
-export type StopHookDefinition<TOptions> = HookDefinition<StopInput, StopPipelineOutput, unknown, TOptions>;
+export type StopHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
+	StopInput,
+	StopPipelineOutput,
+	unknown,
+	TOptions,
+	TState
+>;
 
 /**
  * SubagentStop hook definition
  * @public
  */
-export type SubagentStopHookDefinition<TOptions> = HookDefinition<
+export type SubagentStopHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	SubagentStopInput,
 	SubagentStopPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 /**
  * UserPromptSubmit hook definition
  * @public
  */
-export type UserPromptSubmitHookDefinition<TOptions> = HookDefinition<
+export type UserPromptSubmitHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	UserPromptSubmitInput,
 	UserPromptSubmitPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 /**
  * PreCompact hook definition
  * @public
  */
-export type PreCompactHookDefinition<TOptions> = HookDefinition<
+export type PreCompactHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PreCompactInput,
 	PreCompactPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 /**
  * Notification hook definition
  * @public
  */
-export type NotificationHookDefinition<TOptions> = HookDefinition<
+export type NotificationHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	NotificationInput,
 	NotificationPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 /**
  * PermissionRequest hook definition
  * @public
  */
-export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
+export type PermissionRequestHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PermissionRequestInput,
 	PermissionRequestPipelineOutput,
 	unknown,
-	TOptions
+	TOptions,
+	TState
 >;
 
 // =============================================================================
@@ -689,17 +707,17 @@ export type PermissionRequestHookDefinition<TOptions> = HookDefinition<
  * Map of hook event types to their definitions.
  * @public
  */
-export interface HooksMap<TOptions> {
-	SessionStart?: SessionStartHookDefinition<TOptions>[];
-	SessionEnd?: SessionEndHookDefinition<TOptions>[];
-	PreToolUse?: PreToolUseHookDefinition<TOptions>[];
-	PostToolUse?: PostToolUseHookDefinition<TOptions>[];
-	Stop?: StopHookDefinition<TOptions>[];
-	SubagentStop?: SubagentStopHookDefinition<TOptions>[];
-	UserPromptSubmit?: UserPromptSubmitHookDefinition<TOptions>[];
-	PreCompact?: PreCompactHookDefinition<TOptions>[];
-	Notification?: NotificationHookDefinition<TOptions>[];
-	PermissionRequest?: PermissionRequestHookDefinition<TOptions>[];
+export interface HooksMap<TOptions, TState = Record<string, unknown>> {
+	SessionStart?: SessionStartHookDefinition<TOptions, TState>[];
+	SessionEnd?: SessionEndHookDefinition<TOptions, TState>[];
+	PreToolUse?: PreToolUseHookDefinition<TOptions, TState>[];
+	PostToolUse?: PostToolUseHookDefinition<TOptions, TState>[];
+	Stop?: StopHookDefinition<TOptions, TState>[];
+	SubagentStop?: SubagentStopHookDefinition<TOptions, TState>[];
+	UserPromptSubmit?: UserPromptSubmitHookDefinition<TOptions, TState>[];
+	PreCompact?: PreCompactHookDefinition<TOptions, TState>[];
+	Notification?: NotificationHookDefinition<TOptions, TState>[];
+	PermissionRequest?: PermissionRequestHookDefinition<TOptions, TState>[];
 }
 
 // =============================================================================

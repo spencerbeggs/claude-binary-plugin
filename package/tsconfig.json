@@ -1,3 +1,6 @@
 {
-	"extends": ["@savvy-web/bun-builder/tsconfig/ecma/lib.json"]
+	"extends": ["@savvy-web/bun-builder/tsconfig/ecma/lib.json"],
+	"compilerOptions": {
+		"types": ["bun"]
+	}
 }

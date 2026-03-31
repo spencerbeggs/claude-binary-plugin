@@ -1,7 +1,7 @@
 import { AddContext, MarkdownContext } from "claude-binary-plugin";
-import type { PluginState } from "../state.js";
+import type { Handlers } from "../plugin.config.js";
 
-const handler = ({ state }: { state: PluginState }) => {
+const handler: Handlers["SessionStart"] = ({ state }) => {
 	const ctx = new MarkdownContext()
 		.heading(2, "Test Plugin Environment")
 		.list([

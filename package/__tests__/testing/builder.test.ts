@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { Schema } from "effect";
 import type { SetupContext } from "../../src/plugin/config.js";
-import { Plugin } from "../../src/plugin/config.js";
+import { ClaudePlugin, PluginConfig } from "../../src/plugin/config.js";
 import type { MockEnvContext } from "../../src/testing/mocks.js";
 import { TestFixtures } from "../../src/testing/mocks.js";
 
 // =============================================================================
-// TEST PLUGIN
+// TEST PLUGIN CONFIG
 // =============================================================================
 
 const testSchema = Schema.Struct({
@@ -22,78 +22,18 @@ interface TestState {
 	projectRoot: string;
 }
 
-// Test plugin with inline handlers for testing runHook
-class TestPluginClass extends Plugin("TEST_PLUGIN", {
-	options: testSchema,
-	setup: async (ctx: SetupContext<TestOptions>): Promise<TestState> => {
+class TestPluginConfig extends PluginConfig.extend<TestPluginConfig>("TestPluginConfig")({
+	prefix: Schema.Literal("TEST_PLUGIN"),
+}) {
+	static readonly options = testSchema;
+	static readonly setup = async (ctx: SetupContext<TestOptions>): Promise<TestState> => {
 		return {
 			packageManager: "bun",
 			gitRepo: true,
 			projectRoot: ctx.cwd,
 		};
-	},
-	hooks: {
-		PreToolUse: [
-			{
-				name: "security",
-				tools: ["Bash"],
-				pipeline: async ({ input, options: _options, state: _state }) => {
-					const toolInput = input.tool_input as { command?: string };
-					const command = toolInput.command ?? "";
-
-					// Block dangerous commands
-					if (command.includes("rm -rf")) {
-						return {
-							status: "executed" as const,
-							action: "deny" as const,
-							summary: "blocked dangerous command",
-							reason: "rm -rf is not allowed",
-						};
-					}
-
-					// Allow safe commands
-					return {
-						status: "executed" as const,
-						action: "allow" as const,
-						summary: "allowed safe command",
-					};
-				},
-			},
-			{
-				name: "file-path-hook",
-				tools: ["Bash"],
-				pipeline: "./hooks/security.hook.ts",
-			},
-		],
-		SessionStart: [
-			{
-				name: "context",
-				pipeline: async ({ input: _input, options: _options, state }) => {
-					return {
-						status: "executed" as const,
-						action: "context" as const,
-						summary: "added project context",
-						claudeContext: `Project uses ${state.packageManager}`,
-					};
-				},
-			},
-		],
-		PostToolUse: [
-			{
-				name: "post-bash",
-				tools: ["Bash"],
-				pipeline: async ({ input: _input }) => {
-					return {
-						status: "executed" as const,
-						action: "context" as const,
-						summary: "added post-tool context",
-						claudeContext: "Command completed successfully",
-					};
-				},
-			},
-		],
-	},
-	commands: {
+	};
+	static readonly commands = {
 		lint: {
 			description: "Lint the codebase",
 			args: Schema.Struct({
@@ -146,9 +86,70 @@ class TestPluginClass extends Plugin("TEST_PLUGIN", {
 				};
 			},
 		},
-	},
-}) {}
-const testPlugin = new TestPluginClass();
+	};
+}
+
+const testPlugin = new ClaudePlugin(TestPluginConfig, {
+	PreToolUse: [
+		{
+			name: "security",
+			tools: ["Bash"],
+			pipeline: async ({ input, options: _options, state: _state }) => {
+				const toolInput = input.tool_input as { command?: string };
+				const command = toolInput.command ?? "";
+
+				// Block dangerous commands
+				if (command.includes("rm -rf")) {
+					return {
+						status: "executed" as const,
+						action: "deny" as const,
+						summary: "blocked dangerous command",
+						reason: "rm -rf is not allowed",
+					};
+				}
+
+				// Allow safe commands
+				return {
+					status: "executed" as const,
+					action: "allow" as const,
+					summary: "allowed safe command",
+				};
+			},
+		},
+		{
+			name: "file-path-hook",
+			tools: ["Bash"],
+			pipeline: "./hooks/security.hook.ts",
+		},
+	],
+	SessionStart: [
+		{
+			name: "context",
+			pipeline: async ({ input: _input, options: _options, state }) => {
+				return {
+					status: "executed" as const,
+					action: "context" as const,
+					summary: "added project context",
+					claudeContext: `Project uses ${state.packageManager}`,
+				};
+			},
+		},
+	],
+	PostToolUse: [
+		{
+			name: "post-bash",
+			tools: ["Bash"],
+			pipeline: async ({ input: _input }) => {
+				return {
+					status: "executed" as const,
+					action: "context" as const,
+					summary: "added post-tool context",
+					claudeContext: "Command completed successfully",
+				};
+			},
+		},
+	],
+});
 
 // =============================================================================
 // TESTS
@@ -443,30 +444,33 @@ describe("PluginTester", () => {
 		test("handler receives correct options from withOptions()", async () => {
 			let receivedOptions: unknown;
 
-			class OptionsCheckPlugin extends Plugin("OPTIONS_CHECK", {
-				options: Schema.Struct({
+			class OptionsCheckConfig extends PluginConfig.extend<OptionsCheckConfig>("OptionsCheckConfig")({
+				prefix: Schema.Literal("OPTIONS_CHECK"),
+			}) {
+				static readonly options = Schema.Struct({
 					API_KEY: Schema.optional(Schema.String),
 					DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
-				}),
-				setup: async () => ({}),
-				hooks: {
-					PreToolUse: [
-						{
-							name: "check-options",
-							pipeline: async ({ options }) => {
-								receivedOptions = options;
-								return {
-									status: "executed" as const,
-									action: "allow" as const,
-									summary: "checked options",
-								};
-							},
-						},
-					],
-				},
-			}) {}
+				});
+				static readonly setup = async () => ({});
+			}
 
-			const ctx = new OptionsCheckPlugin()
+			const optionsCheckPlugin = new ClaudePlugin(OptionsCheckConfig, {
+				PreToolUse: [
+					{
+						name: "check-options",
+						pipeline: async ({ options }) => {
+							receivedOptions = options;
+							return {
+								status: "executed" as const,
+								action: "allow" as const,
+								summary: "checked options",
+							};
+						},
+					},
+				],
+			});
+
+			const ctx = optionsCheckPlugin
 				.test()
 				.withOptions({ API_KEY: "my-secret-key", DEBUG: "true" })
 				.withState({})
@@ -485,32 +489,34 @@ describe("PluginTester", () => {
 		test("handler receives correct state from withState()", async () => {
 			let receivedState: unknown;
 
-			// Create a custom plugin to capture state
-			class StateCheckPlugin extends Plugin("STATE_CHECK", {
-				options: Schema.Struct({}),
-				setup: async (): Promise<{ customField: string; nested: { deep: boolean } }> => ({
+			class StateCheckConfig extends PluginConfig.extend<StateCheckConfig>("StateCheckConfig")({
+				prefix: Schema.Literal("STATE_CHECK"),
+			}) {
+				static readonly options = Schema.Struct({});
+				static readonly setup = async (): Promise<{ customField: string; nested: { deep: boolean } }> => ({
 					customField: "",
 					nested: { deep: false },
-				}),
-				hooks: {
-					SessionStart: [
-						{
-							name: "check-state",
-							pipeline: async ({ state }) => {
-								receivedState = state;
-								return {
-									status: "executed" as const,
-									action: "context" as const,
-									summary: "checked state",
-									claudeContext: "test",
-								};
-							},
-						},
-					],
-				},
-			}) {}
+				});
+			}
 
-			const stateCtx = new StateCheckPlugin()
+			const stateCheckPlugin = new ClaudePlugin(StateCheckConfig, {
+				SessionStart: [
+					{
+						name: "check-state",
+						pipeline: async ({ state }) => {
+							receivedState = state;
+							return {
+								status: "executed" as const,
+								action: "context" as const,
+								summary: "checked state",
+								claudeContext: "test",
+							};
+						},
+					},
+				],
+			});
+
+			const stateCtx = stateCheckPlugin
 				.test()
 				.withOptions({})
 				.withState({ customField: "custom-value", nested: { deep: true } })
