@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Either, Schema } from "effect";
-import { Plugin } from "../../src/plugin/config.js";
+import { ClaudePlugin, PluginConfig } from "../../src/plugin/config.js";
 import type { PreToolUsePipelineOutput, SessionStartPipelineOutput } from "../../src/schemas/pipeline-outputs.js";
 import {
 	PostToolUseOutputSchema,
@@ -206,66 +206,67 @@ describe("Pipeline Output Schemas", () => {
 	});
 });
 
-describe("Plugin() factory (basic)", () => {
-	test("returns compiled plugin config", () => {
-		const envSchema = Schema.Struct({
-			VERBOSE: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+describe("ClaudePlugin (basic)", () => {
+	test("stores config and hooks", () => {
+		class TestConfig extends PluginConfig.extend<TestConfig>("TestConfig")({
+			prefix: Schema.Literal("TEST_PLUGIN"),
+		}) {
+			static readonly options = Schema.Struct({
+				VERBOSE: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+			});
+		}
+
+		const plugin = new ClaudePlugin(TestConfig, {
+			SessionStart: [
+				{
+					name: "test-context",
+					pipeline: async (): Promise<SessionStartPipelineOutput> => {
+						return {
+							status: "executed",
+							action: "context",
+							summary: "provided context",
+							claudeContext: "Test context",
+						};
+					},
+				},
+			],
 		});
 
-		class TestPlugin extends Plugin("TEST_PLUGIN", {
-			options: envSchema,
-			hooks: {
-				SessionStart: [
-					{
-						name: "test-context",
-						pipeline: async (): Promise<SessionStartPipelineOutput> => {
-							return {
-								status: "executed",
-								action: "context",
-								summary: "provided context",
-								claudeContext: "Test context",
-							};
-						},
-					},
-				],
-			},
-		}) {}
-		const plugin = new TestPlugin();
-
-		expect(plugin.config).toBeDefined();
-		expect(plugin.prefix).toBe("TEST_PLUGIN");
-		expect(plugin.config.hooks.SessionStart).toHaveLength(1);
+		expect(plugin.config).toBe(TestConfig);
+		expect(plugin.hooks.SessionStart).toHaveLength(1);
 	});
 
 	test("accepts multiple hooks per event type", () => {
-		class MultiPlugin extends Plugin("MULTI", {
-			options: Schema.Struct({}),
-			hooks: {
-				PreToolUse: [
-					{
-						name: "allowlist",
-						tools: ["Bash"],
-						pipeline: (): PreToolUsePipelineOutput => ({
-							status: "executed",
-							action: "allow",
-							summary: "allowed: allowlist",
-						}),
-					},
-					{
-						name: "security",
-						tools: ["Write", "Edit"],
-						pipeline: (): PreToolUsePipelineOutput => ({
-							status: "executed",
-							action: "ask",
-							summary: "ask: security check",
-						}),
-					},
-				],
-			},
-		}) {}
-		const plugin = new MultiPlugin();
+		class MultiConfig extends PluginConfig.extend<MultiConfig>("MultiConfig")({
+			prefix: Schema.Literal("MULTI"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 
-		const hooks = plugin.config.hooks.PreToolUse;
+		const plugin = new ClaudePlugin(MultiConfig, {
+			PreToolUse: [
+				{
+					name: "allowlist",
+					tools: ["Bash"],
+					pipeline: (): PreToolUsePipelineOutput => ({
+						status: "executed",
+						action: "allow",
+						summary: "allowed: allowlist",
+					}),
+				},
+				{
+					name: "security",
+					tools: ["Write", "Edit"],
+					pipeline: (): PreToolUsePipelineOutput => ({
+						status: "executed",
+						action: "ask",
+						summary: "ask: security check",
+					}),
+				},
+			],
+		});
+
+		const hooks = plugin.hooks.PreToolUse;
 		expect(hooks).toBeDefined();
 		expect(hooks).toHaveLength(2);
 		const first = hooks?.[0];
@@ -275,102 +276,111 @@ describe("Plugin() factory (basic)", () => {
 	});
 
 	test("accepts raw handler mode", () => {
-		class RawPlugin extends Plugin("RAW", {
-			options: Schema.Struct({}),
-			hooks: {
-				PreToolUse: [
-					{
-						name: "raw-handler",
-						handler: async (ctx) => {
-							// Raw handler has full control
-							ctx.event.end(ctx.event.response().allow());
-						},
-					},
-				],
-			},
-		}) {}
-		const plugin = new RawPlugin();
+		class RawConfig extends PluginConfig.extend<RawConfig>("RawConfig")({
+			prefix: Schema.Literal("RAW"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 
-		expect(plugin.config.hooks.PreToolUse).toHaveLength(1);
+		const plugin = new ClaudePlugin(RawConfig, {
+			PreToolUse: [
+				{
+					name: "raw-handler",
+					// biome-ignore lint/suspicious/noExplicitAny: Raw handler test needs untyped event access
+					handler: async (ctx: { event: any; options: unknown; state: unknown }) => {
+						// Raw handler has full control
+						ctx.event.end(ctx.event.response().allow());
+					},
+				},
+			],
+		});
+
+		expect(plugin.hooks.PreToolUse).toHaveLength(1);
 	});
 
 	test("type safety: pipeline return must match output schema", () => {
-		// This is a compile-time test - if types are wrong, this won't compile
-		class TypedPlugin extends Plugin("TYPED", {
-			options: Schema.Struct({}),
-			hooks: {
-				SessionStart: [
-					{
-						name: "typed-hook",
-						pipeline: (): SessionStartPipelineOutput => {
-							// Must return SessionStartPipelineOutput shape
-							return {
-								status: "executed",
-								action: "context",
-								summary: "typed context",
-								claudeContext: "typed",
-							};
-						},
+		class TypedConfig extends PluginConfig.extend<TypedConfig>("TypedConfig")({
+			prefix: Schema.Literal("TYPED"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+
+		const plugin = new ClaudePlugin(TypedConfig, {
+			SessionStart: [
+				{
+					name: "typed-hook",
+					pipeline: (): SessionStartPipelineOutput => {
+						return {
+							status: "executed",
+							action: "context",
+							summary: "typed context",
+							claudeContext: "typed",
+						};
 					},
-				],
-				PreToolUse: [
-					{
-						name: "typed-pretool",
-						pipeline: (): PreToolUsePipelineOutput => {
-							// Must return PreToolUsePipelineOutput shape
-							return {
-								status: "executed",
-								action: "allow",
-								summary: "allowed",
-							};
-						},
+				},
+			],
+			PreToolUse: [
+				{
+					name: "typed-pretool",
+					pipeline: (): PreToolUsePipelineOutput => {
+						return {
+							status: "executed",
+							action: "allow",
+							summary: "allowed",
+						};
 					},
-				],
-			},
-		}) {}
-		const plugin = new TypedPlugin();
+				},
+			],
+		});
 
 		expect(plugin.config).toBeDefined();
 	});
 });
 
-describe("Plugin() factory (advanced)", () => {
-	test("with setup function preserves config", () => {
-		const setupFn = async ({ options: _options, cwd: _cwd }: { options: Record<string, unknown>; cwd: string }) => ({
-			packageManager: "bun",
-			detectedFeatures: ["typescript"],
-		});
-		class SetupPlugin extends Plugin("SETUP_TEST", {
-			options: Schema.Struct({
+describe("ClaudePlugin (advanced)", () => {
+	test("with setup function on config class", () => {
+		class SetupConfig extends PluginConfig.extend<SetupConfig>("SetupConfig")({
+			prefix: Schema.Literal("SETUP_TEST"),
+		}) {
+			static readonly options = Schema.Struct({
 				DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
-			}),
-			setup: setupFn,
-			hooks: {
-				SessionStart: [
-					{
-						name: "context",
-						pipeline: async ({ state }) => ({
-							status: "executed" as const,
-							action: "context" as const,
-							summary: "provided context",
-							claudeContext: `PM: ${state.packageManager}`,
-						}),
-					},
-				],
-			},
-		}) {}
-		const plugin = new SetupPlugin();
+			});
+			static readonly setup = async ({
+				options: _options,
+				cwd: _cwd,
+			}: {
+				options: Record<string, unknown>;
+				cwd: string;
+			}) => ({
+				packageManager: "bun",
+				detectedFeatures: ["typescript"],
+			});
+		}
 
-		expect(plugin.prefix).toBe("SETUP_TEST");
-		expect(plugin.config.setup).toBeDefined();
-		expect(typeof plugin.config.setup).toBe("function");
+		const _plugin = new ClaudePlugin(SetupConfig, {
+			SessionStart: [
+				{
+					name: "context",
+					pipeline: async ({ state }) => ({
+						status: "executed" as const,
+						action: "context" as const,
+						summary: "provided context",
+						claudeContext: `PM: ${state.packageManager}`,
+					}),
+				},
+			],
+		});
+
+		expect(SetupConfig.setup).toBeDefined();
+		expect(typeof SetupConfig.setup).toBe("function");
 	});
 
-	test("with commands stores command definitions", () => {
-		class CmdPlugin extends Plugin("CMD_TEST", {
-			options: Schema.Struct({}),
-			hooks: {},
-			commands: {
+	test("with commands as statics on config class", () => {
+		class CmdConfig extends PluginConfig.extend<CmdConfig>("CmdConfig")({
+			prefix: Schema.Literal("CMD_TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+			static readonly commands = {
 				lint: {
 					description: "Run linter",
 					args: Schema.Struct({
@@ -383,155 +393,139 @@ describe("Plugin() factory (advanced)", () => {
 					description: "Run tests",
 					pipeline: "./commands/test.cmd.ts",
 				},
-			},
-		}) {}
-		const plugin = new CmdPlugin();
+			};
+		}
 
-		expect(plugin.config.commands).toBeDefined();
-		expect(Object.keys(plugin.config.commands ?? {})).toEqual(["lint", "test"]);
-		expect(plugin.config.commands?.lint.description).toBe("Run linter");
-		expect(plugin.config.commands?.test.description).toBe("Run tests");
+		expect(CmdConfig.commands).toBeDefined();
+		expect(Object.keys(CmdConfig.commands)).toEqual(["lint", "test"]);
+		expect(CmdConfig.commands.lint.description).toBe("Run linter");
+		expect(CmdConfig.commands.test.description).toBe("Run tests");
 	});
 
 	test("with all hook types stores them correctly", () => {
-		class AllHooksPlugin extends Plugin("ALL_HOOKS", {
-			options: Schema.Struct({}),
-			hooks: {
-				SessionStart: [
-					{
-						name: "init",
-						pipeline: async () => ({
-							status: "executed" as const,
-							action: "context" as const,
-							summary: "ok",
-							claudeContext: "",
-						}),
-					},
-				],
-				SessionEnd: [
-					{
-						name: "cleanup",
-						pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
-					},
-				],
-				PreToolUse: [
-					{
-						name: "filter",
-						tools: ["Bash"],
-						pipeline: async () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
-					},
-				],
-				PostToolUse: [
-					{
-						name: "reporter",
-						pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
-					},
-				],
-				Stop: [
-					{
-						name: "guard",
-						pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
-					},
-				],
-				SubagentStop: [
-					{
-						name: "sub-guard",
-						pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
-					},
-				],
-				UserPromptSubmit: [
-					{
-						name: "prompt",
-						pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
-					},
-				],
-			},
-		}) {}
-		const plugin = new AllHooksPlugin();
+		class AllHooksConfig extends PluginConfig.extend<AllHooksConfig>("AllHooksConfig")({
+			prefix: Schema.Literal("ALL_HOOKS"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 
-		expect(plugin.config.hooks.SessionStart).toHaveLength(1);
-		expect(plugin.config.hooks.SessionEnd).toHaveLength(1);
-		expect(plugin.config.hooks.PreToolUse).toHaveLength(1);
-		expect(plugin.config.hooks.PostToolUse).toHaveLength(1);
-		expect(plugin.config.hooks.Stop).toHaveLength(1);
-		expect(plugin.config.hooks.SubagentStop).toHaveLength(1);
-		expect(plugin.config.hooks.UserPromptSubmit).toHaveLength(1);
+		const plugin = new ClaudePlugin(AllHooksConfig, {
+			SessionStart: [
+				{
+					name: "init",
+					pipeline: async () => ({
+						status: "executed" as const,
+						action: "context" as const,
+						summary: "ok",
+						claudeContext: "",
+					}),
+				},
+			],
+			SessionEnd: [
+				{
+					name: "cleanup",
+					pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+				},
+			],
+			PreToolUse: [
+				{
+					name: "filter",
+					tools: ["Bash"],
+					pipeline: async () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
+				},
+			],
+			PostToolUse: [
+				{
+					name: "reporter",
+					pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+				},
+			],
+			Stop: [
+				{
+					name: "guard",
+					pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
+				},
+			],
+			SubagentStop: [
+				{
+					name: "sub-guard",
+					pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
+				},
+			],
+			UserPromptSubmit: [
+				{
+					name: "prompt",
+					pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+				},
+			],
+		});
+
+		expect(plugin.hooks.SessionStart).toHaveLength(1);
+		expect(plugin.hooks.SessionEnd).toHaveLength(1);
+		expect(plugin.hooks.PreToolUse).toHaveLength(1);
+		expect(plugin.hooks.PostToolUse).toHaveLength(1);
+		expect(plugin.hooks.Stop).toHaveLength(1);
+		expect(plugin.hooks.SubagentStop).toHaveLength(1);
+		expect(plugin.hooks.UserPromptSubmit).toHaveLength(1);
 	});
 
 	test("with passthrough hooks preserves them", () => {
-		class PassPlugin extends Plugin("PASS", {
-			options: Schema.Struct({}),
-			hooks: {
-				PreToolUse: [
-					{
-						name: "compiled",
-						pipeline: async () => ({
-							status: "executed" as const,
-							action: "allow" as const,
-							summary: "ok",
-						}),
-					},
-					{
-						matcher: "WebFetch",
-						hooks: [{ type: "command" as const, command: "bash ./scripts/log.sh" }],
-					},
-				],
-			},
-		}) {}
-		const plugin = new PassPlugin();
+		class PassConfig extends PluginConfig.extend<PassConfig>("PassConfig")({
+			prefix: Schema.Literal("PASS"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 
-		expect(plugin.config.hooks.PreToolUse).toHaveLength(2);
-	});
+		const plugin = new ClaudePlugin(PassConfig, {
+			PreToolUse: [
+				{
+					name: "compiled",
+					pipeline: async () => ({
+						status: "executed" as const,
+						action: "allow" as const,
+						summary: "ok",
+					}),
+				},
+				{
+					matcher: "WebFetch",
+					hooks: [{ type: "command" as const, command: "bash ./scripts/log.sh" }],
+				},
+			],
+		});
 
-	test("with build options stores them", () => {
-		class BuildOptsPlugin extends Plugin("BUILD_OPTS", {
-			options: Schema.Struct({}),
-			hooks: {},
-			bytecode: true,
-			persistLocal: false,
-			compile: true,
-			minify: false,
-			sourcemap: false,
-			hooksOutputPath: "custom/hooks.json",
-		}) {}
-		const plugin = new BuildOptsPlugin();
-
-		expect(plugin.config.bytecode).toBe(true);
-		expect(plugin.config.persistLocal).toBe(false);
-		expect(plugin.config.compile).toBe(true);
-		expect(plugin.config.minify).toBe(false);
-		expect(plugin.config.sourcemap).toBe(false);
-		expect(plugin.config.hooksOutputPath).toBe("custom/hooks.json");
+		expect(plugin.hooks.PreToolUse).toHaveLength(2);
 	});
 
 	test("with file-based pipeline hooks", () => {
-		class FileHooksPlugin extends Plugin("FILE_HOOKS", {
-			options: Schema.Struct({}),
-			hooks: {
-				SessionStart: [
-					{
-						name: "context",
-						pipeline: "./hooks/context.hook.ts",
-					},
-				],
-				PreToolUse: [
-					{
-						name: "security",
-						tools: ["Bash", "Write"],
-						pipeline: "./hooks/security.hook.ts",
-					},
-				],
-			},
-		}) {}
-		const plugin = new FileHooksPlugin();
+		class FileHooksConfig extends PluginConfig.extend<FileHooksConfig>("FileHooksConfig")({
+			prefix: Schema.Literal("FILE_HOOKS"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 
-		const sessionHook = plugin.config.hooks.SessionStart?.[0];
+		const plugin = new ClaudePlugin(FileHooksConfig, {
+			SessionStart: [
+				{
+					name: "context",
+					pipeline: "./hooks/context.hook.ts",
+				},
+			],
+			PreToolUse: [
+				{
+					name: "security",
+					tools: ["Bash", "Write"],
+					pipeline: "./hooks/security.hook.ts",
+				},
+			],
+		});
+
+		const sessionHook = plugin.hooks.SessionStart?.[0];
 		expect(sessionHook).toBeDefined();
 		expect(sessionHook?.name).toBe("context");
 		// File path stored as pipeline string
 		expect(typeof sessionHook?.pipeline).toBe("string");
 
-		const preToolHook = plugin.config.hooks.PreToolUse?.[0];
+		const preToolHook = plugin.hooks.PreToolUse?.[0];
 		expect(preToolHook).toBeDefined();
 		if (preToolHook && "tools" in preToolHook) {
 			expect(preToolHook.tools).toEqual(["Bash", "Write"]);
@@ -539,25 +533,27 @@ describe("Plugin() factory (advanced)", () => {
 	});
 
 	test("test() returns a PluginTester instance", () => {
-		class TesterPlugin extends Plugin("TESTER", {
-			options: Schema.Struct({
+		class TesterConfig extends PluginConfig.extend<TesterConfig>("TesterConfig")({
+			prefix: Schema.Literal("TESTER"),
+		}) {
+			static readonly options = Schema.Struct({
 				DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
-			}),
-			hooks: {
-				SessionStart: [
-					{
-						name: "context",
-						pipeline: async () => ({
-							status: "executed" as const,
-							action: "context" as const,
-							summary: "ok",
-							claudeContext: "test",
-						}),
-					},
-				],
-			},
-		}) {}
-		const plugin = new TesterPlugin();
+			});
+		}
+
+		const plugin = new ClaudePlugin(TesterConfig, {
+			SessionStart: [
+				{
+					name: "context",
+					pipeline: async () => ({
+						status: "executed" as const,
+						action: "context" as const,
+						summary: "ok",
+						claudeContext: "test",
+					}),
+				},
+			],
+		});
 
 		const tester = plugin.test();
 		expect(tester).toBeDefined();
@@ -568,11 +564,12 @@ describe("Plugin() factory (advanced)", () => {
 		tester.dispose();
 	});
 
-	test("with inline command handler", () => {
-		class InlineCmdPlugin extends Plugin("INLINE_CMD", {
-			options: Schema.Struct({}),
-			hooks: {},
-			commands: {
+	test("with inline command handler on config", () => {
+		class InlineCmdConfig extends PluginConfig.extend<InlineCmdConfig>("InlineCmdConfig")({
+			prefix: Schema.Literal("INLINE_CMD"),
+		}) {
+			static readonly options = Schema.Struct({});
+			static readonly commands = {
 				status: {
 					description: "Show status",
 					args: Schema.Struct({}),
@@ -581,36 +578,41 @@ describe("Plugin() factory (advanced)", () => {
 						output: `Project: ${state.projectDir}`,
 					}),
 				},
-			},
-		}) {}
-		const plugin = new InlineCmdPlugin();
+			};
+		}
 
-		expect(plugin.config.commands?.status).toBeDefined();
-		expect(plugin.config.commands?.status.description).toBe("Show status");
-		expect(typeof plugin.config.commands?.status.pipeline).toBe("function");
+		expect(InlineCmdConfig.commands?.status).toBeDefined();
+		expect(InlineCmdConfig.commands?.status.description).toBe("Show status");
+		expect(typeof InlineCmdConfig.commands?.status.pipeline).toBe("function");
 	});
 
 	test("with empty hooks is valid", () => {
-		class EmptyPlugin extends Plugin("EMPTY", {
-			options: Schema.Struct({}),
-			hooks: {},
-		}) {}
-		const plugin = new EmptyPlugin();
+		class EmptyConfig extends PluginConfig.extend<EmptyConfig>("EmptyConfig")({
+			prefix: Schema.Literal("EMPTY"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 
-		expect(plugin.prefix).toBe("EMPTY");
-		expect(Object.keys(plugin.config.hooks)).toHaveLength(0);
+		const plugin = new ClaudePlugin(EmptyConfig, {});
+
+		const instance = new EmptyConfig({ prefix: "EMPTY" });
+		expect(instance.prefix).toBe("EMPTY");
+		expect(Object.keys(plugin.hooks)).toHaveLength(0);
 	});
 
-	test("config is readonly on the instance", () => {
-		class ReadonlyPlugin extends Plugin("READONLY", {
-			options: Schema.Struct({}),
-			hooks: {},
-		}) {}
-		const plugin = new ReadonlyPlugin();
+	test("config class is accessible on the plugin instance", () => {
+		class ReadonlyConfig extends PluginConfig.extend<ReadonlyConfig>("ReadonlyConfig")({
+			prefix: Schema.Literal("READONLY"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+
+		const plugin = new ClaudePlugin(ReadonlyConfig, {});
 
 		// Config is accessible
-		expect(plugin.config).toBeDefined();
-		expect(plugin.prefix).toBe("READONLY");
+		expect(plugin.config).toBe(ReadonlyConfig);
+		const instance = new ReadonlyConfig({ prefix: "READONLY" });
+		expect(instance.prefix).toBe("READONLY");
 	});
 });
 
@@ -653,16 +655,17 @@ describe("Helper functions", () => {
 });
 
 // =============================================================================
-// Plugin() instance methods
+// ClaudePlugin.test()
 // =============================================================================
 
-describe("Plugin().test()", () => {
+describe("ClaudePlugin.test()", () => {
 	test("returns a PluginTester instance with fluent API", () => {
-		class TestPlugin extends Plugin("TESTER", {
-			options: Schema.Struct({}),
-			hooks: {},
-		}) {}
-		const plugin = new TestPlugin();
+		class TestConfig extends PluginConfig.extend<TestConfig>("TestConfig1")({
+			prefix: Schema.Literal("TESTER"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+		const plugin = new ClaudePlugin(TestConfig, {});
 		const tester = plugin.test();
 		expect(tester).toBeDefined();
 		expect(typeof tester.withOptions).toBe("function");
@@ -672,11 +675,12 @@ describe("Plugin().test()", () => {
 	});
 
 	test("returns a new tester each time", () => {
-		class TestPlugin extends Plugin("TESTER2", {
-			options: Schema.Struct({}),
-			hooks: {},
-		}) {}
-		const plugin = new TestPlugin();
+		class TestConfig extends PluginConfig.extend<TestConfig>("TestConfig2")({
+			prefix: Schema.Literal("TESTER2"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+		const plugin = new ClaudePlugin(TestConfig, {});
 		const tester1 = plugin.test();
 		const tester2 = plugin.test();
 		expect(tester1).not.toBe(tester2);
@@ -685,33 +689,36 @@ describe("Plugin().test()", () => {
 	});
 });
 
-describe("Plugin().build()", () => {
+describe("ClaudePlugin.build()", () => {
 	test("is an async function", () => {
-		class TestPlugin extends Plugin("BUILD_TEST", {
-			options: Schema.Struct({}),
-			hooks: {},
-		}) {}
-		const plugin = new TestPlugin();
+		class TestConfig extends PluginConfig.extend<TestConfig>("BuildTestConfig")({
+			prefix: Schema.Literal("BUILD_TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+		const plugin = new ClaudePlugin(TestConfig, {});
 		expect(typeof plugin.build).toBe("function");
 	});
 
 	test("delegates to PluginBuilder.fromConfig and returns result", async () => {
-		class TestPlugin extends Plugin("BUILD_TEST", {
-			options: Schema.Struct({}),
-			hooks: {
-				SessionStart: [
-					{
-						name: "init",
-						pipeline: async () => ({
-							status: "executed" as const,
-							action: "context" as const,
-							summary: "test",
-						}),
-					},
-				],
-			},
-		}) {}
-		const plugin = new TestPlugin();
+		class TestConfig extends PluginConfig.extend<TestConfig>("BuildTestConfig2")({
+			prefix: Schema.Literal("BUILD_TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+
+		const plugin = new ClaudePlugin(TestConfig, {
+			SessionStart: [
+				{
+					name: "init",
+					pipeline: async () => ({
+						status: "executed" as const,
+						action: "context" as const,
+						summary: "test",
+					}),
+				},
+			],
+		});
 
 		// Silence console output from the build process
 		const origLog = console.log;
@@ -736,8 +743,8 @@ describe("Plugin().build()", () => {
 	});
 });
 
-describe("Plugin().config", () => {
-	test("config property is readonly and contains the plugin configuration", () => {
+describe("ClaudePlugin.config", () => {
+	test("config property references the config class", () => {
 		const hooks = {
 			SessionStart: [
 				{
@@ -750,101 +757,114 @@ describe("Plugin().config", () => {
 				},
 			],
 		};
-		class TestPlugin extends Plugin("CFG", {
-			options: Schema.Struct({ DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }) }),
-			hooks,
-		}) {}
-		const plugin = new TestPlugin();
+		class TestConfig extends PluginConfig.extend<TestConfig>("CfgConfig")({
+			prefix: Schema.Literal("CFG"),
+		}) {
+			static readonly options = Schema.Struct({
+				DEBUG: Schema.optionalWith(Schema.String, { default: () => "false" }),
+			});
+		}
+		const plugin = new ClaudePlugin(TestConfig, hooks);
 
-		expect(plugin.prefix).toBe("CFG");
-		expect(plugin.config.hooks).toBe(hooks);
+		expect(plugin.config).toBe(TestConfig);
+		expect(plugin.hooks).toBe(hooks);
 	});
 });
 
 // =============================================================================
-// Plugin() factory (extended)
+// PluginConfig.extend() and ClaudePlugin (extended)
 // =============================================================================
 
-describe("Plugin() factory (extended)", () => {
-	test("returns a class constructor", () => {
-		const Base = Plugin("TEST", {
-			options: Schema.Struct({ MODE: Schema.String }),
-			hooks: {},
+describe("PluginConfig.extend() and ClaudePlugin (extended)", () => {
+	test("PluginConfig.extend() returns a class constructor", () => {
+		const ExtConfig = PluginConfig.extend("ExtConfig1")({
+			prefix: Schema.Literal("TEST"),
 		});
-		expect(typeof Base).toBe("function");
+		expect(typeof ExtConfig).toBe("function");
 	});
 
-	test("returned class can be extended", () => {
-		class MyPlugin extends Plugin("TEST", {
-			options: Schema.Struct({}),
-			hooks: {},
+	test("returned class can be instantiated", () => {
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig2")({
+			prefix: Schema.Literal("TEST"),
 		}) {}
-		const instance = new MyPlugin();
-		expect(instance).toBeInstanceOf(MyPlugin);
+		const instance = new MyConfig({ prefix: "TEST" });
+		expect(instance).toBeInstanceOf(MyConfig);
 	});
 
-	test("instance has config with all fields", () => {
-		class MyPlugin extends Plugin("TEST", {
-			options: Schema.Struct({ FOO: Schema.String }),
-			hooks: {},
-		}) {}
-		const instance = new MyPlugin();
-		expect(instance.config).toBeDefined();
-		expect(instance.config.options).toBeDefined();
-		expect(instance.prefix).toBe("TEST");
+	test("ClaudePlugin stores config and hooks", () => {
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig3")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({ FOO: Schema.String });
+		}
+		const plugin = new ClaudePlugin(MyConfig, {});
+		expect(plugin.config).toBe(MyConfig);
+		expect(MyConfig.options).toBeDefined();
 	});
 
-	test("state is preserved on config (not tree-shaken)", () => {
+	test("state is preserved as static on config class", () => {
 		class TestState extends Schema.Class<TestState>("TestState")({
 			git: Schema.Boolean,
 		}) {}
 
-		class MyPlugin extends Plugin("TEST", {
-			options: Schema.Struct({}),
-			state: TestState,
-			hooks: {},
-		}) {}
-		expect(new MyPlugin().config.state).toBe(TestState);
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig4")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+			static readonly state = TestState;
+		}
+		expect(MyConfig.state).toBe(TestState);
 	});
 
-	test("setup is preserved on config", () => {
+	test("setup is preserved as static on config class", () => {
 		const setupFn = () => ({ detected: true });
-		class MyPlugin extends Plugin("TEST", {
-			options: Schema.Struct({}),
-			setup: setupFn,
-			hooks: {},
-		}) {}
-		expect(new MyPlugin().config.setup).toBe(setupFn);
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig5")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+			static readonly setup = setupFn;
+		}
+		expect(MyConfig.setup).toBe(setupFn);
 	});
 
-	test("hooks are preserved on config", () => {
+	test("hooks are stored on ClaudePlugin", () => {
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig6")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
 		const handler = () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" });
-		class MyPlugin extends Plugin("TEST", {
-			options: Schema.Struct({}),
-			hooks: {
-				PreToolUse: [{ name: "guard", pipeline: handler }],
-			},
-		}) {}
-		const hooks = new MyPlugin().config.hooks;
-		expect(hooks.PreToolUse).toHaveLength(1);
+		const plugin = new ClaudePlugin(MyConfig, {
+			PreToolUse: [{ name: "guard", pipeline: handler }],
+		});
+		expect(plugin.hooks.PreToolUse).toHaveLength(1);
 	});
 
 	test("instance has build method", () => {
-		class MyPlugin extends Plugin("TEST", { options: Schema.Struct({}), hooks: {} }) {}
-		expect(typeof new MyPlugin().build).toBe("function");
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig7")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+		expect(typeof new ClaudePlugin(MyConfig, {}).build).toBe("function");
 	});
 
 	test("instance has test method", () => {
-		class MyPlugin extends Plugin("TEST", { options: Schema.Struct({}), hooks: {} }) {}
-		expect(typeof new MyPlugin().test).toBe("function");
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig8")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
+		}
+		expect(typeof new ClaudePlugin(MyConfig, {}).test).toBe("function");
 	});
 
-	test("user can add methods to extended class", () => {
-		class MyPlugin extends Plugin("TEST", { options: Schema.Struct({}), hooks: {} }) {
-			getVersion() {
-				return "1.0.0";
-			}
+	test("prefix is a schema field on the config instance", () => {
+		class MyConfig extends PluginConfig.extend<MyConfig>("ExtConfig9")({
+			prefix: Schema.Literal("TEST"),
+		}) {
+			static readonly options = Schema.Struct({});
 		}
-		expect(new MyPlugin().getVersion()).toBe("1.0.0");
+		const instance = new MyConfig({ prefix: "TEST" });
+		expect(instance.prefix).toBe("TEST");
 	});
 });
