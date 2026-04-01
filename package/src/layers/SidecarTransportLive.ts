@@ -1,10 +1,8 @@
 import type { Socket, SocketHandler } from "bun";
 import { Effect, Layer, Ref } from "effect";
-import { EventHandler } from "../otel/EventHandler.js";
-import { MetricHandler } from "../otel/MetricHandler.js";
 import { OTEL_SCOPE } from "../otel/message-builders.js";
 import type { OtelProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../otel/protocol.js";
-import { SpanHandler } from "../otel/SpanHandler.js";
+import { MessageRouter } from "../services/MessageRouter.js";
 import type { ResourceConfig } from "../services/OtelProviders.js";
 import { OtelProviders } from "../services/OtelProviders.js";
 import { SidecarTransport } from "../services/SidecarTransport.js";
@@ -51,6 +49,7 @@ const routeMessage = (
 	message: typeof SidecarProtocolMessage.Type,
 	providers: OtelProviders["Type"],
 	sessionConfigs: Map<string, OtelProtocolConfig>,
+	router: MessageRouter["Type"],
 ): Effect.Effect<SidecarResponse | undefined> =>
 	Effect.gen(function* () {
 		switch (message.type) {
@@ -65,7 +64,7 @@ const routeMessage = (
 
 			case "span": {
 				const tracer = providers.getTracer(OTEL_SCOPE.NAME);
-				SpanHandler.handle(message.data, tracer);
+				yield* router.handleSpan(message.data, tracer);
 				return undefined;
 			}
 
@@ -73,13 +72,13 @@ const routeMessage = (
 				const logger = message.data.scope
 					? providers.getLogger(message.data.scope.name, message.data.scope.version)
 					: providers.getLogger(OTEL_SCOPE.NAME);
-				EventHandler.handle(message.data, logger);
+				yield* router.handleEvent(message.data, logger);
 				return undefined;
 			}
 
 			case "metric": {
 				const meter = providers.getMeter(OTEL_SCOPE.NAME);
-				MetricHandler.handle(message.data, meter);
+				yield* router.handleMetric(message.data, meter);
 				return undefined;
 			}
 
@@ -117,11 +116,12 @@ const routeMessage = (
  */
 export const makeSidecarTransportLive = (
 	lastActivity: Ref.Ref<number>,
-): Layer.Layer<SidecarTransport, never, OtelProviders> =>
+): Layer.Layer<SidecarTransport, never, OtelProviders | MessageRouter> =>
 	Layer.scoped(
 		SidecarTransport,
 		Effect.gen(function* () {
 			const providers = yield* OtelProviders;
+			const router = yield* MessageRouter;
 
 			// Session config storage (per-session OTEL config)
 			const sessionConfigs = new Map<string, OtelProtocolConfig>();
@@ -173,7 +173,7 @@ export const makeSidecarTransportLive = (
 
 						// Route message — run the Effect synchronously for fire-and-forget,
 						// or capture response for request/reply messages.
-						const effect = routeMessage(message, providers, sessionConfigs).pipe(
+						const effect = routeMessage(message, providers, sessionConfigs, router).pipe(
 							Effect.tap((result) =>
 								Effect.sync(() => {
 									if (result) {

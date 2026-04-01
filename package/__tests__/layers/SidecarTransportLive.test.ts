@@ -4,6 +4,7 @@ import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import type { Logger } from "@opentelemetry/api-logs";
 import { SeverityNumber } from "@opentelemetry/api-logs";
 import { Effect, Ref } from "effect";
+import { MessageRouterLive } from "../../src/layers/MessageRouterLive.js";
 import { makeSidecarTransportLive } from "../../src/layers/SidecarTransportLive.js";
 import { EventHandler } from "../../src/otel/EventHandler.js";
 import { MetricHandler } from "../../src/otel/MetricHandler.js";
