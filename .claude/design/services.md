@@ -63,16 +63,24 @@ class EnvPersister extends Context.Tag("EnvPersister")<EnvPersister, {
 
 ### SessionStore
 
-Looks up and registers session-to-env-dir mappings.
+Looks up and registers session-to-env-dir mappings. Provides full CRUD
+operations over the SQLite session registry.
 
 ```typescript
 class SessionStore extends Context.Tag("SessionStore")<SessionStore, {
   readonly lookup: (sessionId: SessionId) => Effect.Effect<string, SessionLookupError>;
+  readonly lookupByProject: (projectDir: string) => Effect.Effect<string, SessionLookupError>;
   readonly register: (sessionId: SessionId, dir: string) => Effect.Effect<void>;
+  readonly getRecord: (sessionId: SessionId) => Effect.Effect<SessionRecord | null>;
+  readonly remove: (sessionId: SessionId) => Effect.Effect<void>;
+  readonly cleanup: (maxAge: number) => Effect.Effect<number>;
+  readonly getAll: () => Effect.Effect<SessionRecord[]>;
+  readonly count: () => Effect.Effect<number>;
 }>() {}
 ```
 
-- **Live** (`SessionStoreLive`): Delegates to `SessionRegistry` (SQLite)
+- **Live** (`SessionStoreLive`): Uses `Layer.scoped` with `acquireRelease` for
+  SQLite DB lifecycle. Delegates to `SessionRegistry` facade functions.
 - **Test** (`makeSessionStoreTest()`): In-memory `Map<string, string>`
 
 ### ShellExecutor
@@ -110,6 +118,7 @@ class Telemetry extends Context.Tag("Telemetry")<Telemetry, {
 
 - **Live** (`TelemetryLive`): Routes telemetry through `SidecarConnection` IPC.
   Also installs an Effect Tracer that bridges `Effect.withSpan` to the sidecar.
+  Depends on `PlatformInfo` for platform context in telemetry data.
 - **Test** (`makeTelemetryTest()`): No-op implementation, records calls for assertion
 
 ### OtelConfig
@@ -124,6 +133,11 @@ class OtelConfigData extends Schema.Class<OtelConfigData>("OtelConfigData")({
   serviceName: Schema.optional(Schema.String),
   headers: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
   socketPath: Schema.optional(Schema.String),
+  tracesExporter: Schema.optional(Schema.String),
+  metricsExporter: Schema.optional(Schema.String),
+  logsExporter: Schema.optional(Schema.String),
+  resourceAttributes: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  deploymentEnv: Schema.optional(Schema.String),
 }) {}
 
 class OtelConfig extends Context.Tag("OtelConfig")<OtelConfig, OtelConfigData>() {}
@@ -131,6 +145,7 @@ class OtelConfig extends Context.Tag("OtelConfig")<OtelConfig, OtelConfigData>()
 
 - **Live** (`OtelConfigLive`): Reads from `CLAUDE_CODE_ENABLE_TELEMETRY`,
   `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, etc.
+  Depends on `PlatformInfo` for platform-gated enablement.
 - **Test** (`makeOtelConfigTest(overrides)`): Returns config with provided overrides
 
 ### SidecarConnection
@@ -181,11 +196,11 @@ class PipelineRuntimeService extends Context.Tag("PipelineRuntimeService")<Pipel
 }>() {}
 ```
 
-- **Live** (`PipelineRuntimeServiceLive`): Full hook execution lifecycle —
+- **Live** (`PipelineRuntimeServiceLive`): Full hook execution lifecycle --
   reads stdin, decodes schemas, loads state, invokes handler, validates
   Outcome, emits telemetry, returns `RunResult`. Uses `Layer.succeed`
   (no service dependencies of its own).
-- **Test**: Not yet provided — use `Effect.succeed` with mock `RunResult`
+- **Test**: Not yet provided -- use `Effect.succeed` with mock `RunResult`
 
 ### CommandRunner
 
@@ -208,7 +223,7 @@ class CommandRunner extends Context.Tag("CommandRunner")<CommandRunner, {
 }>() {}
 ```
 
-- **Live** (`CommandRunnerLive`): Full command lifecycle — parses args,
+- **Live** (`CommandRunnerLive`): Full command lifecycle -- parses args,
   finds session env, loads state, invokes handler, validates output
 - **Test** (`makeCommandRunnerTest()`): Returns pre-configured command outputs
 
@@ -242,6 +257,83 @@ class PluginBuilderService extends Context.Tag("PluginBuilder")<PluginBuilderSer
 - **Live** (`PluginBuilderLive`): Delegates to `PluginBuilder` static methods
 - **Test** (`makePluginBuilderTest()`): Returns mock build results
 
+### PlatformInfo
+
+Provides platform detection and socket path resolution.
+
+```typescript
+class PlatformInfo extends Context.Tag("PlatformInfo")<PlatformInfo, {
+  readonly os: string;
+  readonly arch: string;
+  readonly isSupported: boolean;
+  readonly resolveSocketPath: (pluginName: string) => string;
+}>() {}
+```
+
+- **Live** (`PlatformInfoLive`): Reads from `process.platform` and `process.arch`,
+  resolves socket paths via XDG/temp directories
+- **Test** (`makePlatformInfoTest(overrides?)`): Returns platform info with provided overrides
+
+### PluginInfoService
+
+Provides plugin metadata for OTEL resource attributes.
+
+```typescript
+class PluginInfoService extends Context.Tag("PluginInfoService")<PluginInfoService, {
+  readonly name: string;
+  readonly version: string;
+  readonly sdkVersion: string;
+}>() {}
+```
+
+- **Live** (`PluginInfoServiceLive`): Reads from plugin config and SDK version macro
+- **Test** (`makePluginInfoServiceTest(overrides?)`): Returns mock plugin metadata
+
+### ClaudeAccountInfo
+
+Detects Claude account information for OTEL resource attributes.
+
+```typescript
+class ClaudeAccountInfo extends Context.Tag("ClaudeAccountInfo")<ClaudeAccountInfo, {
+  readonly accountType: string;
+  readonly organizationId: string | undefined;
+}>() {}
+```
+
+- **Live** (`ClaudeAccountInfoLive`): Reads from environment variables
+- **Test** (`makeClaudeAccountInfoTest(overrides?)`): Returns mock account info
+
+### GitInfo
+
+Provides git repository information for OTEL resource attributes.
+
+```typescript
+class GitInfo extends Context.Tag("GitInfo")<GitInfo, {
+  readonly repoUrl: string | undefined;
+  readonly branch: string | undefined;
+  readonly commitSha: string | undefined;
+}>() {}
+```
+
+- **Live** (`GitInfoLive`): Runs git commands via `ShellExecutor` to detect repo info
+- **Test** (`makeGitInfoTest(overrides?)`): Returns mock git info
+
+### MessageRouter
+
+Routes sidecar protocol messages to OTEL providers. Replaces the previous
+`SpanHandler`, `EventHandler`, and `MetricHandler` modules.
+
+```typescript
+class MessageRouter extends Context.Tag("MessageRouter")<MessageRouter, {
+  readonly route: (message: SidecarProtocolMessage) => Effect.Effect<void>;
+}>() {}
+```
+
+- **Live** (`MessageRouterLive`): Dispatches messages by type to the appropriate
+  OTEL provider (Tracer for spans, Logger for events, Meter for metrics).
+  Handles ping, span, event, metric, and shutdown message types.
+- **Test** (`makeMessageRouterTest()`): No-op implementation, records routed messages
+
 ## Logger Layers
 
 These are not services but Effect logger replacements.
@@ -270,6 +362,7 @@ const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive),
 export const PipelineLive = Layer.mergeAll(
   StdinReaderLive, SchemaValidatorLive, EnvLoaderLive,
   EnvPersisterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
+  PluginInfoServiceLive, PlatformInfoLive, GitInfoLive, ClaudeAccountInfoLive,
 );
 ```
 

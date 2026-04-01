@@ -21,6 +21,11 @@ import {
   makeOtelConfigTest,
   makeCommandRunnerTest,
   makeSidecarConnectionTest,
+  makePlatformInfoTest,
+  makePluginInfoServiceTest,
+  makeClaudeAccountInfoTest,
+  makeGitInfoTest,
+  makeMessageRouterTest,
   EnvLoaderTest,
 } from "claude-binary-plugin/testing";
 ```
@@ -30,7 +35,7 @@ import {
 | Factory | Arguments | Returns |
 | --------- | ----------- | --------- |
  | `makeStdinReaderTest(json)` | JSON string | Layer providing `StdinReader` |
-| `makeSessionStoreTest()` | none | Layer with in-memory session map |
+| `makeSessionStoreTest()` | none | Layer with in-memory session map (expanded 8-method interface) |
 | `makeShellExecutorTest(results)` | Pre-configured shell results | Layer providing `ShellExecutor` |
 | `makeTelemetryTest()` | none | Layer providing no-op `Telemetry` |
 | `makePluginLoggerTest()` | none | `{ layer, getLogs(), clear() }` |
@@ -39,6 +44,11 @@ import {
 | `makeOtelConfigTest(overrides?)` | Optional config overrides | Layer providing `OtelConfig` |
 | `makeCommandRunnerTest()` | none | Layer providing `CommandRunner` |
 | `makeSidecarConnectionTest()` | none | Layer providing no-op `SidecarConnection` |
+| `makePlatformInfoTest(overrides?)` | Optional platform overrides | Layer providing `PlatformInfo` |
+| `makePluginInfoServiceTest(overrides?)` | Optional plugin info overrides | Layer providing `PluginInfoService` |
+| `makeClaudeAccountInfoTest(overrides?)` | Optional account info overrides | Layer providing `ClaudeAccountInfo` |
+| `makeGitInfoTest(overrides?)` | Optional git info overrides | Layer providing `GitInfo` |
+| `makeMessageRouterTest()` | none | Layer providing no-op `MessageRouter`, records routed messages |
 | `EnvLoaderTest` | (constant layer) | Layer providing no-op `EnvLoader` |
 
 ### Example: Testing a Pipeline Handler

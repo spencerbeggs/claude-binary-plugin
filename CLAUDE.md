@@ -36,7 +36,7 @@ Do NOT load unless the task specifically requires the details within.
 
 - `.claude/design/architecture.md` - System architecture, directory structure,
   service/layer pattern, handler execution flow, build system
-- `.claude/design/services.md` - All 10 Effect services, their interfaces,
+- `.claude/design/services.md` - All 18 Effect services, their interfaces,
   Live/Test layers, PipelineLive, LoggerLive
 - `.claude/design/schema.md` - Effect Schema usage, Schema.Class pattern,
   hook event schemas, pipeline output schemas, branded types
@@ -44,7 +44,7 @@ Do NOT load unless the task specifically requires the details within.
   PluginTester fluent API, test file organization
 - `.claude/design/cli.md` - CLI build command, artifact generation
 - `.claude/design/otel.md` - OTEL telemetry, sidecar architecture, IPC
-  protocol (imperative, planned for Effect conversion)
+  protocol (~95% Effect-native)
 
 ## Development Commands
 
@@ -216,6 +216,8 @@ import {
 
   // Services
   StdinReader, EnvLoader, SchemaValidatorService,
+  PlatformInfo, PluginInfoService, ClaudeAccountInfo,
+  GitInfo, MessageRouter,
 
   // Layers
   PipelineLive,
@@ -235,6 +237,11 @@ import {
   makeStdinReaderTest,
   makeTelemetryTest,
   makeShellExecutorTest,
+  makePlatformInfoTest,
+  makePluginInfoServiceTest,
+  makeClaudeAccountInfoTest,
+  makeGitInfoTest,
+  makeMessageRouterTest,
 } from "claude-binary-plugin/testing";
 ```
 
@@ -253,24 +260,10 @@ Load these files as needed for deeper context:
 | `src/schemas/hook-responses.ts` | Response schemas (outcome to JSON) |
 | `src/outcomes/` | Outcome classes (Allow, Deny, etc.) |
 | `src/services/PluginEnv.ts` | `PluginEnv` base class |
-| `src/layers/SessionRegistry.ts` | SQLite session lookup |
+| `src/layers/SessionRegistry.ts` | SQLite session lookup (facade functions: getBySessionId, getByProjectDir, registerSession, closeDb) |
 | `src/build/builder.ts` | `PluginBuilder` class |
 | `src/types/tool-inputs.ts` | Typed tool inputs |
 | `src/schemas/hook-literals.ts` | Hook type enums and literals |
-
-### OTEL Classes
-
-All in `src/otel/`:
-
-| Class | Purpose |
-| ----- | ------- |
-| `OtelConfig` | Configuration, `isEnabled()` |
-| `TelemetryEmitter` | Event emission |
-| `TelemetryMetrics` | Metric recording |
-| `TelemetrySpan` | Span instrumentation |
-| `SidecarLauncher` | Sidecar spawning |
-| `SidecarClient` | IPC client |
-| `SidecarServer` | Unix socket server |
 
 ## Known Issues
 

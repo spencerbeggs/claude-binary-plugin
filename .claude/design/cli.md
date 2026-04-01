@@ -17,7 +17,7 @@ import MyConfig from "./plugin.config.js";
 import guardHandler from "./hooks/guard.js";
 
 const plugin = new ClaudePlugin(MyConfig, {
-  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
 });
 
 await plugin.build({
@@ -41,11 +41,12 @@ await PluginBuilder.fromConfig(
 ## Build Pipeline Steps
 
 1. **Extract hooks** (`HookExtractor`) -- Iterates plugin config's `hooks` map,
-   separating pipeline hooks (have `name` + `pipeline` path) from passthrough
-   hooks (raw `hooks.json` entries forwarded directly).
+   separating handler hooks (have `name` + `handler` function reference) from
+   passthrough hooks (raw `hooks.json` entries forwarded directly).
 
 2. **Extract commands** (`CommandExtractor`) -- Iterates plugin config's `commands`
-   map, extracting command name, description, file path, and args schema presence.
+   map, extracting command name, description, handler function reference, and
+   args schema presence.
 
 3. **Generate entrypoint** (`EntrypointGenerator`) -- Generates a TypeScript
    source file that imports the PluginConfig class and dispatches based on CLI
@@ -101,7 +102,7 @@ The build system is decomposed into focused modules:
 | Module | File | Purpose |
 | -------- | ------ | --------- |
  | `PluginBuilder` | `build/builder.ts` | Public facade (static class) |
-| `HookExtractor` | `build/HookExtractor.ts` | Extract pipeline and passthrough hook entries |
+| `HookExtractor` | `build/HookExtractor.ts` | Extract handler and passthrough hook entries |
 | `CommandExtractor` | `build/CommandExtractor.ts` | Extract command entries |
 | `EntrypointGenerator` | `build/EntrypointGenerator.ts` | Generate TypeScript entrypoint source |
 | `ManifestGenerator` | `build/ManifestGenerator.ts` | Generate hooks.json content |
@@ -110,7 +111,7 @@ The build system is decomposed into focused modules:
 ## Consumer Pattern
 
 Plugins define a build script (e.g., `plugin/plugin.build.ts`) that wires
-handlers to config and builds:
+handlers to config and builds. All handlers are direct function references:
 
 ```typescript
 import { ClaudePlugin } from "claude-binary-plugin";
@@ -119,8 +120,8 @@ import guardHandler from "./hooks/guard.js";
 import initHandler from "./hooks/session-start.js";
 
 const plugin = new ClaudePlugin(MyConfig, {
-  SessionStart: [{ name: "init", pipeline: initHandler }],
-  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+  SessionStart: [{ name: "init", handler: initHandler }],
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
 });
 
 await plugin.build({ rootDir: import.meta.dir });

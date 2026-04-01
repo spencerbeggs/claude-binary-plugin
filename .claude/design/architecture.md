@@ -38,13 +38,13 @@ src/
     CommandRunnerLive.ts # CommandRunner Live layer (full run + parse)
     PluginLoggerLive.ts # NDJSON file logger
     PluginLoggerTest.ts # In-memory test logger
-    SessionRegistry.ts  # SQLite session-to-env-dir mapping
+    SessionRegistry.ts  # SQLite session-to-env-dir mapping (facade module with exported functions)
     SidecarConnectionLive.ts  # Unix socket IPC to OTEL sidecar
     SidecarLoggerLive.ts      # Sidecar process file logger
     SidecarTransportLive.ts   # Sidecar Unix socket server
     *Live.ts            # Production implementations
     *Test.ts            # Test factory functions
-  otel/                 # OpenTelemetry subsystem (sidecar, protocol, handlers)
+  otel/                 # OpenTelemetry subsystem (~95% Effect-native)
   outcomes/             # Outcome system (typed hook return values)
     Outcome.ts          # Abstract base class with isOutcome(), resolveContext()
     Allow.ts            # PreToolUse/PermissionRequest: permit action
@@ -264,13 +264,18 @@ Service (Context.Tag)     Layer (implementation)
   PipelineRuntimeService -> PipelineRuntimeServiceLive
   PluginEnvService    ->  PluginEnvLive / makePluginEnvTest
   PluginBuilderService -> PluginBuilderLive / makePluginBuilderTest
+  PlatformInfo        ->  PlatformInfoLive / makePlatformInfoTest
+  PluginInfoService   ->  PluginInfoServiceLive / makePluginInfoServiceTest
+  ClaudeAccountInfo   ->  ClaudeAccountInfoLive / makeClaudeAccountInfoTest
+  GitInfo             ->  GitInfoLive / makeGitInfoTest
+  MessageRouter       ->  MessageRouterLive / makeMessageRouterTest
 ```
 
 ## PipelineLive (Handler Dependencies Layer)
 
 `PipelineLive` merges all production service layers into a single layer
 that satisfies handler Effect dependencies. It does NOT include the
-runtime services themselves — those are composed separately.
+runtime services themselves -- those are composed separately.
 
 ```typescript
 const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive), Layer.provide(OtelConfigLive));
@@ -278,6 +283,7 @@ const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive),
 export const PipelineLive = Layer.mergeAll(
   StdinReaderLive, SchemaValidatorLive, EnvLoaderLive,
   EnvPersisterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
+  PluginInfoServiceLive, PlatformInfoLive, GitInfoLive, ClaudeAccountInfoLive,
 );
 ```
 
@@ -288,9 +294,9 @@ results; the entrypoint writes stdout and manages process.exit:
 
 ```text
 Generated Entrypoint (owns stdout + process.exit)
-  └─ Effect.gen + Effect.provide(RuntimeLayer)
-       ├─ PipelineRuntimeServiceLive.run() → RunResult { code, response, telemetry? }
-       └─ CommandRunnerLive.run() → CommandOutput { exitCode, output, data? }
+  +-- Effect.gen + Effect.provide(RuntimeLayer)
+       +-- PipelineRuntimeServiceLive.run() -> RunResult { code, response, telemetry? }
+       +-- CommandRunnerLive.run() -> CommandOutput { exitCode, output, data? }
 ```
 
 ```typescript
@@ -316,7 +322,7 @@ console.log(result.output);
 process.exit(result.exitCode);
 ```
 
-No `process.exit()` anywhere in service code — the entrypoint is the sole
+No `process.exit()` anywhere in service code -- the entrypoint is the sole
 owner of process lifecycle.
 
 ## PipelineRuntimeService Execution Flow
@@ -333,7 +339,7 @@ owner of process lifecycle.
 7. Call handler with `{ input, options, state }`
 8. Handle sync, Promise, or Effect returns from handler
 9. **Check if output is an Outcome** (via `Outcome.isOutcome()`):
-   - Validate via `isValidOutcomeForHook()` — fail with `PipelineError` if invalid
+   - Validate via `isValidOutcomeForHook()` -- fail with `PipelineError` if invalid
    - Extract telemetry via `outcome.toTelemetry()`
    - Return `RunResult` with `outcome.toResponse()`
 10. **Else check if output is a legacy PipelineOutput** (via `isPipelineOutput()`):
@@ -398,9 +404,11 @@ plugin environment management. Plugins extend it with their options schema.
 It handles loading env vars from hook `.sh` files, validating options, and
 persisting state via `escapeForBashDoubleQuotes()` into session env files.
 
-**SessionRegistry** (`src/layers/SessionRegistry.ts`) provides SQLite-based
-session-to-env-dir mapping. It stores `session_id -> session_env_dir` pairs
-so non-SessionStart hooks can find their session's env directory.
+**SessionRegistry** (`src/layers/SessionRegistry.ts`) is a facade module
+providing exported functions for SQLite-based session-to-env-dir mapping:
+`getBySessionId`, `getByProjectDir`, `registerSession`, `closeDb`. It stores
+`session_id -> session_env_dir` pairs so non-SessionStart hooks can find
+their session's env directory.
 
 ## Two Entry Points
 

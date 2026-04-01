@@ -124,6 +124,24 @@ extending the abstract `Outcome` base. See `architecture.md` for full details.
 | `NoAction` | `{}` | `"no_action"` |
 | `Skip` | `{}` | `"skipped"` |
 
+## OtelConfigData Schema
+
+```typescript
+class OtelConfigData extends Schema.Class<OtelConfigData>("OtelConfigData")({
+  enabled: Schema.Boolean,
+  endpoint: Schema.optional(Schema.String),
+  protocol: Schema.optional(Schema.Literal("http", "grpc")),
+  serviceName: Schema.optional(Schema.String),
+  headers: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  socketPath: Schema.optional(Schema.String),
+  tracesExporter: Schema.optional(Schema.String),
+  metricsExporter: Schema.optional(Schema.String),
+  logsExporter: Schema.optional(Schema.String),
+  resourceAttributes: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  deploymentEnv: Schema.optional(Schema.String),
+}) {}
+```
+
 ## Pipeline Output Schemas (`pipeline-outputs.ts`) [Legacy]
 
 Pipeline outputs are the legacy return format, discriminated unions on `status`.

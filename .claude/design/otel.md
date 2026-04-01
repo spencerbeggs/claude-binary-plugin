@@ -5,7 +5,8 @@
 The SDK provides OpenTelemetry observability through a sidecar architecture.
 Hook processes (short-lived) communicate with a long-lived sidecar process
 via Unix socket IPC. The sidecar aggregates telemetry and exports it to an
-OTLP endpoint.
+OTLP endpoint. The OTEL subsystem is ~95% Effect-native, using Effect
+services, layers, and scoped lifecycle management.
 
 ## Architecture
 
@@ -16,9 +17,7 @@ Hook Process (short-lived)          Sidecar Process (long-lived)
 |   -> Telemetry service    | IPC   |   -> SidecarTransport     |
 |   -> SidecarConnection ---+------>|   -> OtelProviders        |
 |      (Unix socket client) |       |      (Tracer, Meter, Log) |
-+---------------------------+       |   -> SpanHandler          |
-                                    |   -> EventHandler         |
-                                    |   -> MetricHandler        |
++---------------------------+       |   -> MessageRouter        |
                                     +---------------------------+
                                               |
                                               v
@@ -38,8 +37,14 @@ Tag: `"OtelConfig"`, value: `OtelConfigData` (Schema.Class).
 | `protocol` | `"http" \| "grpc"` | `OTEL_EXPORTER_OTLP_PROTOCOL` |
 | `headers` | Record? | `OTEL_EXPORTER_OTLP_HEADERS` (comma-separated `key=value`) |
 | `socketPath` | string? | `OTEL_SIDECAR_SOCKET` |
+| `tracesExporter` | string? | `OTEL_TRACES_EXPORTER` |
+| `metricsExporter` | string? | `OTEL_METRICS_EXPORTER` |
+| `logsExporter` | string? | `OTEL_LOGS_EXPORTER` |
+| `resourceAttributes` | Record? | `OTEL_RESOURCE_ATTRIBUTES` (comma-separated `key=value`) |
+| `deploymentEnv` | string? | `OTEL_DEPLOYMENT_ENVIRONMENT` |
 
-Live: `OtelConfigLive` reads from `Bun.env`.
+Live: `OtelConfigLive` reads from `Bun.env`. Depends on `PlatformInfo` for
+platform-gated enablement.
 Test: `makeOtelConfigTest(overrides?)` returns config with provided fields.
 
 ### Telemetry
@@ -57,6 +62,7 @@ Methods:
 Live: `TelemetryLive` is a merged layer providing both the Telemetry service
 and an Effect Tracer that routes `Effect.withSpan` calls through the sidecar.
 When OTEL is disabled, all methods are no-ops and no tracer is installed.
+Depends on `PlatformInfo` for platform context in telemetry data.
 
 ### SidecarConnection
 
@@ -90,6 +96,7 @@ Methods:
 
 Live: `OtelProvidersLive` wraps `NodeTracerProvider`, `MeterProvider`,
 and `LoggerProvider` with Effect lifecycle management.
+Depends on `GitInfo` for git repository resource attributes.
 
 ### SidecarTransport
 
@@ -103,14 +110,28 @@ Live: `makeSidecarTransportLive(lastActivity)` creates a scoped layer that:
 
 - Listens on a Unix socket (`OTEL_SIDECAR_SOCKET` or default path)
 - Parses JSON Lines messages with BigInt revival
-- Routes messages to handlers via `routeMessage()`:
-  - `ping` -> configure providers, store session config
-  - `span` -> `SpanHandler.handle()` via Tracer
-  - `event` -> `EventHandler.handle()` via Logger
-  - `metric` -> `MetricHandler.handle()` via Meter
-  - `shutdown` -> `Effect.interrupt` for orderly shutdown
+- Routes messages to `MessageRouter` service for dispatch
 - Updates `lastActivity` Ref on every message
 - Cleans up on scope close (close clients, stop server, remove socket file)
+
+Depends on `MessageRouter` for message dispatch.
+
+### MessageRouter
+
+Tag: `"MessageRouter"`. Routes sidecar protocol messages to OTEL providers.
+Replaces the previous `SpanHandler`, `EventHandler`, and `MetricHandler` modules.
+
+Methods:
+
+- `route(message)` -- Dispatch a protocol message to the appropriate provider
+
+Live: `MessageRouterLive` dispatches messages by type:
+
+- `ping` -> configure providers, store session config
+- `span` -> route SpanData to OTEL Tracer
+- `event` -> route EventData to OTEL Logger
+- `metric` -> route MetricData to OTEL Meter
+- `shutdown` -> `Effect.interrupt` for orderly shutdown
 
 ## Sidecar Lifecycle
 
@@ -127,7 +148,8 @@ Live: `makeSidecarTransportLive(lastActivity)` creates a scoped layer that:
 
 1. Reads idle timeout from `CLAUDE_CODE_OTEL_SIDECAR_IDLE_TIMEOUT_MS` (default 5min)
 2. Creates shared `Ref<number>` for last-activity tracking
-3. Builds layer stack: `SidecarTransportLive` + `OtelProvidersLive`
+3. Builds layer stack: `SidecarTransportLive` + `OtelProvidersLive` +
+   `MessageRouterLive` + `GitInfoLive` + `ShellExecutorLive`
 4. Races idle timeout checker against signal handler (SIGTERM/SIGINT)
 5. Whichever fires first interrupts the fiber, triggering scope unwinding
 
@@ -157,22 +179,16 @@ All messages are Schema.Class definitions in a discriminated union on `type`:
 Wire format: JSON Lines (newline-delimited JSON) over Unix socket.
 BigInt values are serialized as `"123n"` strings.
 
-## OTEL Handlers (`src/otel/`)
+## OTEL Source Files (`src/otel/`)
 
 | File | Purpose |
 | ------ | --------- |
- | `SpanHandler.ts` | Routes SpanData to OTEL Tracer |
-| `EventHandler.ts` | Routes EventData to OTEL Logger |
-| `MetricHandler.ts` | Routes MetricData to OTEL Meter |
+ | `MessageRouter.ts` | Routes protocol messages to OTEL providers (spans, events, metrics) |
 | `SidecarSpan.ts` | Effect Tracer Span implementation that emits via IPC |
-| `SidecarExporters.ts` | OTLP exporter configuration |
-| `SidecarResource.ts` | OTEL resource attribute builder |
-| `message-builders.ts` | Build protocol messages from hook execution data |
+| `SidecarExporters.ts` | OTLP exporter configuration (takes config params) |
+| `SidecarResource.ts` | OTEL resource attribute builder (takes config params) |
+| `message-builders.ts` | Build protocol messages from hook execution data (takes PlatformContext param) |
 | `constants.ts` | Shared constants (`isOtelEnabled`, etc.) |
-| `Platform.ts` | Platform detection, socket path resolution |
-| `GitInfo.ts` | Git repository info for resource attributes |
-| `ClaudeAccountInfo.ts` | Claude account info detection |
-| `PluginInfo.ts` | Plugin metadata for resource attributes |
 | `version.macro.ts` | Build-time version injection |
 
 ## Configuration Environment Variables
@@ -185,6 +201,11 @@ BigInt values are serialized as `"123n"` strings.
 | `OTEL_EXPORTER_OTLP_HEADERS` | Auth headers (`key=value,key=value`) |
 | `OTEL_SIDECAR_SOCKET` | Custom Unix socket path |
 | `CLAUDE_CODE_OTEL_SIDECAR_IDLE_TIMEOUT_MS` | Sidecar idle timeout (default 300000) |
+| `OTEL_TRACES_EXPORTER` | Traces exporter type |
+| `OTEL_METRICS_EXPORTER` | Metrics exporter type |
+| `OTEL_LOGS_EXPORTER` | Logs exporter type |
+| `OTEL_RESOURCE_ATTRIBUTES` | Additional resource attributes (`key=value,key=value`) |
+| `OTEL_DEPLOYMENT_ENVIRONMENT` | Deployment environment label |
 
 ## SidecarLoggerLive
 
