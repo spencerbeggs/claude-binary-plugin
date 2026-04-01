@@ -294,13 +294,9 @@ export {
 // COMMAND TYPES
 // =============================================================================
 
-export type { EmptyArgs, RunCommandOptions } from "./commands/runtime.js";
+export type { EmptyArgs } from "./commands/runtime.js";
 
-export {
-	CommandArgumentError,
-	// Main class (preferred)
-	Commands,
-} from "./commands/runtime.js";
+export { CommandArgumentError } from "./commands/runtime.js";
 export { CommandRunnerLive } from "./layers/CommandRunnerLive.js";
 export { makeCommandRunnerTest } from "./layers/CommandRunnerTest.js";
 // CommandRunner Effect service

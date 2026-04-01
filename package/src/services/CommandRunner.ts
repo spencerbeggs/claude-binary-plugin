@@ -21,6 +21,15 @@ export interface RunCommandOptions {
 	readonly pluginName: string;
 	readonly pluginVersion: string;
 	readonly rawArgs: string[];
+	/** Command handler function */
+	// biome-ignore lint/suspicious/noExplicitAny: Handler signature varies by command
+	readonly handler: (ctx: { args: any; options: any; state: any }) => any;
+	/** Effect Schema for validating arguments */
+	// biome-ignore lint/suspicious/noExplicitAny: Schema type varies by command
+	readonly argsSchema?: Schema.Schema<any, any, never>;
+	/** State class constructor for loading env vars */
+	// biome-ignore lint/suspicious/noExplicitAny: State class varies by plugin
+	readonly stateClass: new () => any;
 }
 
 /**
