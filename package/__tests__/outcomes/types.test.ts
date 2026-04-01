@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
+import { AddContext } from "../../src/outcomes/AddContext.js";
 import { Allow } from "../../src/outcomes/Allow.js";
-import { Deny } from "../../src/outcomes/Deny.js";
 import { Ask } from "../../src/outcomes/Ask.js";
-import { Modify } from "../../src/outcomes/Modify.js";
 import { Block } from "../../src/outcomes/Block.js";
 import { Continue } from "../../src/outcomes/Continue.js";
-import { AddContext } from "../../src/outcomes/AddContext.js";
+import { Deny } from "../../src/outcomes/Deny.js";
+import { Modify } from "../../src/outcomes/Modify.js";
 import { NoAction } from "../../src/outcomes/NoAction.js";
 import { Skip } from "../../src/outcomes/Skip.js";
 import { isValidOutcomeForHook } from "../../src/outcomes/types.js";

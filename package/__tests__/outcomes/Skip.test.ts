@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { Skip } from "../../src/outcomes/Skip.js";
 import { Outcome } from "../../src/outcomes/Outcome.js";
+import { Skip } from "../../src/outcomes/Skip.js";
 
 describe("Skip", () => {
 	test("constructs with summary", () => {

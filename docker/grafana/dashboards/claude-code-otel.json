@@ -1,752 +1,712 @@
 {
-  "timezone": "browser",
-  "editable": true,
-  "graphTooltip": 1,
-  "fiscalYearStartMonth": 0,
-  "schemaVersion": 41,
-  "templating": {},
-  "annotations": {},
-  "title": "Claude Code Metrics",
-  "uid": "claude-code-otel",
-  "description": "OpenTelemetry metrics from Claude Code CLI usage",
-  "tags": [
-    "claude",
-    "opentelemetry",
-    "metrics"
-  ],
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "refresh": "30s",
-  "panels": [
-    {
-      "type": "stat",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Total Sessions",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 0,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "options": {
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "targets": [
-        {
-          "expr": "count(group by (session_id) (increase(claude_code_token_usage_tokens_total[$__range])))",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Lines of Code Accepted",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "options": {
-        "graphMode": "none",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(claude_code_lines_of_code_count_total[$__range]))",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Total Cost (USD)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD"
-        },
-        "overrides": []
-      },
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(claude_code_cost_usage_USD_total[$__range]))",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "piechart",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Tokens by Type",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 4
-      },
-      "options": {
-        "pieType": "pie",
-        "tooltip": {
-          "mode": "single",
-          "sort": "asc"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "legend": {
-          "values": [
-            "value",
-            "percent"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": []
-        },
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "cacheRead"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Cache Read"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "cacheCreation"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Cache Creation"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "input"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Input"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "output"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Output"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "expr": "sum by (type) (increase(claude_code_token_usage_tokens_total[$__range]))",
-          "refId": "A",
-          "legendFormat": "{{type}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "piechart",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Tokens by Model",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 4
-      },
-      "options": {
-        "pieType": "pie",
-        "tooltip": {
-          "mode": "single",
-          "sort": "asc"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "legend": {
-          "values": [
-            "value",
-            "percent"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": []
-        },
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "claude-sonnet-4-5-20250929"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Sonnet 4.5"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "claude-haiku-4-5-20251001"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Haiku 4.5"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "claude-opus-4-5-20251101"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Opus 4.5"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "expr": "sum by (model) (increase(claude_code_token_usage_tokens_total[$__range]))",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "piechart",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Sessions by Terminal",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 4
-      },
-      "options": {
-        "pieType": "pie",
-        "tooltip": {
-          "mode": "single",
-          "sort": "asc"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "legend": {
-          "values": [
-            "value",
-            "percent"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": []
-        },
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "WezTerm"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "WezTerm"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "vscode"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "VS Code"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "cli"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "CLI"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "expr": "count by (terminal_type) (group by (session_id, terminal_type) (increase(claude_code_token_usage_tokens_total[$__range])))",
-          "refId": "A",
-          "legendFormat": "{{terminal_type}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Activity Time",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 16,
-        "x": 0,
-        "y": 12
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "last",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(claude_code_active_time_seconds_total{type=\"cli\"}[5m]))",
-          "refId": "A",
-          "legendFormat": "CLI Time",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        },
-        {
-          "expr": "sum(rate(claude_code_active_time_seconds_total{type=\"user\"}[5m]))",
-          "refId": "B",
-          "legendFormat": "User Time",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Productivity Ratio",
-      "description": "CLI time divided by user time - higher is better",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 12
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.5
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(claude_code_active_time_seconds_total{type=\"cli\"}[5m])) / sum(rate(claude_code_active_time_seconds_total{type=\"user\"}[5m]))",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Cost Rate (5m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "last"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(claude_code_cost_usage_USD_total[5m]))",
-          "refId": "A",
-          "legendFormat": "Cost",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Cost by Model",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 20
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD",
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": [
-            "sum"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (model) (increase(claude_code_cost_usage_USD_total[$__range]))",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "transparent": false,
-      "repeatDirection": "h",
-      "title": "Token Usage Rate (5m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 24
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "last",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (type) (rate(claude_code_token_usage_tokens_total[5m]))",
-          "refId": "A",
-          "legendFormat": "{{type}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ]
-    }
-  ]
+	"timezone": "browser",
+	"editable": true,
+	"graphTooltip": 1,
+	"fiscalYearStartMonth": 0,
+	"schemaVersion": 41,
+	"templating": {},
+	"annotations": {},
+	"title": "Claude Code Metrics",
+	"uid": "claude-code-otel",
+	"description": "OpenTelemetry metrics from Claude Code CLI usage",
+	"tags": ["claude", "opentelemetry", "metrics"],
+	"time": {
+		"from": "now-6h",
+		"to": "now"
+	},
+	"refresh": "30s",
+	"panels": [
+		{
+			"type": "stat",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Total Sessions",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 4,
+				"w": 8,
+				"x": 0,
+				"y": 0
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short"
+				},
+				"overrides": []
+			},
+			"options": {
+				"graphMode": "none",
+				"colorMode": "value",
+				"justifyMode": "auto",
+				"textMode": "auto",
+				"wideLayout": true,
+				"showPercentChange": false,
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"percentChangeColorMode": "standard",
+				"orientation": "auto"
+			},
+			"targets": [
+				{
+					"expr": "count(group by (session_id) (increase(claude_code_token_usage_tokens_total[$__range])))",
+					"refId": "A",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "stat",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Lines of Code Accepted",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 4,
+				"w": 8,
+				"x": 8,
+				"y": 0
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short"
+				},
+				"overrides": []
+			},
+			"options": {
+				"graphMode": "none",
+				"colorMode": "value",
+				"justifyMode": "auto",
+				"textMode": "auto",
+				"wideLayout": true,
+				"showPercentChange": false,
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"percentChangeColorMode": "standard",
+				"orientation": "auto"
+			},
+			"targets": [
+				{
+					"expr": "sum(increase(claude_code_lines_of_code_count_total[$__range]))",
+					"refId": "A",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "stat",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Total Cost (USD)",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 4,
+				"w": 8,
+				"x": 16,
+				"y": 0
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "currencyUSD"
+				},
+				"overrides": []
+			},
+			"options": {
+				"graphMode": "area",
+				"colorMode": "value",
+				"justifyMode": "auto",
+				"textMode": "auto",
+				"wideLayout": true,
+				"showPercentChange": false,
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"percentChangeColorMode": "standard",
+				"orientation": "auto"
+			},
+			"targets": [
+				{
+					"expr": "sum(increase(claude_code_cost_usage_USD_total[$__range]))",
+					"refId": "A",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "piechart",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Tokens by Type",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 0,
+				"y": 4
+			},
+			"options": {
+				"pieType": "pie",
+				"tooltip": {
+					"mode": "single",
+					"sort": "asc"
+				},
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"legend": {
+					"values": ["value", "percent"],
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": []
+				},
+				"orientation": "auto"
+			},
+			"fieldConfig": {
+				"defaults": {},
+				"overrides": [
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "cacheRead"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Cache Read"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "cacheCreation"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Cache Creation"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "input"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Input"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "output"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Output"
+							}
+						]
+					}
+				]
+			},
+			"targets": [
+				{
+					"expr": "sum by (type) (increase(claude_code_token_usage_tokens_total[$__range]))",
+					"refId": "A",
+					"legendFormat": "{{type}}",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "piechart",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Tokens by Model",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 8,
+				"y": 4
+			},
+			"options": {
+				"pieType": "pie",
+				"tooltip": {
+					"mode": "single",
+					"sort": "asc"
+				},
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"legend": {
+					"values": ["value", "percent"],
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": []
+				},
+				"orientation": "auto"
+			},
+			"fieldConfig": {
+				"defaults": {},
+				"overrides": [
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "claude-sonnet-4-5-20250929"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Sonnet 4.5"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "claude-haiku-4-5-20251001"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Haiku 4.5"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "claude-opus-4-5-20251101"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "Opus 4.5"
+							}
+						]
+					}
+				]
+			},
+			"targets": [
+				{
+					"expr": "sum by (model) (increase(claude_code_token_usage_tokens_total[$__range]))",
+					"refId": "A",
+					"legendFormat": "{{model}}",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "piechart",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Sessions by Terminal",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 4
+			},
+			"options": {
+				"pieType": "pie",
+				"tooltip": {
+					"mode": "single",
+					"sort": "asc"
+				},
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"legend": {
+					"values": ["value", "percent"],
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": []
+				},
+				"orientation": "auto"
+			},
+			"fieldConfig": {
+				"defaults": {},
+				"overrides": [
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "WezTerm"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "WezTerm"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "vscode"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "VS Code"
+							}
+						]
+					},
+					{
+						"matcher": {
+							"id": "byName",
+							"options": "cli"
+						},
+						"properties": [
+							{
+								"id": "displayName",
+								"value": "CLI"
+							}
+						]
+					}
+				]
+			},
+			"targets": [
+				{
+					"expr": "count by (terminal_type) (group by (session_id, terminal_type) (increase(claude_code_token_usage_tokens_total[$__range])))",
+					"refId": "A",
+					"legendFormat": "{{terminal_type}}",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Activity Time",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 16,
+				"x": 0,
+				"y": 12
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s",
+					"custom": {
+						"drawStyle": "line",
+						"fillOpacity": 25,
+						"showPoints": "never",
+						"stacking": {
+							"mode": "normal",
+							"group": "A"
+						}
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": ["mean", "last", "max"]
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "desc"
+				}
+			},
+			"targets": [
+				{
+					"expr": "sum(rate(claude_code_active_time_seconds_total{type=\"cli\"}[5m]))",
+					"refId": "A",
+					"legendFormat": "CLI Time",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				},
+				{
+					"expr": "sum(rate(claude_code_active_time_seconds_total{type=\"user\"}[5m]))",
+					"refId": "B",
+					"legendFormat": "User Time",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "stat",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Productivity Ratio",
+			"description": "CLI time divided by user time - higher is better",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 12
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percentunit",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "yellow",
+								"value": 0.5
+							},
+							{
+								"color": "green",
+								"value": 1
+							}
+						]
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"graphMode": "area",
+				"colorMode": "value",
+				"justifyMode": "auto",
+				"textMode": "auto",
+				"wideLayout": true,
+				"showPercentChange": false,
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"values": false
+				},
+				"percentChangeColorMode": "standard",
+				"orientation": "auto"
+			},
+			"targets": [
+				{
+					"expr": "sum(rate(claude_code_active_time_seconds_total{type=\"cli\"}[5m])) / sum(rate(claude_code_active_time_seconds_total{type=\"user\"}[5m]))",
+					"refId": "A",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Cost Rate (5m)",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 20
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "currencyUSD",
+					"custom": {
+						"drawStyle": "line",
+						"fillOpacity": 10,
+						"showPoints": "never"
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": ["mean", "last"]
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "desc"
+				}
+			},
+			"targets": [
+				{
+					"expr": "sum(rate(claude_code_cost_usage_USD_total[5m]))",
+					"refId": "A",
+					"legendFormat": "Cost",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Cost by Model",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 20
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "currencyUSD",
+					"custom": {
+						"drawStyle": "bars",
+						"fillOpacity": 80,
+						"showPoints": "never"
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": ["sum"]
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "desc"
+				}
+			},
+			"targets": [
+				{
+					"expr": "sum by (model) (increase(claude_code_cost_usage_USD_total[$__range]))",
+					"refId": "A",
+					"legendFormat": "{{model}}",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"transparent": false,
+			"repeatDirection": "h",
+			"title": "Token Usage Rate (5m)",
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 24,
+				"x": 0,
+				"y": 24
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short",
+					"custom": {
+						"drawStyle": "line",
+						"fillOpacity": 25,
+						"showPoints": "never",
+						"stacking": {
+							"mode": "normal",
+							"group": "A"
+						}
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "table",
+					"placement": "right",
+					"showLegend": true,
+					"calcs": ["mean", "last", "max"]
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "desc"
+				}
+			},
+			"targets": [
+				{
+					"expr": "sum by (type) (rate(claude_code_token_usage_tokens_total[5m]))",
+					"refId": "A",
+					"legendFormat": "{{type}}",
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					}
+				}
+			]
+		}
+	]
 }

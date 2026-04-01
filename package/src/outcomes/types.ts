@@ -1,13 +1,13 @@
+import type { AddContext } from "./AddContext.js";
 import type { Allow } from "./Allow.js";
 import type { Ask } from "./Ask.js";
-import type { AddContext } from "./AddContext.js";
 import type { Block } from "./Block.js";
 import type { Continue } from "./Continue.js";
 import type { Deny } from "./Deny.js";
 import type { Modify } from "./Modify.js";
 import type { NoAction } from "./NoAction.js";
-import type { Skip } from "./Skip.js";
 import { Outcome } from "./Outcome.js";
+import type { Skip } from "./Skip.js";
 
 // ─── Per-hook-type outcome unions ────────────────────────────────────
 

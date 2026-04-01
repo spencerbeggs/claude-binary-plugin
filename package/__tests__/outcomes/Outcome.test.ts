@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { Outcome } from "../../src/outcomes/Outcome.js";
 import type { ContextBuilder } from "../../src/outcomes/ContextBuilder.js";
+import { Outcome } from "../../src/outcomes/Outcome.js";
 
 describe("Outcome", () => {
 	test("is abstract - cannot be instantiated", () => {

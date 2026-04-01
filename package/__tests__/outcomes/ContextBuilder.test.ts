@@ -42,10 +42,7 @@ describe("MarkdownContext", () => {
 	});
 
 	test("chains multiple elements with double newlines", () => {
-		const ctx = new MarkdownContext()
-			.heading(2, "Context")
-			.paragraph("Important info.")
-			.rule("Follow this rule");
+		const ctx = new MarkdownContext().heading(2, "Context").paragraph("Important info.").rule("Follow this rule");
 		expect(ctx.toString()).toBe("## Context\n\nImportant info.\n\n- **Rule:** Follow this rule");
 	});
 
