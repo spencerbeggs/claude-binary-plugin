@@ -1,14 +1,14 @@
 import { Schema } from "effect";
-import { JsonObjectSchema } from "./json.js";
 import type {
-	PassthroughPipelineOutput,
-	PermissionRequestPipelineOutput,
-	PostToolUsePipelineOutput,
-	PreToolUsePipelineOutput,
-	SessionStartPipelineOutput,
-	StopPipelineOutput,
-	UserPromptSubmitPipelineOutput,
-} from "./pipeline-outputs.js";
+	PassthroughOutput,
+	PermissionRequestOutput,
+	PostToolUseOutput,
+	PreToolUseOutput,
+	SessionStartOutput,
+	StopOutput,
+	UserPromptSubmitOutput,
+} from "./hook-outputs.js";
+import { JsonObjectSchema } from "./json.js";
 
 // =============================================================================
 // RESPONSE SCHEMA CLASSES
@@ -130,7 +130,7 @@ export class PassthroughResponse extends Schema.Class<PassthroughResponse>("Pass
  * @returns A validated PreToolUseResponse instance
  * @public
  */
-export function toPreToolUseResponse(output: PreToolUsePipelineOutput): PreToolUseResponse {
+export function toPreToolUseResponse(output: PreToolUseOutput): PreToolUseResponse {
 	const action = "action" in output ? output.action : undefined;
 	let permissionDecision: "allow" | "deny" | "ask" = "allow";
 	if (action === "deny") permissionDecision = "deny";
@@ -154,7 +154,7 @@ export function toPreToolUseResponse(output: PreToolUsePipelineOutput): PreToolU
  * @returns A validated PostToolUseResponse instance
  * @public
  */
-export function toPostToolUseResponse(output: PostToolUsePipelineOutput): PostToolUseResponse {
+export function toPostToolUseResponse(output: PostToolUseOutput): PostToolUseResponse {
 	const action = "action" in output ? output.action : undefined;
 	if (action === "block" && "reason" in output && output.reason) {
 		return new PostToolUseResponse({ decision: "block", reason: output.reason });
@@ -175,7 +175,7 @@ export function toPostToolUseResponse(output: PostToolUsePipelineOutput): PostTo
  * @returns A validated SessionStartResponse instance
  * @public
  */
-export function toSessionStartResponse(output: SessionStartPipelineOutput): SessionStartResponse {
+export function toSessionStartResponse(output: SessionStartOutput): SessionStartResponse {
 	if ("claudeContext" in output && output.claudeContext) {
 		return new SessionStartResponse({ additionalContext: output.claudeContext });
 	}
@@ -193,7 +193,7 @@ export function toSessionStartResponse(output: SessionStartPipelineOutput): Sess
  * @returns A validated StopResponse instance
  * @public
  */
-export function toStopResponse(output: StopPipelineOutput): StopResponse {
+export function toStopResponse(output: StopOutput): StopResponse {
 	const action = "action" in output ? output.action : undefined;
 	if (action === "block" && "reason" in output && output.reason) {
 		return new StopResponse({ decision: "block", reason: output.reason });
@@ -213,7 +213,7 @@ export function toStopResponse(output: StopPipelineOutput): StopResponse {
  * @returns A validated UserPromptSubmitResponse instance
  * @public
  */
-export function toUserPromptSubmitResponse(output: UserPromptSubmitPipelineOutput): UserPromptSubmitResponse {
+export function toUserPromptSubmitResponse(output: UserPromptSubmitOutput): UserPromptSubmitResponse {
 	const action = "action" in output ? output.action : undefined;
 	if (action === "block" && "reason" in output && output.reason) {
 		return new UserPromptSubmitResponse({ decision: "block", reason: output.reason });
@@ -236,7 +236,7 @@ export function toUserPromptSubmitResponse(output: UserPromptSubmitPipelineOutpu
  * @returns A validated PermissionRequestResponse instance
  * @public
  */
-export function toPermissionRequestResponse(output: PermissionRequestPipelineOutput): PermissionRequestResponse {
+export function toPermissionRequestResponse(output: PermissionRequestOutput): PermissionRequestResponse {
 	const action = "action" in output ? output.action : undefined;
 	return new PermissionRequestResponse({
 		behavior: action === "deny" ? "deny" : "allow",
@@ -256,6 +256,6 @@ export function toPermissionRequestResponse(output: PermissionRequestPipelineOut
  * @returns A PassthroughResponse instance (empty object)
  * @public
  */
-export function toPassthroughResponse(_output: PassthroughPipelineOutput): PassthroughResponse {
+export function toPassthroughResponse(_output: PassthroughOutput): PassthroughResponse {
 	return new PassthroughResponse({});
 }

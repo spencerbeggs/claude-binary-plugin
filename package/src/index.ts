@@ -15,7 +15,6 @@
  * **Core Exports:**
  * - {@link PluginConfig} - Schema.Class base for plugin configuration
  * - {@link ClaudePlugin} - Runtime orchestrator binding config to hooks
- * - {@link PluginEnv} - Base class for environment management
  * - {@link PluginBuilder} - Compile plugins to executables
  * - Effect Schema-validated hook event parsing
  *
@@ -76,7 +75,7 @@ export { isValidOutcomeForHook } from "./outcomes/types.js";
 export { CommandParseError } from "./errors/CommandParseError.js";
 export { EnvLoadError } from "./errors/EnvLoadError.js";
 export { EnvPersistError } from "./errors/EnvPersistError.js";
-export { PipelineError } from "./errors/PipelineError.js";
+export { PluginRuntimeError } from "./errors/PluginRuntimeError.js";
 export type { SchemaIssue } from "./errors/SchemaValidationError.js";
 export { SchemaValidationError } from "./errors/SchemaValidationError.js";
 export { SessionLookupError } from "./errors/SessionLookupError.js";
@@ -87,12 +86,16 @@ export { StdinError } from "./errors/StdinError.js";
 // SERVICES
 // =============================================================================
 
+export { EnvBridgeLive } from "./layers/EnvBridgeLive.js";
+export { EnvCoordinatorLive } from "./layers/EnvCoordinatorLive.js";
+export { EnvFileParserLive } from "./layers/EnvFileParserLive.js";
 export { EnvLoaderLive } from "./layers/EnvLoaderLive.js";
 export { EnvLoaderTest } from "./layers/EnvLoaderTest.js";
-export { EnvPersisterLive } from "./layers/EnvPersisterLive.js";
-export { makeEnvPersisterTest } from "./layers/EnvPersisterTest.js";
-export { PipelineLive } from "./layers/PipelineLive.js";
-export { PipelineRuntimeServiceLive } from "./layers/PipelineRuntimeServiceLive.js";
+export { EnvResolverLive } from "./layers/EnvResolverLive.js";
+export { EnvValidatorLive } from "./layers/EnvValidatorLive.js";
+export { EnvWriterLive } from "./layers/EnvWriterLive.js";
+export { PluginLive } from "./layers/PluginLive.js";
+export { PluginRuntimeServiceLive } from "./layers/PluginRuntimeServiceLive.js";
 export { SchemaValidatorLive } from "./layers/SchemaValidatorLive.js";
 export { SessionStoreLive } from "./layers/SessionStoreLive.js";
 export { makeSessionStoreTest } from "./layers/SessionStoreTest.js";
@@ -102,9 +105,21 @@ export { StdinReaderLive } from "./layers/StdinReaderLive.js";
 export { makeStdinReaderTest } from "./layers/StdinReaderTest.js";
 export { TelemetryLive, withErrorTelemetry } from "./layers/TelemetryLive.js";
 export { makeTelemetryTest } from "./layers/TelemetryTest.js";
+export { EnvBridge } from "./services/EnvBridge.js";
+export type {
+	CommandParams,
+	CommandResult,
+	HookParams,
+	PersistParams,
+	SessionStartParams,
+} from "./services/EnvCoordinator.js";
+export { EnvCoordinator } from "./services/EnvCoordinator.js";
+export { EnvFileParser } from "./services/EnvFileParser.js";
 export { EnvLoader } from "./services/EnvLoader.js";
-export { EnvPersister } from "./services/EnvPersister.js";
-export { type PipelineRunConfig, PipelineRuntimeService, type RunResult } from "./services/PipelineRuntimeService.js";
+export { EnvResolver } from "./services/EnvResolver.js";
+export { EnvValidator } from "./services/EnvValidator.js";
+export { EnvWriter, type PersistResult } from "./services/EnvWriter.js";
+export { type PluginRunConfig, PluginRuntimeService, type RunResult } from "./services/PluginRuntimeService.js";
 export { SchemaValidator as SchemaValidatorService } from "./services/SchemaValidator.js";
 export { SessionStore } from "./services/SessionStore.js";
 export { ShellExecutor as ShellExecutorService, ShellResult } from "./services/ShellExecutor.js";
@@ -115,7 +130,6 @@ export { FatalErrorData, HookExecutionData, Telemetry } from "./services/Telemet
 // CORE TYPES
 // =============================================================================
 
-export { PluginEnvLive } from "./layers/PluginEnvLive.js";
 // Effect Logger layers
 export { makePluginLoggerLive, resolveLogLevel } from "./layers/PluginLoggerLive.js";
 export type { SessionRegistration } from "./layers/SessionRegistry.js";
@@ -174,21 +188,6 @@ export type {
 	ToolName,
 } from "./schemas/hook-literals.js";
 export { HookType } from "./schemas/hook-literals.js";
-export type {
-	CommandConfig,
-	CommandContextParams,
-	CommandContextResult,
-	EnvContext,
-	HookContextParams,
-	PersistResult,
-	PluginEnvFileSystem,
-	SessionStartContextParams,
-	ValidationErrorMinimal,
-	ValidationIssueMinimal,
-	ValidationResult,
-} from "./services/PluginEnv.js";
-export { EnvFileLoadError, PluginEnv, formatValidationError } from "./services/PluginEnv.js";
-export { PluginEnvService } from "./services/PluginEnvService.js";
 export type { SessionRecord } from "./services/SessionStore.js";
 // Type utilities re-exported from type-fest for user convenience
 export type { PartialDeep, ReadonlyDeep, RequiredDeep, Tagged, WritableDeep } from "./types/common.js";
@@ -365,11 +364,11 @@ export type { PluginInfoData } from "./services/PluginInfoService.js";
 export { PLUGIN_INFO_ATTRS, PluginInfoService } from "./services/PluginInfoService.js";
 
 // =============================================================================
-// PIPELINE CONFIG
+// PLUGIN CONFIG
 // =============================================================================
 
-// Pipeline runtime types
-export type { HookEventType, IODependencies, PipelineConfig } from "./layers/PipelineRuntime.js";
+// Plugin runtime types
+export type { HookEventType, IODependencies } from "./layers/PluginRuntime.js";
 export type {
 	BaseState,
 	CmdContext,
@@ -399,8 +398,8 @@ export type {
 	PassthroughHookEntry,
 	PermissionRequestHandler,
 	PermissionRequestHookDefinition,
-	PipelineHandler,
 	PluginBuildOptions,
+	PluginHandler,
 	PluginState,
 	PostToolUseHandler,
 	PostToolUseHookDefinition,
@@ -423,35 +422,35 @@ export type {
 	UserPromptSubmitHookDefinition,
 } from "./plugin/config.js";
 export { ClaudePlugin, PluginConfig } from "./plugin/config.js";
-// Pipeline output schemas
+// Hook output schemas
 export type {
 	ExecutionQuality,
 	ExecutionStatus,
 	HookAction,
-	NotificationPipelineOutput,
-	PassthroughPipelineOutput,
-	PermissionRequestPipelineOutput,
-	PipelineMetrics,
-	PipelineOutputBase,
-	PostToolUsePipelineOutput,
-	PreCompactPipelineOutput,
-	PreToolUsePipelineOutput,
-	SessionEndPipelineOutput,
-	SessionStartPipelineOutput,
-	StopPipelineOutput,
-	SubagentStopPipelineOutput,
-	UserPromptSubmitPipelineOutput,
-	ValidationResult as PipelineValidationResult,
-} from "./schemas/pipeline-outputs.js";
+	HookMetrics,
+	HookOutputBase,
+	NotificationOutput,
+	PassthroughOutput,
+	PermissionRequestOutput,
+	PostToolUseOutput,
+	PreCompactOutput,
+	PreToolUseOutput,
+	SessionEndOutput,
+	SessionStartOutput,
+	StopOutput,
+	SubagentStopOutput,
+	UserPromptSubmitOutput,
+	ValidationResult as HookValidationResult,
+} from "./schemas/hook-outputs.js";
 export {
 	ExecutionQualitySchema,
 	ExecutionStatusSchema,
 	HookActionSchema,
+	HookMetricsSchema,
+	HookOutputBaseSchema,
 	NotificationOutputSchema,
 	PassthroughOutputSchema,
 	PermissionRequestOutputSchema,
-	PipelineMetricsSchema,
-	PipelineOutputBaseSchema,
 	PostToolUseOutputSchema,
 	PreCompactOutputSchema,
 	PreToolUseOutputSchema,
@@ -461,9 +460,9 @@ export {
 	SubagentStopOutputSchema,
 	UserPromptSubmitOutputSchema,
 	ValidationResultSchema,
-} from "./schemas/pipeline-outputs.js";
+} from "./schemas/hook-outputs.js";
 export type {
-	AnyPipelineOutput,
+	AnyHookOutput,
 	BudgetCheckResult,
 	ContentType,
 	SessionTokenState,
@@ -471,7 +470,7 @@ export type {
 	TokenMetricsData,
 } from "./types/pipeline.js";
 // Pipeline utilities (type guards, metrics)
-export { Pipeline, TokenMetrics, isPipelineOutput } from "./types/pipeline.js";
+export { Pipeline, TokenMetrics, isHookOutput } from "./types/pipeline.js";
 
 // =============================================================================
 // BUILD SYSTEM
@@ -479,20 +478,20 @@ export { Pipeline, TokenMetrics, isPipelineOutput } from "./types/pipeline.js";
 
 export type {
 	BuildPluginOptions,
+	CommandEntry,
 	CompileTarget,
 	ExtractableCommand,
 	ExtractableHook,
 	ExtractedPassthroughHooks,
 	GenerateHooksJsonOptions,
-	GeneratePipelinePluginOptions,
+	GeneratePluginEntrypointOptions,
+	HookEntry,
+	HookEventTypeName,
 	HooksJsonCommand,
 	HooksJsonEntry,
 	HooksJsonFile,
 	MarketplaceManifest,
 	PersistLocalConfig,
-	PipelineCommandEntry,
-	PipelineHookEntry,
-	PipelineHookEventType,
 	PluginBuildResult,
 	PluginManifest,
 	ShellExecutor as BuildShellExecutor,

@@ -10,12 +10,12 @@ import type {
 	CommandDefinition,
 	CommandHandler,
 	CommandOutput,
-	PipelineHandler,
+	PluginHandler,
 	PluginState,
 } from "../plugin/config.js";
-import type { HookAction } from "../schemas/pipeline-outputs.js";
-import type { AnyPipelineOutput } from "../types/pipeline.js";
-import { isPipelineOutput } from "../types/pipeline.js";
+import type { HookAction } from "../schemas/hook-outputs.js";
+import type { AnyHookOutput } from "../types/pipeline.js";
+import { isHookOutput } from "../types/pipeline.js";
 import type { BufferShellResult } from "./mocks.js";
 
 // =============================================================================
@@ -1817,7 +1817,7 @@ export class PluginTester<
 	 * @internal
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Hook definitions have varied shapes
-	private async resolveHandler(hookDef: any): Promise<PipelineHandler<unknown, unknown, TOptions, TState> | null> {
+	private async resolveHandler(hookDef: any): Promise<PluginHandler<unknown, unknown, TOptions, TState> | null> {
 		if (typeof hookDef.handler === "function") {
 			return hookDef.handler;
 		}
@@ -1885,7 +1885,7 @@ export class PluginTester<
 		}
 
 		// Check if it's a valid pipeline output (legacy pattern)
-		if (!isPipelineOutput(output)) {
+		if (!isHookOutput(output)) {
 			return {
 				exitCode: 1,
 				stdout: "",
@@ -1897,7 +1897,7 @@ export class PluginTester<
 			};
 		}
 
-		const pipelineOutput = output as AnyPipelineOutput;
+		const pipelineOutput = output as AnyHookOutput;
 
 		// Extract convenience fields
 		let action: HookAction | undefined;

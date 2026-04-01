@@ -3,8 +3,6 @@ import { $ } from "bun";
 import type { ShellExecutor, ShellResult } from "../build/builder.js";
 import type { IO } from "../plugin/config.js";
 import type { HookEventBase } from "../schemas/hook-inputs.js";
-import { PluginEnv } from "../services/PluginEnv.js";
-
 // =============================================================================
 // MOCK STATE CLASS
 // =============================================================================
@@ -13,8 +11,8 @@ import { PluginEnv } from "../services/PluginEnv.js";
  * Mock state class for testing plugin handlers.
  * @public
  */
-export class MockState extends PluginEnv {
-	protected readonly prefix = "MOCK";
+export class MockState {
+	readonly prefix = "MOCK";
 }
 
 // =============================================================================
