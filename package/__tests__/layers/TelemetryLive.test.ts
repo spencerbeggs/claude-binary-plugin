@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer } from "effect";
+import { makePlatformInfoTest } from "../../src/layers/PlatformInfoTest.js";
 import { makeSidecarConnectionTest } from "../../src/layers/SidecarConnectionTest.js";
 import { TelemetryLive, withErrorTelemetry } from "../../src/layers/TelemetryLive.js";
 import { makeTelemetryTest } from "../../src/layers/TelemetryTest.js";
@@ -86,14 +87,24 @@ describe("TelemetryLive", () => {
 	const makeEnabledLayer = () => {
 		const connTest = makeSidecarConnectionTest();
 		const otelConfigLayer = Layer.succeed(OtelConfig, new OtelConfigData({ enabled: true }));
-		const telemetryLayer = TelemetryLive.pipe(Layer.provide(connTest.layer), Layer.provide(otelConfigLayer));
+		const platformInfoLayer = makePlatformInfoTest();
+		const telemetryLayer = TelemetryLive.pipe(
+			Layer.provide(connTest.layer),
+			Layer.provide(otelConfigLayer),
+			Layer.provide(platformInfoLayer),
+		);
 		return { connTest, telemetryLayer };
 	};
 
 	const makeDisabledLayer = () => {
 		const connTest = makeSidecarConnectionTest();
 		const otelConfigLayer = Layer.succeed(OtelConfig, new OtelConfigData({ enabled: false }));
-		const telemetryLayer = TelemetryLive.pipe(Layer.provide(connTest.layer), Layer.provide(otelConfigLayer));
+		const platformInfoLayer = makePlatformInfoTest();
+		const telemetryLayer = TelemetryLive.pipe(
+			Layer.provide(connTest.layer),
+			Layer.provide(otelConfigLayer),
+			Layer.provide(platformInfoLayer),
+		);
 		return { connTest, telemetryLayer };
 	};
 
@@ -234,6 +245,8 @@ describe("withErrorTelemetry", () => {
 // =============================================================================
 
 describe("message builders", () => {
+	const ctx = { claudeVersion: "1.0.0", terminalType: "iTerm" };
+
 	test("buildHookExecutionEvent produces correct OTEL attributes", () => {
 		const data = new HookExecutionData({
 			hookType: "PreToolUse",
@@ -246,7 +259,7 @@ describe("message builders", () => {
 			summary: "auto-allowed: git status",
 		});
 
-		const eventData = buildHookExecutionEvent(data, "session-123");
+		const eventData = buildHookExecutionEvent(data, "session-123", ctx);
 
 		expect(eventData.name).toBe(OTEL_EVENT_NAMES.HOOK_EXECUTION);
 		expect(eventData.severity).toBe("info");
@@ -272,7 +285,7 @@ describe("message builders", () => {
 			success: false,
 		});
 
-		const eventData = buildHookExecutionEvent(data, "s-1");
+		const eventData = buildHookExecutionEvent(data, "s-1", ctx);
 
 		expect(eventData.body).toBe("lint (PostToolUse): failed");
 		expect(eventData.severity).toBe("error");
@@ -281,7 +294,7 @@ describe("message builders", () => {
 	test("buildErrorEvent produces correct attributes from Error", () => {
 		const error = new TypeError("bad input");
 
-		const eventData = buildErrorEvent(error, "session-456");
+		const eventData = buildErrorEvent(error, "session-456", ctx);
 
 		expect(eventData.name).toBe(OTEL_EVENT_NAMES.FATAL_ERROR);
 		expect(eventData.severity).toBe("error");
@@ -292,7 +305,7 @@ describe("message builders", () => {
 	});
 
 	test("buildErrorEvent handles non-Error values", () => {
-		const eventData = buildErrorEvent("string error", "s-1");
+		const eventData = buildErrorEvent("string error", "s-1", ctx);
 
 		expect(eventData.attributes![OTEL_ATTRS.ERROR]).toBe("string error");
 		expect(eventData.attributes![OTEL_ATTRS.ERROR_TYPE]).toBe("unknown");
@@ -306,7 +319,7 @@ describe("message builders", () => {
 			errorStack: "Error: fatal crash\n    at main.ts:42",
 		});
 
-		const eventData = buildFatalErrorEvent(data, "session-789");
+		const eventData = buildFatalErrorEvent(data, "session-789", ctx);
 
 		expect(eventData.name).toBe(OTEL_EVENT_NAMES.FATAL_ERROR);
 		expect(eventData.severity).toBe("fatal");
@@ -326,7 +339,7 @@ describe("message builders", () => {
 			errorStack: longStack,
 		});
 
-		const eventData = buildFatalErrorEvent(data, "s-1");
+		const eventData = buildFatalErrorEvent(data, "s-1", ctx);
 
 		expect(eventData.body!.length).toBeLessThan(2000);
 		expect(eventData.body).toContain("(truncated)");

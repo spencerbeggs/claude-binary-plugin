@@ -5,9 +5,9 @@ import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { Effect, Layer, Ref } from "effect";
-import { detectGitInfo, gitInfoToAttributes } from "../otel/GitInfo.js";
 import { createLogsExporter, createMetricsExporter, createTraceExporter } from "../otel/SidecarExporters.js";
 import { createOtelResource } from "../otel/SidecarResource.js";
+import { GitInfo } from "../services/GitInfo.js";
 import type { ResourceConfig } from "../services/OtelProviders.js";
 import { OtelProviders } from "../services/OtelProviders.js";
 
@@ -50,9 +50,10 @@ const shutdownProvider = (
  *
  * The finalizer flushes and shuts down all providers concurrently on scope close.
  */
-export const OtelProvidersLive: Layer.Layer<OtelProviders> = Layer.scoped(
+export const OtelProvidersLive: Layer.Layer<OtelProviders, never, GitInfo> = Layer.scoped(
 	OtelProviders,
 	Effect.gen(function* () {
+		const gitInfoService = yield* GitInfo;
 		const tracerProviderRef = yield* Ref.make<NodeTracerProvider | null>(null);
 		const meterProviderRef = yield* Ref.make<MeterProvider | null>(null);
 		const loggerProviderRef = yield* Ref.make<LoggerProvider | null>(null);
@@ -108,8 +109,8 @@ export const OtelProvidersLive: Layer.Layer<OtelProviders> = Layer.scoped(
 				);
 
 				// Detect git info for resource attributes
-				const gitInfo = yield* Effect.promise(() => detectGitInfo());
-				const gitAttrs = gitInfoToAttributes(gitInfo);
+				const gitData = yield* gitInfoService.detect;
+				const gitAttrs = gitInfoService.toAttributes(gitData);
 
 				// Merge git attributes into config
 				const configWithGit: ResourceConfig = {
@@ -120,10 +121,10 @@ export const OtelProvidersLive: Layer.Layer<OtelProviders> = Layer.scoped(
 					},
 				};
 
-				const resource = createOtelResource(configWithGit);
+				const resource = createOtelResource(configWithGit, undefined);
 
 				// Create Tracer Provider
-				const traceExporter = createTraceExporter(config);
+				const traceExporter = createTraceExporter(config, undefined);
 				const spanProcessors = traceExporter ? [new BatchSpanProcessor(traceExporter)] : [];
 
 				const newTracerProvider = new NodeTracerProvider({
@@ -133,7 +134,7 @@ export const OtelProvidersLive: Layer.Layer<OtelProviders> = Layer.scoped(
 				newTracerProvider.register();
 
 				// Create Meter Provider
-				const metricsExporter = createMetricsExporter(config);
+				const metricsExporter = createMetricsExporter(config, undefined);
 				const readers = metricsExporter
 					? [
 							new PeriodicExportingMetricReader({
@@ -150,7 +151,7 @@ export const OtelProvidersLive: Layer.Layer<OtelProviders> = Layer.scoped(
 				metrics.setGlobalMeterProvider(newMeterProvider);
 
 				// Create Logger Provider
-				const logsExporter = createLogsExporter(config);
+				const logsExporter = createLogsExporter(config, undefined);
 				const processors = logsExporter
 					? [
 							new BatchLogRecordProcessor(logsExporter, {

@@ -1,7 +1,9 @@
 import { Effect, Layer, Tracer } from "effect";
+import type { PlatformContext } from "../otel/message-builders.js";
 import { buildErrorEvent, buildFatalErrorEvent, buildHookExecutionEvent } from "../otel/message-builders.js";
 import { SidecarSpan } from "../otel/SidecarSpan.js";
 import { OtelConfig } from "../services/OtelConfig.js";
+import { PlatformInfo } from "../services/PlatformInfo.js";
 import { SidecarConnection } from "../services/SidecarConnection.js";
 import type { FatalErrorData, HookExecutionData } from "../services/Telemetry.js";
 import { Telemetry } from "../services/Telemetry.js";
@@ -11,11 +13,17 @@ const TelemetryServiceLive = Layer.effect(
 	Effect.gen(function* () {
 		const conn = yield* SidecarConnection;
 		const config = yield* OtelConfig;
+		const platformInfo = yield* PlatformInfo;
+		const claudeVersion = yield* platformInfo.claudeVersion;
+		const ctx: PlatformContext = {
+			claudeVersion,
+			terminalType: platformInfo.terminalType,
+		};
 
 		return {
 			emitHookExecution: (data: HookExecutionData) => {
 				if (!config.enabled) return Effect.void;
-				const eventData = buildHookExecutionEvent(data, "unknown");
+				const eventData = buildHookExecutionEvent(data, "unknown", ctx);
 				return conn.emit({
 					type: "event",
 					sessionId: "unknown",
@@ -25,7 +33,7 @@ const TelemetryServiceLive = Layer.effect(
 
 			emitError: (error: unknown) => {
 				if (!config.enabled) return Effect.void;
-				const eventData = buildErrorEvent(error, "unknown");
+				const eventData = buildErrorEvent(error, "unknown", ctx);
 				return conn.emit({
 					type: "event",
 					sessionId: "unknown",
@@ -35,7 +43,7 @@ const TelemetryServiceLive = Layer.effect(
 
 			emitFatalError: (data: FatalErrorData) => {
 				if (!config.enabled) return Effect.succeed(false);
-				const eventData = buildFatalErrorEvent(data, "unknown");
+				const eventData = buildFatalErrorEvent(data, "unknown", ctx);
 				return Effect.flatMap(
 					conn.emit({
 						type: "event",

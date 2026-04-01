@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer } from "effect";
+import { makeGitInfoTest } from "../../src/layers/GitInfoTest.js";
 import { OtelProvidersLive } from "../../src/layers/OtelProvidersLive.js";
 import type { ResourceConfig } from "../../src/services/OtelProviders.js";
 import { OtelProviders } from "../../src/services/OtelProviders.js";
+
+const { layer: GitInfoTestLayer } = makeGitInfoTest();
 
 // =============================================================================
 // Service Tag
@@ -28,7 +31,7 @@ describe("OtelProvidersLive", () => {
 			expect(typeof providers.reinit).toBe("function");
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	// =============================================================================
@@ -43,7 +46,7 @@ describe("OtelProvidersLive", () => {
 			expect(typeof tracer.startSpan).toBe("function");
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	test("getMeter returns an object before reinit", async () => {
@@ -54,7 +57,7 @@ describe("OtelProvidersLive", () => {
 			expect(typeof meter.createCounter).toBe("function");
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	test("getLogger returns an object before reinit", async () => {
@@ -65,7 +68,7 @@ describe("OtelProvidersLive", () => {
 			expect(typeof logger.emit).toBe("function");
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	// =============================================================================
@@ -91,7 +94,7 @@ describe("OtelProvidersLive", () => {
 			expect(second).toBe(false);
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	test("reinit with different config returns true", async () => {
@@ -115,7 +118,7 @@ describe("OtelProvidersLive", () => {
 			expect(second).toBe(true);
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	// =============================================================================
@@ -135,7 +138,7 @@ describe("OtelProvidersLive", () => {
 			yield* providers.reinit(config);
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 
 	test("scope close completes without error when no reinit was called", async () => {
@@ -144,6 +147,6 @@ describe("OtelProvidersLive", () => {
 			// Don't call reinit — providers stay null
 		});
 
-		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive))));
+		await Effect.runPromise(Effect.scoped(program.pipe(Effect.provide(OtelProvidersLive.pipe(Layer.provide(GitInfoTestLayer))))));
 	});
 });
