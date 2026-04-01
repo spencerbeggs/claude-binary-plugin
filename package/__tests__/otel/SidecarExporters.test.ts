@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
@@ -6,26 +6,6 @@ import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-base";
 import { createLogsExporter, createMetricsExporter, createTraceExporter } from "../../src/otel/SidecarExporters.js";
 
 describe("SidecarExporters", () => {
-	let originalEnv: Record<string, string | undefined>;
-
-	beforeEach(() => {
-		originalEnv = { ...process.env };
-	});
-
-	afterEach(() => {
-		// Restore original env vars
-		for (const key of Object.keys(process.env)) {
-			if (!(key in originalEnv)) {
-				delete process.env[key];
-			}
-		}
-		for (const [key, value] of Object.entries(originalEnv)) {
-			if (value !== undefined) {
-				process.env[key] = value;
-			}
-		}
-	});
-
 	describe("createTraceExporter", () => {
 		test("returns OTLPTraceExporter by default", () => {
 			const exporter = createTraceExporter({});
@@ -33,18 +13,14 @@ describe("SidecarExporters", () => {
 			expect(exporter).toBeInstanceOf(OTLPTraceExporter);
 		});
 
-		test("returns ConsoleSpanExporter when OTEL_TRACES_EXPORTER=console", () => {
-			process.env.OTEL_TRACES_EXPORTER = "console";
-
-			const exporter = createTraceExporter({});
+		test("returns ConsoleSpanExporter when tracesExporter is console", () => {
+			const exporter = createTraceExporter({}, { tracesExporter: "console" });
 
 			expect(exporter).toBeInstanceOf(ConsoleSpanExporter);
 		});
 
-		test("returns null when OTEL_TRACES_EXPORTER=none", () => {
-			process.env.OTEL_TRACES_EXPORTER = "none";
-
-			const exporter = createTraceExporter({});
+		test("returns null when tracesExporter is none", () => {
+			const exporter = createTraceExporter({}, { tracesExporter: "none" });
 
 			expect(exporter).toBeNull();
 		});
@@ -72,10 +48,8 @@ describe("SidecarExporters", () => {
 			expect(exporter).toBeInstanceOf(OTLPMetricExporter);
 		});
 
-		test("returns null when OTEL_METRICS_EXPORTER=none", () => {
-			process.env.OTEL_METRICS_EXPORTER = "none";
-
-			const exporter = createMetricsExporter({});
+		test("returns null when metricsExporter is none", () => {
+			const exporter = createMetricsExporter({}, { metricsExporter: "none" });
 
 			expect(exporter).toBeNull();
 		});
@@ -96,10 +70,8 @@ describe("SidecarExporters", () => {
 			expect(exporter).toBeInstanceOf(OTLPLogExporter);
 		});
 
-		test("returns null when OTEL_LOGS_EXPORTER=none", () => {
-			process.env.OTEL_LOGS_EXPORTER = "none";
-
-			const exporter = createLogsExporter({});
+		test("returns null when logsExporter is none", () => {
+			const exporter = createLogsExporter({}, { logsExporter: "none" });
 
 			expect(exporter).toBeNull();
 		});

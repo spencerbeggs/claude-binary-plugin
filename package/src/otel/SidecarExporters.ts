@@ -6,24 +6,37 @@ import { OTEL_DEFAULTS } from "./constants.js";
 import type { OtelProtocolConfig } from "./protocol.js";
 
 /**
+ * Options for controlling which exporter implementations are used.
+ */
+export interface ExporterOptions {
+	tracesExporter?: "otlp" | "console" | "none";
+	metricsExporter?: "otlp" | "none";
+	logsExporter?: "otlp" | "none";
+}
+
+/**
  * Create a trace exporter based on configuration.
  *
  * Creates an OTLP HTTP trace exporter by default. Returns a ConsoleSpanExporter
- * when OTEL_TRACES_EXPORTER=console, or null when OTEL_TRACES_EXPORTER=none.
+ * when tracesExporter is "console", or null when tracesExporter is "none".
  *
  * @param config - OTEL protocol configuration
+ * @param options - Optional exporter selection options
  * @returns Trace exporter or null if disabled
  */
-export function createTraceExporter(config: OtelProtocolConfig): OTLPTraceExporter | ConsoleSpanExporter | null {
+export function createTraceExporter(
+	config: OtelProtocolConfig,
+	options?: ExporterOptions,
+): OTLPTraceExporter | ConsoleSpanExporter | null {
 	const endpoint = config.endpoint ?? OTEL_DEFAULTS.ENDPOINT;
 
 	// Check for console exporter (for debugging)
-	if (Bun.env.OTEL_TRACES_EXPORTER === "console") {
+	if (options?.tracesExporter === "console") {
 		return new ConsoleSpanExporter();
 	}
 
 	// Check if traces are disabled
-	if (Bun.env.OTEL_TRACES_EXPORTER === "none") {
+	if (options?.tracesExporter === "none") {
 		return null;
 	}
 
@@ -39,16 +52,20 @@ export function createTraceExporter(config: OtelProtocolConfig): OTLPTraceExport
  * Create a metrics exporter based on configuration.
  *
  * Creates an OTLP HTTP metrics exporter by default. Returns null when
- * OTEL_METRICS_EXPORTER=none.
+ * metricsExporter is "none".
  *
  * @param config - OTEL protocol configuration
+ * @param options - Optional exporter selection options
  * @returns Metrics exporter or null if disabled
  */
-export function createMetricsExporter(config: OtelProtocolConfig): OTLPMetricExporter | null {
+export function createMetricsExporter(
+	config: OtelProtocolConfig,
+	options?: ExporterOptions,
+): OTLPMetricExporter | null {
 	const endpoint = config.endpoint ?? OTEL_DEFAULTS.ENDPOINT;
 
 	// Check if metrics are disabled
-	if (Bun.env.OTEL_METRICS_EXPORTER === "none") {
+	if (options?.metricsExporter === "none") {
 		return null;
 	}
 
@@ -64,16 +81,17 @@ export function createMetricsExporter(config: OtelProtocolConfig): OTLPMetricExp
  * Create a logs exporter based on configuration.
  *
  * Creates an OTLP HTTP logs exporter by default. Returns null when
- * OTEL_LOGS_EXPORTER=none.
+ * logsExporter is "none".
  *
  * @param config - OTEL protocol configuration
+ * @param options - Optional exporter selection options
  * @returns Logs exporter or null if disabled
  */
-export function createLogsExporter(config: OtelProtocolConfig): OTLPLogExporter | null {
+export function createLogsExporter(config: OtelProtocolConfig, options?: ExporterOptions): OTLPLogExporter | null {
 	const endpoint = config.endpoint ?? OTEL_DEFAULTS.ENDPOINT;
 
 	// Check if logs are disabled
-	if (Bun.env.OTEL_LOGS_EXPORTER === "none") {
+	if (options?.logsExporter === "none") {
 		return null;
 	}
 

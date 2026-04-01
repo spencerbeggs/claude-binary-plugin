@@ -27,29 +27,12 @@ export const ATTRS = {
 } as const;
 
 /**
- * Parse OTEL_RESOURCE_ATTRIBUTES environment variable.
- *
- * Format: key1=value1,key2=value2
- *
- * @param attrs - The environment variable value
- * @returns Parsed attributes object
+ * Options for additional resource attributes and deployment environment.
  */
-const parseResourceAttributes = (attrs?: string): Record<string, string> => {
-	if (!attrs) return {};
-
-	const result: Record<string, string> = {};
-	for (const pair of attrs.split(",")) {
-		const eqIndex = pair.indexOf("=");
-		if (eqIndex > 0) {
-			const key = pair.slice(0, eqIndex).trim();
-			const value = pair.slice(eqIndex + 1).trim();
-			if (key && value) {
-				result[key] = value;
-			}
-		}
-	}
-	return result;
-};
+export interface ResourceOptions {
+	resourceAttributes?: Record<string, string>;
+	deploymentEnv?: string;
+}
 
 /**
  * Create an OTEL Resource from configuration.
@@ -67,10 +50,11 @@ const parseResourceAttributes = (attrs?: string): Record<string, string> => {
  * ```
  *
  * @param config - Resource configuration
+ * @param options - Optional additional resource attributes and deployment environment
  * @returns OTEL Resource with attributes
  * @public
  */
-export function createOtelResource(config: ResourceConfig): Resource {
+export function createOtelResource(config: ResourceConfig, options?: ResourceOptions): Resource {
 	const attributes: Record<string, string> = {
 		[ATTR_SERVICE_NAME]: config.serviceName ?? OTEL_DEFAULTS.SERVICE_NAME,
 		"service.namespace": OTEL_DEFAULTS.SERVICE_NAMESPACE,
@@ -93,13 +77,16 @@ export function createOtelResource(config: ResourceConfig): Resource {
 		}
 	}
 
-	// Parse OTEL_RESOURCE_ATTRIBUTES if present
-	const extraAttrs = parseResourceAttributes(Bun.env.OTEL_RESOURCE_ATTRIBUTES);
-	Object.assign(attributes, extraAttrs);
+	// Merge with any resource attributes from options (after config, so options can override)
+	if (options?.resourceAttributes) {
+		for (const [key, value] of Object.entries(options.resourceAttributes)) {
+			attributes[key] = value;
+		}
+	}
 
 	// Add deployment environment if set
-	if (Bun.env.DEPLOYMENT_ENV || Bun.env.NODE_ENV) {
-		attributes[ATTRS.DEPLOYMENT_ENV] = Bun.env.DEPLOYMENT_ENV ?? Bun.env.NODE_ENV ?? "development";
+	if (options?.deploymentEnv) {
+		attributes[ATTRS.DEPLOYMENT_ENV] = options.deploymentEnv;
 	}
 
 	return resourceFromAttributes(attributes);

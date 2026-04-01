@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { OTEL_DEFAULTS } from "../../src/otel/constants.js";
 import { PluginInfo } from "../../src/otel/PluginInfo.js";
@@ -6,26 +6,6 @@ import type { ResourceConfig } from "../../src/otel/SidecarResource.js";
 import { ATTRS, createOtelResource } from "../../src/otel/SidecarResource.js";
 
 describe("SidecarResource", () => {
-	let originalEnv: Record<string, string | undefined>;
-
-	beforeEach(() => {
-		originalEnv = { ...process.env };
-	});
-
-	afterEach(() => {
-		// Restore original env vars
-		for (const key of Object.keys(process.env)) {
-			if (!(key in originalEnv)) {
-				delete process.env[key];
-			}
-		}
-		for (const [key, value] of Object.entries(originalEnv)) {
-			if (value !== undefined) {
-				process.env[key] = value;
-			}
-		}
-	});
-
 	describe("createOtelResource", () => {
 		test("creates resource with default service name", () => {
 			const resource = createOtelResource({});
@@ -84,7 +64,7 @@ describe("SidecarResource", () => {
 			expect(attrs[PluginInfo.ATTRS.MARKETPLACE_VERSION]).toBeUndefined();
 		});
 
-		test("merges custom resource attributes", () => {
+		test("merges custom resource attributes from config", () => {
 			const config: ResourceConfig = {
 				resourceAttributes: {
 					"custom.attr": "value",
@@ -101,48 +81,35 @@ describe("SidecarResource", () => {
 			expect(attrs["custom.bool"]).toBe("true");
 		});
 
-		test("parses OTEL_RESOURCE_ATTRIBUTES env var", () => {
-			process.env.OTEL_RESOURCE_ATTRIBUTES = "env.attr=envvalue,another.attr=another";
-
-			const resource = createOtelResource({});
+		test("merges resource attributes from options", () => {
+			const resource = createOtelResource(
+				{},
+				{ resourceAttributes: { "env.attr": "envvalue", "another.attr": "another" } },
+			);
 			const attrs = resource.attributes;
 
 			expect(attrs["env.attr"]).toBe("envvalue");
 			expect(attrs["another.attr"]).toBe("another");
 		});
 
-		test("handles OTEL_RESOURCE_ATTRIBUTES with equals in value", () => {
-			process.env.OTEL_RESOURCE_ATTRIBUTES = "key=value=with=equals";
+		test("options resourceAttributes override config resourceAttributes", () => {
+			const config: ResourceConfig = { resourceAttributes: { "shared.key": "from-config" } };
 
-			const resource = createOtelResource({});
+			const resource = createOtelResource(config, { resourceAttributes: { "shared.key": "from-options" } });
 
-			expect(resource.attributes.key).toBe("value=with=equals");
+			expect(resource.attributes["shared.key"]).toBe("from-options");
 		});
 
-		test("includes deployment environment from DEPLOYMENT_ENV", () => {
-			process.env.DEPLOYMENT_ENV = "production";
-
-			const resource = createOtelResource({});
+		test("includes deployment environment from options", () => {
+			const resource = createOtelResource({}, { deploymentEnv: "production" });
 
 			expect(resource.attributes[ATTRS.DEPLOYMENT_ENV]).toBe("production");
 		});
 
-		test("falls back to NODE_ENV for deployment environment", () => {
-			delete process.env.DEPLOYMENT_ENV;
-			process.env.NODE_ENV = "development";
-
+		test("does not set deployment environment when not provided", () => {
 			const resource = createOtelResource({});
 
-			expect(resource.attributes[ATTRS.DEPLOYMENT_ENV]).toBe("development");
-		});
-
-		test("prefers DEPLOYMENT_ENV over NODE_ENV", () => {
-			process.env.DEPLOYMENT_ENV = "staging";
-			process.env.NODE_ENV = "production";
-
-			const resource = createOtelResource({});
-
-			expect(resource.attributes[ATTRS.DEPLOYMENT_ENV]).toBe("staging");
+			expect(resource.attributes[ATTRS.DEPLOYMENT_ENV]).toBeUndefined();
 		});
 	});
 });
