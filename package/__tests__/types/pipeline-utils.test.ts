@@ -36,35 +36,35 @@ describe("Pipeline", () => {
 	});
 
 	describe("isPipelineHook", () => {
-		test("returns true for pipeline hook definition", () => {
-			const hook = { pipeline: () => ({ status: "executed", summary: "ok" }) };
+		test("returns true for hook with handler function", () => {
+			const hook = { handler: () => ({ status: "executed", summary: "ok" }) };
 			expect(Pipeline.isPipelineHook(hook as never)).toBe(true);
 		});
 
-		test("returns false for raw hook definition", () => {
-			const hook = { handler: () => {} };
+		test("returns false for hook with handler set to undefined", () => {
+			const hook = { handler: undefined };
 			expect(Pipeline.isPipelineHook(hook as never)).toBe(false);
 		});
 
-		test("returns false for hook with pipeline set to undefined", () => {
-			const hook = { pipeline: undefined };
+		test("returns false for hook without handler", () => {
+			const hook = { name: "test" };
 			expect(Pipeline.isPipelineHook(hook as never)).toBe(false);
 		});
 	});
 
 	describe("isRawHook", () => {
-		test("returns true for raw hook definition", () => {
+		test("returns true for hook with handler function", () => {
 			const hook = { handler: () => {} };
 			expect(Pipeline.isRawHook(hook as never)).toBe(true);
 		});
 
-		test("returns false for pipeline hook definition", () => {
-			const hook = { pipeline: () => ({ status: "executed", summary: "ok" }) };
+		test("returns false for hook with handler set to undefined", () => {
+			const hook = { handler: undefined };
 			expect(Pipeline.isRawHook(hook as never)).toBe(false);
 		});
 
-		test("returns false for hook with handler set to undefined", () => {
-			const hook = { handler: undefined };
+		test("returns false for hook without handler", () => {
+			const hook = { name: "test" };
 			expect(Pipeline.isRawHook(hook as never)).toBe(false);
 		});
 	});

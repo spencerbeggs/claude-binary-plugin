@@ -166,7 +166,7 @@ export interface PipelineConfig<TOptions = unknown, TState = Record<string, stri
 	/** Plugin version for telemetry attribution (from package.json) */
 	pluginVersion: string;
 	/** Pipeline handler function that processes the hook event and returns a pipeline output */
-	pipeline: PipelineHandler<unknown, unknown, TOptions, TState>;
+	handler: PipelineHandler<unknown, unknown, TOptions, TState>;
 	/** State class constructor for loading and validating environment variables */
 	stateClass: new () => PluginEnv<TOptions>;
 	/** Tool name filter for PreToolUse/PostToolUse hooks (hook skips if tool not in list) */
@@ -265,7 +265,7 @@ interface PersistSessionEnvOptions {
  *   hookName: "security",
  *   pluginName: "my-plugin",
  *   pluginVersion: "1.0.0",
- *   pipeline: myHandler,
+ *   handler: myHandler,
  *   stateClass: MyEnv,
  * });
  *
@@ -322,7 +322,7 @@ export class PipelineRuntime {
 			hookName,
 			pluginName,
 			pluginVersion,
-			pipeline,
+			handler: pipeline,
 			stateClass,
 			tools,
 			optionsSchema,

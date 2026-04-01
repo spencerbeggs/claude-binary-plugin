@@ -73,7 +73,7 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
-        pipeline: ${fileHookImport},
+        handler: ${fileHookImport},
         stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: PluginConfigClass.options,
@@ -86,13 +86,13 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 					// Inline pipeline hook
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = configInstance.hooks.${hookType}?.find(h => h.name === "${hook.name}");
-      if (!hookDef || !("pipeline" in hookDef)) throw new Error("Hook not found: ${hook.name}");
+      if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
-        pipeline: hookDef.pipeline,
+        handler: hookDef.handler,
         stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: PluginConfigClass.options,

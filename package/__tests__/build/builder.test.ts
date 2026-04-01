@@ -788,7 +788,7 @@ describe("extractPassthroughHookEntries", () => {
 		const config = {
 			hooks: {
 				SessionStart: [
-					{ name: "compiled", pipeline: () => ({}) },
+					{ name: "compiled", handler: () => ({}) },
 					{ matcher: "startup", hooks: [{ type: "command" as const, command: "bash ./init.sh" }] },
 				],
 				PreToolUse: [{ hooks: [{ type: "command" as const, command: "echo hello" }] }],
@@ -810,7 +810,7 @@ describe("extractPassthroughHookEntries", () => {
 	test("returns empty object when no passthrough hooks", () => {
 		const config = {
 			hooks: {
-				SessionStart: [{ name: "compiled", pipeline: () => ({}) }],
+				SessionStart: [{ name: "compiled", handler: () => ({}) }],
 			},
 		};
 
@@ -823,7 +823,7 @@ describe("extractPassthroughHookEntries", () => {
 		const config = {
 			hooks: {
 				SessionStart: [
-					{ name: "pipeline-hook", pipeline: () => ({}) },
+					{ name: "pipeline-hook", handler: () => ({}) },
 					{ name: "handler-hook", handler: () => {} },
 				],
 			},
@@ -976,7 +976,7 @@ describe("extractHookEntries", () => {
 				SessionStart: [
 					{
 						name: "context",
-						pipeline: "./hooks/context.hook.ts",
+						handler: "./hooks/context.hook.ts",
 						description: "Add project context",
 					},
 				],
@@ -984,7 +984,7 @@ describe("extractHookEntries", () => {
 					{
 						name: "security",
 						tools: ["Bash", "Write"],
-						pipeline: "./hooks/security.hook.ts",
+						handler: "./hooks/security.hook.ts",
 					},
 				],
 			},
@@ -1013,7 +1013,7 @@ describe("extractHookEntries", () => {
 				PreToolUse: [
 					{
 						name: "inline-check",
-						pipeline: () => ({
+						handler: () => ({
 							status: "executed",
 							action: "allow",
 							summary: "ok",
@@ -1031,12 +1031,12 @@ describe("extractHookEntries", () => {
 		expect(entries[0]?.filePath).toBeUndefined();
 	});
 
-	test("extracts raw handler hooks", () => {
+	test("extracts handler hooks with file paths", () => {
 		const config = {
 			hooks: {
 				PreToolUse: [
 					{
-						name: "raw-handler",
+						name: "file-handler",
 						handler: "./hooks/raw.hook.ts",
 					},
 				],
@@ -1046,8 +1046,8 @@ describe("extractHookEntries", () => {
 		const entries = PluginBuilder.extractHookEntries(config);
 
 		expect(entries).toHaveLength(1);
-		expect(entries[0]?.name).toBe("raw-handler");
-		expect(entries[0]?.isPipeline).toBe(false);
+		expect(entries[0]?.name).toBe("file-handler");
+		expect(entries[0]?.isPipeline).toBe(true);
 		expect(entries[0]?.filePath).toBe("./hooks/raw.hook.ts");
 	});
 
@@ -1055,7 +1055,7 @@ describe("extractHookEntries", () => {
 		const config = {
 			hooks: {
 				PreToolUse: [
-					{ name: "compiled", pipeline: "./hooks/compiled.ts" },
+					{ name: "compiled", handler: "./hooks/compiled.ts" },
 					{ matcher: "Bash", hooks: [{ type: "command" as const, command: "echo test" }] },
 				],
 			},
@@ -1079,9 +1079,9 @@ describe("extractHookEntries", () => {
 		const config = {
 			hooks: {
 				PreToolUse: [
-					{ name: "allow-list", tools: ["Bash"], pipeline: "./hooks/allow.ts" },
-					{ name: "deny-list", tools: ["Write"], pipeline: "./hooks/deny.ts" },
-					{ name: "audit", pipeline: "./hooks/audit.ts" },
+					{ name: "allow-list", tools: ["Bash"], handler: "./hooks/allow.ts" },
+					{ name: "deny-list", tools: ["Write"], handler: "./hooks/deny.ts" },
+					{ name: "audit", handler: "./hooks/audit.ts" },
 				],
 			},
 		};
@@ -1099,12 +1099,12 @@ describe("extractCommandEntries", () => {
 			commands: {
 				lint: {
 					description: "Run linter",
-					pipeline: "./commands/lint.cmd.ts",
+					handler: "./commands/lint.cmd.ts",
 					args: {},
 				},
 				test: {
 					description: "Run tests",
-					pipeline: "./commands/test.cmd.ts",
+					handler: "./commands/test.cmd.ts",
 				},
 			},
 		};
@@ -1448,14 +1448,14 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "context",
-						pipeline: "./hooks/context.hook.ts",
+						handler: "./hooks/context.hook.ts",
 					},
 				],
 				PreToolUse: [
 					{
 						name: "security",
 						tools: ["Bash"],
-						pipeline: "./hooks/security.hook.ts",
+						handler: "./hooks/security.hook.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1484,7 +1484,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: async () => ({
+						handler: async () => ({
 							status: "executed" as const,
 							action: "context" as const,
 							summary: "ok",
@@ -1528,7 +1528,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1562,14 +1562,14 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "context",
-						pipeline: "./hooks/context.ts",
+						handler: "./hooks/context.ts",
 					},
 				],
 				PreToolUse: [
 					{
 						name: "filter",
 						tools: ["Bash", "Edit"],
-						pipeline: "./hooks/filter.ts",
+						handler: "./hooks/filter.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1614,7 +1614,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1639,7 +1639,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1670,7 +1670,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1700,12 +1700,12 @@ describe("PluginBuilder.fromConfig", () => {
 				commands: {
 					lint: {
 						description: "Run linter",
-						pipeline: "./commands/lint.cmd.ts",
+						handler: "./commands/lint.cmd.ts",
 						args: {},
 					},
 					test: {
 						description: "Run tests",
-						pipeline: "./commands/test.cmd.ts",
+						handler: "./commands/test.cmd.ts",
 					},
 				},
 			},
@@ -1713,7 +1713,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1739,7 +1739,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 				PreToolUse: [
@@ -1781,7 +1781,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1821,7 +1821,7 @@ describe("PluginBuilder.fromConfig", () => {
 					{
 						name: "filter",
 						tools: ["Bash"],
-						pipeline: "./hooks/filter.ts",
+						handler: "./hooks/filter.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1863,7 +1863,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1893,11 +1893,11 @@ describe("PluginBuilder.fromConfig", () => {
 				commands: {
 					lint: {
 						description: "Lint",
-						pipeline: "./commands/lint.cmd.ts",
+						handler: "./commands/lint.cmd.ts",
 					},
 					abs: {
 						description: "Absolute",
-						pipeline: "/absolute/path/cmd.ts",
+						handler: "/absolute/path/cmd.ts",
 					},
 				},
 			},
@@ -1906,11 +1906,11 @@ describe("PluginBuilder.fromConfig", () => {
 					{
 						name: "security",
 						tools: ["Bash"],
-						pipeline: "./hooks/security.hook.ts",
+						handler: "./hooks/security.hook.ts",
 					},
 					{
 						name: "absolute",
-						pipeline: "/absolute/path/hook.ts",
+						handler: "/absolute/path/hook.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1937,7 +1937,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1969,7 +1969,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/nonexistent.ts",
+						handler: "./hooks/nonexistent.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1998,7 +1998,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -2027,7 +2027,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						pipeline: "./hooks/init.ts",
+						handler: "./hooks/init.ts",
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,

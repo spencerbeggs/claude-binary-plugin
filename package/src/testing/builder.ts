@@ -1490,8 +1490,8 @@ export class PluginTester<
 				);
 			}
 
-			// Check for passthrough hooks (no pipeline or handler)
-			if (!hookDef.pipeline && !hookDef.handler) {
+			// Check for passthrough hooks (no handler)
+			if (!hookDef.handler) {
 				throw new Error(`Hook "${hookName}" is a passthrough hook and cannot be tested with runHook()`);
 			}
 
@@ -1819,31 +1819,14 @@ export class PluginTester<
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Hook definitions have varied shapes
 	private async resolveHandler(hookDef: any): Promise<PipelineHandler<unknown, unknown, TOptions, TState> | null> {
-		// Check for inline pipeline function
-		if (typeof hookDef.pipeline === "function") {
-			return hookDef.pipeline;
-		}
-
-		// Check for inline handler function (raw handler)
+		// Check for inline handler function
 		if (typeof hookDef.handler === "function") {
-			// Wrap raw handler in pipeline interface
-			// Raw handlers call event.end() directly, so we need to adapt
-			throw new Error(
-				"Raw handlers (handler property) are not supported in runHook(). " +
-					"Use pipeline handlers or test raw handlers separately.",
-			);
+			return hookDef.handler;
 		}
 
 		// Check for file path
-		if (typeof hookDef.pipeline === "string") {
-			return this.importHandler(hookDef.pipeline);
-		}
-
 		if (typeof hookDef.handler === "string") {
-			throw new Error(
-				"Raw handler file paths (handler property) are not supported in runHook(). " +
-					"Use pipeline handlers or test raw handlers separately.",
-			);
+			return this.importHandler(hookDef.handler);
 		}
 
 		return null;
@@ -2004,14 +1987,14 @@ export class PluginTester<
 	private async resolveCommandHandler(
 		commandDef: CommandDefinition,
 	): Promise<CommandHandler<unknown, TOptions, TState> | null> {
-		// Check for inline pipeline function
-		if (typeof commandDef.pipeline === "function") {
-			return commandDef.pipeline as CommandHandler<unknown, TOptions, TState>;
+		// Check for inline handler function
+		if (typeof commandDef.handler === "function") {
+			return commandDef.handler as CommandHandler<unknown, TOptions, TState>;
 		}
 
 		// Check for file path
-		if (typeof commandDef.pipeline === "string") {
-			return this.importCommandHandler(commandDef.pipeline);
+		if (typeof commandDef.handler === "string") {
+			return this.importCommandHandler(commandDef.handler);
 		}
 
 		return null;

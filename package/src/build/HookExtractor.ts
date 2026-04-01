@@ -51,18 +51,15 @@ export function extractPipelineHookEntries(config: {
 			// At this point, hook must have a name (passthrough entries are skipped above)
 			if (!hook.name) continue;
 
-			// Check if this is a file-based hook (pipeline/handler is a string path)
-			const pipelineValue = hook.pipeline;
+			// Check if this is a file-based hook (handler is a string path)
 			const handlerValue = hook.handler;
-			const isFileBased =
-				(typeof pipelineValue === "string" && pipelineValue.length > 0) ||
-				(typeof handlerValue === "string" && handlerValue.length > 0);
-			const filePath = isFileBased ? (pipelineValue as string) || (handlerValue as string) : undefined;
+			const isFileBased = typeof handlerValue === "string" && handlerValue.length > 0;
+			const filePath = isFileBased ? (handlerValue as string) : undefined;
 
 			entries.push({
 				hookType: hookType as PipelineHookEventType,
 				name: hook.name,
-				isPipeline: "pipeline" in hook && hook.pipeline !== undefined,
+				isPipeline: "handler" in hook && hook.handler !== undefined,
 				tools: hook.tools,
 				description: hook.description,
 				filePath,

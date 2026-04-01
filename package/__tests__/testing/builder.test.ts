@@ -40,7 +40,7 @@ class TestPluginConfig extends PluginConfig.extend<TestPluginConfig>("TestPlugin
 				path: Schema.optionalWith(Schema.String, { default: () => "." }),
 				fix: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 			}),
-			pipeline: async ({
+			handler: async ({
 				args,
 				options: _options,
 				state,
@@ -61,7 +61,7 @@ class TestPluginConfig extends PluginConfig.extend<TestPluginConfig>("TestPlugin
 				pattern: Schema.optional(Schema.String),
 				verbose: Schema.optionalWith(Schema.Boolean, { default: () => false }),
 			}),
-			pipeline: async ({ args }: { args: { pattern?: string; verbose: boolean } }) => {
+			handler: async ({ args }: { args: { pattern?: string; verbose: boolean } }) => {
 				if (args.pattern === "failing") {
 					return {
 						exitCode: 1,
@@ -79,7 +79,7 @@ class TestPluginConfig extends PluginConfig.extend<TestPluginConfig>("TestPlugin
 		status: {
 			description: "Show status",
 			args: Schema.Struct({}),
-			pipeline: async ({ state }: { state: { projectDir: string } }) => {
+			handler: async ({ state }: { state: { projectDir: string } }) => {
 				return {
 					exitCode: 0,
 					output: `# Status\n\nProject: ${state.projectDir}`,
@@ -94,7 +94,7 @@ const testPlugin = new ClaudePlugin(TestPluginConfig, {
 		{
 			name: "security",
 			tools: ["Bash"],
-			pipeline: async ({ input, options: _options, state: _state }) => {
+			handler: async ({ input, options: _options, state: _state }) => {
 				const toolInput = input.tool_input as { command?: string };
 				const command = toolInput.command ?? "";
 
@@ -119,13 +119,13 @@ const testPlugin = new ClaudePlugin(TestPluginConfig, {
 		{
 			name: "file-path-hook",
 			tools: ["Bash"],
-			pipeline: "./hooks/security.hook.ts",
+			handler: "./hooks/security.hook.ts",
 		},
 	],
 	SessionStart: [
 		{
 			name: "context",
-			pipeline: async ({ input: _input, options: _options, state }) => {
+			handler: async ({ input: _input, options: _options, state }) => {
 				return {
 					status: "executed" as const,
 					action: "context" as const,
@@ -139,7 +139,7 @@ const testPlugin = new ClaudePlugin(TestPluginConfig, {
 		{
 			name: "post-bash",
 			tools: ["Bash"],
-			pipeline: async ({ input: _input }) => {
+			handler: async ({ input: _input }) => {
 				return {
 					status: "executed" as const,
 					action: "context" as const,
@@ -458,7 +458,7 @@ describe("PluginTester", () => {
 				PreToolUse: [
 					{
 						name: "check-options",
-						pipeline: async ({ options }) => {
+						handler: async ({ options }) => {
 							receivedOptions = options;
 							return {
 								status: "executed" as const,
@@ -503,7 +503,7 @@ describe("PluginTester", () => {
 				SessionStart: [
 					{
 						name: "check-state",
-						pipeline: async ({ state }) => {
+						handler: async ({ state }) => {
 							receivedState = state;
 							return {
 								status: "executed" as const,

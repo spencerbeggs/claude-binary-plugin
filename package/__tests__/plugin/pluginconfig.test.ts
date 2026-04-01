@@ -75,7 +75,7 @@ describe("ClaudePlugin", () => {
 			PreToolUse: [
 				{
 					name: "guard",
-					pipeline: () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
+					handler: () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
 				},
 			],
 		};

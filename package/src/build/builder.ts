@@ -31,7 +31,7 @@
  * const plugin = ClaudeBinaryPlugin.create({
  *   prefix: "MY_PLUGIN",
  *   options: z.object({}),
- *   hooks: { SessionStart: [{ name: "init", pipeline: "./hooks/init.ts" }] },
+ *   hooks: { SessionStart: [{ name: "init", handler: "./hooks/init.ts" }] },
  * });
  *
  * const result = await PluginBuilder.fromConfig(plugin, { rootDir: "." });
@@ -224,7 +224,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
-        pipeline: ${fileHookImport},
+        handler: ${fileHookImport},
         stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
@@ -235,13 +235,13 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 					// Inline pipeline hook
 					hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
-      if (!hookDef || !("pipeline" in hookDef)) throw new Error("Hook not found: ${hook.name}");
+      if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
-        pipeline: hookDef.pipeline,
+        handler: hookDef.handler,
         stateClass: EnvClass,
         tools: ${toolsArg},
         optionsSchema: pluginConfig.options,
@@ -454,7 +454,6 @@ export interface ExtractableHook {
 	name?: string | undefined;
 	tools?: string[] | undefined;
 	description?: string | undefined;
-	pipeline?: unknown;
 	handler?: unknown;
 	/** Passthrough hooks array (for raw hooks.json entries) */
 	hooks?: Array<{ type: "command"; command: string }> | undefined;
@@ -507,18 +506,15 @@ function extractPipelineHookEntries(config: {
 			// At this point, hook must have a name (passthrough entries are skipped above)
 			if (!hook.name) continue;
 
-			// Check if this is a file-based hook (pipeline/handler is a string path)
-			const pipelineValue = hook.pipeline;
+			// Check if this is a file-based hook (handler is a string path)
 			const handlerValue = hook.handler;
-			const isFileBased =
-				(typeof pipelineValue === "string" && pipelineValue.length > 0) ||
-				(typeof handlerValue === "string" && handlerValue.length > 0);
-			const filePath = isFileBased ? (pipelineValue as string) || (handlerValue as string) : undefined;
+			const isFileBased = typeof handlerValue === "string" && handlerValue.length > 0;
+			const filePath = isFileBased ? (handlerValue as string) : undefined;
 
 			entries.push({
 				hookType: hookType as PipelineHookEventType,
 				name: hook.name,
-				isPipeline: "pipeline" in hook && hook.pipeline !== undefined,
+				isPipeline: "handler" in hook && hook.handler !== undefined,
 				tools: hook.tools,
 				description: hook.description,
 				filePath,
@@ -536,7 +532,7 @@ function extractPipelineHookEntries(config: {
 export interface ExtractableCommand {
 	description?: string;
 	args?: unknown;
-	pipeline: string;
+	handler: string;
 }
 
 /**
@@ -557,7 +553,7 @@ function extractPipelineCommandEntries(config: {
 		entries.push({
 			name,
 			description: cmd.description,
-			filePath: cmd.pipeline,
+			filePath: cmd.handler,
 			hasArgsSchema: cmd.args !== undefined,
 		});
 	}

@@ -758,7 +758,7 @@ export class Pipeline {
 	static isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
 		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
 	): hook is HandlerHookDefinition<TInput, TOutput, TOptions> {
-		return "pipeline" in hook && hook.pipeline !== undefined;
+		return "handler" in hook && hook.handler !== undefined;
 	}
 
 	/**

@@ -4,8 +4,8 @@ import sessionStartHandler from "./hooks/session-start.js";
 import TestConfig from "./plugin.config.js";
 
 const plugin = new ClaudePlugin(TestConfig, {
-	SessionStart: [{ name: "init", pipeline: sessionStartHandler }],
-	PreToolUse: [{ name: "guard", pipeline: preToolUseHandler }],
+	SessionStart: [{ name: "init", handler: sessionStartHandler }],
+	PreToolUse: [{ name: "guard", handler: preToolUseHandler }],
 });
 
 const result = await plugin.build({

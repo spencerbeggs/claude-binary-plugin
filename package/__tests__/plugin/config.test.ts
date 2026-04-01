@@ -220,7 +220,7 @@ describe("ClaudePlugin (basic)", () => {
 			SessionStart: [
 				{
 					name: "test-context",
-					pipeline: async (): Promise<SessionStartPipelineOutput> => {
+					handler: async (): Promise<SessionStartPipelineOutput> => {
 						return {
 							status: "executed",
 							action: "context",
@@ -248,7 +248,7 @@ describe("ClaudePlugin (basic)", () => {
 				{
 					name: "allowlist",
 					tools: ["Bash"],
-					pipeline: (): PreToolUsePipelineOutput => ({
+					handler: (): PreToolUsePipelineOutput => ({
 						status: "executed",
 						action: "allow",
 						summary: "allowed: allowlist",
@@ -257,7 +257,7 @@ describe("ClaudePlugin (basic)", () => {
 				{
 					name: "security",
 					tools: ["Write", "Edit"],
-					pipeline: (): PreToolUsePipelineOutput => ({
+					handler: (): PreToolUsePipelineOutput => ({
 						status: "executed",
 						action: "ask",
 						summary: "ask: security check",
@@ -309,7 +309,7 @@ describe("ClaudePlugin (basic)", () => {
 			SessionStart: [
 				{
 					name: "typed-hook",
-					pipeline: (): SessionStartPipelineOutput => {
+					handler: (): SessionStartPipelineOutput => {
 						return {
 							status: "executed",
 							action: "context",
@@ -322,7 +322,7 @@ describe("ClaudePlugin (basic)", () => {
 			PreToolUse: [
 				{
 					name: "typed-pretool",
-					pipeline: (): PreToolUsePipelineOutput => {
+					handler: (): PreToolUsePipelineOutput => {
 						return {
 							status: "executed",
 							action: "allow",
@@ -361,7 +361,7 @@ describe("ClaudePlugin (advanced)", () => {
 			SessionStart: [
 				{
 					name: "context",
-					pipeline: async ({ state }) => ({
+					handler: async ({ state }) => ({
 						status: "executed" as const,
 						action: "context" as const,
 						summary: "provided context",
@@ -387,11 +387,11 @@ describe("ClaudePlugin (advanced)", () => {
 						_positionals: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
 						fix: Schema.optionalWith(Schema.Boolean, { default: () => true }),
 					}),
-					pipeline: "./commands/lint.cmd.ts",
+					handler: "./commands/lint.cmd.ts",
 				},
 				test: {
 					description: "Run tests",
-					pipeline: "./commands/test.cmd.ts",
+					handler: "./commands/test.cmd.ts",
 				},
 			};
 		}
@@ -413,7 +413,7 @@ describe("ClaudePlugin (advanced)", () => {
 			SessionStart: [
 				{
 					name: "init",
-					pipeline: async () => ({
+					handler: async () => ({
 						status: "executed" as const,
 						action: "context" as const,
 						summary: "ok",
@@ -424,38 +424,38 @@ describe("ClaudePlugin (advanced)", () => {
 			SessionEnd: [
 				{
 					name: "cleanup",
-					pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+					handler: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
 				},
 			],
 			PreToolUse: [
 				{
 					name: "filter",
 					tools: ["Bash"],
-					pipeline: async () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
+					handler: async () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" }),
 				},
 			],
 			PostToolUse: [
 				{
 					name: "reporter",
-					pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+					handler: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
 				},
 			],
 			Stop: [
 				{
 					name: "guard",
-					pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
+					handler: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
 				},
 			],
 			SubagentStop: [
 				{
 					name: "sub-guard",
-					pipeline: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
+					handler: async () => ({ status: "executed" as const, action: "continue" as const, summary: "ok" }),
 				},
 			],
 			UserPromptSubmit: [
 				{
 					name: "prompt",
-					pipeline: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
+					handler: async () => ({ status: "executed" as const, action: "none" as const, summary: "ok" }),
 				},
 			],
 		});
@@ -480,7 +480,7 @@ describe("ClaudePlugin (advanced)", () => {
 			PreToolUse: [
 				{
 					name: "compiled",
-					pipeline: async () => ({
+					handler: async () => ({
 						status: "executed" as const,
 						action: "allow" as const,
 						summary: "ok",
@@ -507,14 +507,14 @@ describe("ClaudePlugin (advanced)", () => {
 			SessionStart: [
 				{
 					name: "context",
-					pipeline: "./hooks/context.hook.ts",
+					handler: "./hooks/context.hook.ts",
 				},
 			],
 			PreToolUse: [
 				{
 					name: "security",
 					tools: ["Bash", "Write"],
-					pipeline: "./hooks/security.hook.ts",
+					handler: "./hooks/security.hook.ts",
 				},
 			],
 		});
@@ -522,8 +522,8 @@ describe("ClaudePlugin (advanced)", () => {
 		const sessionHook = plugin.hooks.SessionStart?.[0];
 		expect(sessionHook).toBeDefined();
 		expect(sessionHook?.name).toBe("context");
-		// File path stored as pipeline string
-		expect(typeof sessionHook?.pipeline).toBe("string");
+		// File path stored as handler string
+		expect(typeof sessionHook?.handler).toBe("string");
 
 		const preToolHook = plugin.hooks.PreToolUse?.[0];
 		expect(preToolHook).toBeDefined();
@@ -545,7 +545,7 @@ describe("ClaudePlugin (advanced)", () => {
 			SessionStart: [
 				{
 					name: "context",
-					pipeline: async () => ({
+					handler: async () => ({
 						status: "executed" as const,
 						action: "context" as const,
 						summary: "ok",
@@ -573,7 +573,7 @@ describe("ClaudePlugin (advanced)", () => {
 				status: {
 					description: "Show status",
 					args: Schema.Struct({}),
-					pipeline: async ({ state }: { state: { projectDir: string } }) => ({
+					handler: async ({ state }: { state: { projectDir: string } }) => ({
 						exitCode: 0,
 						output: `Project: ${state.projectDir}`,
 					}),
@@ -583,7 +583,7 @@ describe("ClaudePlugin (advanced)", () => {
 
 		expect(InlineCmdConfig.commands?.status).toBeDefined();
 		expect(InlineCmdConfig.commands?.status.description).toBe("Show status");
-		expect(typeof InlineCmdConfig.commands?.status.pipeline).toBe("function");
+		expect(typeof InlineCmdConfig.commands?.status.handler).toBe("function");
 	});
 
 	test("with empty hooks is valid", () => {
@@ -618,39 +618,33 @@ describe("ClaudePlugin (advanced)", () => {
 
 describe("Helper functions", () => {
 	test("Pipeline.isPipelineHook identifies pipeline hooks", () => {
-		const pipelineHook = {
+		const hookWithHandler = {
 			name: "test",
-			pipeline: () => ({
+			handler: () => ({
 				status: "executed" as const,
 				action: "context" as const,
 				summary: "test",
 			}),
 		};
-		const rawHook = {
+		const hookWithoutHandler = {
 			name: "test",
-			handler: () => {},
 		};
 
-		expect(Pipeline.isPipelineHook(pipelineHook)).toBe(true);
-		expect(Pipeline.isPipelineHook(rawHook)).toBe(false);
+		expect(Pipeline.isPipelineHook(hookWithHandler)).toBe(true);
+		expect(Pipeline.isPipelineHook(hookWithoutHandler as never)).toBe(false);
 	});
 
 	test("Pipeline.isRawHook identifies raw hooks", () => {
-		const pipelineHook = {
-			name: "test",
-			pipeline: () => ({
-				status: "executed" as const,
-				action: "context" as const,
-				summary: "test",
-			}),
-		};
-		const rawHook = {
+		const hookWithHandler = {
 			name: "test",
 			handler: () => {},
 		};
+		const hookWithoutHandler = {
+			name: "test",
+		};
 
-		expect(Pipeline.isRawHook(rawHook)).toBe(true);
-		expect(Pipeline.isRawHook(pipelineHook)).toBe(false);
+		expect(Pipeline.isRawHook(hookWithHandler)).toBe(true);
+		expect(Pipeline.isRawHook(hookWithoutHandler as never)).toBe(false);
 	});
 });
 
@@ -711,7 +705,7 @@ describe("ClaudePlugin.build()", () => {
 			SessionStart: [
 				{
 					name: "init",
-					pipeline: async () => ({
+					handler: async () => ({
 						status: "executed" as const,
 						action: "context" as const,
 						summary: "test",
@@ -749,7 +743,7 @@ describe("ClaudePlugin.config", () => {
 			SessionStart: [
 				{
 					name: "ctx",
-					pipeline: async () => ({
+					handler: async () => ({
 						status: "executed" as const,
 						action: "context" as const,
 						summary: "ctx",
@@ -835,7 +829,7 @@ describe("PluginConfig.extend() and ClaudePlugin (extended)", () => {
 		}
 		const handler = () => ({ status: "executed" as const, action: "allow" as const, summary: "ok" });
 		const plugin = new ClaudePlugin(MyConfig, {
-			PreToolUse: [{ name: "guard", pipeline: handler }],
+			PreToolUse: [{ name: "guard", handler: handler }],
 		});
 		expect(plugin.hooks.PreToolUse).toHaveLength(1);
 	});

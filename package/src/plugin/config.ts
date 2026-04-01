@@ -481,8 +481,7 @@ export interface ToolFilter {
 export interface HandlerHookDefinition<TInput, TOutput, TOptions, TState = Record<string, unknown>>
 	extends HookDefinitionBase {
 	/** Pure transformation function */
-	pipeline: PipelineHandler<TInput, TOutput, TOptions, TState>;
-	handler?: never;
+	handler: PipelineHandler<TInput, TOutput, TOptions, TState>;
 }
 
 /**
@@ -495,15 +494,14 @@ export interface HandlerHookDefinition<TInput, TOutput, TOptions, TState = Recor
  * {
  *   name: "docs-access",
  *   tools: ["WebFetch"],
- *   pipeline: "./hooks/docs-access.hook.ts"
+ *   handler: "./hooks/docs-access.hook.ts"
  * }
  * ```
  * @public
  */
 export interface HandlerFileHookDefinition extends HookDefinitionBase {
 	/** Relative path to file exporting default pipeline function */
-	pipeline: string;
-	handler?: never;
+	handler: string;
 }
 
 /**
@@ -513,7 +511,6 @@ export interface HandlerFileHookDefinition extends HookDefinitionBase {
 export interface RawHookDefinition<TEvent, TOptions, TState = Record<string, string>> extends HookDefinitionBase {
 	/** Raw event handler with full control */
 	handler: RawHandler<TEvent, TOptions, TState>;
-	pipeline?: never;
 }
 
 /**
@@ -534,7 +531,6 @@ export interface RawHookDefinition<TEvent, TOptions, TState = Record<string, str
 export interface RawFileHookDefinition extends HookDefinitionBase {
 	/** Relative path to file exporting default handler function */
 	handler: string;
-	pipeline?: never;
 }
 
 /**
@@ -558,7 +554,6 @@ export interface PassthroughHookEntry {
 	hooks: Array<{ type: "command"; command: string }>;
 	/** Mark that this is not a compiled hook */
 	name?: never;
-	pipeline?: never;
 	handler?: never;
 }
 
@@ -738,7 +733,7 @@ export interface HooksMap<TOptions, TState = Record<string, unknown>> {
  *       path: Schema.optionalWith(Schema.String, { default: () => "." }),
  *       fix: Schema.optionalWith(Schema.Boolean, { default: () => true }),
  *     }),
- *     pipeline: "./commands/lint.cmd.ts",
+ *     handler: "./commands/lint.cmd.ts",
  *   },
  * }
  * ```
@@ -750,7 +745,7 @@ export interface CommandFileDefinition<TArgs extends Schema.Schema.Any = Schema.
 	/** Effect Schema for validating CLI arguments */
 	args?: TArgs;
 	/** Path to handler file (relative to plugin root) */
-	pipeline: string;
+	handler: string;
 }
 
 /**
@@ -766,7 +761,7 @@ export interface CommandFileDefinition<TArgs extends Schema.Schema.Any = Schema.
  *   status: {
  *     description: "Show project status",
  *     args: Schema.Struct({}),
- *     pipeline: async ({ state }) => ({
+ *     handler: async ({ state }) => ({
  *       exitCode: 0,
  *       output: `# Status\n\nProject: ${state.projectDir}`,
  *     }),
@@ -785,7 +780,7 @@ export interface CommandInlineDefinition<
 	/** Effect Schema for validating CLI arguments */
 	args?: TArgs;
 	/** Inline handler function */
-	pipeline: CommandHandler<Schema.Schema.Type<TArgs>, TOptions, TState>;
+	handler: CommandHandler<Schema.Schema.Type<TArgs>, TOptions, TState>;
 }
 
 /**
@@ -800,7 +795,7 @@ export interface CommandInlineDefinition<
  * {
  *   description: "Fix lint errors",
  *   args: Schema.Struct({ path: Schema.optionalWith(Schema.String, { default: () => "." }) }),
- *   pipeline: "./commands/lint.cmd.ts",
+ *   handler: "./commands/lint.cmd.ts",
  * }
  * ```
  *
@@ -809,7 +804,7 @@ export interface CommandInlineDefinition<
  * {
  *   description: "Show status",
  *   args: Schema.Struct({}),
- *   pipeline: async ({ state }) => ({
+ *   handler: async ({ state }) => ({
  *     exitCode: 0,
  *     output: `Project: ${state.projectDir}`,
  *   }),
@@ -887,7 +882,7 @@ export interface CommandDefinitionBase {
 	description: string;
 	args?: Schema.Schema.Any;
 	/** File path (string) or inline handler function */
-	pipeline: string | CommandHandlerFn;
+	handler: string | CommandHandlerFn;
 }
 
 /**
@@ -1054,7 +1049,7 @@ export interface PluginConfigOptions<
 	 *   lint: {
 	 *     description: "Fix lint errors",
 	 *     args: Schema.Struct({ path: Schema.optionalWith(Schema.String, { default: () => "." }) }),
-	 *     pipeline: "./commands/lint.cmd.ts",
+	 *     handler: "./commands/lint.cmd.ts",
 	 *   },
 	 * }
 	 * ```
