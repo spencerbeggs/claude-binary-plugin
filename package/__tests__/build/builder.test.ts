@@ -664,11 +664,11 @@ describe("generatePipelinePluginEntrypoint", () => {
 		// Check that tools filter is included
 		expect(entrypoint).toContain('["Bash", "Write"]');
 
-		// Check for PipelineRuntime.run call
-		expect(entrypoint).toContain("PipelineRuntime.run(");
+		// Check for PipelineRuntimeService usage
+		expect(entrypoint).toContain("PipelineRuntimeService");
 	});
 
-	test("generates valid entrypoint with non-pipeline hooks using PipelineRuntime.run", () => {
+	test("generates valid entrypoint with non-pipeline hooks using PipelineRuntimeService", () => {
 		const hooks: PipelineHookEntry[] = [
 			{
 				hookType: "PreToolUse",
@@ -687,8 +687,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
-		// All hooks now use PipelineRuntime.run
-		expect(entrypoint).toContain("PipelineRuntime.run(");
+		// All hooks now use PipelineRuntimeService
+		expect(entrypoint).toContain("PipelineRuntimeService");
 		expect(entrypoint).toContain('case "PreToolUse/raw-handler"');
 	});
 
@@ -1290,8 +1290,8 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
 		expect(entrypoint).toContain('case "status"');
-		// Should use Commands.emptySchema for commands without args
-		expect(entrypoint).toContain("Commands.emptySchema");
+		// Should use Schema.Struct({}) for commands without args
+		expect(entrypoint).toContain("Schema.Struct({})");
 	});
 
 	test("generates entrypoint with multiple hooks of same type", () => {

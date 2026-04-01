@@ -50,3 +50,4 @@ plugin/*.plugin
 plugin/.plugin-entrypoint.ts
 plugin/hooks/hooks.json
 plugin/scripts/
+docs/superpowers

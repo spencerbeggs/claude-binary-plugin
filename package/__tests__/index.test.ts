@@ -87,9 +87,10 @@ describe("Public API exports", () => {
 		expect(mod.PluginEnv).toBeDefined();
 	});
 
-	test("exports PipelineRuntime", async () => {
+	test("exports PipelineRuntimeService and PipelineRuntimeServiceLive", async () => {
 		const mod = await import("../src/index.js");
-		expect(mod.PipelineRuntime).toBeDefined();
+		expect(mod.PipelineRuntimeService).toBeDefined();
+		expect(mod.PipelineRuntimeServiceLive).toBeDefined();
 	});
 
 	test("exports OtelConfig", async () => {
