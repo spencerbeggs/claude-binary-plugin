@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { OtelConfigLive } from "../../src/layers/OtelConfigLive.js";
 import { makeOtelConfigTest } from "../../src/layers/OtelConfigTest.js";
+import { makePlatformInfoTest } from "../../src/layers/PlatformInfoTest.js";
 import { OtelConfig, OtelConfigData } from "../../src/services/OtelConfig.js";
 
 describe("OtelConfigData", () => {
@@ -19,13 +20,19 @@ describe("OtelConfigData", () => {
 		expect(data.protocol).toBeUndefined();
 		expect(data.headers).toBeUndefined();
 		expect(data.socketPath).toBeUndefined();
+		expect(data.tracesExporter).toBeUndefined();
+		expect(data.metricsExporter).toBeUndefined();
+		expect(data.logsExporter).toBeUndefined();
+		expect(data.resourceAttributes).toBeUndefined();
+		expect(data.deploymentEnv).toBeUndefined();
 	});
 });
 
 describe("OtelConfigLive", () => {
 	test("reads enabled from env", async () => {
+		const layer = OtelConfigLive.pipe(Layer.provide(makePlatformInfoTest()));
 		const program = Effect.flatMap(OtelConfig, (config) => Effect.succeed(config.enabled));
-		const result = await Effect.runPromise(program.pipe(Effect.provide(OtelConfigLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(layer)));
 		expect(typeof result).toBe("boolean");
 	});
 });
