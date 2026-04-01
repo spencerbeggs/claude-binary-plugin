@@ -103,6 +103,7 @@ export { TelemetryLive, withErrorTelemetry } from "./layers/TelemetryLive.js";
 export { makeTelemetryTest } from "./layers/TelemetryTest.js";
 export { EnvLoader } from "./services/EnvLoader.js";
 export { EnvPersister } from "./services/EnvPersister.js";
+export { type PipelineRunConfig, PipelineRuntimeService, type RunResult } from "./services/PipelineRuntimeService.js";
 export { SchemaValidator as SchemaValidatorService } from "./services/SchemaValidator.js";
 export { SessionStore } from "./services/SessionStore.js";
 export { ShellExecutor as ShellExecutorService, ShellResult } from "./services/ShellExecutor.js";
