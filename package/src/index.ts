@@ -367,8 +367,6 @@ export { OtelConfig, OtelConfigData } from "./services/OtelConfig.js";
 
 // Pipeline runtime types
 export type { HookEventType, IODependencies, PipelineConfig } from "./layers/PipelineRuntime.js";
-// Pipeline runtime execution
-export { PipelineRuntime } from "./layers/PipelineRuntime.js";
 export type {
 	BaseState,
 	CmdContext,
