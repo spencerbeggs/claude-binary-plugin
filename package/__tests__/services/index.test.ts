@@ -228,7 +228,7 @@ describe("SessionStore", () => {
 
 		const program = Effect.gen(function* () {
 			const ss = yield* SessionStore;
-			yield* ss.register(sessionId, "/tmp/sessions/abc");
+			yield* ss.register({ sessionId, projectDir: "/tmp/project", sessionEnvDir: "/tmp/sessions/abc" });
 			return yield* ss.lookup(sessionId);
 		});
 

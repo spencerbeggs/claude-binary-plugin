@@ -118,9 +118,9 @@ export { FatalErrorData, HookExecutionData, Telemetry } from "./services/Telemet
 export { PluginEnvLive } from "./layers/PluginEnvLive.js";
 // Effect Logger layers
 export { makePluginLoggerLive, resolveLogLevel } from "./layers/PluginLoggerLive.js";
-export type { SessionRecord, SessionRegistration } from "./layers/SessionRegistry.js";
+export type { SessionRegistration } from "./layers/SessionRegistry.js";
 // Session registry for persistent session lookups
-export { SessionRegistry } from "./layers/SessionRegistry.js";
+export { closeDb, getByProjectDir, getBySessionId, registerSession } from "./layers/SessionRegistry.js";
 // I/O types (non-serializable, live in plugin/config)
 export type { HookEventOptions, IO } from "./plugin/config.js";
 // Branded types for type-safe identifiers
@@ -189,6 +189,7 @@ export type {
 } from "./services/PluginEnv.js";
 export { EnvFileLoadError, PluginEnv, formatValidationError } from "./services/PluginEnv.js";
 export { PluginEnvService } from "./services/PluginEnvService.js";
+export type { SessionRecord } from "./services/SessionStore.js";
 // Type utilities re-exported from type-fest for user convenience
 export type { PartialDeep, ReadonlyDeep, RequiredDeep, Tagged, WritableDeep } from "./types/common.js";
 // JSON type utilities (re-exported from type-fest)
