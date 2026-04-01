@@ -220,7 +220,8 @@ function generatePipelinePluginEntrypoint(options: GeneratePluginEntrypointOptio
           handler: pluginConfig.commands["${c.name}"].handler,
           rawArgs: cmdArgs,
           argsSchema: ${argsSchemaAccess},
-          stateClass: EnvClass,
+          prefix: pluginConfig.prefix,
+          optionsSchema: pluginConfig.options,
         });
       });
       break;

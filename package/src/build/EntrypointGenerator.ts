@@ -75,7 +75,8 @@ export function generatePipelinePluginEntrypoint(options: GeneratePluginEntrypoi
           handler: configInstance.commands["${c.name}"].handler,
           rawArgs: cmdArgs,
           argsSchema: ${argsSchemaAccess},
-          stateClass: EnvClass,
+          prefix: configInstance.prefix,
+          optionsSchema: PluginConfigClass.options,
         });
       });
       break;

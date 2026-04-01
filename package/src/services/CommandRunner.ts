@@ -27,9 +27,11 @@ export interface RunCommandOptions {
 	/** Effect Schema for validating arguments */
 	// biome-ignore lint/suspicious/noExplicitAny: Schema type varies by command
 	readonly argsSchema?: Schema.Schema<any, any, never>;
-	/** State class constructor for loading env vars */
-	// biome-ignore lint/suspicious/noExplicitAny: State class varies by plugin
-	readonly stateClass: new () => any;
+	/** Plugin prefix for env var namespacing */
+	readonly prefix?: string;
+	/** Options schema for validating env vars */
+	// biome-ignore lint/suspicious/noExplicitAny: Schema type varies by plugin
+	readonly optionsSchema?: Schema.Schema<any, any, never>;
 }
 
 /**

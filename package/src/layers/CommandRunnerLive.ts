@@ -4,7 +4,7 @@ import { CommandParseError } from "../errors/CommandParseError.js";
 import type { BaseState } from "../plugin/config.js";
 import type { CommandOutput } from "../services/CommandRunner.js";
 import { CommandRunner } from "../services/CommandRunner.js";
-import { PluginEnv } from "../services/PluginEnv.js";
+import { getByProjectDir, getBySessionId } from "./SessionRegistry.js";
 
 /**
  * Parse a string value from CLI args, handling booleans and numbers.
@@ -65,7 +65,7 @@ function parseRaw(rawArgs: string[]): Record<string, unknown> {
 function findSessionEnvDir(): string | undefined {
 	// First try via session ID in SQLite registry
 	if (Bun.env.CLAUDE_SESSION_ID) {
-		const dir = PluginEnv.getSessionEnvDir(Bun.env.CLAUDE_SESSION_ID);
+		const dir = getBySessionId(Bun.env.CLAUDE_SESSION_ID);
 		if (dir) return dir;
 	}
 
@@ -83,19 +83,17 @@ function findSessionEnvDir(): string | undefined {
 
 	// Try project directory in SQLite registry (saved during SessionStart)
 	const projectDir = process.cwd();
-	const dir = PluginEnv.getProjectSessionEnvDir(projectDir);
+	const dir = getByProjectDir(projectDir);
 	if (dir) return dir;
 
 	return undefined;
 }
 
 /**
- * Create the base state object from a PluginEnv instance.
+ * Create the base state object from environment variables.
  * @internal
  */
-// biome-ignore lint/suspicious/noExplicitAny: Schema invariance requires `any` for generic PluginEnv instances
-function createBaseState(stateInstance: PluginEnv<any>): BaseState {
-	const prefix = stateInstance.getPrefix() ?? "";
+function createBaseState(prefix: string): BaseState {
 	return {
 		projectDir: Bun.env[`${prefix}_PROJECT_DIR`] ?? Bun.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
 		pluginDir: Bun.env[`${prefix}_PLUGIN_DIR`] ?? Bun.env.CLAUDE_PLUGIN_ROOT ?? "",
@@ -104,24 +102,17 @@ function createBaseState(stateInstance: PluginEnv<any>): BaseState {
 }
 
 /**
- * Extract persisted state from the environment.
- * Reads `PREFIX_PLUGIN_STATE` and parses it as JSON.
+ * Extract persisted state from environment variables.
+ * Reads `PREFIX_PLUGIN_STATE` and parses it as base64-encoded JSON.
  * @internal
  */
-// biome-ignore lint/suspicious/noExplicitAny: Schema invariance requires `any` for generic PluginEnv instances
-function extractPersistedState(stateInstance: PluginEnv<any>): Record<string, unknown> {
-	const prefix = stateInstance.getPrefix();
-	if (!prefix) {
-		return {};
-	}
+function extractPersistedState(prefix: string): Record<string, unknown> {
+	if (!prefix) return {};
 
 	const stateJson = Bun.env[`${prefix}_PLUGIN_STATE`];
-	if (!stateJson) {
-		return {};
-	}
+	if (!stateJson) return {};
 
 	try {
-		// Decode from base64 first, then parse JSON
 		const jsonStr = Buffer.from(stateJson, "base64").toString("utf8");
 		const state = JSON.parse(jsonStr);
 		return typeof state === "object" && state !== null ? state : {};
@@ -184,7 +175,7 @@ export const CommandRunnerLive = Layer.succeed(
 	CommandRunner.of({
 		run: (options) =>
 			Effect.gen(function* () {
-				const { commandName, handler, rawArgs, argsSchema, stateClass } = options;
+				const { commandName, handler, rawArgs, argsSchema } = options;
 
 				// Parse args
 				const parsed = parseRaw(rawArgs);
@@ -217,18 +208,38 @@ export const CommandRunnerLive = Layer.succeed(
 					);
 				}
 
-				// Load session files
-				yield* Effect.tryPromise({
-					try: () => PluginEnv.loadAllHookFiles(sessionEnvDir),
+				// Load session hook files into Bun.env
+				yield* Effect.try({
+					try: () => {
+						const glob = new Bun.Glob("*hook*.sh");
+						for (const file of glob.scanSync({ cwd: sessionEnvDir, absolute: true })) {
+							const content = Bun.file(file).textSync?.() ?? "";
+							for (const line of content.split("\n")) {
+								const match = line.match(/^export\s+(\w+)=(.*)$/);
+								if (match?.[1] && match[2] !== undefined) {
+									const raw = match[2].trim();
+									const value =
+										(raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))
+											? raw.slice(1, -1)
+											: raw;
+									Bun.env[match[1]] = value;
+								}
+							}
+						}
+					},
 					catch: (error): CommandParseError =>
 						new CommandParseError({ commandName, message: `Failed to load session files: ${error}` }),
 				});
 
-				// Create state instance after loading session files (constructor reads from Bun.env)
-				const stateInstance = new stateClass();
-				const validatedOptions = stateInstance.vars;
-				const baseState = createBaseState(stateInstance);
-				const persistedState = extractPersistedState(stateInstance);
+				// Build state from environment (session files already loaded above)
+				const prefix = options.prefix ?? "";
+				const validatedOptions = options.optionsSchema
+					? Schema.decodeUnknownSync(options.optionsSchema)(
+							Object.fromEntries(Object.keys((options.optionsSchema as any).fields ?? {}).map((k) => [k, Bun.env[k]])),
+						)
+					: {};
+				const baseState = createBaseState(prefix);
+				const persistedState = extractPersistedState(prefix);
 				const pluginState = { ...baseState, ...persistedState };
 
 				// Call handler
