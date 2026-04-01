@@ -92,6 +92,7 @@ export { EnvLoaderTest } from "./layers/EnvLoaderTest.js";
 export { EnvPersisterLive } from "./layers/EnvPersisterLive.js";
 export { makeEnvPersisterTest } from "./layers/EnvPersisterTest.js";
 export { PipelineLive } from "./layers/PipelineLive.js";
+export { PipelineRuntimeServiceLive } from "./layers/PipelineRuntimeServiceLive.js";
 export { SchemaValidatorLive } from "./layers/SchemaValidatorLive.js";
 export { SessionStoreLive } from "./layers/SessionStoreLive.js";
 export { makeSessionStoreTest } from "./layers/SessionStoreTest.js";
