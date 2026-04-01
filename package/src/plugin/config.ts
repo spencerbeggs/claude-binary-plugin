@@ -215,7 +215,7 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
 ) => TOutput | AnyOutcome | Promise<TOutput | AnyOutcome> | Effect.Effect<TOutput | AnyOutcome>;
 
 // =============================================================================
-// TYPED HANDLER HELPERS - For file-based hooks
+// TYPED HANDLER HELPERS
 // =============================================================================
 
 /**
@@ -223,15 +223,10 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
  *
  * @example
  * ```ts
- * import type { Pipeline } from "../plugin.js";
+ * import type { SessionStartHandler } from "claude-binary-plugin";
  *
- * const handler: Pipeline["SessionStart"] = ({ input, options, state }) => {
- *   return {
- *     status: "executed",
- *     action: "context",
- *     summary: "added project context",
- *     claudeContext: "This project uses TypeScript.",
- *   };
+ * const handler: SessionStartHandler<TOptions, TState> = ({ input, options, state }) => {
+ *   return new AddContext({ claudeContext: "This project uses TypeScript." });
  * };
  * export default handler;
  * ```
@@ -396,26 +391,6 @@ export interface HandlerHookDefinition<TInput, TOutput, TOptions, TState = Recor
 }
 
 /**
- * Pipeline-based hook definition with file path.
- * The file should export a default function matching PipelineHandler signature.
- * Use a relative path from the plugin definition file.
- *
- * @example
- * ```ts
- * {
- *   name: "docs-access",
- *   tools: ["WebFetch"],
- *   handler: "./hooks/docs-access.hook.ts"
- * }
- * ```
- * @public
- */
-export interface HandlerFileHookDefinition extends HookDefinitionBase {
-	/** Relative path to file exporting default pipeline function */
-	handler: string;
-}
-
-/**
  * Passthrough hook entry - included directly in hooks.json without compilation.
  * Use this for hooks that don't need to be part of the binary plugin,
  * like bash scripts or external tools.
@@ -440,12 +415,11 @@ export interface PassthroughHookEntry {
 }
 
 /**
- * Hook definition: either pipeline, handler, file path, or passthrough.
+ * Hook definition: either an inline handler function or a passthrough entry.
  * @public
  */
 export type HookDefinition<TInput, TOutput, _TEvent, TOptions, TState = Record<string, unknown>> =
 	| HandlerHookDefinition<TInput, TOutput, TOptions, TState>
-	| HandlerFileHookDefinition
 	| PassthroughHookEntry;
 
 // =============================================================================
@@ -600,35 +574,6 @@ export interface HooksMap<TOptions, TState = Record<string, unknown>> {
 // =============================================================================
 
 /**
- * Command definition with file path for the handler.
- *
- * @typeParam TArgs - Effect Schema type for command arguments
- *
- * @example
- * ```ts
- * commands: {
- *   lint: {
- *     description: "Fix lint errors across the codebase",
- *     args: Schema.Struct({
- *       path: Schema.optionalWith(Schema.String, { default: () => "." }),
- *       fix: Schema.optionalWith(Schema.Boolean, { default: () => true }),
- *     }),
- *     handler: "./commands/lint.cmd.ts",
- *   },
- * }
- * ```
- * @public
- */
-export interface CommandFileDefinition<TArgs extends Schema.Schema.Any = Schema.Schema.Any> {
-	/** Description shown in help text and to LLM */
-	description: string;
-	/** Effect Schema for validating CLI arguments */
-	args?: TArgs;
-	/** Path to handler file (relative to plugin root) */
-	handler: string;
-}
-
-/**
  * Command definition with inline handler function.
  *
  * @typeParam TArgs - Effect Schema type for command arguments
@@ -664,22 +609,13 @@ export interface CommandInlineDefinition<
 }
 
 /**
- * Command definition - either file path or inline handler.
+ * Command definition with an inline handler function.
  *
  * @typeParam TArgs - Effect Schema type for command arguments
  * @typeParam TOptions - Validated options from plugin schema
  * @typeParam TState - Computed state from setup function
  *
- * @example File path (production)
- * ```ts
- * {
- *   description: "Fix lint errors",
- *   args: Schema.Struct({ path: Schema.optionalWith(Schema.String, { default: () => "." }) }),
- *   handler: "./commands/lint.cmd.ts",
- * }
- * ```
- *
- * @example Inline handler (testing or simple commands)
+ * @example
  * ```ts
  * {
  *   description: "Show status",
@@ -696,7 +632,7 @@ export type CommandDefinition<
 	TArgs extends Schema.Schema.Any = Schema.Schema.Any,
 	TOptions = unknown,
 	TState = Record<string, unknown>,
-> = CommandFileDefinition<TArgs> | CommandInlineDefinition<TArgs, TOptions, TState>;
+> = CommandInlineDefinition<TArgs, TOptions, TState>;
 
 /**
  * Context provided to command handlers.
@@ -755,14 +691,13 @@ export interface CommandOutput {
 
 /**
  * Base command definition structure (for type constraints).
- * Uses union types to allow both file paths and inline handlers.
  * @public
  */
 export interface CommandDefinitionBase {
 	description: string;
 	args?: Schema.Schema.Any;
-	/** File path (string) or inline handler function */
-	handler: string | CommandHandlerFn;
+	/** Inline handler function */
+	handler: CommandHandlerFn;
 }
 
 /**

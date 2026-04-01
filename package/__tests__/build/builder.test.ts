@@ -702,8 +702,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 		];
 
 		const pipelineCommands: PipelineCommandEntry[] = [
-			{ name: "lint", filePath: "./commands/lint.js", description: "Run linter", hasArgsSchema: false },
-			{ name: "test", filePath: "./commands/test.js", description: "Run tests", hasArgsSchema: true },
+			{ name: "lint", description: "Run linter", hasArgsSchema: false },
+			{ name: "test", description: "Run tests", hasArgsSchema: true },
 		];
 
 		const options: GeneratePipelinePluginOptions = {
@@ -719,8 +719,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 		// Check for command cases
 		expect(entrypoint).toContain('case "lint"');
 		expect(entrypoint).toContain('case "test"');
-		expect(entrypoint).toContain("./commands/lint.js");
-		expect(entrypoint).toContain("./commands/test.js");
+		expect(entrypoint).toContain('commands["lint"].handler');
+		expect(entrypoint).toContain('commands["test"].handler');
 	});
 
 	test("generates help text with hook descriptions", () => {
@@ -971,13 +971,14 @@ describe("generateHooksJson", () => {
 });
 
 describe("extractHookEntries", () => {
-	test("extracts pipeline hooks with file paths", () => {
+	test("extracts inline pipeline hooks", () => {
+		const inlineHandler = () => ({ status: "executed", action: "allow", summary: "ok" });
 		const config = {
 			hooks: {
 				SessionStart: [
 					{
 						name: "context",
-						handler: "./hooks/context.hook.ts",
+						handler: inlineHandler,
 						description: "Add project context",
 					},
 				],
@@ -985,7 +986,7 @@ describe("extractHookEntries", () => {
 					{
 						name: "security",
 						tools: ["Bash", "Write"],
-						handler: "./hooks/security.hook.ts",
+						handler: inlineHandler,
 					},
 				],
 			},
@@ -998,65 +999,19 @@ describe("extractHookEntries", () => {
 		const sessionEntry = entries.find((e) => e.hookType === "SessionStart");
 		expect(sessionEntry?.name).toBe("context");
 		expect(sessionEntry?.isPipeline).toBe(true);
-		expect(sessionEntry?.filePath).toBe("./hooks/context.hook.ts");
 		expect(sessionEntry?.description).toBe("Add project context");
 
 		const preToolEntry = entries.find((e) => e.hookType === "PreToolUse");
 		expect(preToolEntry?.name).toBe("security");
 		expect(preToolEntry?.isPipeline).toBe(true);
 		expect(preToolEntry?.tools).toEqual(["Bash", "Write"]);
-		expect(preToolEntry?.filePath).toBe("./hooks/security.hook.ts");
-	});
-
-	test("extracts inline pipeline hooks (no file path)", () => {
-		const config = {
-			hooks: {
-				PreToolUse: [
-					{
-						name: "inline-check",
-						handler: () => ({
-							status: "executed",
-							action: "allow",
-							summary: "ok",
-						}),
-					},
-				],
-			},
-		};
-
-		const entries = PluginBuilder.extractHookEntries(config);
-
-		expect(entries).toHaveLength(1);
-		expect(entries[0]?.name).toBe("inline-check");
-		expect(entries[0]?.isPipeline).toBe(true);
-		expect(entries[0]?.filePath).toBeUndefined();
-	});
-
-	test("extracts handler hooks with file paths", () => {
-		const config = {
-			hooks: {
-				PreToolUse: [
-					{
-						name: "file-handler",
-						handler: "./hooks/raw.hook.ts",
-					},
-				],
-			},
-		};
-
-		const entries = PluginBuilder.extractHookEntries(config);
-
-		expect(entries).toHaveLength(1);
-		expect(entries[0]?.name).toBe("file-handler");
-		expect(entries[0]?.isPipeline).toBe(true);
-		expect(entries[0]?.filePath).toBe("./hooks/raw.hook.ts");
 	});
 
 	test("skips passthrough hooks", () => {
 		const config = {
 			hooks: {
 				PreToolUse: [
-					{ name: "compiled", handler: "./hooks/compiled.ts" },
+					{ name: "compiled", handler: () => ({ status: "executed", action: "allow", summary: "ok" }) },
 					{ matcher: "Bash", hooks: [{ type: "command" as const, command: "echo test" }] },
 				],
 			},
@@ -1077,12 +1032,13 @@ describe("extractHookEntries", () => {
 	});
 
 	test("handles multiple hooks per type", () => {
+		const inlineHandler = () => ({ status: "executed", action: "allow", summary: "ok" });
 		const config = {
 			hooks: {
 				PreToolUse: [
-					{ name: "allow-list", tools: ["Bash"], handler: "./hooks/allow.ts" },
-					{ name: "deny-list", tools: ["Write"], handler: "./hooks/deny.ts" },
-					{ name: "audit", handler: "./hooks/audit.ts" },
+					{ name: "allow-list", tools: ["Bash"], handler: inlineHandler },
+					{ name: "deny-list", tools: ["Write"], handler: inlineHandler },
+					{ name: "audit", handler: inlineHandler },
 				],
 			},
 		};
@@ -1095,17 +1051,18 @@ describe("extractHookEntries", () => {
 });
 
 describe("extractCommandEntries", () => {
-	test("extracts commands with file paths", () => {
+	test("extracts commands with inline handlers", () => {
+		const inlineHandler = async () => ({ exitCode: 0, output: "ok" });
 		const config = {
 			commands: {
 				lint: {
 					description: "Run linter",
-					handler: "./commands/lint.cmd.ts",
+					handler: inlineHandler,
 					args: {},
 				},
 				test: {
 					description: "Run tests",
-					handler: "./commands/test.cmd.ts",
+					handler: inlineHandler,
 				},
 			},
 		};
@@ -1116,12 +1073,10 @@ describe("extractCommandEntries", () => {
 
 		const lintEntry = entries.find((e) => e.name === "lint");
 		expect(lintEntry?.description).toBe("Run linter");
-		expect(lintEntry?.filePath).toBe("./commands/lint.cmd.ts");
 		expect(lintEntry?.hasArgsSchema).toBe(true);
 
 		const testEntry = entries.find((e) => e.name === "test");
 		expect(testEntry?.description).toBe("Run tests");
-		expect(testEntry?.filePath).toBe("./commands/test.cmd.ts");
 		expect(testEntry?.hasArgsSchema).toBe(false);
 	});
 
@@ -1217,28 +1172,27 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 		expect(entrypoint).toContain("validCommands = []");
 	});
 
-	test("generates entrypoint with hook file paths", () => {
+	test("generates entrypoint with tool-filtered hooks", () => {
 		const hooks: PipelineHookEntry[] = [
 			{
 				hookType: "PreToolUse",
 				name: "security",
 				isPipeline: true,
-				filePath: "./hooks/security.hook.ts",
 				tools: ["Bash"],
 			},
 		];
 
 		const options: GeneratePipelinePluginOptions = {
 			pluginPath: "./plugin.ts",
-			pluginName: "file-hooks",
+			pluginName: "inline-hooks",
 			pluginVersion: "1.0.0",
 			hooks,
 		};
 
 		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
-		expect(entrypoint).toContain("./hooks/security.hook.ts");
 		expect(entrypoint).toContain('case "PreToolUse/security"');
+		expect(entrypoint).toContain('"Bash"');
 	});
 
 	test("generates entrypoint with command that has args schema", () => {
@@ -1247,7 +1201,6 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 		const pipelineCommands: PipelineCommandEntry[] = [
 			{
 				name: "lint",
-				filePath: "./commands/lint.js",
 				description: "Run linter",
 				hasArgsSchema: true,
 			},
@@ -1274,7 +1227,6 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 		const pipelineCommands: PipelineCommandEntry[] = [
 			{
 				name: "status",
-				filePath: "./commands/status.js",
 				description: "Show status",
 				hasArgsSchema: false,
 			},
@@ -1449,14 +1401,14 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "context",
-						handler: "./hooks/context.hook.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 				PreToolUse: [
 					{
 						name: "security",
 						tools: ["Bash"],
-						handler: "./hooks/security.hook.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1529,7 +1481,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1563,14 +1515,14 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "context",
-						handler: "./hooks/context.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 				PreToolUse: [
 					{
 						name: "filter",
 						tools: ["Bash", "Edit"],
-						handler: "./hooks/filter.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1615,7 +1567,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1640,7 +1592,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1671,7 +1623,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1701,12 +1653,12 @@ describe("PluginBuilder.fromConfig", () => {
 				commands: {
 					lint: {
 						description: "Run linter",
-						handler: "./commands/lint.cmd.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 						args: {},
 					},
 					test: {
 						description: "Run tests",
-						handler: "./commands/test.cmd.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				},
 			},
@@ -1714,7 +1666,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1740,7 +1692,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 				PreToolUse: [
@@ -1782,7 +1734,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1822,7 +1774,7 @@ describe("PluginBuilder.fromConfig", () => {
 					{
 						name: "filter",
 						tools: ["Bash"],
-						handler: "./hooks/filter.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
@@ -1864,7 +1816,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1885,34 +1837,23 @@ describe("PluginBuilder.fromConfig", () => {
 		expect(result.duration).toBeGreaterThanOrEqual(0);
 	}, 30_000);
 
-	test("resolves relative file paths for hooks", async () => {
-		const testDir = join(fromConfigTestDir, "relative-paths");
+	test("handles multiple hooks and commands with inline handlers", async () => {
+		const testDir = join(fromConfigTestDir, "multi-hooks-commands");
 		await mkdir(testDir, { recursive: true });
+
+		const inlineHandler = () => ({ exitCode: 0, output: "ok" });
 
 		const pluginConfig = {
 			config: {
 				commands: {
-					lint: {
-						description: "Lint",
-						handler: "./commands/lint.cmd.ts",
-					},
-					abs: {
-						description: "Absolute",
-						handler: "/absolute/path/cmd.ts",
-					},
+					lint: { description: "Lint", handler: inlineHandler },
+					status: { description: "Status", handler: inlineHandler },
 				},
 			},
 			hooks: {
 				PreToolUse: [
-					{
-						name: "security",
-						tools: ["Bash"],
-						handler: "./hooks/security.hook.ts",
-					},
-					{
-						name: "absolute",
-						handler: "/absolute/path/hook.ts",
-					},
+					{ name: "security", tools: ["Bash"], handler: inlineHandler },
+					{ name: "audit", handler: inlineHandler },
 				],
 			} as Record<string, Array<{ name?: string; tools?: string[]; pipeline?: unknown }>>,
 		};
@@ -1922,8 +1863,6 @@ describe("PluginBuilder.fromConfig", () => {
 			compile: false,
 		});
 
-		// The function resolves relative paths from rootDir.
-		// Absolute paths are left as-is.
 		expect(result.entrypoint).toBe("(auto-generated)");
 		expect(result.duration).toBeGreaterThanOrEqual(0);
 	}, 30_000);
@@ -1938,7 +1877,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1970,7 +1909,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/nonexistent.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -1999,7 +1938,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,
@@ -2028,7 +1967,7 @@ describe("PluginBuilder.fromConfig", () => {
 				SessionStart: [
 					{
 						name: "init",
-						handler: "./hooks/init.ts",
+						handler: () => ({ exitCode: 0, output: "ok" }),
 					},
 				],
 			} as Record<string, Array<{ name?: string; pipeline?: unknown }>>,

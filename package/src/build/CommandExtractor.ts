@@ -26,7 +26,6 @@ export function extractPipelineCommandEntries(config: {
 		entries.push({
 			name,
 			description: cmd.description,
-			filePath: cmd.handler,
 			hasArgsSchema: cmd.args !== undefined,
 		});
 	}

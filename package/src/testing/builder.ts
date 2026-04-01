@@ -1814,60 +1814,14 @@ export class PluginTester<
 
 	/**
 	 * Resolve a handler from a hook definition.
-	 * Supports inline functions and file paths.
 	 * @internal
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: Hook definitions have varied shapes
 	private async resolveHandler(hookDef: any): Promise<PipelineHandler<unknown, unknown, TOptions, TState> | null> {
-		// Check for inline handler function
 		if (typeof hookDef.handler === "function") {
 			return hookDef.handler;
 		}
-
-		// Check for file path
-		if (typeof hookDef.handler === "string") {
-			return this.importHandler(hookDef.handler);
-		}
-
 		return null;
-	}
-
-	/**
-	 * Import a handler from a file path.
-	 * @internal
-	 */
-	private async importHandler(filePath: string): Promise<PipelineHandler<unknown, unknown, TOptions, TState>> {
-		// Try to resolve the path
-		let resolvedPath = filePath;
-
-		// If it's a relative path, resolve from plugin root (preferred) or cwd
-		if (filePath.startsWith("./") || filePath.startsWith("../")) {
-			// Use configured plugin root if available, otherwise fall back to cwd
-			const baseDir = this.state.pluginRoot ?? process.cwd();
-			resolvedPath = `${baseDir}/${filePath}`;
-		}
-
-		try {
-			// Dynamic import
-			const module = await import(resolvedPath);
-			const handler = module.default || module;
-
-			if (typeof handler !== "function") {
-				throw new Error(`Handler file "${filePath}" does not export a function`);
-			}
-
-			return handler;
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Cannot find module")) {
-				const baseDir = this.state.pluginRoot ?? process.cwd();
-				throw new Error(
-					`Could not import handler from "${filePath}". ` +
-						`Make sure the file exists and the path is correct relative to plugin root (${baseDir}). ` +
-						`Use withPluginRoot() to set the plugin directory.`,
-				);
-			}
-			throw error;
-		}
 	}
 
 	/**
@@ -1981,61 +1935,15 @@ export class PluginTester<
 
 	/**
 	 * Resolve a command handler from a command definition.
-	 * Supports inline functions and file paths.
 	 * @internal
 	 */
 	private async resolveCommandHandler(
 		commandDef: CommandDefinition,
 	): Promise<CommandHandler<unknown, TOptions, TState> | null> {
-		// Check for inline handler function
 		if (typeof commandDef.handler === "function") {
 			return commandDef.handler as CommandHandler<unknown, TOptions, TState>;
 		}
-
-		// Check for file path
-		if (typeof commandDef.handler === "string") {
-			return this.importCommandHandler(commandDef.handler);
-		}
-
 		return null;
-	}
-
-	/**
-	 * Import a command handler from a file path.
-	 * @internal
-	 */
-	private async importCommandHandler(filePath: string): Promise<CommandHandler<unknown, TOptions, TState>> {
-		// Try to resolve the path
-		let resolvedPath = filePath;
-
-		// If it's a relative path, resolve from plugin root (preferred) or cwd
-		if (filePath.startsWith("./") || filePath.startsWith("../")) {
-			// Use configured plugin root if available, otherwise fall back to cwd
-			const baseDir = this.state.pluginRoot ?? process.cwd();
-			resolvedPath = `${baseDir}/${filePath}`;
-		}
-
-		try {
-			// Dynamic import
-			const module = await import(resolvedPath);
-			const handler = module.default || module;
-
-			if (typeof handler !== "function") {
-				throw new Error(`Command handler file "${filePath}" does not export a function`);
-			}
-
-			return handler;
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Cannot find module")) {
-				const baseDir = this.state.pluginRoot ?? process.cwd();
-				throw new Error(
-					`Could not import command handler from "${filePath}". ` +
-						`Make sure the file exists and the path is correct relative to plugin root (${baseDir}). ` +
-						`Use withPluginRoot() to set the plugin directory.`,
-				);
-			}
-			throw error;
-		}
 	}
 
 	/**

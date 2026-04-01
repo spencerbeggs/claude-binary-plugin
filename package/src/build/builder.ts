@@ -124,8 +124,6 @@ export interface PipelineHookEntry {
 	tools?: string[] | undefined;
 	/** Description for help text */
 	description?: string | undefined;
-	/** File path for file-based hooks (resolved via import.meta.resolve) */
-	filePath?: string | undefined;
 }
 
 /**
@@ -137,8 +135,6 @@ export interface PipelineCommandEntry {
 	name: string;
 	/** Description for help text */
 	description?: string | undefined;
-	/** File path for the command handler (resolved via import.meta.resolve) */
-	filePath: string;
 	/** Whether the command has an args schema */
 	hasArgsSchema: boolean;
 }
@@ -181,62 +177,14 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 		hooksByType.set(hook.hookType, list);
 	}
 
-	// Generate imports for file-based hooks
-	const fileHookImports: string[] = [];
-	const fileHookMap = new Map<string, string>(); // hookKey -> importName
-	let fileHookIndex = 0;
-	for (const hook of hooks) {
-		if (hook.filePath) {
-			const importName = `fileHook_${fileHookIndex++}`;
-			const hookKey = `${hook.hookType}/${hook.name}`;
-			fileHookMap.set(hookKey, importName);
-			// Convert file:// URL to absolute path - Bun's bundler handles .ts files
-			const importPath = hook.filePath.startsWith("file://") ? hook.filePath.slice(7) : hook.filePath;
-			fileHookImports.push(`import ${importName} from "${importPath}";`);
-		}
-	}
-
-	// Generate imports for pipeline command handlers
-	const commandImports: string[] = [];
-	const commandImportMap = new Map<string, string>(); // cmdName -> importName
-	let commandIndex = 0;
-	for (const cmd of pipelineCommands) {
-		const importName = `cmdHandler_${commandIndex++}`;
-		commandImportMap.set(cmd.name, importName);
-		const importPath = cmd.filePath.startsWith("file://") ? cmd.filePath.slice(7) : cmd.filePath;
-		commandImports.push(`import ${importName} from "${importPath}";`);
-	}
-
 	// Generate hook dispatch cases
 	const hookCases: string[] = [];
 	for (const [hookType, typeHooks] of hooksByType) {
 		for (const hook of typeHooks) {
 			const hookKey = `${hook.hookType}/${hook.name}`;
 			const toolsArg = hook.tools?.length ? `[${hook.tools.map((t) => `"${t}"`).join(", ")}]` : "undefined";
-			const fileHookImport = fileHookMap.get(hookKey);
 
-			if (fileHookImport) {
-				// File-based pipeline hook
-				hookCases.push(`    case "${hookKey}": {
-      program = Effect.gen(function* () {
-        const runtime = yield* PipelineRuntimeService;
-        return yield* runtime.run({
-          hookType: "${hookType}",
-          hookName: "${hook.name}",
-          pluginName: PLUGIN_NAME,
-          pluginVersion: PLUGIN_VERSION,
-          handler: ${fileHookImport},
-          stateClass: EnvClass,
-          tools: ${toolsArg},
-          optionsSchema: pluginConfig.options,
-          setup: pluginConfig.setup,
-        });
-      });
-      break;
-    }`);
-			} else {
-				// Inline pipeline hook
-				hookCases.push(`    case "${hookKey}": {
+			hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       program = Effect.gen(function* () {
@@ -255,14 +203,12 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
       });
       break;
     }`);
-			}
 		}
 	}
 
 	// Generate command cases
 	const commandCases = pipelineCommands
 		.map((c) => {
-			const importName = commandImportMap.get(c.name);
 			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Schema.Struct({})";
 			return `    case "${c.name}": {
       program = Effect.gen(function* () {
@@ -271,7 +217,7 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
           commandName: "${c.name}",
           pluginName: PLUGIN_NAME,
           pluginVersion: PLUGIN_VERSION,
-          handler: ${importName},
+          handler: pluginConfig.commands["${c.name}"].handler,
           rawArgs: cmdArgs,
           argsSchema: ${argsSchemaAccess},
           stateClass: EnvClass,
@@ -317,8 +263,6 @@ import pluginDefinition from "${pluginPath}";
 import { PipelineRuntimeService, PipelineRuntimeServiceLive, PluginEnv, PluginInfoService } from "claude-binary-plugin";
 import type { RunResult } from "claude-binary-plugin";
 ${commandRunnerImports}
-${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
-${commandImports.length > 0 ? commandImports.join("\n") : ""}
 
 // Plugin metadata - compiled constants, not env vars
 const PLUGIN_NAME = "${pluginName}";
@@ -525,18 +469,12 @@ function extractPipelineHookEntries(config: {
 			// At this point, hook must have a name (passthrough entries are skipped above)
 			if (!hook.name) continue;
 
-			// Check if this is a file-based hook (handler is a string path)
-			const handlerValue = hook.handler;
-			const isFileBased = typeof handlerValue === "string" && handlerValue.length > 0;
-			const filePath = isFileBased ? (handlerValue as string) : undefined;
-
 			entries.push({
 				hookType: hookType as PipelineHookEventType,
 				name: hook.name,
 				isPipeline: "handler" in hook && hook.handler !== undefined,
 				tools: hook.tools,
 				description: hook.description,
-				filePath,
 			});
 		}
 	}
@@ -551,7 +489,6 @@ function extractPipelineHookEntries(config: {
 export interface ExtractableCommand {
 	description?: string;
 	args?: unknown;
-	handler: string;
 }
 
 /**
@@ -572,7 +509,6 @@ function extractPipelineCommandEntries(config: {
 		entries.push({
 			name,
 			description: cmd.description,
-			filePath: cmd.handler,
 			hasArgsSchema: cmd.args !== undefined,
 		});
 	}
@@ -1406,32 +1342,9 @@ async function buildPluginFromConfig(
 	const commandEntries = extractPipelineCommandEntries({ commands: (plugin.config as any).commands });
 	const passthroughHooks = extractPassthroughHookEntries({ hooks: plugin.hooks });
 
-	// Resolve file paths for file-based handlers using import.meta.resolve
-	const resolvedHooks: PipelineHookEntry[] = hookEntries.map((hook) => {
-		if (hook.filePath && !hook.filePath.startsWith("file://") && !hook.filePath.startsWith("/")) {
-			// Relative path - resolve from rootDir
-			return {
-				...hook,
-				filePath: resolve(absoluteRootDir, hook.filePath),
-			};
-		}
-		return hook;
-	});
-
-	const resolvedCommands: PipelineCommandEntry[] = commandEntries.map((cmd) => {
-		if (cmd.filePath && !cmd.filePath.startsWith("file://") && !cmd.filePath.startsWith("/")) {
-			// Relative path - resolve from rootDir
-			return {
-				...cmd,
-				filePath: resolve(absoluteRootDir, cmd.filePath),
-			};
-		}
-		return cmd;
-	});
-
 	console.log(`\nBuilding plugin: ${pluginIdentifier}`);
-	console.log(`  Hooks: ${resolvedHooks.length}`);
-	console.log(`  Commands: ${resolvedCommands.length}`);
+	console.log(`  Hooks: ${hookEntries.length}`);
+	console.log(`  Commands: ${commandEntries.length}`);
 	console.log(`  Passthrough hooks: ${Object.keys(passthroughHooks).length} types`);
 
 	// Generate entrypoint
@@ -1448,8 +1361,8 @@ async function buildPluginFromConfig(
 		pluginPath: pluginImportPath,
 		pluginName: manifestPluginName ?? "plugin",
 		pluginVersion: manifestPluginVersion,
-		hooks: resolvedHooks,
-		pipelineCommands: resolvedCommands,
+		hooks: hookEntries,
+		pipelineCommands: commandEntries,
 	});
 
 	console.log(`Generating plugin entrypoint...`);
@@ -1540,7 +1453,7 @@ async function buildPluginFromConfig(
 		const proxyScriptAbsPath = resolve(absoluteRootDir, proxyScriptRelPath);
 		const proxyScriptDir = resolve(proxyScriptAbsPath, "..");
 
-		const hasSessionStart = resolvedHooks.some((h) => h.hookType === "SessionStart");
+		const hasSessionStart = hookEntries.some((h) => h.hookType === "SessionStart");
 
 		const proxyScriptContent = generateProxyScript({
 			binaryName: outputName,
@@ -1560,7 +1473,7 @@ async function buildPluginFromConfig(
 		// Generate hooks.json with proxy routing for SessionStart
 		const hooksJson = generateHooksJson({
 			pluginBinaryName: outputName,
-			hooks: resolvedHooks,
+			hooks: hookEntries,
 			passthroughHooks,
 			proxyScript: proxyScriptRelPath,
 		});
