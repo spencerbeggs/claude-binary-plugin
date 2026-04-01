@@ -1,7 +1,7 @@
-import { Effect } from "effect";
 import { describe, expect, test } from "bun:test";
-import { EnvResolver } from "../../src/services/EnvResolver.js";
+import { Effect } from "effect";
 import { makeEnvResolverTest } from "../../src/layers/EnvResolverTest.js";
+import { EnvResolver } from "../../src/services/EnvResolver.js";
 
 describe("EnvResolver (test layer)", () => {
 	test("registerSession then getSessionEnvDir returns the dir", async () => {

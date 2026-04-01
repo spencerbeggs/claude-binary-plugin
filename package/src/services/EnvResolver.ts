@@ -6,10 +6,6 @@ export class EnvResolver extends Context.Tag("EnvResolver")<
 	{
 		readonly getSessionEnvDir: (sessionId: string | undefined) => Effect.Effect<string | undefined>;
 		readonly getProjectSessionEnvDir: (projectDir: string) => Effect.Effect<string | undefined>;
-		readonly registerSession: (
-			sessionId: string,
-			projectDir: string,
-			sessionEnvDir: string,
-		) => Effect.Effect<void>;
+		readonly registerSession: (sessionId: string, projectDir: string, sessionEnvDir: string) => Effect.Effect<void>;
 	}
 >() {}

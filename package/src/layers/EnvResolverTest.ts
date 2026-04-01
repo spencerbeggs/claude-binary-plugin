@@ -12,14 +12,10 @@ export const makeEnvResolverTest = () => {
 
 	const layer = Layer.succeed(EnvResolver, {
 		getSessionEnvDir: (sessionId: string | undefined) =>
-			Ref.get(ref).pipe(
-				Effect.map((entries) => entries.find((e) => e.sessionId === sessionId)?.sessionEnvDir),
-			),
+			Ref.get(ref).pipe(Effect.map((entries) => entries.find((e) => e.sessionId === sessionId)?.sessionEnvDir)),
 
 		getProjectSessionEnvDir: (projectDir: string) =>
-			Ref.get(ref).pipe(
-				Effect.map((entries) => entries.find((e) => e.projectDir === projectDir)?.sessionEnvDir),
-			),
+			Ref.get(ref).pipe(Effect.map((entries) => entries.find((e) => e.projectDir === projectDir)?.sessionEnvDir)),
 
 		registerSession: (sessionId: string, projectDir: string, sessionEnvDir: string) =>
 			Ref.update(ref, (entries) => [...entries, { sessionId, projectDir, sessionEnvDir }]),
