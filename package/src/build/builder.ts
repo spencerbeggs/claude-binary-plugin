@@ -94,10 +94,10 @@ export type CompileTarget =
 // =============================================================================
 
 /**
- * Hook event type for pipeline plugins.
+ * Hook event type for plugins.
  * @public
  */
-export type PipelineHookEventType =
+export type HookEventTypeName =
 	| "PreToolUse"
 	| "PostToolUse"
 	| "SessionStart"
@@ -113,9 +113,9 @@ export type PipelineHookEventType =
  * Configuration for a pipeline hook in the generated entrypoint.
  * @public
  */
-export interface PipelineHookEntry {
+export interface HookEntry {
 	/** Hook event type (e.g., "PreToolUse", "SessionStart") */
-	hookType: PipelineHookEventType;
+	hookType: HookEventTypeName;
 	/** Hook name for CLI routing */
 	name: string;
 	/** Whether this is a pipeline (true) or raw handler (false) */
@@ -130,7 +130,7 @@ export interface PipelineHookEntry {
  * Configuration for a pipeline command in the generated entrypoint.
  * @public
  */
-export interface PipelineCommandEntry {
+export interface CommandEntry {
 	/** Command name for CLI routing */
 	name: string;
 	/** Description for help text */
@@ -143,7 +143,7 @@ export interface PipelineCommandEntry {
  * Options for generating a pipeline plugin entrypoint.
  * @public
  */
-export interface GeneratePipelinePluginOptions {
+export interface GeneratePluginEntrypointOptions {
 	/** Import path to the plugin definition file (relative to entrypoint) */
 	pluginPath: string;
 	/** Plugin name for help text */
@@ -151,9 +151,9 @@ export interface GeneratePipelinePluginOptions {
 	/** Plugin version */
 	pluginVersion: string;
 	/** Array of hook configurations extracted from the plugin definition */
-	hooks: PipelineHookEntry[];
+	hooks: HookEntry[];
 	/** Pipeline-style commands with Effect Schema arg schemas */
-	pipelineCommands?: PipelineCommandEntry[];
+	pipelineCommands?: CommandEntry[];
 }
 
 /**
@@ -166,11 +166,11 @@ export interface GeneratePipelinePluginOptions {
  * @returns Generated TypeScript source code
  * @internal
  */
-function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions): string {
+function generatePipelinePluginEntrypoint(options: GeneratePluginEntrypointOptions): string {
 	const { pluginPath, pluginName, pluginVersion, hooks, pipelineCommands = [] } = options;
 
 	// Group hooks by type for the switch statement
-	const hooksByType = new Map<string, PipelineHookEntry[]>();
+	const hooksByType = new Map<string, HookEntry[]>();
 	for (const hook of hooks) {
 		const list = hooksByType.get(hook.hookType) || [];
 		list.push(hook);
@@ -188,14 +188,14 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       program = Effect.gen(function* () {
-        const runtime = yield* PipelineRuntimeService;
+        const runtime = yield* PluginRuntimeService;
         return yield* runtime.run({
           hookType: "${hookType}",
           hookName: "${hook.name}",
           pluginName: PLUGIN_NAME,
           pluginVersion: PLUGIN_VERSION,
           handler: hookDef.handler,
-          stateClass: EnvClass,
+          prefix: pluginConfig.prefix,
           tools: ${toolsArg},
           optionsSchema: pluginConfig.options,
           setup: pluginConfig.setup,
@@ -246,8 +246,8 @@ import type { CommandOutput } from "claude-binary-plugin";`
 		? `import { Effect, Layer, Schema } from "effect";`
 		: `import { Effect, Layer } from "effect";`;
 	const runtimeLayerLine = hasPipelineCmds
-		? `const RuntimeLayer = Layer.merge(PipelineRuntimeServiceLive, CommandRunnerLive);`
-		: `const RuntimeLayer = PipelineRuntimeServiceLive;`;
+		? `const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, CommandRunnerLive);`
+		: `const RuntimeLayer = PluginRuntimeServiceLive;`;
 
 	return `#!/usr/bin/env bun
 /**
@@ -260,7 +260,7 @@ import type { CommandOutput } from "claude-binary-plugin";`
 import { parseArgs } from "node:util";
 ${schemaImport}
 import pluginDefinition from "${pluginPath}";
-import { PipelineRuntimeService, PipelineRuntimeServiceLive, PluginEnv, PluginInfoService } from "claude-binary-plugin";
+import { PluginRuntimeService, PluginRuntimeServiceLive, PluginInfoService } from "claude-binary-plugin";
 import type { RunResult } from "claude-binary-plugin";
 ${commandRunnerImports}
 
@@ -270,9 +270,6 @@ const PLUGIN_VERSION = "${pluginVersion}";
 
 // Extract config from plugin definition
 const pluginConfig = pluginDefinition.config;
-
-// Create environment class from plugin options schema (with pluginName for logging)
-const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
 
 ${runtimeLayerLine}
 
@@ -286,7 +283,7 @@ const validHooks = [${validHooksArray}];
 const validCommands = [${validCommandsArray}];
 
 async function runHook(hookKey: string): Promise<void> {
-  let program: Effect.Effect<RunResult, any, PipelineRuntimeService>;
+  let program: Effect.Effect<RunResult, any, PluginRuntimeService>;
 
   switch (hookKey) {
 ${hookCases.join("\n")}
@@ -455,9 +452,9 @@ export interface ExtractedPassthroughHooks {
  * @internal
  */
 function extractPipelineHookEntries(config: {
-	hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
-}): PipelineHookEntry[] {
-	const entries: PipelineHookEntry[] = [];
+	hooks: Partial<Record<HookEventTypeName, ExtractableHook[]>>;
+}): HookEntry[] {
+	const entries: HookEntry[] = [];
 
 	for (const [hookType, hooks] of Object.entries(config.hooks)) {
 		if (!Array.isArray(hooks)) continue;
@@ -470,7 +467,7 @@ function extractPipelineHookEntries(config: {
 			if (!hook.name) continue;
 
 			entries.push({
-				hookType: hookType as PipelineHookEventType,
+				hookType: hookType as HookEventTypeName,
 				name: hook.name,
 				isPipeline: "handler" in hook && hook.handler !== undefined,
 				tools: hook.tools,
@@ -498,12 +495,10 @@ export interface ExtractableCommand {
  * @returns Array of pipeline command entries
  * @internal
  */
-function extractPipelineCommandEntries(config: {
-	commands?: Record<string, ExtractableCommand>;
-}): PipelineCommandEntry[] {
+function extractPipelineCommandEntries(config: { commands?: Record<string, ExtractableCommand> }): CommandEntry[] {
 	if (!config.commands) return [];
 
-	const entries: PipelineCommandEntry[] = [];
+	const entries: CommandEntry[] = [];
 
 	for (const [name, cmd] of Object.entries(config.commands)) {
 		entries.push({
@@ -526,7 +521,7 @@ function extractPipelineCommandEntries(config: {
  * @internal
  */
 function extractPassthroughHookEntries(config: {
-	hooks: Partial<Record<PipelineHookEventType, unknown[]>>;
+	hooks: Partial<Record<HookEventTypeName, unknown[]>>;
 }): ExtractedPassthroughHooks {
 	const result: ExtractedPassthroughHooks = {};
 
@@ -1113,7 +1108,7 @@ export interface GenerateHooksJsonOptions {
 	/** Plugin binary name (e.g., "bun-plugin-builder.plugin") */
 	pluginBinaryName: string;
 	/** Array of hook configurations extracted from the plugin definition */
-	hooks: PipelineHookEntry[];
+	hooks: HookEntry[];
 	/** Passthrough hooks to include directly in hooks.json */
 	passthroughHooks?: ExtractedPassthroughHooks;
 	/** Relative path to proxy script (e.g., "scripts/setup-proxy.sh"). When set, SessionStart hooks route through the proxy instead of the binary. */
@@ -1179,7 +1174,7 @@ function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
 	const { pluginBinaryName, hooks, passthroughHooks = {}, proxyScript } = options;
 
 	// Group hooks by type
-	const hooksByType = new Map<string, PipelineHookEntry[]>();
+	const hooksByType = new Map<string, HookEntry[]>();
 	for (const hook of hooks) {
 		const list = hooksByType.get(hook.hookType) || [];
 		list.push(hook);
@@ -1273,7 +1268,7 @@ function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonFile {
 async function buildPluginFromConfig(
 	plugin: {
 		config: any;
-		hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+		hooks: Partial<Record<HookEventTypeName, ExtractableHook[]>>;
 	},
 	options: {
 		rootDir?: string;
@@ -1652,7 +1647,7 @@ export class PluginBuilder {
 	static fromConfig(
 		plugin: {
 			config: any;
-			hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+			hooks: Partial<Record<HookEventTypeName, ExtractableHook[]>>;
 		},
 		options: {
 			rootDir?: string;
@@ -1700,9 +1695,9 @@ export class PluginBuilder {
 	 * await Bun.write(".plugin-entrypoint.ts", source);
 	 * ```
 	 *
-	 * @see {@link GeneratePipelinePluginOptions}
+	 * @see {@link GeneratePluginEntrypointOptions}
 	 */
-	static generateEntrypoint(options: GeneratePipelinePluginOptions): string {
+	static generateEntrypoint(options: GeneratePluginEntrypointOptions): string {
 		return generatePipelinePluginEntrypoint(options);
 	}
 
@@ -1784,11 +1779,9 @@ export class PluginBuilder {
 	 * console.log(`Found ${hookEntries.length} hooks to compile`);
 	 * ```
 	 *
-	 * @see {@link PipelineHookEntry}
+	 * @see {@link HookEntry}
 	 */
-	static extractHookEntries(config: {
-		hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
-	}): PipelineHookEntry[] {
+	static extractHookEntries(config: { hooks: Partial<Record<HookEventTypeName, ExtractableHook[]>> }): HookEntry[] {
 		return extractPipelineHookEntries(config);
 	}
 
@@ -1807,9 +1800,9 @@ export class PluginBuilder {
 	 * console.log(`Found ${commandEntries.length} commands to compile`);
 	 * ```
 	 *
-	 * @see {@link PipelineCommandEntry}
+	 * @see {@link CommandEntry}
 	 */
-	static extractCommandEntries(config: { commands?: Record<string, ExtractableCommand> }): PipelineCommandEntry[] {
+	static extractCommandEntries(config: { commands?: Record<string, ExtractableCommand> }): CommandEntry[] {
 		return extractPipelineCommandEntries(config);
 	}
 
@@ -1833,7 +1826,7 @@ export class PluginBuilder {
 	 * @see {@link ExtractedPassthroughHooks}
 	 */
 	static extractPassthroughEntries(config: {
-		hooks: Partial<Record<PipelineHookEventType, unknown[]>>;
+		hooks: Partial<Record<HookEventTypeName, unknown[]>>;
 	}): ExtractedPassthroughHooks {
 		return extractPassthroughHookEntries(config);
 	}

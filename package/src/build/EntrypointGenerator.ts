@@ -8,7 +8,7 @@
  *
  * @internal
  */
-import type { GeneratePipelinePluginOptions, PipelineHookEntry } from "./builder.js";
+import type { GeneratePluginEntrypointOptions, HookEntry } from "./builder.js";
 
 /**
  * Generates the TypeScript source code for a pipeline-based plugin entrypoint.
@@ -19,11 +19,11 @@ import type { GeneratePipelinePluginOptions, PipelineHookEntry } from "./builder
  * @param options - Generation options
  * @returns Generated TypeScript source code
  */
-export function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions): string {
+export function generatePipelinePluginEntrypoint(options: GeneratePluginEntrypointOptions): string {
 	const { pluginPath, pluginName, pluginVersion, hooks, pipelineCommands = [] } = options;
 
 	// Group hooks by type for the switch statement
-	const hooksByType = new Map<string, PipelineHookEntry[]>();
+	const hooksByType = new Map<string, HookEntry[]>();
 	for (const hook of hooks) {
 		const list = hooksByType.get(hook.hookType) || [];
 		list.push(hook);
@@ -41,19 +41,19 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
       const hookDef = configInstance.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
       program = Effect.gen(function* () {
-        const runtime = yield* PipelineRuntimeService;
+        const runtime = yield* PluginRuntimeService;
         return yield* runtime.run({
           hookType: "${hookType}",
           hookName: "${hook.name}",
           pluginName: PLUGIN_NAME,
           pluginVersion: PLUGIN_VERSION,
           handler: hookDef.handler,
-          stateClass: EnvClass,
+          prefix: configInstance.prefix,
           tools: ${toolsArg},
           optionsSchema: PluginConfigClass.options,
           stateSchema: StateSchema,
           setup: PluginConfigClass.setup,
-          handlerLayer: PipelineLive,
+          handlerLayer: PluginLive,
         });
       });
       break;
@@ -101,8 +101,8 @@ import type { CommandOutput } from "claude-binary-plugin";`
 		? `import { Effect, Layer, Schema } from "effect";`
 		: `import { Effect, Layer } from "effect";`;
 	const runtimeLayerLine = hasPipelineCmds
-		? `const RuntimeLayer = Layer.merge(PipelineRuntimeServiceLive, CommandRunnerLive);`
-		: `const RuntimeLayer = PipelineRuntimeServiceLive;`;
+		? `const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, CommandRunnerLive);`
+		: `const RuntimeLayer = PluginRuntimeServiceLive;`;
 
 	return `#!/usr/bin/env bun
 /**
@@ -115,7 +115,7 @@ import type { CommandOutput } from "claude-binary-plugin";`
 import { parseArgs } from "node:util";
 ${schemaImport}
 import PluginConfigClass from "${pluginPath}";
-import { PipelineLive, PipelineRuntimeService, PipelineRuntimeServiceLive, PluginEnv, PluginInfoService } from "claude-binary-plugin";
+import { PluginLive, PluginRuntimeService, PluginRuntimeServiceLive, PluginInfoService } from "claude-binary-plugin";
 import type { RunResult } from "claude-binary-plugin";
 ${commandRunnerImports}
 
@@ -125,7 +125,6 @@ const PLUGIN_VERSION = "${pluginVersion}";
 
 // Read statics from the config class — they survive Bun tree-shaking
 const configInstance = new PluginConfigClass();
-const EnvClass = PluginEnv.create(configInstance.prefix, PluginConfigClass.options, PLUGIN_NAME);
 const StateSchema = PluginConfigClass.state;
 
 ${runtimeLayerLine}
@@ -140,7 +139,7 @@ const validHooks = [${validHooksArray}];
 const validCommands = [${validCommandsArray}];
 
 async function runHook(hookKey: string): Promise<void> {
-  let program: Effect.Effect<RunResult, any, PipelineRuntimeService>;
+  let program: Effect.Effect<RunResult, any, PluginRuntimeService>;
 
   switch (hookKey) {
 ${hookCases.join("\n")}

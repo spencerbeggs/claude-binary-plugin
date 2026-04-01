@@ -9,12 +9,7 @@
  * @internal
  */
 import type { PassthroughHookEntry } from "../plugin/config.js";
-import type {
-	ExtractableHook,
-	ExtractedPassthroughHooks,
-	PipelineHookEntry,
-	PipelineHookEventType,
-} from "./builder.js";
+import type { ExtractableHook, ExtractedPassthroughHooks, HookEntry, PipelineHookEventType } from "./builder.js";
 
 /**
  * Check if a hook entry is a passthrough (raw hooks.json entry).
@@ -38,8 +33,8 @@ function isPassthroughHook(hook: unknown): hook is PassthroughHookEntry {
  */
 export function extractPipelineHookEntries(config: {
 	hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
-}): PipelineHookEntry[] {
-	const entries: PipelineHookEntry[] = [];
+}): HookEntry[] {
+	const entries: HookEntry[] = [];
 
 	for (const [hookType, hooks] of Object.entries(config.hooks)) {
 		if (!Array.isArray(hooks)) continue;
