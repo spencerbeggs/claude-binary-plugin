@@ -1,7 +1,13 @@
+import { BunFileSystem } from "@effect/platform-bun";
 import { Layer, pipe } from "effect";
 import { ClaudeAccountInfoLive } from "./ClaudeAccountInfoLive.js";
+import { EnvBridgeLive } from "./EnvBridgeLive.js";
+import { EnvCoordinatorLive } from "./EnvCoordinatorLive.js";
+import { EnvFileParserLive } from "./EnvFileParserLive.js";
 import { EnvLoaderLive } from "./EnvLoaderLive.js";
-import { EnvPersisterLive } from "./EnvPersisterLive.js";
+import { EnvResolverLive } from "./EnvResolverLive.js";
+import { EnvValidatorLive } from "./EnvValidatorLive.js";
+import { EnvWriterLive } from "./EnvWriterLive.js";
 import { GitInfoLive } from "./GitInfoLive.js";
 import { OtelConfigLive } from "./OtelConfigLive.js";
 import { PlatformInfoLive } from "./PlatformInfoLive.js";
@@ -20,11 +26,26 @@ const OtelClientLive = pipe(
 	Layer.provide(PlatformInfoLive),
 );
 
-export const PipelineLive = Layer.mergeAll(
+// Compose the env service dependency graph
+const EnvInfra = Layer.mergeAll(EnvFileParserLive, EnvBridgeLive, BunFileSystem.layer);
+
+const EnvServices = pipe(
+	EnvCoordinatorLive,
+	Layer.provide(
+		Layer.mergeAll(
+			pipe(EnvLoaderLive, Layer.provide(EnvInfra)),
+			pipe(EnvValidatorLive, Layer.provide(EnvBridgeLive)),
+			pipe(EnvWriterLive, Layer.provide(EnvInfra)),
+			EnvResolverLive,
+			EnvBridgeLive,
+		),
+	),
+);
+
+export const PluginLive = Layer.mergeAll(
 	StdinReaderLive,
 	SchemaValidatorLive,
-	EnvLoaderLive,
-	EnvPersisterLive,
+	EnvServices,
 	SessionStoreLive,
 	OtelClientLive,
 	ShellExecutorLive,
