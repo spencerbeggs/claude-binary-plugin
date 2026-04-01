@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { OTEL_DEFAULTS } from "../../src/otel/constants.js";
-import { PluginInfo } from "../../src/otel/PluginInfo.js";
 import type { ResourceConfig } from "../../src/otel/SidecarResource.js";
 import { ATTRS, createOtelResource } from "../../src/otel/SidecarResource.js";
+import { PLUGIN_INFO_ATTRS } from "../../src/services/PluginInfoService.js";
 
 describe("SidecarResource", () => {
 	describe("createOtelResource", () => {
@@ -58,10 +58,10 @@ describe("SidecarResource", () => {
 
 			// These should NOT be in the resource - they go in event attributes
 			expect(attrs[ATTR_SERVICE_VERSION]).toBeUndefined();
-			expect(attrs[PluginInfo.ATTRS.NAME]).toBeUndefined();
-			expect(attrs[PluginInfo.ATTRS.VERSION]).toBeUndefined();
-			expect(attrs[PluginInfo.ATTRS.MARKETPLACE]).toBeUndefined();
-			expect(attrs[PluginInfo.ATTRS.MARKETPLACE_VERSION]).toBeUndefined();
+			expect(attrs[PLUGIN_INFO_ATTRS.NAME]).toBeUndefined();
+			expect(attrs[PLUGIN_INFO_ATTRS.VERSION]).toBeUndefined();
+			expect(attrs[PLUGIN_INFO_ATTRS.MARKETPLACE]).toBeUndefined();
+			expect(attrs[PLUGIN_INFO_ATTRS.MARKETPLACE_VERSION]).toBeUndefined();
 		});
 
 		test("merges custom resource attributes from config", () => {

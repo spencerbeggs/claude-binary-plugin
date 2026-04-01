@@ -313,33 +313,20 @@ export { CommandRunner } from "./services/CommandRunner.js";
 export { OtelConfigError } from "./errors/OtelConfigError.js";
 // New error types
 export { SidecarError } from "./errors/SidecarError.js";
+export { ClaudeAccountInfoLive } from "./layers/ClaudeAccountInfoLive.js";
+export { makeClaudeAccountInfoTest } from "./layers/ClaudeAccountInfoTest.js";
+export { GitInfoLive } from "./layers/GitInfoLive.js";
+export { makeGitInfoTest } from "./layers/GitInfoTest.js";
+export { MessageRouterLive } from "./layers/MessageRouterLive.js";
+export { makeMessageRouterTest } from "./layers/MessageRouterTest.js";
 export { OtelConfigLive } from "./layers/OtelConfigLive.js";
-// Configuration classes
-export type { ClaudeAccountInfoData } from "./otel/ClaudeAccountInfo.js";
-export { clearClaudeAccountInfoCache, detectClaudeAccountInfo } from "./otel/ClaudeAccountInfo.js";
-export type { GitInfoData, GitProvider } from "./otel/GitInfo.js";
-export {
-	detectGitInfo,
-	getGitInfoDisplayName,
-	gitInfoToAttributes,
-	isGitInfoValid,
-	parseGitRemoteUrl,
-} from "./otel/GitInfo.js";
+export { PlatformInfoLive } from "./layers/PlatformInfoLive.js";
+export { makePlatformInfoTest } from "./layers/PlatformInfoTest.js";
+export { PluginInfoServiceLive } from "./layers/PluginInfoServiceLive.js";
+export { makePluginInfoServiceTest } from "./layers/PluginInfoServiceTest.js";
+export type { PlatformContext } from "./otel/message-builders.js";
 // Message builder constants (for advanced users)
 export { OTEL_ATTRS, OTEL_EVENT_NAMES, OTEL_SCOPE } from "./otel/message-builders.js";
-// Platform utilities
-export type { PlatformType, SupportedPlatform } from "./otel/Platform.js";
-export {
-	MAX_SOCKET_PATH_LENGTH,
-	assertPlatformSupported,
-	getPlatform,
-	getSocketPath,
-	getSocketPathWithFallback,
-	isPlatformSupported,
-	socketExists,
-} from "./otel/Platform.js";
-export type { PluginInfoData } from "./otel/PluginInfo.js";
-export { PluginInfo } from "./otel/PluginInfo.js";
 // Protocol types (for advanced usage)
 export type { OtelProtocolConfig } from "./otel/protocol.js";
 export {
@@ -359,7 +346,22 @@ export {
 // Sidecar entry point (compiled separately by builder)
 export { Sidecar } from "./otel/Sidecar.js";
 // New OTEL Effect services
+export type { ClaudeAccountInfoData } from "./services/ClaudeAccountInfo.js";
+export { ClaudeAccountInfo } from "./services/ClaudeAccountInfo.js";
+export type { GitInfoData, GitProvider } from "./services/GitInfo.js";
+export {
+	GitInfo,
+	getGitInfoDisplayName,
+	gitInfoToAttributes,
+	isGitInfoValid,
+	parseGitRemoteUrl,
+} from "./services/GitInfo.js";
+export { MessageRouter } from "./services/MessageRouter.js";
 export { OtelConfig, OtelConfigData } from "./services/OtelConfig.js";
+export type { PlatformType, SupportedPlatform } from "./services/PlatformInfo.js";
+export { MAX_SOCKET_PATH_LENGTH, PlatformInfo } from "./services/PlatformInfo.js";
+export type { PluginInfoData } from "./services/PluginInfoService.js";
+export { PLUGIN_INFO_ATTRS, PluginInfoService } from "./services/PluginInfoService.js";
 
 // =============================================================================
 // PIPELINE CONFIG
