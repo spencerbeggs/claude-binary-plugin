@@ -16,6 +16,7 @@ interface EnvValidationErrorResult {
 
 import type { ValidationErrorMinimal, ValidationIssueMinimal, ValidationResult } from "../types/plugin-state.js";
 import { formatValidationError } from "../types/plugin-state.js";
+
 export type { ValidationErrorMinimal, ValidationIssueMinimal, ValidationResult };
 export { formatValidationError };
 
@@ -866,9 +867,8 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static getSessionEnvDir(sessionId: string | undefined): string | undefined {
 		// Import inline to avoid circular dependency at module load time
-		const { SessionRegistry } =
-			require("../layers/SessionRegistry.js") as typeof import("../layers/SessionRegistry.js");
-		return SessionRegistry.getBySessionId(sessionId);
+		const { getBySessionId } = require("../layers/SessionRegistry.js") as typeof import("../layers/SessionRegistry.js");
+		return getBySessionId(sessionId);
 	}
 
 	/**
@@ -884,9 +884,9 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static registerSession(sessionId: string, projectDir: string, sessionEnvDir: string): void {
 		// Import inline to avoid circular dependency at module load time
-		const { SessionRegistry } =
+		const { registerSession } =
 			require("../layers/SessionRegistry.js") as typeof import("../layers/SessionRegistry.js");
-		SessionRegistry.register({ sessionId, projectDir, sessionEnvDir });
+		registerSession({ sessionId, projectDir, sessionEnvDir });
 	}
 
 	/**
@@ -901,9 +901,9 @@ export abstract class PluginEnv<TOptions = Record<string, string>> {
 	 */
 	static getProjectSessionEnvDir(projectDir: string): string | undefined {
 		// Import inline to avoid circular dependency at module load time
-		const { SessionRegistry } =
+		const { getByProjectDir } =
 			require("../layers/SessionRegistry.js") as typeof import("../layers/SessionRegistry.js");
-		return SessionRegistry.getByProjectDir(projectDir);
+		return getByProjectDir(projectDir);
 	}
 
 	/**
