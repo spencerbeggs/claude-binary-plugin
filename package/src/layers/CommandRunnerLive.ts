@@ -209,11 +209,11 @@ export const CommandRunnerLive = Layer.succeed(
 				}
 
 				// Load session hook files into Bun.env
-				yield* Effect.try({
-					try: () => {
+				yield* Effect.tryPromise({
+					try: async () => {
 						const glob = new Bun.Glob("*hook*.sh");
-						for (const file of glob.scanSync({ cwd: sessionEnvDir, absolute: true })) {
-							const content = Bun.file(file).textSync?.() ?? "";
+						for await (const file of glob.scan({ cwd: sessionEnvDir, absolute: true })) {
+							const content = await Bun.file(file).text();
 							for (const line of content.split("\n")) {
 								const match = line.match(/^export\s+(\w+)=(.*)$/);
 								if (match?.[1] && match[2] !== undefined) {

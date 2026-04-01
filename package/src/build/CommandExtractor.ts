@@ -7,7 +7,7 @@
  *
  * @internal
  */
-import type { ExtractableCommand, PipelineCommandEntry } from "./builder.js";
+import type { CommandEntry, ExtractableCommand } from "./builder.js";
 
 /**
  * Extracts pipeline command entries from a plugin configuration.
@@ -17,10 +17,10 @@ import type { ExtractableCommand, PipelineCommandEntry } from "./builder.js";
  */
 export function extractPipelineCommandEntries(config: {
 	commands?: Record<string, ExtractableCommand>;
-}): PipelineCommandEntry[] {
+}): CommandEntry[] {
 	if (!config.commands) return [];
 
-	const entries: PipelineCommandEntry[] = [];
+	const entries: CommandEntry[] = [];
 
 	for (const [name, cmd] of Object.entries(config.commands)) {
 		entries.push({

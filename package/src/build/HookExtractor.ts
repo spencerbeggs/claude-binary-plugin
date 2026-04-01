@@ -9,7 +9,7 @@
  * @internal
  */
 import type { PassthroughHookEntry } from "../plugin/config.js";
-import type { ExtractableHook, ExtractedPassthroughHooks, HookEntry, PipelineHookEventType } from "./builder.js";
+import type { ExtractableHook, ExtractedPassthroughHooks, HookEntry, HookEventTypeName } from "./builder.js";
 
 /**
  * Check if a hook entry is a passthrough (raw hooks.json entry).
@@ -32,7 +32,7 @@ function isPassthroughHook(hook: unknown): hook is PassthroughHookEntry {
  * @returns Array of hook entries ready for code generation
  */
 export function extractPipelineHookEntries(config: {
-	hooks: Partial<Record<PipelineHookEventType, ExtractableHook[]>>;
+	hooks: Partial<Record<HookEventTypeName, ExtractableHook[]>>;
 }): HookEntry[] {
 	const entries: HookEntry[] = [];
 
@@ -47,7 +47,7 @@ export function extractPipelineHookEntries(config: {
 			if (!hook.name) continue;
 
 			entries.push({
-				hookType: hookType as PipelineHookEventType,
+				hookType: hookType as HookEventTypeName,
 				name: hook.name,
 				isPipeline: "handler" in hook && hook.handler !== undefined,
 				tools: hook.tools,
@@ -68,7 +68,7 @@ export function extractPipelineHookEntries(config: {
  * @returns Object mapping hook types to their passthrough entries
  */
 export function extractPassthroughHookEntries(config: {
-	hooks: Partial<Record<PipelineHookEventType, unknown[]>>;
+	hooks: Partial<Record<HookEventTypeName, unknown[]>>;
 }): ExtractedPassthroughHooks {
 	const result: ExtractedPassthroughHooks = {};
 

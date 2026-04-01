@@ -10,9 +10,9 @@
 import type {
 	ExtractedPassthroughHooks,
 	GenerateHooksJsonOptions,
+	HookEntry,
 	HooksJsonEntry,
 	HooksJsonFile,
-	PipelineHookEntry,
 } from "./builder.js";
 
 /**
@@ -29,7 +29,7 @@ export function generateHooksJson(options: GenerateHooksJsonOptions): HooksJsonF
 	const { pluginBinaryName, hooks, passthroughHooks = {}, proxyScript } = options;
 
 	// Group hooks by type
-	const hooksByType = new Map<string, PipelineHookEntry[]>();
+	const hooksByType = new Map<string, HookEntry[]>();
 	for (const hook of hooks) {
 		const list = hooksByType.get(hook.hookType) || [];
 		list.push(hook);
