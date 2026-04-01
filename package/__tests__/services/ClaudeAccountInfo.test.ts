@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Effect, Option, Ref } from "effect";
+import { Effect } from "effect";
 import { ClaudeAccountInfoLive } from "../../src/layers/ClaudeAccountInfoLive.js";
 import { makeClaudeAccountInfoTest } from "../../src/layers/ClaudeAccountInfoTest.js";
 import { ClaudeAccountInfo } from "../../src/services/ClaudeAccountInfo.js";
