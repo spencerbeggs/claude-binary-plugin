@@ -64,10 +64,9 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
 			const toolsArg = hook.tools?.length ? `[${hook.tools.map((t) => `"${t}"`).join(", ")}]` : "undefined";
 			const fileHookImport = fileHookMap.get(hookKey);
 
-			if (hook.isPipeline) {
-				if (fileHookImport) {
-					// File-based pipeline hook
-					hookCases.push(`    case "${hookKey}": {
+			if (fileHookImport) {
+				// File-based pipeline hook
+				hookCases.push(`    case "${hookKey}": {
       return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
@@ -82,54 +81,25 @@ export function generatePipelinePluginEntrypoint(options: GeneratePipelinePlugin
         handlerLayer: PipelineLive,
       });
     }`);
-				} else {
-					// Inline pipeline hook
-					hookCases.push(`    case "${hookKey}": {
-      const hookDef = configInstance.hooks.${hookType}?.find(h => h.name === "${hook.name}");
-      if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return PipelineRuntime.run({
-        hookType: "${hookType}",
-        hookName: "${hook.name}",
-        pluginName: PLUGIN_NAME,
-        pluginVersion: PLUGIN_VERSION,
-        handler: hookDef.handler,
-        stateClass: EnvClass,
-        tools: ${toolsArg},
-        optionsSchema: PluginConfigClass.options,
-        stateSchema: StateSchema,
-        setup: PluginConfigClass.setup,
-        handlerLayer: PipelineLive,
-      });
-    }`);
-				}
 			} else {
-				if (fileHookImport) {
-					// File-based handler hook
-					hookCases.push(`    case "${hookKey}": {
-      return PipelineRuntime.runRaw({
-        hookType: "${hookType}",
-        hookName: "${hook.name}",
-        pluginName: PLUGIN_NAME,
-        pluginVersion: PLUGIN_VERSION,
-        handler: ${fileHookImport},
-        stateClass: EnvClass,
-      });
-    }`);
-				} else {
-					// Inline handler hook
-					hookCases.push(`    case "${hookKey}": {
+				// Inline pipeline hook
+				hookCases.push(`    case "${hookKey}": {
       const hookDef = configInstance.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return PipelineRuntime.runRaw({
+      return PipelineRuntime.run({
         hookType: "${hookType}",
         hookName: "${hook.name}",
         pluginName: PLUGIN_NAME,
         pluginVersion: PLUGIN_VERSION,
         handler: hookDef.handler,
         stateClass: EnvClass,
+        tools: ${toolsArg},
+        optionsSchema: PluginConfigClass.options,
+        stateSchema: StateSchema,
+        setup: PluginConfigClass.setup,
+        handlerLayer: PipelineLive,
       });
     }`);
-				}
 			}
 		}
 	}

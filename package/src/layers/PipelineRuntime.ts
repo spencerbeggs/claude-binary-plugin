@@ -197,25 +197,6 @@ export interface PipelineConfig<TOptions = unknown, TState = Record<string, stri
 	_telemetry?: TelemetryInterface;
 }
 
-/**
- * Options for running a raw handler hook.
- * @public
- */
-export interface RunRawHandlerOptions<TOptions, TState = Record<string, string>> {
-	/** Hook event type (e.g., "PreToolUse", "SessionStart") */
-	hookType: HookEventType;
-	/** Custom hook name for logging and telemetry identification */
-	hookName: string;
-	/** Plugin name for telemetry attribution (passed explicitly to avoid env var cross-contamination) */
-	pluginName: string;
-	/** Plugin version for telemetry attribution (from package.json) */
-	pluginVersion: string;
-	/** Raw handler function with direct access to the HookEvent object */
-	handler: (ctx: { event: unknown; options: TOptions; state: TState }) => void | Promise<void>;
-	/** State class constructor for loading and validating environment variables */
-	stateClass: new () => PluginEnv<TOptions>;
-}
-
 // =============================================================================
 // RESOLVED TYPES
 // =============================================================================
@@ -252,8 +233,7 @@ interface PersistSessionEnvOptions {
  *
  * @remarks
  * The `PipelineRuntime` class consolidates all runtime execution logic into a
- * single, static class. This includes hook execution, raw handler execution,
- * and unknown hook handling.
+ * single, static class. This includes hook execution and unknown hook handling.
  *
  * @example
  * ```typescript
@@ -266,16 +246,6 @@ interface PersistSessionEnvOptions {
  *   pluginName: "my-plugin",
  *   pluginVersion: "1.0.0",
  *   handler: myHandler,
- *   stateClass: MyEnv,
- * });
- *
- * // Execute a raw handler
- * await PipelineRuntime.runRaw({
- *   hookType: "PreToolUse",
- *   hookName: "custom",
- *   pluginName: "my-plugin",
- *   pluginVersion: "1.0.0",
- *   handler: async ({ event }) => event.end(event.response().allow()),
  *   stateClass: MyEnv,
  * });
  * ```
@@ -698,118 +668,6 @@ export class PipelineRuntime {
 
 		const result = await Effect.runPromise(program);
 		io.exit(result.code);
-	}
-
-	/**
-	 * Execute a raw handler hook.
-	 *
-	 * @remarks
-	 * Raw handlers receive direct access to the HookEvent object instead of
-	 * the pipeline abstraction. They are responsible for:
-	 * - Calling `event.end()` or using response builder methods
-	 * - Managing their own telemetry (optional)
-	 * - Handling errors and exit codes
-	 *
-	 * Use raw handlers when you need:
-	 * - Direct access to response builder fluent API
-	 * - Custom response formatting not supported by pipeline outputs
-	 * - Maximum control over the response flow
-	 *
-	 * @param options - Raw handler configuration
-	 *
-	 * @public
-	 */
-	static async runRaw<TOptions, TState = Record<string, string>>(
-		options: RunRawHandlerOptions<TOptions, TState>,
-	): Promise<void> {
-		const { hookType, hookName, pluginName, handler, stateClass } = options;
-
-		const program = Effect.gen(function* () {
-			yield* Effect.annotateLogsScoped({ hookType, hookName, pluginName });
-
-			const hookSchemas = PipelineRuntime.getHookSchemas(hookType);
-			if (!hookSchemas) {
-				console.error(`Unknown hook type: ${hookType}`);
-				return { _tag: "exit" as const, code: 2 };
-			}
-
-			// biome-ignore lint/suspicious/noExplicitAny: Dynamic event parsing requires runtime typing
-			let event: any;
-			// biome-ignore lint/suspicious/noExplicitAny: Dynamic state creation requires runtime typing
-			let stateInstance: any;
-			try {
-				const inputText = yield* Effect.tryPromise(() => Bun.stdin.text());
-				const rawInput = JSON.parse(inputText);
-				// Decode input and convert to event instance via fromInput
-				// biome-ignore lint/suspicious/noExplicitAny: inputSchema is dynamically looked up
-				const decodedInput = Schema.decodeUnknownSync(hookSchemas.inputSchema as Schema.Schema<any, any, never>)(
-					rawInput,
-				);
-				event = hookSchemas.fromInput(decodedInput);
-
-				yield* Effect.log("input decoded").pipe(Effect.annotateLogs("channel", "pipeline"));
-
-				// Initialize state via static forContext method
-				const sessionEnvDir = PluginEnv.getSessionEnvDir(event.session_id);
-				// biome-ignore lint/suspicious/noExplicitAny: stateClass is dynamically provided
-				stateInstance = yield* Effect.tryPromise(() =>
-					(stateClass as any).forContext(hookType === "SessionStart" ? "sessionStart" : "hook", {
-						sessionId: event.session_id,
-						sessionEnvDir,
-						hookName,
-					}),
-				);
-			} catch (error) {
-				// Handle validation errors with debug output
-				if (ParseResult.isParseError(error)) {
-					const formatted = ParseResult.TreeFormatter.formatErrorSync(error);
-					console.error(`[${hookName}] Input validation failed:`);
-					console.error(formatted);
-
-					if (Bun.env.CLAUDE_DEBUG === "1") {
-						console.error(`\n[${hookName}] Debug: Hook type=${hookType}, Plugin=${pluginName}`);
-						console.error(`[${hookName}] Debug: Set CLAUDE_DEBUG=0 to suppress this output`);
-					}
-					return { _tag: "exit" as const, code: 2 };
-				}
-				throw error;
-			}
-
-			// Extract options and state, merge with base state
-			const handlerOptions = (stateInstance.vars ?? {}) as TOptions;
-			const claudeEnvFile = Bun.env.CLAUDE_ENV_FILE ?? "";
-			const cwd = "cwd" in event ? (event.cwd as string) : process.cwd();
-			const baseState = PipelineRuntime.createBaseState(cwd, claudeEnvFile, stateInstance);
-
-			// Load session env files for non-SessionStart hooks
-			if (hookType !== "SessionStart") {
-				const sessionEnvDir = PipelineRuntime.findSessionEnvDir(event);
-				if (sessionEnvDir) {
-					yield* Effect.tryPromise(() => PluginEnv.loadAllHookFiles(sessionEnvDir));
-				}
-			}
-
-			const persistedState = PipelineRuntime.extractPersistedState(stateInstance);
-			const pluginState = { ...baseState, ...persistedState } as TState;
-
-			yield* Effect.log("invoking handler").pipe(Effect.annotateLogs("channel", "pipeline"));
-			yield* Effect.tryPromise(() => Promise.resolve(handler({ event, options: handlerOptions, state: pluginState })));
-			yield* Effect.log("handler completed").pipe(Effect.annotateLogs("channel", "pipeline"));
-			return { _tag: "done" as const };
-		}).pipe(
-			Effect.catchAll((error) => {
-				// Extract original error from UnknownException for re-throwing
-				const cause = "error" in (error as object) ? (error as { error: unknown }).error : error;
-				return Effect.die(cause);
-			}),
-			Effect.scoped,
-			Effect.provide(makePluginLoggerLive(pluginName)),
-		);
-
-		const result = await Effect.runPromise(program);
-		if (result._tag === "exit") {
-			process.exit(result.code);
-		}
 	}
 
 	/**

@@ -52,23 +52,6 @@ describe("Pipeline", () => {
 		});
 	});
 
-	describe("isRawHook", () => {
-		test("returns true for hook with handler function", () => {
-			const hook = { handler: () => {} };
-			expect(Pipeline.isRawHook(hook as never)).toBe(true);
-		});
-
-		test("returns false for hook with handler set to undefined", () => {
-			const hook = { handler: undefined };
-			expect(Pipeline.isRawHook(hook as never)).toBe(false);
-		});
-
-		test("returns false for hook without handler", () => {
-			const hook = { name: "test" };
-			expect(Pipeline.isRawHook(hook as never)).toBe(false);
-		});
-	});
-
 	describe("Metrics", () => {
 		test("exposes estimateTokens function", () => {
 			expect(typeof Pipeline.Metrics.estimateTokens).toBe("function");

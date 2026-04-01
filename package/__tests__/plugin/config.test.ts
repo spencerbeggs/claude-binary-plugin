@@ -275,29 +275,6 @@ describe("ClaudePlugin (basic)", () => {
 		expect(second?.name).toBe("security");
 	});
 
-	test("accepts raw handler mode", () => {
-		class RawConfig extends PluginConfig.extend<RawConfig>("RawConfig")({
-			prefix: Schema.Literal("RAW"),
-		}) {
-			static readonly options = Schema.Struct({});
-		}
-
-		const plugin = new ClaudePlugin(RawConfig, {
-			PreToolUse: [
-				{
-					name: "raw-handler",
-					// biome-ignore lint/suspicious/noExplicitAny: Raw handler test needs untyped event access
-					handler: async (ctx: { event: any; options: unknown; state: unknown }) => {
-						// Raw handler has full control
-						ctx.event.end(ctx.event.response().allow());
-					},
-				},
-			],
-		});
-
-		expect(plugin.hooks.PreToolUse).toHaveLength(1);
-	});
-
 	test("type safety: pipeline return must match output schema", () => {
 		class TypedConfig extends PluginConfig.extend<TypedConfig>("TypedConfig")({
 			prefix: Schema.Literal("TYPED"),
@@ -632,19 +609,6 @@ describe("Helper functions", () => {
 
 		expect(Pipeline.isPipelineHook(hookWithHandler)).toBe(true);
 		expect(Pipeline.isPipelineHook(hookWithoutHandler as never)).toBe(false);
-	});
-
-	test("Pipeline.isRawHook identifies raw hooks", () => {
-		const hookWithHandler = {
-			name: "test",
-			handler: () => {},
-		};
-		const hookWithoutHandler = {
-			name: "test",
-		};
-
-		expect(Pipeline.isRawHook(hookWithHandler)).toBe(true);
-		expect(Pipeline.isRawHook(hookWithoutHandler as never)).toBe(false);
 	});
 });
 

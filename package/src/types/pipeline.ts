@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import type { HandlerHookDefinition, HookDefinition, RawHookDefinition } from "../plugin/config.js";
+import type { HandlerHookDefinition, HookDefinition } from "../plugin/config.js";
 import type {
 	ExecutionQuality,
 	NotificationPipelineOutput,
@@ -686,10 +686,10 @@ export class TokenMetrics {
  *
  * | Category | Methods |
  * |----------|---------|
- * | Type Guards | `isOutput`, `isPipelineHook`, `isRawHook` |
+ * | Type Guards | `isOutput`, `isPipelineHook` |
  * | Metrics | `Metrics.*` (static property) |
  *
- * For execution methods (`run`, `runRaw`, `handleUnknown`), see {@link PipelineRuntime}.
+ * For execution methods (`run`, `handleUnknown`), see {@link PipelineRuntime}.
  *
  * @example
  * ```typescript
@@ -758,24 +758,6 @@ export class Pipeline {
 	static isPipelineHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
 		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
 	): hook is HandlerHookDefinition<TInput, TOutput, TOptions> {
-		return "handler" in hook && hook.handler !== undefined;
-	}
-
-	/**
-	 * Check if a hook definition uses raw handler mode.
-	 *
-	 * @remarks
-	 * Returns true if the hook has a `handler` property, indicating it
-	 * receives the full HookEvent object and manages its own response.
-	 *
-	 * @param hook - Hook definition to check
-	 * @returns `true` if hook uses raw handler mode
-	 *
-	 * @public
-	 */
-	static isRawHook<TInput, TOutput, TEvent, TOptions, TState = Record<string, string>>(
-		hook: HookDefinition<TInput, TOutput, TEvent, TOptions, TState>,
-	): hook is RawHookDefinition<TEvent, TOptions, TState> {
 		return "handler" in hook && hook.handler !== undefined;
 	}
 

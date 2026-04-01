@@ -214,27 +214,6 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
 	ctx: HandlerContext<TInput, TOptions, TState>,
 ) => TOutput | AnyOutcome | Promise<TOutput | AnyOutcome> | Effect.Effect<TOutput | AnyOutcome>;
 
-/**
- * Raw handler: full access to event object for advanced use cases.
- *
- * @remarks
- * Unlike pipeline handlers, raw handlers receive the full event object
- * which remains mutable (for calling methods like `event.end()`).
- * Options and state are deeply readonly to prevent mutations.
- *
- * User is responsible for calling `event.end()` with appropriate response.
- *
- * @public
- */
-export type RawHandler<TEvent, TOptions, TState = Record<string, unknown>> = (ctx: {
-	/** Full event object (mutable for method calls) */
-	event: TEvent;
-	/** Validated options from plugin schema (readonly) */
-	options: ReadonlyDeep<TOptions>;
-	/** State: base paths + computed state from setup() (readonly) */
-	state: ReadonlyDeep<PluginState<TState>>;
-}) => void | Promise<void>;
-
 // =============================================================================
 // TYPED HANDLER HELPERS - For file-based hooks
 // =============================================================================
@@ -382,74 +361,6 @@ export type PermissionRequestHandler<TOptions, TState = Record<string, string>> 
 	TState
 >;
 
-/**
- * Typed raw handler for SessionStart hooks.
- * @public
- */
-export type SessionStartRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for SessionEnd hooks.
- * @public
- */
-export type SessionEndRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for PreToolUse hooks.
- * @public
- */
-export type PreToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for PostToolUse hooks.
- * @public
- */
-export type PostToolUseRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for Stop hooks.
- * @public
- */
-export type StopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for SubagentStop hooks.
- * @public
- */
-export type SubagentStopRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for UserPromptSubmit hooks.
- * @public
- */
-export type UserPromptSubmitRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	unknown,
-	TOptions,
-	TState
->;
-
-/**
- * Typed raw handler for PreCompact hooks.
- * @public
- */
-export type PreCompactRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for Notification hooks.
- * @public
- */
-export type NotificationRawHandler<TOptions, TState = Record<string, string>> = RawHandler<unknown, TOptions, TState>;
-
-/**
- * Typed raw handler for PermissionRequest hooks.
- * @public
- */
-export type PermissionRequestRawHandler<TOptions, TState = Record<string, string>> = RawHandler<
-	unknown,
-	TOptions,
-	TState
->;
-
 // =============================================================================
 // HOOK DEFINITION TYPES
 // =============================================================================
@@ -505,35 +416,6 @@ export interface HandlerFileHookDefinition extends HookDefinitionBase {
 }
 
 /**
- * Raw handler-based hook definition with inline function.
- * @public
- */
-export interface RawHookDefinition<TEvent, TOptions, TState = Record<string, string>> extends HookDefinitionBase {
-	/** Raw event handler with full control */
-	handler: RawHandler<TEvent, TOptions, TState>;
-}
-
-/**
- * Raw handler-based hook definition with file path.
- * The file should export a default function matching RawHandler signature.
- * Use a relative path from the plugin definition file.
- *
- * @example
- * ```ts
- * {
- *   name: "post-build",
- *   tools: ["Bash"],
- *   handler: "./hooks/post-build.hook.ts"
- * }
- * ```
- * @public
- */
-export interface RawFileHookDefinition extends HookDefinitionBase {
-	/** Relative path to file exporting default handler function */
-	handler: string;
-}
-
-/**
  * Passthrough hook entry - included directly in hooks.json without compilation.
  * Use this for hooks that don't need to be part of the binary plugin,
  * like bash scripts or external tools.
@@ -561,11 +443,9 @@ export interface PassthroughHookEntry {
  * Hook definition: either pipeline, handler, file path, or passthrough.
  * @public
  */
-export type HookDefinition<TInput, TOutput, TEvent, TOptions, TState = Record<string, unknown>> =
+export type HookDefinition<TInput, TOutput, _TEvent, TOptions, TState = Record<string, unknown>> =
 	| HandlerHookDefinition<TInput, TOutput, TOptions, TState>
 	| HandlerFileHookDefinition
-	| RawHookDefinition<TEvent, TOptions, TState>
-	| RawFileHookDefinition
 	| PassthroughHookEntry;
 
 // =============================================================================
@@ -1272,11 +1152,9 @@ export type InferPluginState<T> =
  * Returns an interface with typed handlers for each hook event.
  * This is the primary type for defining hook handlers in plugin projects.
  *
- * The interface includes both pipeline handlers (pure transformation functions)
- * and raw handlers (full event access):
+ * The interface includes pipeline handlers (pure transformation functions):
  *
  * - `Pipeline["PreToolUse"]` - Pipeline handler receiving `{ input, options, state }`
- * - `Pipeline["PreToolUseRaw"]` - Raw handler receiving `{ event, options, state }`
  *
  * @example
  * ```ts
@@ -1371,80 +1249,6 @@ export interface InferHandlers<T> {
 	 * @see {@link PermissionRequestHandler}
 	 */
 	PermissionRequest: PermissionRequestHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	// =========================================================================
-	// Raw handlers (full event access)
-	// =========================================================================
-
-	/**
-	 * Raw handler for session initialization with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link SessionStartRawHandler}
-	 */
-	SessionStartRaw: SessionStartRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for session cleanup with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link SessionEndRawHandler}
-	 */
-	SessionEndRaw: SessionEndRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for tool pre-execution with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link PreToolUseRawHandler}
-	 */
-	PreToolUseRaw: PreToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for tool post-execution with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link PostToolUseRawHandler}
-	 */
-	PostToolUseRaw: PostToolUseRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for agent stop events with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link StopRawHandler}
-	 */
-	StopRaw: StopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for subagent stop events with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link SubagentStopRawHandler}
-	 */
-	SubagentStopRaw: SubagentStopRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for user prompt submission with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link UserPromptSubmitRawHandler}
-	 */
-	UserPromptSubmitRaw: UserPromptSubmitRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for context compaction with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link PreCompactRawHandler}
-	 */
-	PreCompactRaw: PreCompactRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for notification events with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link NotificationRawHandler}
-	 */
-	NotificationRaw: NotificationRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
-
-	/**
-	 * Raw handler for permission requests with full event access.
-	 * Use when you need direct access to the HookEvent object.
-	 * @see {@link PermissionRequestRawHandler}
-	 */
-	PermissionRequestRaw: PermissionRequestRawHandler<InferPluginOptions<T>, InferPluginState<T>>;
 }
 
 /**

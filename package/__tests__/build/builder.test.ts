@@ -668,13 +668,13 @@ describe("generatePipelinePluginEntrypoint", () => {
 		expect(entrypoint).toContain("PipelineRuntime.run(");
 	});
 
-	test("generates valid entrypoint with raw handler hooks", () => {
+	test("generates valid entrypoint with non-pipeline hooks using PipelineRuntime.run", () => {
 		const hooks: PipelineHookEntry[] = [
 			{
 				hookType: "PreToolUse",
 				name: "raw-handler",
 				isPipeline: false,
-				description: "Raw handler test",
+				description: "Handler test",
 			},
 		];
 
@@ -687,8 +687,8 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
-		// Check for PipelineRuntime.runRaw call
-		expect(entrypoint).toContain("PipelineRuntime.runRaw(");
+		// All hooks now use PipelineRuntime.run
+		expect(entrypoint).toContain("PipelineRuntime.run(");
 		expect(entrypoint).toContain('case "PreToolUse/raw-handler"');
 	});
 

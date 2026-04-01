@@ -368,7 +368,7 @@ export { OtelConfig, OtelConfigData } from "./services/OtelConfig.js";
 // =============================================================================
 
 // Pipeline runtime types
-export type { HookEventType, IODependencies, PipelineConfig, RunRawHandlerOptions } from "./layers/PipelineRuntime.js";
+export type { HookEventType, IODependencies, PipelineConfig } from "./layers/PipelineRuntime.js";
 // Pipeline runtime execution
 export { PipelineRuntime } from "./layers/PipelineRuntime.js";
 export type {
@@ -399,44 +399,31 @@ export type {
 	InferPluginState,
 	NotificationHandler,
 	NotificationHookDefinition,
-	NotificationRawHandler,
 	PassthroughHookEntry,
 	PermissionRequestHandler,
 	PermissionRequestHookDefinition,
-	PermissionRequestRawHandler,
 	PipelineHandler,
 	PluginBuildOptions,
 	PluginState,
 	PostToolUseHandler,
 	PostToolUseHookDefinition,
-	PostToolUseRawHandler,
 	PreCompactHandler,
 	PreCompactHookDefinition,
-	PreCompactRawHandler,
 	PreToolUseHandler,
 	PreToolUseHookDefinition,
-	PreToolUseRawHandler,
-	RawFileHookDefinition,
-	RawHandler,
-	RawHookDefinition,
 	SessionEndHandler,
 	SessionEndHookDefinition,
-	SessionEndRawHandler,
 	SessionStartHandler,
 	SessionStartHookDefinition,
-	SessionStartRawHandler,
 	SetupContext,
 	SetupFunction,
 	StopHandler,
 	StopHookDefinition,
-	StopRawHandler,
 	SubagentStopHandler,
 	SubagentStopHookDefinition,
-	SubagentStopRawHandler,
 	ToolFilter,
 	UserPromptSubmitHandler,
 	UserPromptSubmitHookDefinition,
-	UserPromptSubmitRawHandler,
 } from "./plugin/config.js";
 export { ClaudePlugin, PluginConfig } from "./plugin/config.js";
 // Pipeline output schemas
