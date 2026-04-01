@@ -1,4 +1,4 @@
-import { isPlatformSupported } from "./Platform.js";
+import { platform } from "node:os";
 
 /**
  * Default values for OTEL configuration.
@@ -32,5 +32,7 @@ export const OTEL_ENV_VARS = {
  * Effect code should use the OtelConfig service's `enabled` field.
  */
 export function isOtelEnabled(): boolean {
-	return Bun.env.CLAUDE_CODE_ENABLE_TELEMETRY === "1" && isPlatformSupported();
+	const p = platform();
+	const isSupported = p === "darwin" || p === "linux";
+	return Bun.env.CLAUDE_CODE_ENABLE_TELEMETRY === "1" && isSupported;
 }

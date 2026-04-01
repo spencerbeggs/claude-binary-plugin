@@ -14,7 +14,10 @@
  * provider flush+shutdown, log file close).
  */
 import { Duration, Effect, Layer, Ref, Schedule } from "effect";
+import { GitInfoLive } from "../layers/GitInfoLive.js";
+import { MessageRouterLive } from "../layers/MessageRouterLive.js";
 import { OtelProvidersLive } from "../layers/OtelProvidersLive.js";
+import { ShellExecutorLive } from "../layers/ShellExecutorLive.js";
 import { makeSidecarTransportLive } from "../layers/SidecarTransportLive.js";
 
 /**
@@ -80,7 +83,12 @@ export const makeSidecarProgram = () =>
 		);
 
 		// Build the sidecar layer stack
-		const SidecarLive = makeSidecarTransportLive(lastActivity).pipe(Layer.provide(OtelProvidersLive));
+		const SidecarLive = makeSidecarTransportLive(lastActivity).pipe(
+			Layer.provide(OtelProvidersLive),
+			Layer.provide(MessageRouterLive),
+			Layer.provide(GitInfoLive),
+			Layer.provide(ShellExecutorLive),
+		);
 
 		// Race idle checker against signal handler
 		// Either one interrupting triggers scope unwinding
