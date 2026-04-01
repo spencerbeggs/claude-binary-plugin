@@ -9,7 +9,7 @@ import { JsonObjectSchema } from "./json.js";
  * Execution status indicating whether the hook ran and how.
  *
  * @remarks
- * The status field is the discriminator for pipeline output types. Each status
+ * The status field is the discriminator for hook output types. Each status
  * has different valid fields and actions:
  *
  * | Status | Meaning | Has Action? |
@@ -132,7 +132,7 @@ export const ExecutionQualitySchema = Schema.Struct({
 export type ExecutionQuality = typeof ExecutionQualitySchema.Type;
 
 // =============================================================================
-// PIPELINE METRICS
+// HOOK METRICS
 // =============================================================================
 
 /**
@@ -141,7 +141,7 @@ export type ExecutionQuality = typeof ExecutionQualitySchema.Type;
  * @schema
  * @public
  */
-export const PipelineMetricsSchema = Schema.Struct({
+export const HookMetricsSchema = Schema.Struct({
 	// Validation metrics
 	issuesFound: Schema.optional(Schema.Number),
 	issuesFixed: Schema.optional(Schema.Number),
@@ -157,14 +157,14 @@ export const PipelineMetricsSchema = Schema.Struct({
 );
 
 /** @public */
-export type PipelineMetrics = typeof PipelineMetricsSchema.Type;
+export type HookMetrics = typeof HookMetricsSchema.Type;
 
 // =============================================================================
-// PIPELINE OUTPUT BASE
+// HOOK OUTPUT BASE
 // =============================================================================
 
 /**
- * Base schema for all pipeline outputs defining common fields.
+ * Base schema for all hook outputs defining common fields.
  *
  * @remarks
  * All hook-specific output schemas extend this base schema. Fields are organized
@@ -193,7 +193,7 @@ export type PipelineMetrics = typeof PipelineMetricsSchema.Type;
  * @schema
  * @public
  */
-export const PipelineOutputBaseSchema = Schema.Struct({
+export const HookOutputBaseSchema = Schema.Struct({
 	// ─────────────────────────────────────────────────────────────────────────
 	// REQUIRED: Telemetry
 	// ─────────────────────────────────────────────────────────────────────────
@@ -218,7 +218,7 @@ export const PipelineOutputBaseSchema = Schema.Struct({
 	quality: Schema.optional(ExecutionQualitySchema),
 
 	/** User-provided metrics for telemetry */
-	metrics: Schema.optional(PipelineMetricsSchema),
+	metrics: Schema.optional(HookMetricsSchema),
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// OPTIONAL: User-facing messages (shown in terminal)
@@ -246,14 +246,14 @@ export const PipelineOutputBaseSchema = Schema.Struct({
 });
 
 /** @public */
-export type PipelineOutputBase = typeof PipelineOutputBaseSchema.Type;
+export type HookOutputBase = typeof HookOutputBaseSchema.Type;
 
 // =============================================================================
 // PRETOOLUSE OUTPUT
 // =============================================================================
 
 /**
- * PreToolUse pipeline output with discriminated union for type safety.
+ * PreToolUse hook output with discriminated union for type safety.
  * @schema
  * @public
  */
@@ -265,7 +265,7 @@ export const PreToolUseOutputSchema = Schema.Union(
 		summary: Schema.String,
 		validation: Schema.optional(ValidationResultSchema),
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 		userMessage: Schema.optional(Schema.String),
 		claudeContext: Schema.optional(Schema.String),
 		reason: Schema.optional(Schema.String),
@@ -315,14 +315,14 @@ export const PreToolUseOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type PreToolUsePipelineOutput = typeof PreToolUseOutputSchema.Type;
+export type PreToolUseOutput = typeof PreToolUseOutputSchema.Type;
 
 // =============================================================================
 // POSTTOOLUSE OUTPUT
 // =============================================================================
 
 /**
- * PostToolUse pipeline output with discriminated union for type safety.
+ * PostToolUse hook output with discriminated union for type safety.
  * @schema
  * @public
  */
@@ -334,7 +334,7 @@ export const PostToolUseOutputSchema = Schema.Union(
 		summary: Schema.String,
 		validation: Schema.optional(ValidationResultSchema),
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 		userMessage: Schema.optional(Schema.String),
 		claudeContext: Schema.optional(Schema.String),
 		reason: Schema.optional(Schema.String),
@@ -381,14 +381,14 @@ export const PostToolUseOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type PostToolUsePipelineOutput = typeof PostToolUseOutputSchema.Type;
+export type PostToolUseOutput = typeof PostToolUseOutputSchema.Type;
 
 // =============================================================================
 // SESSIONSTART OUTPUT
 // =============================================================================
 
 /**
- * SessionStart pipeline output with discriminated union for type safety.
+ * SessionStart hook output with discriminated union for type safety.
  * @schema
  * @public
  */
@@ -399,7 +399,7 @@ export const SessionStartOutputSchema = Schema.Union(
 		action: Schema.Literal("context", "none"),
 		summary: Schema.String,
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 		userMessage: Schema.optional(Schema.String),
 		claudeContext: Schema.optional(Schema.String),
 	}),
@@ -431,14 +431,14 @@ export const SessionStartOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type SessionStartPipelineOutput = typeof SessionStartOutputSchema.Type;
+export type SessionStartOutput = typeof SessionStartOutputSchema.Type;
 
 // =============================================================================
 // STOP / SUBAGENTSTOP OUTPUT
 // =============================================================================
 
 /**
- * Stop/SubagentStop pipeline output with discriminated union for type safety.
+ * Stop/SubagentStop hook output with discriminated union for type safety.
  * @schema
  * @public
  */
@@ -450,7 +450,7 @@ export const StopOutputSchema = Schema.Union(
 		summary: Schema.String,
 		reason: Schema.optional(Schema.String), // Required for block, optional for continue
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 		userMessage: Schema.optional(Schema.String),
 		claudeContext: Schema.optional(Schema.String),
 	}).pipe(
@@ -488,24 +488,24 @@ export const StopOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type StopPipelineOutput = typeof StopOutputSchema.Type;
+export type StopOutput = typeof StopOutputSchema.Type;
 
 // Alias for SubagentStop
 /**
- * SubagentStop pipeline output (alias for StopOutputSchema).
+ * SubagentStop hook output (alias for StopOutputSchema).
  * @schema
  * @public
  */
 export const SubagentStopOutputSchema = StopOutputSchema;
 /** @public */
-export type SubagentStopPipelineOutput = StopPipelineOutput;
+export type SubagentStopOutput = StopOutput;
 
 // =============================================================================
 // USERPROMPTSUBMIT OUTPUT
 // =============================================================================
 
 /**
- * UserPromptSubmit pipeline output with discriminated union for type safety.
+ * UserPromptSubmit hook output with discriminated union for type safety.
  * @schema
  * @public
  */
@@ -516,7 +516,7 @@ export const UserPromptSubmitOutputSchema = Schema.Union(
 		action: Schema.Literal("block", "continue", "context", "none"),
 		summary: Schema.String,
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 		userMessage: Schema.optional(Schema.String),
 		claudeContext: Schema.optional(Schema.String),
 		reason: Schema.optional(Schema.String),
@@ -548,14 +548,14 @@ export const UserPromptSubmitOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type UserPromptSubmitPipelineOutput = typeof UserPromptSubmitOutputSchema.Type;
+export type UserPromptSubmitOutput = typeof UserPromptSubmitOutputSchema.Type;
 
 // =============================================================================
 // PERMISSIONREQUEST OUTPUT
 // =============================================================================
 
 /**
- * PermissionRequest pipeline output with discriminated union for type safety.
+ * PermissionRequest hook output with discriminated union for type safety.
  * @schema
  * @public
  */
@@ -566,7 +566,7 @@ export const PermissionRequestOutputSchema = Schema.Union(
 		action: Schema.Literal("allow", "deny"),
 		summary: Schema.String,
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 		userMessage: Schema.optional(Schema.String),
 		claudeContext: Schema.optional(Schema.String),
 		reason: Schema.optional(Schema.String),
@@ -600,7 +600,7 @@ export const PermissionRequestOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type PermissionRequestPipelineOutput = typeof PermissionRequestOutputSchema.Type;
+export type PermissionRequestOutput = typeof PermissionRequestOutputSchema.Type;
 
 // =============================================================================
 // PASSTHROUGH OUTPUTS (SessionEnd, PreCompact, Notification)
@@ -618,7 +618,7 @@ export const PassthroughOutputSchema = Schema.Union(
 		action: Schema.Literal("none"),
 		summary: Schema.String,
 		quality: Schema.optional(ExecutionQualitySchema),
-		metrics: Schema.optional(PipelineMetricsSchema),
+		metrics: Schema.optional(HookMetricsSchema),
 	}),
 
 	// Skipped state
@@ -644,32 +644,32 @@ export const PassthroughOutputSchema = Schema.Union(
 );
 
 /** @public */
-export type PassthroughPipelineOutput = typeof PassthroughOutputSchema.Type;
+export type PassthroughOutput = typeof PassthroughOutputSchema.Type;
 
 // Aliases for specific passthrough hooks
 /**
- * SessionEnd pipeline output (alias for PassthroughOutputSchema).
+ * SessionEnd hook output (alias for PassthroughOutputSchema).
  * @schema
  * @public
  */
 export const SessionEndOutputSchema = PassthroughOutputSchema;
 /** @public */
-export type SessionEndPipelineOutput = PassthroughPipelineOutput;
+export type SessionEndOutput = PassthroughOutput;
 
 /**
- * PreCompact pipeline output (alias for PassthroughOutputSchema).
+ * PreCompact hook output (alias for PassthroughOutputSchema).
  * @schema
  * @public
  */
 export const PreCompactOutputSchema = PassthroughOutputSchema;
 /** @public */
-export type PreCompactPipelineOutput = PassthroughPipelineOutput;
+export type PreCompactOutput = PassthroughOutput;
 
 /**
- * Notification pipeline output (alias for PassthroughOutputSchema).
+ * Notification hook output (alias for PassthroughOutputSchema).
  * @schema
  * @public
  */
 export const NotificationOutputSchema = PassthroughOutputSchema;
 /** @public */
-export type NotificationPipelineOutput = PassthroughPipelineOutput;
+export type NotificationOutput = PassthroughOutput;
