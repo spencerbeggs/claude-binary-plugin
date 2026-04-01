@@ -29,11 +29,13 @@ src/
     ManifestGenerator.ts    # Generate hooks.json manifest
     ProxyTemplate.ts        # Generate proxy shell script
   commands/             # Command system runtime
-    runtime.ts          # Commands class, argument parsing
+    runtime.ts          # CommandArgumentError, EmptyArgs type
   errors/               # Data.TaggedError definitions (one per file)
   layers/               # Service implementations (Live + Test)
-    PipelineRuntime.ts  # Hook execution engine
-    PipelineLive.ts     # Composed service layer for production
+    PipelineRuntime.ts  # Type exports only (HookEventType, IODependencies, PipelineConfig)
+    PipelineRuntimeServiceLive.ts  # PipelineRuntimeService Live layer
+    PipelineLive.ts     # Composed service layer for handler dependencies
+    CommandRunnerLive.ts # CommandRunner Live layer (full run + parse)
     PluginLoggerLive.ts # NDJSON file logger
     PluginLoggerTest.ts # In-memory test logger
     SessionRegistry.ts  # SQLite session-to-env-dir mapping
@@ -67,6 +69,7 @@ src/
     json.ts             # JSON schema utilities
     pipeline-outputs.ts # Pipeline output schemas (discriminated on status)
   services/             # Effect Context.Tag service interfaces
+    PipelineRuntimeService.ts  # Hook execution service (RunResult, PipelineRunConfig)
   testing/              # Test utilities
     builder.ts          # PluginTester fluent API
     mocks.ts            # Mock types and utilities
@@ -132,7 +135,7 @@ import MyConfig from "./plugin.config.js";
 import guardHandler from "./hooks/guard.js";
 
 const plugin = new ClaudePlugin(MyConfig, {
-  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
 });
 await plugin.build({ rootDir: import.meta.dir });
 ```
@@ -230,15 +233,16 @@ its `context` field. The SDK resolves it to a string at response time.
 
 `isValidOutcomeForHook(hookType, outcome)` validates at runtime that a
 handler returned a valid outcome for its hook type. The mapping is defined
-in `VALID_OUTCOME_TAGS` in `outcomes/types.ts`. `PipelineRuntime` calls
-this before serializing the response; invalid outcomes cause an error exit.
+in `VALID_OUTCOME_TAGS` in `outcomes/types.ts`. `PipelineRuntimeServiceLive`
+calls this before serializing the response; invalid outcomes cause a
+`PipelineError`.
 
 ### Backward Compatibility
 
-`PipelineRuntime` checks `Outcome.isOutcome(output)` first (new path),
-then falls back to `isPipelineOutput(output)` (legacy path). Both paths
-work -- existing handlers returning `{ status, action, summary }` objects
-continue to function unchanged.
+`PipelineRuntimeServiceLive` checks `Outcome.isOutcome(output)` first
+(new path), then falls back to `isPipelineOutput(output)` (legacy path).
+Both paths work -- existing handlers returning `{ status, action, summary }`
+objects continue to function unchanged.
 
 ## Effect Service/Layer Pattern
 
@@ -257,14 +261,16 @@ Service (Context.Tag)     Layer (implementation)
   OtelConfig          ->  OtelConfigLive / makeOtelConfigTest
   SidecarConnection   ->  SidecarConnectionLive / makeSidecarConnectionTest
   CommandRunner       ->  CommandRunnerLive / makeCommandRunnerTest
+  PipelineRuntimeService -> PipelineRuntimeServiceLive
   PluginEnvService    ->  PluginEnvLive / makePluginEnvTest
   PluginBuilderService -> PluginBuilderLive / makePluginBuilderTest
 ```
 
-## PipelineLive (Composed Layer)
+## PipelineLive (Handler Dependencies Layer)
 
-`PipelineLive` merges all production service layers into a single layer for
-pipeline execution. OTEL layers are composed with dependency ordering:
+`PipelineLive` merges all production service layers into a single layer
+that satisfies handler Effect dependencies. It does NOT include the
+runtime services themselves — those are composed separately.
 
 ```typescript
 const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive), Layer.provide(OtelConfigLive));
@@ -275,29 +281,80 @@ export const PipelineLive = Layer.mergeAll(
 );
 ```
 
-## PipelineRuntime Execution Flow
+## Generated Entrypoint Architecture
 
-`PipelineRuntime.run()` is the main entry point for hook execution:
+The generated entrypoint owns the process lifecycle. Services return typed
+results; the entrypoint writes stdout and manages process.exit:
 
-1. Resolve I/O dependencies (stdin/stdout/stderr or injected test streams)
-2. Preconnect telemetry sidecar (non-blocking)
-3. Read JSON from stdin, decode with Input Schema.Class
-4. Convert decoded input to Event instance via `fromInput()`
-5. Check tool filter (PreToolUse/PostToolUse only)
-6. Load environment via `PluginEnv.forContext()`
-7. Run `setup()` and persist state if SessionStart
-8. Call pipeline handler with `{ input, options, state }`
+```text
+Generated Entrypoint (owns stdout + process.exit)
+  └─ Effect.gen + Effect.provide(RuntimeLayer)
+       ├─ PipelineRuntimeServiceLive.run() → RunResult { code, response, telemetry? }
+       └─ CommandRunnerLive.run() → CommandOutput { exitCode, output, data? }
+```
+
+```typescript
+const RuntimeLayer = Layer.merge(PipelineRuntimeServiceLive, CommandRunnerLive);
+
+// Hook execution
+const result = await Effect.runPromise(
+  Effect.gen(function* () {
+    const runtime = yield* PipelineRuntimeService;
+    return yield* runtime.run({ hookType, hookName, handler, ... });
+  }).pipe(Effect.provide(RuntimeLayer))
+);
+process.stdout.write(JSON.stringify(result.response));
+
+// Command execution
+const result = await Effect.runPromise(
+  Effect.gen(function* () {
+    const runner = yield* CommandRunner;
+    return yield* runner.run({ commandName, handler, rawArgs, ... });
+  }).pipe(Effect.provide(RuntimeLayer))
+);
+console.log(result.output);
+process.exit(result.exitCode);
+```
+
+No `process.exit()` anywhere in service code — the entrypoint is the sole
+owner of process lifecycle.
+
+## PipelineRuntimeService Execution Flow
+
+`PipelineRuntimeServiceLive.run()` executes hook handlers and returns
+`RunResult` instead of writing stdout or calling `process.exit()`:
+
+1. Read stdin (pre-loaded `inputText` or `Bun.stdin.text()`)
+2. JSON parse and Schema decode input via `getHookSchemas()`
+3. Convert decoded input to Event instance via `fromInput()`
+4. Check tool filter (PreToolUse/PostToolUse only)
+5. Load environment via `PluginEnv.forContext()`
+6. Run `setup()` and persist state if SessionStart
+7. Call handler with `{ input, options, state }`
+8. Handle sync, Promise, or Effect returns from handler
 9. **Check if output is an Outcome** (via `Outcome.isOutcome()`):
-   - Validate outcome for hook type via `isValidOutcomeForHook()`
+   - Validate via `isValidOutcomeForHook()` — fail with `PipelineError` if invalid
    - Extract telemetry via `outcome.toTelemetry()`
-   - Convert to response via `outcome.toResponse()`
+   - Return `RunResult` with `outcome.toResponse()`
 10. **Else check if output is a legacy PipelineOutput** (via `isPipelineOutput()`):
-    - Validate against hook-type-specific output schema
     - Map status/action to telemetry outcome label
-    - Convert via `toResponse()` functions
-11. Emit OTEL telemetry (hook execution event)
-12. Write JSON response to stdout
-13. Exit process
+    - Convert via `toResponseForHook()` functions
+    - Return `RunResult`
+11. Emit OTEL telemetry throughout
+12. Errors become `PipelineError` with `hookName`, `stage`, `cause`
+
+### CommandRunner Execution Flow
+
+`CommandRunnerLive.run()` executes commands and returns `CommandOutput`:
+
+1. Parse raw CLI args via `parseRaw()`
+2. Validate args against `argsSchema` (if provided)
+3. Find session env dir via `findSessionEnvDir()`
+4. Load session env files via `PluginEnv.loadAllHookFiles()`
+5. Create state instance, extract options and persisted state
+6. Call handler with `{ args, options, state }`
+7. Validate output via `validateOutput()`
+8. Return `CommandOutput { exitCode, output, data? }`
 
 ### State Schema.Class Support
 
@@ -309,10 +366,6 @@ When `PluginConfig.state` is a `Schema.Class`, the pipeline:
   to reconstruct a typed instance with methods
 - **Prototype preservation**: Uses `Object.assign(Object.create(proto), state, baseState)`
   to ensure decoded state retains `Schema.Class` prototype methods
-
-`PipelineConfig` carries `stateSchema` and `handlerLayer` fields.
-`EntrypointGenerator` passes `stateSchema: pluginConfig.state` and
-`handlerLayer: PipelineLive` when generating the entrypoint code.
 
 ## PluginLoggerLive
 

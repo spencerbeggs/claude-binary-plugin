@@ -149,18 +149,67 @@ class SidecarConnection extends Context.Tag("SidecarConnection")<SidecarConnecti
   queue (1024 messages), auto-reconnect, and sidecar spawning. No-op when OTEL disabled.
 - **Test** (`makeSidecarConnectionTest()`): No-op implementation
 
+### PipelineRuntimeService
+
+Executes hook handlers and returns structured results. Replaces the old
+static `PipelineRuntime.run()` method.
+
+```typescript
+interface RunResult {
+  readonly code: number;
+  readonly response: Record<string, unknown>;
+  readonly telemetry?: OutcomeTelemetry;
+}
+
+interface PipelineRunConfig<TOptions, TState> {
+  hookType: string;
+  hookName: string;
+  pluginName: string;
+  pluginVersion: string;
+  handler: (ctx: { input: unknown; options: TOptions; state: TState }) => unknown;
+  stateClass: new (...args: any[]) => unknown;
+  tools?: string[];
+  optionsSchema?: unknown;
+  stateSchema?: unknown;
+  setup?: (ctx: unknown) => unknown;
+  handlerLayer?: unknown;
+  inputText?: string;
+}
+
+class PipelineRuntimeService extends Context.Tag("PipelineRuntimeService")<PipelineRuntimeService, {
+  readonly run: <TOptions, TState>(config: PipelineRunConfig<TOptions, TState>) => Effect.Effect<RunResult, PipelineError>;
+}>() {}
+```
+
+- **Live** (`PipelineRuntimeServiceLive`): Full hook execution lifecycle —
+  reads stdin, decodes schemas, loads state, invokes handler, validates
+  Outcome, emits telemetry, returns `RunResult`. Uses `Layer.succeed`
+  (no service dependencies of its own).
+- **Test**: Not yet provided — use `Effect.succeed` with mock `RunResult`
+
 ### CommandRunner
 
 Runs plugin commands and parses CLI arguments.
 
 ```typescript
+interface RunCommandOptions {
+  readonly commandName: string;
+  readonly pluginName: string;
+  readonly pluginVersion: string;
+  readonly rawArgs: string[];
+  readonly handler: (ctx: { args: unknown; options: unknown; state: unknown }) => unknown;
+  readonly argsSchema?: unknown;
+  readonly stateClass: new (...args: any[]) => unknown;
+}
+
 class CommandRunner extends Context.Tag("CommandRunner")<CommandRunner, {
   readonly run: (options: RunCommandOptions) => Effect.Effect<CommandOutput, CommandParseError>;
   readonly parse: <TArgs>(schema: Schema<TArgs>, args: string[]) => Effect.Effect<TArgs, CommandParseError>;
 }>() {}
 ```
 
-- **Live** (`CommandRunnerLive`): Runs commands from plugin config
+- **Live** (`CommandRunnerLive`): Full command lifecycle — parses args,
+  finds session env, loads state, invokes handler, validates output
 - **Test** (`makeCommandRunnerTest()`): Returns pre-configured command outputs
 
 ### PluginEnvService
@@ -224,7 +273,10 @@ export const PipelineLive = Layer.mergeAll(
 );
 ```
 
-Provides all services needed for `PipelineRuntime.run()` in production.
+Provides handler dependencies (services that handlers may require via
+`handlerLayer`). The runtime services (`PipelineRuntimeServiceLive`,
+`CommandRunnerLive`) are composed separately in the generated entrypoint's
+`RuntimeLayer`.
 
 ## Outcomes Subsystem
 
@@ -239,7 +291,7 @@ subsystem that interacts with services:
   section/rule/tag counts via their `.metrics` getter, which are included
   in telemetry emission when used with `AddContext`.
 
-- **PipelineRuntime interaction**: `PipelineRuntime` checks
+- **PipelineRuntimeServiceLive interaction**: The Live layer checks
   `Outcome.isOutcome(output)` before the legacy `isPipelineOutput()` path.
   It calls `isValidOutcomeForHook()` for runtime validation, then
   `outcome.toResponse()` for serialization and `outcome.toTelemetry()` for

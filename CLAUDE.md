@@ -145,7 +145,7 @@ import MyConfig from "./plugin.config.js";
 import guardHandler from "./hooks/guard.js";
 
 const plugin = new ClaudePlugin(MyConfig, {
-  PreToolUse: [{ name: "guard", pipeline: guardHandler }],
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
 });
 await plugin.build({ rootDir: import.meta.dir });
 ```
