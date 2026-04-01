@@ -17,18 +17,18 @@ import type {
 } from "../schemas/hook-inputs.js";
 import type { ToolName } from "../schemas/hook-literals.js";
 import type {
-	NotificationPipelineOutput,
-	PassthroughPipelineOutput,
-	PermissionRequestPipelineOutput,
-	PostToolUsePipelineOutput,
-	PreCompactPipelineOutput,
-	PreToolUsePipelineOutput,
-	SessionEndPipelineOutput,
-	SessionStartPipelineOutput,
-	StopPipelineOutput,
-	SubagentStopPipelineOutput,
-	UserPromptSubmitPipelineOutput,
-} from "../schemas/pipeline-outputs.js";
+	NotificationOutput,
+	PassthroughOutput,
+	PermissionRequestOutput,
+	PostToolUseOutput,
+	PreCompactOutput,
+	PreToolUseOutput,
+	SessionEndOutput,
+	SessionStartOutput,
+	StopOutput,
+	SubagentStopOutput,
+	UserPromptSubmitOutput,
+} from "../schemas/hook-outputs.js";
 import type { PluginTester } from "../testing/builder.js";
 
 // =============================================================================
@@ -206,11 +206,11 @@ export interface HandlerContext<TInput, TOptions, TState = Record<string, unknow
 }
 
 /**
- * Pipeline handler: pure transformation function.
+ * Plugin handler: pure transformation function.
  * Returns a validated output or throws to indicate error.
  * @public
  */
-export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, unknown>> = (
+export type PluginHandler<TInput, TOutput, TOptions, TState = Record<string, unknown>> = (
 	ctx: HandlerContext<TInput, TOptions, TState>,
 ) => TOutput | AnyOutcome | Promise<TOutput | AnyOutcome> | Effect.Effect<TOutput | AnyOutcome>;
 
@@ -232,9 +232,9 @@ export type PipelineHandler<TInput, TOutput, TOptions, TState = Record<string, u
  * ```
  * @public
  */
-export type SessionStartHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type SessionStartHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	SessionStartInput,
-	SessionStartPipelineOutput,
+	SessionStartOutput,
 	TOptions,
 	TState
 >;
@@ -243,9 +243,9 @@ export type SessionStartHandler<TOptions, TState = Record<string, string>> = Pip
  * Typed pipeline handler for SessionEnd hooks.
  * @public
  */
-export type SessionEndHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type SessionEndHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	SessionEndInput,
-	SessionEndPipelineOutput,
+	SessionEndOutput,
 	TOptions,
 	TState
 >;
@@ -272,9 +272,9 @@ export type SessionEndHandler<TOptions, TState = Record<string, string>> = Pipel
  * ```
  * @public
  */
-export type PreToolUseHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PreToolUseHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	PreToolUseInput,
-	PreToolUsePipelineOutput,
+	PreToolUseOutput,
 	TOptions,
 	TState
 >;
@@ -283,9 +283,9 @@ export type PreToolUseHandler<TOptions, TState = Record<string, string>> = Pipel
  * Typed pipeline handler for PostToolUse hooks.
  * @public
  */
-export type PostToolUseHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PostToolUseHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	PostToolUseInput,
-	PostToolUsePipelineOutput,
+	PostToolUseOutput,
 	TOptions,
 	TState
 >;
@@ -294,9 +294,9 @@ export type PostToolUseHandler<TOptions, TState = Record<string, string>> = Pipe
  * Typed pipeline handler for Stop hooks.
  * @public
  */
-export type StopHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type StopHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	StopInput,
-	StopPipelineOutput,
+	StopOutput,
 	TOptions,
 	TState
 >;
@@ -305,9 +305,9 @@ export type StopHandler<TOptions, TState = Record<string, string>> = PipelineHan
  * Typed pipeline handler for SubagentStop hooks.
  * @public
  */
-export type SubagentStopHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type SubagentStopHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	SubagentStopInput,
-	StopPipelineOutput,
+	StopOutput,
 	TOptions,
 	TState
 >;
@@ -316,9 +316,9 @@ export type SubagentStopHandler<TOptions, TState = Record<string, string>> = Pip
  * Typed pipeline handler for UserPromptSubmit hooks.
  * @public
  */
-export type UserPromptSubmitHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type UserPromptSubmitHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	UserPromptSubmitInput,
-	UserPromptSubmitPipelineOutput,
+	UserPromptSubmitOutput,
 	TOptions,
 	TState
 >;
@@ -327,9 +327,9 @@ export type UserPromptSubmitHandler<TOptions, TState = Record<string, string>> =
  * Typed pipeline handler for PreCompact hooks.
  * @public
  */
-export type PreCompactHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PreCompactHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	PreCompactInput,
-	PassthroughPipelineOutput,
+	PassthroughOutput,
 	TOptions,
 	TState
 >;
@@ -338,9 +338,9 @@ export type PreCompactHandler<TOptions, TState = Record<string, string>> = Pipel
  * Typed pipeline handler for Notification hooks.
  * @public
  */
-export type NotificationHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type NotificationHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	NotificationInput,
-	NotificationPipelineOutput,
+	NotificationOutput,
 	TOptions,
 	TState
 >;
@@ -349,9 +349,9 @@ export type NotificationHandler<TOptions, TState = Record<string, string>> = Pip
  * Typed pipeline handler for PermissionRequest hooks.
  * @public
  */
-export type PermissionRequestHandler<TOptions, TState = Record<string, string>> = PipelineHandler<
+export type PermissionRequestHandler<TOptions, TState = Record<string, string>> = PluginHandler<
 	PermissionRequestInput,
-	PermissionRequestPipelineOutput,
+	PermissionRequestOutput,
 	TOptions,
 	TState
 >;
@@ -387,7 +387,7 @@ export interface ToolFilter {
 export interface HandlerHookDefinition<TInput, TOutput, TOptions, TState = Record<string, unknown>>
 	extends HookDefinitionBase {
 	/** Pure transformation function */
-	handler: PipelineHandler<TInput, TOutput, TOptions, TState>;
+	handler: PluginHandler<TInput, TOutput, TOptions, TState>;
 }
 
 /**
@@ -432,7 +432,7 @@ export type HookDefinition<TInput, TOutput, _TEvent, TOptions, TState = Record<s
  */
 export type SessionStartHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	SessionStartInput,
-	SessionStartPipelineOutput,
+	SessionStartOutput,
 	unknown,
 	TOptions,
 	TState
@@ -444,7 +444,7 @@ export type SessionStartHookDefinition<TOptions, TState = Record<string, unknown
  */
 export type SessionEndHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	SessionEndInput,
-	SessionEndPipelineOutput,
+	SessionEndOutput,
 	unknown,
 	TOptions,
 	TState
@@ -456,7 +456,7 @@ export type SessionEndHookDefinition<TOptions, TState = Record<string, unknown>>
  */
 export type PreToolUseHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PreToolUseInput,
-	PreToolUsePipelineOutput,
+	PreToolUseOutput,
 	unknown,
 	TOptions,
 	TState
@@ -469,7 +469,7 @@ export type PreToolUseHookDefinition<TOptions, TState = Record<string, unknown>>
  */
 export type PostToolUseHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PostToolUseInput,
-	PostToolUsePipelineOutput,
+	PostToolUseOutput,
 	unknown,
 	TOptions,
 	TState
@@ -482,7 +482,7 @@ export type PostToolUseHookDefinition<TOptions, TState = Record<string, unknown>
  */
 export type StopHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	StopInput,
-	StopPipelineOutput,
+	StopOutput,
 	unknown,
 	TOptions,
 	TState
@@ -494,7 +494,7 @@ export type StopHookDefinition<TOptions, TState = Record<string, unknown>> = Hoo
  */
 export type SubagentStopHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	SubagentStopInput,
-	SubagentStopPipelineOutput,
+	SubagentStopOutput,
 	unknown,
 	TOptions,
 	TState
@@ -506,7 +506,7 @@ export type SubagentStopHookDefinition<TOptions, TState = Record<string, unknown
  */
 export type UserPromptSubmitHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	UserPromptSubmitInput,
-	UserPromptSubmitPipelineOutput,
+	UserPromptSubmitOutput,
 	unknown,
 	TOptions,
 	TState
@@ -518,7 +518,7 @@ export type UserPromptSubmitHookDefinition<TOptions, TState = Record<string, unk
  */
 export type PreCompactHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PreCompactInput,
-	PreCompactPipelineOutput,
+	PreCompactOutput,
 	unknown,
 	TOptions,
 	TState
@@ -530,7 +530,7 @@ export type PreCompactHookDefinition<TOptions, TState = Record<string, unknown>>
  */
 export type NotificationHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	NotificationInput,
-	NotificationPipelineOutput,
+	NotificationOutput,
 	unknown,
 	TOptions,
 	TState
@@ -542,7 +542,7 @@ export type NotificationHookDefinition<TOptions, TState = Record<string, unknown
  */
 export type PermissionRequestHookDefinition<TOptions, TState = Record<string, unknown>> = HookDefinition<
 	PermissionRequestInput,
-	PermissionRequestPipelineOutput,
+	PermissionRequestOutput,
 	unknown,
 	TOptions,
 	TState

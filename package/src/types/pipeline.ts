@@ -2,19 +2,19 @@ import { extname } from "node:path";
 import type { HandlerHookDefinition, HookDefinition } from "../plugin/config.js";
 import type {
 	ExecutionQuality,
-	NotificationPipelineOutput,
-	PassthroughPipelineOutput,
-	PermissionRequestPipelineOutput,
-	PipelineMetrics,
-	PostToolUsePipelineOutput,
-	PreCompactPipelineOutput,
-	PreToolUsePipelineOutput,
-	SessionEndPipelineOutput,
-	SessionStartPipelineOutput,
-	StopPipelineOutput,
-	SubagentStopPipelineOutput,
-	UserPromptSubmitPipelineOutput,
-} from "../schemas/pipeline-outputs.js";
+	HookMetrics,
+	NotificationOutput,
+	PassthroughOutput,
+	PermissionRequestOutput,
+	PostToolUseOutput,
+	PreCompactOutput,
+	PreToolUseOutput,
+	SessionEndOutput,
+	SessionStartOutput,
+	StopOutput,
+	SubagentStopOutput,
+	UserPromptSubmitOutput,
+} from "../schemas/hook-outputs.js";
 
 // =============================================================================
 // NON-SCHEMA TYPES (from pipeline/types.ts)
@@ -56,20 +56,20 @@ export interface TokenMetricsData {
 export type ContentType = "code" | "json" | "markdown" | "prose";
 
 /**
- * Union of all pipeline output types.
+ * Union of all hook output types.
  * @public
  */
-export type AnyPipelineOutput =
-	| PreToolUsePipelineOutput
-	| PostToolUsePipelineOutput
-	| SessionStartPipelineOutput
-	| SessionEndPipelineOutput
-	| StopPipelineOutput
-	| SubagentStopPipelineOutput
-	| UserPromptSubmitPipelineOutput
-	| PreCompactPipelineOutput
-	| NotificationPipelineOutput
-	| PermissionRequestPipelineOutput;
+export type AnyHookOutput =
+	| PreToolUseOutput
+	| PostToolUseOutput
+	| SessionStartOutput
+	| SessionEndOutput
+	| StopOutput
+	| SubagentStopOutput
+	| UserPromptSubmitOutput
+	| PreCompactOutput
+	| NotificationOutput
+	| PermissionRequestOutput;
 
 /**
  * Type guard to check if an output uses the pipeline format.
@@ -80,20 +80,20 @@ export type AnyPipelineOutput =
  * (which return structured outputs) and raw handlers (which return arbitrary data).
  *
  * @param output - The output to check
- * @returns `true` if the output is a pipeline output with `status` and `summary`
+ * @returns `true` if the output is a hook output with `status` and `summary`
  *
  * @example
  * ```typescript
  * const result = await handler(context);
- * if (isPipelineOutput(result)) {
- *   // result is typed as AnyPipelineOutput
+ * if (isHookOutput(result)) {
+ *   // result is typed as AnyHookOutput
  *   console.log(result.status, result.summary);
  * }
  * ```
  *
  * @public
  */
-export function isPipelineOutput(output: unknown): output is AnyPipelineOutput {
+export function isHookOutput(output: unknown): output is AnyHookOutput {
 	return typeof output === "object" && output !== null && "status" in output && "summary" in output;
 }
 
@@ -326,7 +326,7 @@ export class TokenMetrics {
 	 * console.log(`Hook added ${metrics.hookTotal} tokens`);
 	 * ```
 	 */
-	static extractFromOutput(output: AnyPipelineOutput): TokenMetricsData {
+	static extractFromOutput(output: AnyHookOutput): TokenMetricsData {
 		const claudeContext = TokenMetrics.estimate("claudeContext" in output ? output.claudeContext : undefined);
 		const userMessage = TokenMetrics.estimate("userMessage" in output ? output.userMessage : undefined);
 		const reason = TokenMetrics.estimate("reason" in output ? output.reason : undefined);
@@ -413,7 +413,7 @@ export class TokenMetrics {
 		hookName: string,
 		pluginName: string,
 		event: Record<string, unknown>,
-		output: AnyPipelineOutput,
+		output: AnyHookOutput,
 		durationMs: number,
 	): Record<string, string | number | boolean | undefined> {
 		const attrs: Record<string, string | number | boolean | undefined> = {
@@ -534,7 +534,7 @@ export class TokenMetrics {
 
 		// User-provided metrics
 		if ("metrics" in output && output.metrics) {
-			const m = output.metrics as PipelineMetrics;
+			const m = output.metrics as HookMetrics;
 			if (m.issuesFound !== undefined) attrs["validation.issues_found"] = m.issuesFound;
 			if (m.issuesFixed !== undefined) attrs["validation.issues_fixed"] = m.issuesFixed;
 			if (m.filesScanned !== undefined) attrs["validation.files_scanned"] = m.filesScanned;
@@ -739,8 +739,8 @@ export class Pipeline {
 	 *
 	 * @public
 	 */
-	static isOutput(output: unknown): output is AnyPipelineOutput {
-		return isPipelineOutput(output);
+	static isOutput(output: unknown): output is AnyHookOutput {
+		return isHookOutput(output);
 	}
 
 	/**
