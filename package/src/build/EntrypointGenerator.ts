@@ -167,7 +167,7 @@ import type { CommandOutput } from "claude-binary-plugin";`
 import { parseArgs } from "node:util";
 ${schemaImport}
 import PluginConfigClass from "${pluginPath}";
-import { PipelineLive, PipelineRuntimeService, PipelineRuntimeServiceLive, PluginEnv, PluginInfo } from "claude-binary-plugin";
+import { PipelineLive, PipelineRuntimeService, PipelineRuntimeServiceLive, PluginEnv, PluginInfoService } from "claude-binary-plugin";
 import type { RunResult } from "claude-binary-plugin";
 ${commandRunnerImports}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
@@ -203,7 +203,11 @@ ${hookCases.join("\n")}
   }
 
   const result = await Effect.runPromise(
-    program.pipe(Effect.provide(RuntimeLayer))
+    Effect.gen(function* () {
+      const pluginInfoService = yield* PluginInfoService;
+      yield* pluginInfoService.set({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
+      return yield* program;
+    }).pipe(Effect.provide(RuntimeLayer))
   );
   process.stdout.write(JSON.stringify(result.response));
 }
@@ -245,9 +249,6 @@ Examples:
 }
 
 async function main(): Promise<void> {
-  // Set plugin info for telemetry (module-level, not env vars)
-  PluginInfo.set({ name: PLUGIN_NAME, version: PLUGIN_VERSION });
-
   const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
     options: {
