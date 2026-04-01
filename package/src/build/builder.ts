@@ -218,34 +218,42 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 			if (fileHookImport) {
 				// File-based pipeline hook
 				hookCases.push(`    case "${hookKey}": {
-      return PipelineRuntime.run({
-        hookType: "${hookType}",
-        hookName: "${hook.name}",
-        pluginName: PLUGIN_NAME,
-        pluginVersion: PLUGIN_VERSION,
-        handler: ${fileHookImport},
-        stateClass: EnvClass,
-        tools: ${toolsArg},
-        optionsSchema: pluginConfig.options,
-        setup: pluginConfig.setup,
+      program = Effect.gen(function* () {
+        const runtime = yield* PipelineRuntimeService;
+        return yield* runtime.run({
+          hookType: "${hookType}",
+          hookName: "${hook.name}",
+          pluginName: PLUGIN_NAME,
+          pluginVersion: PLUGIN_VERSION,
+          handler: ${fileHookImport},
+          stateClass: EnvClass,
+          tools: ${toolsArg},
+          optionsSchema: pluginConfig.options,
+          setup: pluginConfig.setup,
+        });
       });
+      break;
     }`);
 			} else {
 				// Inline pipeline hook
 				hookCases.push(`    case "${hookKey}": {
       const hookDef = pluginConfig.hooks.${hookType}?.find(h => h.name === "${hook.name}");
       if (!hookDef || !("handler" in hookDef)) throw new Error("Hook not found: ${hook.name}");
-      return PipelineRuntime.run({
-        hookType: "${hookType}",
-        hookName: "${hook.name}",
-        pluginName: PLUGIN_NAME,
-        pluginVersion: PLUGIN_VERSION,
-        handler: hookDef.handler,
-        stateClass: EnvClass,
-        tools: ${toolsArg},
-        optionsSchema: pluginConfig.options,
-        setup: pluginConfig.setup,
+      program = Effect.gen(function* () {
+        const runtime = yield* PipelineRuntimeService;
+        return yield* runtime.run({
+          hookType: "${hookType}",
+          hookName: "${hook.name}",
+          pluginName: PLUGIN_NAME,
+          pluginVersion: PLUGIN_VERSION,
+          handler: hookDef.handler,
+          stateClass: EnvClass,
+          tools: ${toolsArg},
+          optionsSchema: pluginConfig.options,
+          setup: pluginConfig.setup,
+        });
       });
+      break;
     }`);
 			}
 		}
@@ -255,17 +263,21 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 	const commandCases = pipelineCommands
 		.map((c) => {
 			const importName = commandImportMap.get(c.name);
-			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Commands.emptySchema";
+			const argsSchemaAccess = c.hasArgsSchema ? `pluginConfig.commands["${c.name}"].args` : "Schema.Struct({})";
 			return `    case "${c.name}": {
-      return Commands.run({
-        commandName: "${c.name}",
-        pluginName: PLUGIN_NAME,
-        pluginVersion: PLUGIN_VERSION,
-        handler: ${importName},
-        rawArgs: cmdArgs,
-        argsSchema: ${argsSchemaAccess},
-        stateClass: EnvClass,
+      program = Effect.gen(function* () {
+        const runner = yield* CommandRunner;
+        return yield* runner.run({
+          commandName: "${c.name}",
+          pluginName: PLUGIN_NAME,
+          pluginVersion: PLUGIN_VERSION,
+          handler: ${importName},
+          rawArgs: cmdArgs,
+          argsSchema: ${argsSchemaAccess},
+          stateClass: EnvClass,
+        });
       });
+      break;
     }`;
 		})
 		.join("\n");
@@ -280,7 +292,16 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
 
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
-	const commandRuntimeImport = hasPipelineCmds ? `import { Commands } from "claude-binary-plugin";` : "";
+	const commandRunnerImports = hasPipelineCmds
+		? `import { CommandRunner, CommandRunnerLive } from "claude-binary-plugin";
+import type { CommandOutput } from "claude-binary-plugin";`
+		: "";
+	const schemaImport = hasPipelineCmds
+		? `import { Effect, Layer, Schema } from "effect";`
+		: `import { Effect, Layer } from "effect";`;
+	const runtimeLayerLine = hasPipelineCmds
+		? `const RuntimeLayer = Layer.merge(PipelineRuntimeServiceLive, CommandRunnerLive);`
+		: `const RuntimeLayer = PipelineRuntimeServiceLive;`;
 
 	return `#!/usr/bin/env bun
 /**
@@ -291,9 +312,11 @@ function generatePipelinePluginEntrypoint(options: GeneratePipelinePluginOptions
  */
 
 import { parseArgs } from "node:util";
+${schemaImport}
 import pluginDefinition from "${pluginPath}";
-import { PipelineRuntime, PluginEnv, PluginInfo } from "claude-binary-plugin";
-${commandRuntimeImport}
+import { PipelineRuntimeService, PipelineRuntimeServiceLive, PluginEnv, PluginInfo } from "claude-binary-plugin";
+import type { RunResult } from "claude-binary-plugin";
+${commandRunnerImports}
 ${fileHookImports.length > 0 ? fileHookImports.join("\n") : ""}
 ${commandImports.length > 0 ? commandImports.join("\n") : ""}
 
@@ -307,6 +330,8 @@ const pluginConfig = pluginDefinition.config;
 // Create environment class from plugin options schema (with pluginName for logging)
 const EnvClass = PluginEnv.create(pluginConfig.prefix, pluginConfig.options, PLUGIN_NAME);
 
+${runtimeLayerLine}
+
 // Sidecar main function - dynamically imported only when needed
 async function runSidecar(): Promise<void> {
   const { Sidecar } = await import("claude-binary-plugin");
@@ -316,20 +341,35 @@ async function runSidecar(): Promise<void> {
 const validHooks = [${validHooksArray}];
 const validCommands = [${validCommandsArray}];
 
-async function runHook(hookKey: string): Promise<never> {
+async function runHook(hookKey: string): Promise<void> {
+  let program: Effect.Effect<RunResult, any, PipelineRuntimeService>;
+
   switch (hookKey) {
 ${hookCases.join("\n")}
     default:
       throw new Error(\`Unknown hook: \${hookKey}\`);
   }
+
+  const result = await Effect.runPromise(
+    program.pipe(Effect.provide(RuntimeLayer))
+  );
+  process.stdout.write(JSON.stringify(result.response));
 }
 
 async function runCommand(name: string, cmdArgs: string[]): Promise<void> {
+  let program: Effect.Effect<CommandOutput, any, CommandRunner>;
+
   switch (name) {
 ${commandCases}
     default:
       throw new Error(\`Unknown command: \${name}\`);
   }
+
+  const result = await Effect.runPromise(
+    program.pipe(Effect.provide(RuntimeLayer))
+  );
+  console.log(result.output);
+  process.exit(result.exitCode);
 }
 
 function printUsage(): void {
@@ -383,7 +423,10 @@ async function main(): Promise<void> {
     const hookKey = values.hook;
 
     if (!validHooks.includes(hookKey)) {
-      await PipelineRuntime.handleUnknown(hookKey, validHooks);
+      // Consume stdin to avoid hanging
+      await Bun.stdin.text();
+      process.stderr.write(\`Unknown hook: \${hookKey}. Valid hooks: \${validHooks.join(", ")}\\n\`);
+      process.exit(2);
     }
 
     await runHook(hookKey);
@@ -410,7 +453,12 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(\`[${pluginName}] Fatal error: \${error}\`);
+  const response = {
+    error: true,
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  };
+  process.stdout.write(JSON.stringify(response));
   process.exit(2);
 });
 `;
