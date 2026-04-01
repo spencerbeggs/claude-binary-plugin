@@ -65,52 +65,12 @@ export const OTEL_EVENT_NAMES = {
 } as const;
 
 /**
- * Detect the terminal type from environment variables.
- * @internal
+ * Platform context passed into builder functions, sourced from the PlatformInfo service.
+ * @public
  */
-const TERMINAL_TYPE_MAP: Record<string, string> = {
-	iTerm: "iTerm",
-	"iTerm.app": "iTerm",
-	Apple_Terminal: "Terminal",
-	vscode: "VSCode",
-	cursor: "Cursor",
-	Hyper: "Hyper",
-	Alacritty: "Alacritty",
-	WezTerm: "WezTerm",
-	kitty: "kitty",
-};
-
-function getTerminalType(): string {
-	if (Bun.env.TMUX) return "tmux";
-	if (Bun.env.STY) return "screen";
-	const termProgram = Bun.env.TERM_PROGRAM;
-	if (termProgram) {
-		return TERMINAL_TYPE_MAP[termProgram] ?? termProgram;
-	}
-	if (Bun.env.VSCODE_GIT_IPC_HANDLE || Bun.env.VSCODE_INJECTION) return "VSCode";
-	if (Bun.env.CURSOR_TRACE_ID) return "Cursor";
-	return "unknown";
-}
-
-let _cachedClaudeVersion: string | null = null;
-
-function getClaudeVersion(): string {
-	if (_cachedClaudeVersion !== null) return _cachedClaudeVersion;
-	try {
-		const result = Bun.spawnSync(["claude", "--version"]);
-		if (result.exitCode === 0) {
-			const output = result.stdout.toString().trim();
-			const match = output.match(/\d+\.\d+\.\d+/);
-			if (match) {
-				_cachedClaudeVersion = match[0];
-				return _cachedClaudeVersion;
-			}
-		}
-	} catch {
-		// Command failed or not found
-	}
-	_cachedClaudeVersion = "unknown";
-	return _cachedClaudeVersion;
+export interface PlatformContext {
+	claudeVersion: string;
+	terminalType: string;
 }
 
 /**
@@ -121,14 +81,14 @@ function getClaudeVersion(): string {
  * @returns An EventData ready to be wrapped in an EventMessage
  * @public
  */
-export function buildHookExecutionEvent(data: HookExecutionData, sessionId: string): EventData {
+export function buildHookExecutionEvent(data: HookExecutionData, sessionId: string, ctx: PlatformContext): EventData {
 	const now = new Date();
 
 	const attributes: Record<string, string | number | boolean> = {
 		[OTEL_ATTRS.SESSION_ID]: sessionId,
 		[OTEL_ATTRS.EVENT_NAME]: OTEL_EVENT_NAMES.HOOK_EXECUTION,
-		[OTEL_ATTRS.APP_VERSION]: getClaudeVersion(),
-		[OTEL_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+		[OTEL_ATTRS.APP_VERSION]: ctx.claudeVersion,
+		[OTEL_ATTRS.TERMINAL_TYPE]: ctx.terminalType,
 		[OTEL_ATTRS.HOOK_NAME]: data.hookName,
 		[OTEL_ATTRS.HOOK_TYPE]: data.hookType,
 		[OTEL_ATTRS.SOURCE]: "hook",
@@ -174,7 +134,7 @@ export function buildHookExecutionEvent(data: HookExecutionData, sessionId: stri
  * @returns An EventData ready to be wrapped in an EventMessage
  * @public
  */
-export function buildErrorEvent(error: unknown, sessionId: string): EventData {
+export function buildErrorEvent(error: unknown, sessionId: string, ctx: PlatformContext): EventData {
 	const now = new Date();
 	const errorMessage = error instanceof Error ? error.message : String(error);
 	const errorStack = error instanceof Error ? error.stack : undefined;
@@ -182,8 +142,8 @@ export function buildErrorEvent(error: unknown, sessionId: string): EventData {
 	const attributes: Record<string, string | number | boolean> = {
 		[OTEL_ATTRS.SESSION_ID]: sessionId,
 		[OTEL_ATTRS.EVENT_NAME]: OTEL_EVENT_NAMES.FATAL_ERROR,
-		[OTEL_ATTRS.APP_VERSION]: getClaudeVersion(),
-		[OTEL_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+		[OTEL_ATTRS.APP_VERSION]: ctx.claudeVersion,
+		[OTEL_ATTRS.TERMINAL_TYPE]: ctx.terminalType,
 		[OTEL_ATTRS.SOURCE]: "hook",
 		[OTEL_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
 		[OTEL_ATTRS.ERROR]: errorMessage,
@@ -220,14 +180,14 @@ export function buildErrorEvent(error: unknown, sessionId: string): EventData {
  * @returns An EventData ready to be wrapped in an EventMessage
  * @public
  */
-export function buildFatalErrorEvent(data: FatalErrorData, sessionId: string): EventData {
+export function buildFatalErrorEvent(data: FatalErrorData, sessionId: string, ctx: PlatformContext): EventData {
 	const now = new Date();
 
 	const attributes: Record<string, string | number | boolean> = {
 		[OTEL_ATTRS.SESSION_ID]: sessionId,
 		[OTEL_ATTRS.EVENT_NAME]: OTEL_EVENT_NAMES.FATAL_ERROR,
-		[OTEL_ATTRS.APP_VERSION]: getClaudeVersion(),
-		[OTEL_ATTRS.TERMINAL_TYPE]: getTerminalType(),
+		[OTEL_ATTRS.APP_VERSION]: ctx.claudeVersion,
+		[OTEL_ATTRS.TERMINAL_TYPE]: ctx.terminalType,
 		[OTEL_ATTRS.HOOK_NAME]: data.hookName,
 		[OTEL_ATTRS.SOURCE]: "hook",
 		[OTEL_ATTRS.EVENT_TIMESTAMP]: now.toISOString(),
