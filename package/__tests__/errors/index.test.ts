@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { CommandParseError } from "../../src/errors/CommandParseError.js";
 import { EnvLoadError } from "../../src/errors/EnvLoadError.js";
 import { EnvPersistError } from "../../src/errors/EnvPersistError.js";
-import { PipelineError } from "../../src/errors/PipelineError.js";
+import { PluginRuntimeError } from "../../src/errors/PluginRuntimeError.js";
 import { SchemaValidationError } from "../../src/errors/SchemaValidationError.js";
 import { SessionLookupError } from "../../src/errors/SessionLookupError.js";
 import { ShellError } from "../../src/errors/ShellError.js";
@@ -26,13 +26,13 @@ describe("Error Types", () => {
 		expect(err.file).toBe("/tmp/env");
 	});
 
-	test("PipelineError has _tag and stage", () => {
-		const err = new PipelineError({
+	test("PluginRuntimeError has _tag and stage", () => {
+		const err = new PluginRuntimeError({
 			hookName: "validate",
 			stage: "handler",
 			cause: new Error("boom"),
 		});
-		expect(err._tag).toBe("PipelineError");
+		expect(err._tag).toBe("PluginRuntimeError");
 		expect(err.stage).toBe("handler");
 	});
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AnyPipelineOutput } from "../../src/types/pipeline.js";
+import type { AnyHookOutput } from "../../src/types/pipeline.js";
 import { TokenMetrics } from "../../src/types/pipeline.js";
 
 describe("TokenMetrics.estimate", () => {
@@ -127,7 +127,7 @@ describe("TokenMetrics.detectContentType", () => {
 
 describe("TokenMetrics.extractFromOutput", () => {
 	test("extracts tokens from claudeContext", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "context",
 			summary: "test",
@@ -139,7 +139,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("extracts tokens from userMessage", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "none",
 			summary: "test",
@@ -151,7 +151,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("extracts tokens from reason", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			summary: "test",
 			action: "deny",
@@ -163,7 +163,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("sums all token sources", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "test",
@@ -176,7 +176,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("returns zeros for output without text fields", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "test",
@@ -229,7 +229,7 @@ describe("TokenMetrics.extractFromTool", () => {
 
 describe("TokenMetrics.extractAuto", () => {
 	test("includes base metrics", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "Test completed",
@@ -245,7 +245,7 @@ describe("TokenMetrics.extractAuto", () => {
 	});
 
 	test("includes action when present", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			summary: "Allowed",
 			action: "allow",
@@ -257,7 +257,7 @@ describe("TokenMetrics.extractAuto", () => {
 
 	test("includes session ID from event", () => {
 		const event = { session_id: "session-123" };
-		const output: AnyPipelineOutput = { status: "executed", action: "allow", summary: "test" };
+		const output: AnyHookOutput = { status: "executed", action: "allow", summary: "test" };
 		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", event, output, 10);
 
 		expect(attrs["session.id"]).toBe("session-123");
@@ -272,7 +272,7 @@ describe("TokenMetrics.extractAuto", () => {
 				content: "export const x = 1;",
 			},
 		};
-		const output: AnyPipelineOutput = { status: "executed", action: "allow", summary: "test" };
+		const output: AnyHookOutput = { status: "executed", action: "allow", summary: "test" };
 		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", event, output, 10);
 
 		expect(attrs["tool.name"]).toBe("Write");
@@ -293,7 +293,7 @@ describe("TokenMetrics.extractAuto", () => {
 				timeout: 30000,
 			},
 		};
-		const output: AnyPipelineOutput = { status: "executed", action: "allow", summary: "test" };
+		const output: AnyHookOutput = { status: "executed", action: "allow", summary: "test" };
 		const attrs = TokenMetrics.extractAuto("PreToolUse", "test-hook", "test-plugin", event, output, 10);
 
 		expect(attrs["bash.command_prefix"]).toBe("npm");
@@ -302,7 +302,7 @@ describe("TokenMetrics.extractAuto", () => {
 	});
 
 	test("includes token metrics when present", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "context",
 			summary: "test",
@@ -315,7 +315,7 @@ describe("TokenMetrics.extractAuto", () => {
 	});
 
 	test("includes response flags", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "modify",
 			summary: "test",
@@ -331,7 +331,7 @@ describe("TokenMetrics.extractAuto", () => {
 	});
 
 	test("includes validation metrics", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "test",
@@ -355,7 +355,7 @@ describe("TokenMetrics.extractAuto", () => {
 	});
 
 	test("includes quality metrics", () => {
-		const output: AnyPipelineOutput = {
+		const output: AnyHookOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "test",

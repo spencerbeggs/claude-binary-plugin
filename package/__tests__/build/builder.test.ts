@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type {
-	GeneratePipelinePluginOptions,
+	CommandEntry,
+	GeneratePluginEntrypointOptions,
+	HookEntry,
 	MarketplaceManifest,
-	PipelineCommandEntry,
-	PipelineHookEntry,
 	PluginManifest,
 	ShellExecutor,
 	ShellResult,
@@ -626,7 +626,7 @@ describe("syncPluginToCache", () => {
 
 describe("generatePipelinePluginEntrypoint", () => {
 	test("generates valid entrypoint with pipeline hooks", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{
 				hookType: "SessionStart",
 				name: "project-context",
@@ -642,7 +642,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			},
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./my-plugin.ts",
 			pluginName: "my-plugin",
 			pluginVersion: "1.0.0",
@@ -664,12 +664,12 @@ describe("generatePipelinePluginEntrypoint", () => {
 		// Check that tools filter is included
 		expect(entrypoint).toContain('["Bash", "Write"]');
 
-		// Check for PipelineRuntimeService usage
-		expect(entrypoint).toContain("PipelineRuntimeService");
+		// Check for PluginRuntimeService usage
+		expect(entrypoint).toContain("PluginRuntimeService");
 	});
 
-	test("generates valid entrypoint with non-pipeline hooks using PipelineRuntimeService", () => {
-		const hooks: PipelineHookEntry[] = [
+	test("generates valid entrypoint with non-pipeline hooks using PluginRuntimeService", () => {
+		const hooks: HookEntry[] = [
 			{
 				hookType: "PreToolUse",
 				name: "raw-handler",
@@ -678,7 +678,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			},
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./raw-plugin.ts",
 			pluginName: "raw-plugin",
 			pluginVersion: "2.0.0",
@@ -687,13 +687,13 @@ describe("generatePipelinePluginEntrypoint", () => {
 
 		const entrypoint = PluginBuilder.generateEntrypoint(options);
 
-		// All hooks now use PipelineRuntimeService
-		expect(entrypoint).toContain("PipelineRuntimeService");
+		// All hooks now use PluginRuntimeService
+		expect(entrypoint).toContain("PluginRuntimeService");
 		expect(entrypoint).toContain('case "PreToolUse/raw-handler"');
 	});
 
 	test("generates entrypoint with pipelineCommands", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{
 				hookType: "SessionStart",
 				name: "init",
@@ -701,12 +701,12 @@ describe("generatePipelinePluginEntrypoint", () => {
 			},
 		];
 
-		const pipelineCommands: PipelineCommandEntry[] = [
+		const pipelineCommands: CommandEntry[] = [
 			{ name: "lint", description: "Run linter", hasArgsSchema: false },
 			{ name: "test", description: "Run tests", hasArgsSchema: true },
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "workflow",
 			pluginVersion: "1.0.0",
@@ -724,7 +724,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 	});
 
 	test("generates help text with hook descriptions", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{
 				hookType: "SessionStart",
 				name: "context",
@@ -733,7 +733,7 @@ describe("generatePipelinePluginEntrypoint", () => {
 			},
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "test-plugin",
 			pluginVersion: "1.0.0",
@@ -749,9 +749,9 @@ describe("generatePipelinePluginEntrypoint", () => {
 	});
 
 	test("includes sidecar support", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "test", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "SessionStart", name: "test", isPipeline: true }];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "test",
 			pluginVersion: "1.0.0",
@@ -766,9 +766,9 @@ describe("generatePipelinePluginEntrypoint", () => {
 	});
 
 	test("sets plugin info via PluginInfoService with plugin name and version", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "test", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "SessionStart", name: "test", isPipeline: true }];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "my-plugin",
 			pluginVersion: "2.5.0",
@@ -838,7 +838,7 @@ describe("extractPassthroughHookEntries", () => {
 
 describe("generateHooksJson", () => {
 	test("generates hooks.json with compiled hooks", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "SessionStart", name: "context", isPipeline: true },
 			{ hookType: "PreToolUse", name: "filter", isPipeline: true, tools: ["Bash", "Write"] },
 		];
@@ -859,7 +859,7 @@ describe("generateHooksJson", () => {
 	});
 
 	test("includes passthrough hooks directly", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "compiled", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "SessionStart", name: "compiled", isPipeline: true }];
 
 		const passthroughHooks = {
 			SessionStart: [{ matcher: "startup", hooks: [{ type: "command" as const, command: "bash init.sh" }] }],
@@ -889,7 +889,7 @@ describe("generateHooksJson", () => {
 	});
 
 	test("routes SessionStart hooks through proxy when proxyScript is set", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "SessionStart", name: "context", isPipeline: true },
 			{ hookType: "PreToolUse", name: "filter", isPipeline: true, tools: ["Bash"] },
 		];
@@ -912,7 +912,7 @@ describe("generateHooksJson", () => {
 	});
 
 	test("non-SessionStart hooks use binary directly even when proxyScript is set", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "PostToolUse", name: "reporter", isPipeline: true },
 			{ hookType: "Stop", name: "guard", isPipeline: true },
 			{ hookType: "UserPromptSubmit", name: "handler", isPipeline: true },
@@ -932,7 +932,7 @@ describe("generateHooksJson", () => {
 	});
 
 	test("all entries use binary when proxyScript is not set (backward compat)", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "SessionStart", name: "context", isPipeline: true },
 			{ hookType: "PreToolUse", name: "filter", isPipeline: true },
 		];
@@ -952,7 +952,7 @@ describe("generateHooksJson", () => {
 	});
 
 	test("multiple SessionStart hooks all route through proxy", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "SessionStart", name: "context", isPipeline: true },
 			{ hookType: "SessionStart", name: "init", isPipeline: true },
 		];
@@ -1099,7 +1099,7 @@ describe("extractCommandEntries", () => {
 
 describe("generateHooksJson extended", () => {
 	test("handles hooks without tools (no matcher)", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "PostToolUse", name: "reporter", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "PostToolUse", name: "reporter", isPipeline: true }];
 
 		const result = PluginBuilder.generateHooksJson({ pluginBinaryName: "my.plugin", hooks });
 
@@ -1108,7 +1108,7 @@ describe("generateHooksJson extended", () => {
 	});
 
 	test("handles multiple hook types in one call", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "SessionStart", name: "init", isPipeline: true },
 			{ hookType: "PreToolUse", name: "filter", isPipeline: true, tools: ["Bash"] },
 			{ hookType: "PostToolUse", name: "reporter", isPipeline: true },
@@ -1129,9 +1129,7 @@ describe("generateHooksJson extended", () => {
 	});
 
 	test("single tool creates simple matcher", () => {
-		const hooks: PipelineHookEntry[] = [
-			{ hookType: "PreToolUse", name: "bash-only", isPipeline: true, tools: ["Bash"] },
-		];
+		const hooks: HookEntry[] = [{ hookType: "PreToolUse", name: "bash-only", isPipeline: true, tools: ["Bash"] }];
 
 		const result = PluginBuilder.generateHooksJson({ pluginBinaryName: "my.plugin", hooks });
 
@@ -1156,9 +1154,9 @@ describe("generateHooksJson extended", () => {
 
 describe("generatePipelinePluginEntrypoint extended", () => {
 	test("generates entrypoint without commands", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "init", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "SessionStart", name: "init", isPipeline: true }];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "no-commands",
 			pluginVersion: "1.0.0",
@@ -1173,7 +1171,7 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 	});
 
 	test("generates entrypoint with tool-filtered hooks", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{
 				hookType: "PreToolUse",
 				name: "security",
@@ -1182,7 +1180,7 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 			},
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "inline-hooks",
 			pluginVersion: "1.0.0",
@@ -1196,9 +1194,9 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 	});
 
 	test("generates entrypoint with command that has args schema", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "init", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "SessionStart", name: "init", isPipeline: true }];
 
-		const pipelineCommands: PipelineCommandEntry[] = [
+		const pipelineCommands: CommandEntry[] = [
 			{
 				name: "lint",
 				description: "Run linter",
@@ -1206,7 +1204,7 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 			},
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "with-args",
 			pluginVersion: "1.0.0",
@@ -1222,9 +1220,9 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 	});
 
 	test("generates entrypoint with command without args schema", () => {
-		const hooks: PipelineHookEntry[] = [{ hookType: "SessionStart", name: "init", isPipeline: true }];
+		const hooks: HookEntry[] = [{ hookType: "SessionStart", name: "init", isPipeline: true }];
 
-		const pipelineCommands: PipelineCommandEntry[] = [
+		const pipelineCommands: CommandEntry[] = [
 			{
 				name: "status",
 				description: "Show status",
@@ -1232,7 +1230,7 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 			},
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "no-args",
 			pluginVersion: "1.0.0",
@@ -1248,12 +1246,12 @@ describe("generatePipelinePluginEntrypoint extended", () => {
 	});
 
 	test("generates entrypoint with multiple hooks of same type", () => {
-		const hooks: PipelineHookEntry[] = [
+		const hooks: HookEntry[] = [
 			{ hookType: "PreToolUse", name: "allow-list", isPipeline: true, tools: ["Bash"] },
 			{ hookType: "PreToolUse", name: "deny-list", isPipeline: true, tools: ["Write"] },
 		];
 
-		const options: GeneratePipelinePluginOptions = {
+		const options: GeneratePluginEntrypointOptions = {
 			pluginPath: "./plugin.ts",
 			pluginName: "multi-hooks",
 			pluginVersion: "1.0.0",

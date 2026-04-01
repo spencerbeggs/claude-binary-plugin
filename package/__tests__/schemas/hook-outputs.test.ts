@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
 import type {
-	PermissionRequestPipelineOutput,
-	PostToolUsePipelineOutput,
-	PreToolUsePipelineOutput,
-	SessionStartPipelineOutput,
-	StopPipelineOutput,
-	UserPromptSubmitPipelineOutput,
-} from "../../src/schemas/pipeline-outputs.js";
+	PermissionRequestOutput,
+	PostToolUseOutput,
+	PreToolUseOutput,
+	SessionStartOutput,
+	StopOutput,
+	UserPromptSubmitOutput,
+} from "../../src/schemas/hook-outputs.js";
 import {
 	PassthroughOutputSchema,
 	PermissionRequestOutputSchema,
@@ -16,52 +16,52 @@ import {
 	SessionStartOutputSchema,
 	StopOutputSchema,
 	UserPromptSubmitOutputSchema,
-} from "../../src/schemas/pipeline-outputs.js";
-import { TokenMetrics, isPipelineOutput } from "../../src/types/pipeline.js";
+} from "../../src/schemas/hook-outputs.js";
+import { TokenMetrics, isHookOutput } from "../../src/types/pipeline.js";
 
 // =============================================================================
 // PIPELINE OUTPUT DETECTION
 // =============================================================================
 
-describe("isPipelineOutput", () => {
+describe("isHookOutput", () => {
 	test("returns true for pipeline output with status and summary", () => {
 		const output = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed: test",
 		};
-		expect(isPipelineOutput(output)).toBe(true);
+		expect(isHookOutput(output)).toBe(true);
 	});
 
 	test("returns false for legacy output (permissionDecision)", () => {
 		const output = {
 			permissionDecision: "allow",
 		};
-		expect(isPipelineOutput(output)).toBe(false);
+		expect(isHookOutput(output)).toBe(false);
 	});
 
 	test("returns false for legacy output (additionalContext)", () => {
 		const output = {
 			additionalContext: "some context",
 		};
-		expect(isPipelineOutput(output)).toBe(false);
+		expect(isHookOutput(output)).toBe(false);
 	});
 
 	test("returns false for empty object", () => {
-		expect(isPipelineOutput({})).toBe(false);
+		expect(isHookOutput({})).toBe(false);
 	});
 
 	test("returns false for null", () => {
-		expect(isPipelineOutput(null)).toBe(false);
+		expect(isHookOutput(null)).toBe(false);
 	});
 
 	test("returns false for undefined", () => {
-		expect(isPipelineOutput(undefined)).toBe(false);
+		expect(isHookOutput(undefined)).toBe(false);
 	});
 
 	test("returns false for output with only status (missing summary)", () => {
 		const output = { status: "executed" };
-		expect(isPipelineOutput(output)).toBe(false);
+		expect(isHookOutput(output)).toBe(false);
 	});
 });
 
@@ -73,7 +73,7 @@ describe("PreToolUseOutputSchema", () => {
 	const decode = Schema.decodeUnknownSync(PreToolUseOutputSchema);
 
 	test("validates executed/allow output", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed: git status",
@@ -82,7 +82,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/deny output with reason", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied: dangerous command",
@@ -92,7 +92,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/modify output with updatedInput", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "modify",
 			summary: "modified: added timeout",
@@ -102,7 +102,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates skipped output", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "skipped",
 			summary: "skipped: tool not in filter",
 		};
@@ -110,7 +110,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates disabled output", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "disabled",
 			summary: "disabled: shellcheck not available",
 			reason: "shellcheck binary not found",
@@ -119,7 +119,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates error output", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "error",
 			summary: "error: unexpected failure",
 			reason: "Connection timeout",
@@ -128,7 +128,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates output with quality indicators", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed with degraded quality",
@@ -141,7 +141,7 @@ describe("PreToolUseOutputSchema", () => {
 	});
 
 	test("validates output with metrics", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "passed linting",
@@ -167,7 +167,7 @@ describe("PostToolUseOutputSchema", () => {
 	const decode = Schema.decodeUnknownSync(PostToolUseOutputSchema);
 
 	test("validates executed/block output", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked: lint errors",
@@ -177,7 +177,7 @@ describe("PostToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/context output with claudeContext", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "context",
 			summary: "added context",
@@ -187,7 +187,7 @@ describe("PostToolUseOutputSchema", () => {
 	});
 
 	test("validates executed/none output (passthrough)", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "none",
 			summary: "analyzed but no action needed",
@@ -200,7 +200,7 @@ describe("SessionStartOutputSchema", () => {
 	const decode = Schema.decodeUnknownSync(SessionStartOutputSchema);
 
 	test("validates executed/context output", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "executed",
 			action: "context",
 			summary: "provided project context",
@@ -210,7 +210,7 @@ describe("SessionStartOutputSchema", () => {
 	});
 
 	test("validates executed/none output", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "executed",
 			action: "none",
 			summary: "no context to add",
@@ -219,7 +219,7 @@ describe("SessionStartOutputSchema", () => {
 	});
 
 	test("validates disabled output", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "disabled",
 			summary: "detection failed",
 			reason: "Could not detect package manager",
@@ -232,7 +232,7 @@ describe("StopOutputSchema", () => {
 	const decode = Schema.decodeUnknownSync(StopOutputSchema);
 
 	test("validates executed/block output", () => {
-		const output: StopPipelineOutput = {
+		const output: StopOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocking stop: tests not run",
@@ -242,7 +242,7 @@ describe("StopOutputSchema", () => {
 	});
 
 	test("validates executed/continue output", () => {
-		const output: StopPipelineOutput = {
+		const output: StopOutput = {
 			status: "executed",
 			action: "continue",
 			summary: "allowing stop: all checks passed",
@@ -255,7 +255,7 @@ describe("UserPromptSubmitOutputSchema", () => {
 	const decode = Schema.decodeUnknownSync(UserPromptSubmitOutputSchema);
 
 	test("validates executed/context output", () => {
-		const output: UserPromptSubmitPipelineOutput = {
+		const output: UserPromptSubmitOutput = {
 			status: "executed",
 			action: "context",
 			summary: "added context to prompt",
@@ -265,7 +265,7 @@ describe("UserPromptSubmitOutputSchema", () => {
 	});
 
 	test("validates executed/block output", () => {
-		const output: UserPromptSubmitPipelineOutput = {
+		const output: UserPromptSubmitOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked prompt",
@@ -279,7 +279,7 @@ describe("PermissionRequestOutputSchema", () => {
 	const decode = Schema.decodeUnknownSync(PermissionRequestOutputSchema);
 
 	test("validates executed/allow output", () => {
-		const output: PermissionRequestPipelineOutput = {
+		const output: PermissionRequestOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed: safe command",
@@ -288,7 +288,7 @@ describe("PermissionRequestOutputSchema", () => {
 	});
 
 	test("validates executed/deny output with interrupt", () => {
-		const output: PermissionRequestPipelineOutput = {
+		const output: PermissionRequestOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied: dangerous command",
@@ -403,7 +403,7 @@ describe("TokenMetrics.detectContentType", () => {
 
 describe("TokenMetrics.extractFromOutput", () => {
 	test("extracts tokens from claudeContext", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "test",
@@ -415,7 +415,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("extracts tokens from userMessage", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "executed",
 			action: "context",
 			summary: "test",
@@ -426,7 +426,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("extracts tokens from reason", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied",
@@ -438,7 +438,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("sums all token fields for hookTotal", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "context",
 			summary: "test",
@@ -454,7 +454,7 @@ describe("TokenMetrics.extractFromOutput", () => {
 	});
 
 	test("returns zeros for output with no text fields", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "skipped",
 			summary: "skipped",
 		};

@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
+import type {
+	PassthroughOutput,
+	PermissionRequestOutput,
+	PostToolUseOutput,
+	PreToolUseOutput,
+	SessionStartOutput,
+	StopOutput,
+	UserPromptSubmitOutput,
+} from "../../src/schemas/hook-outputs.js";
 import {
 	PassthroughResponse,
 	PermissionRequestResponse,
@@ -16,15 +25,6 @@ import {
 	toStopResponse,
 	toUserPromptSubmitResponse,
 } from "../../src/schemas/hook-responses.js";
-import type {
-	PassthroughPipelineOutput,
-	PermissionRequestPipelineOutput,
-	PostToolUsePipelineOutput,
-	PreToolUsePipelineOutput,
-	SessionStartPipelineOutput,
-	StopPipelineOutput,
-	UserPromptSubmitPipelineOutput,
-} from "../../src/schemas/pipeline-outputs.js";
 
 // =============================================================================
 // PRETOOLUSE RESPONSE
@@ -217,7 +217,7 @@ describe("PassthroughResponse", () => {
 
 describe("toPreToolUseResponse", () => {
 	test("maps allow action to allow permissionDecision", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed",
@@ -228,7 +228,7 @@ describe("toPreToolUseResponse", () => {
 	});
 
 	test("maps deny action to deny permissionDecision with reason", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied",
@@ -240,7 +240,7 @@ describe("toPreToolUseResponse", () => {
 	});
 
 	test("maps ask action to ask permissionDecision", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "ask",
 			summary: "asking user",
@@ -250,7 +250,7 @@ describe("toPreToolUseResponse", () => {
 	});
 
 	test("maps modify action with updatedInput", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "executed",
 			action: "modify",
 			summary: "modified input",
@@ -262,7 +262,7 @@ describe("toPreToolUseResponse", () => {
 	});
 
 	test("defaults to allow for skipped status", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "skipped",
 			summary: "skipped",
 		};
@@ -271,7 +271,7 @@ describe("toPreToolUseResponse", () => {
 	});
 
 	test("defaults to allow for error status", () => {
-		const output: PreToolUsePipelineOutput = {
+		const output: PreToolUseOutput = {
 			status: "error",
 			summary: "error",
 			reason: "something broke",
@@ -288,7 +288,7 @@ describe("toPreToolUseResponse", () => {
 
 describe("toPostToolUseResponse", () => {
 	test("maps block action with reason", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked",
@@ -301,7 +301,7 @@ describe("toPostToolUseResponse", () => {
 	});
 
 	test("maps context action with claudeContext", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "context",
 			summary: "added context",
@@ -313,7 +313,7 @@ describe("toPostToolUseResponse", () => {
 	});
 
 	test("returns empty for none action", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "none",
 			summary: "no action",
@@ -324,7 +324,7 @@ describe("toPostToolUseResponse", () => {
 	});
 
 	test("returns empty for skipped status", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "skipped",
 			summary: "skipped",
 		};
@@ -334,7 +334,7 @@ describe("toPostToolUseResponse", () => {
 	});
 
 	test("returns empty for block without reason", () => {
-		const output: PostToolUsePipelineOutput = {
+		const output: PostToolUseOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked but no reason",
@@ -350,7 +350,7 @@ describe("toPostToolUseResponse", () => {
 
 describe("toSessionStartResponse", () => {
 	test("maps claudeContext to additionalContext", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "executed",
 			action: "context",
 			summary: "session started",
@@ -362,7 +362,7 @@ describe("toSessionStartResponse", () => {
 	});
 
 	test("returns empty for none action", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "executed",
 			action: "none",
 			summary: "no context",
@@ -372,7 +372,7 @@ describe("toSessionStartResponse", () => {
 	});
 
 	test("returns empty for error status", () => {
-		const output: SessionStartPipelineOutput = {
+		const output: SessionStartOutput = {
 			status: "error",
 			summary: "error",
 			reason: "failed",
@@ -388,7 +388,7 @@ describe("toSessionStartResponse", () => {
 
 describe("toStopResponse", () => {
 	test("maps block action with reason", () => {
-		const output: StopPipelineOutput = {
+		const output: StopOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked stop",
@@ -401,7 +401,7 @@ describe("toStopResponse", () => {
 	});
 
 	test("returns empty for continue action", () => {
-		const output: StopPipelineOutput = {
+		const output: StopOutput = {
 			status: "executed",
 			action: "continue",
 			summary: "continuing",
@@ -411,7 +411,7 @@ describe("toStopResponse", () => {
 	});
 
 	test("returns empty for skipped status", () => {
-		const output: StopPipelineOutput = {
+		const output: StopOutput = {
 			status: "skipped",
 			summary: "skipped",
 		};
@@ -426,7 +426,7 @@ describe("toStopResponse", () => {
 
 describe("toUserPromptSubmitResponse", () => {
 	test("maps block action with reason", () => {
-		const output: UserPromptSubmitPipelineOutput = {
+		const output: UserPromptSubmitOutput = {
 			status: "executed",
 			action: "block",
 			summary: "blocked prompt",
@@ -439,7 +439,7 @@ describe("toUserPromptSubmitResponse", () => {
 	});
 
 	test("maps context action with claudeContext", () => {
-		const output: UserPromptSubmitPipelineOutput = {
+		const output: UserPromptSubmitOutput = {
 			status: "executed",
 			action: "context",
 			summary: "added context",
@@ -451,7 +451,7 @@ describe("toUserPromptSubmitResponse", () => {
 	});
 
 	test("returns empty for none action", () => {
-		const output: UserPromptSubmitPipelineOutput = {
+		const output: UserPromptSubmitOutput = {
 			status: "executed",
 			action: "none",
 			summary: "no action",
@@ -468,7 +468,7 @@ describe("toUserPromptSubmitResponse", () => {
 
 describe("toPermissionRequestResponse", () => {
 	test("maps deny action to deny behavior", () => {
-		const output: PermissionRequestPipelineOutput = {
+		const output: PermissionRequestOutput = {
 			status: "executed",
 			action: "deny",
 			summary: "denied",
@@ -481,7 +481,7 @@ describe("toPermissionRequestResponse", () => {
 	});
 
 	test("maps allow action to allow behavior", () => {
-		const output: PermissionRequestPipelineOutput = {
+		const output: PermissionRequestOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed",
@@ -491,7 +491,7 @@ describe("toPermissionRequestResponse", () => {
 	});
 
 	test("maps interrupt and updatedInput", () => {
-		const output: PermissionRequestPipelineOutput = {
+		const output: PermissionRequestOutput = {
 			status: "executed",
 			action: "allow",
 			summary: "allowed with modifications",
@@ -504,7 +504,7 @@ describe("toPermissionRequestResponse", () => {
 	});
 
 	test("defaults to allow for skipped status", () => {
-		const output: PermissionRequestPipelineOutput = {
+		const output: PermissionRequestOutput = {
 			status: "skipped",
 			summary: "skipped",
 		};
@@ -519,7 +519,7 @@ describe("toPermissionRequestResponse", () => {
 
 describe("toPassthroughResponse", () => {
 	test("returns empty PassthroughResponse", () => {
-		const output: PassthroughPipelineOutput = {
+		const output: PassthroughOutput = {
 			status: "executed",
 			action: "none",
 			summary: "done",
@@ -529,7 +529,7 @@ describe("toPassthroughResponse", () => {
 	});
 
 	test("ignores output fields", () => {
-		const output: PassthroughPipelineOutput = {
+		const output: PassthroughOutput = {
 			status: "error",
 			summary: "error",
 			reason: "failed",

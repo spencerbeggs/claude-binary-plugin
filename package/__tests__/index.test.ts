@@ -16,7 +16,7 @@ describe("Public API exports", () => {
 	test("exports error types", async () => {
 		const mod = await import("../src/index.js");
 		expect(mod.SchemaValidationError).toBeDefined();
-		expect(mod.PipelineError).toBeDefined();
+		expect(mod.PluginRuntimeError).toBeDefined();
 		expect(mod.EnvLoadError).toBeDefined();
 		expect(mod.EnvPersistError).toBeDefined();
 		expect(mod.SessionLookupError).toBeDefined();
@@ -51,7 +51,12 @@ describe("Public API exports", () => {
 		const mod = await import("../src/index.js");
 		expect(mod.StdinReader).toBeDefined();
 		expect(mod.EnvLoader).toBeDefined();
-		expect(mod.EnvPersister).toBeDefined();
+		expect(mod.EnvWriter).toBeDefined();
+		expect(mod.EnvBridge).toBeDefined();
+		expect(mod.EnvFileParser).toBeDefined();
+		expect(mod.EnvValidator).toBeDefined();
+		expect(mod.EnvResolver).toBeDefined();
+		expect(mod.EnvCoordinator).toBeDefined();
 		expect(mod.SessionStore).toBeDefined();
 		expect(mod.Telemetry).toBeDefined();
 		expect(mod.CommandRunner).toBeDefined();
@@ -59,15 +64,21 @@ describe("Public API exports", () => {
 
 	test("exports Live layers", async () => {
 		const mod = await import("../src/index.js");
-		expect(mod.PipelineLive).toBeDefined();
+		expect(mod.PluginLive).toBeDefined();
 		expect(mod.StdinReaderLive).toBeDefined();
 		expect(mod.EnvLoaderLive).toBeDefined();
+		expect(mod.EnvBridgeLive).toBeDefined();
+		expect(mod.EnvFileParserLive).toBeDefined();
+		expect(mod.EnvValidatorLive).toBeDefined();
+		expect(mod.EnvWriterLive).toBeDefined();
+		expect(mod.EnvResolverLive).toBeDefined();
+		expect(mod.EnvCoordinatorLive).toBeDefined();
 		expect(mod.TelemetryLive).toBeDefined();
 		expect(mod.SchemaValidatorLive).toBeDefined();
 		expect(mod.CommandRunnerLive).toBeDefined();
 	});
 
-	test("exports pipeline output schemas", async () => {
+	test("exports hook output schemas", async () => {
 		const mod = await import("../src/index.js");
 		expect(mod.ExecutionStatusSchema).toBeDefined();
 		expect(mod.HookActionSchema).toBeDefined();
@@ -82,15 +93,10 @@ describe("Public API exports", () => {
 		expect(mod.HookType.SessionStart).toBe("SessionStart");
 	});
 
-	test("exports PluginEnv", async () => {
+	test("exports PluginRuntimeService and PluginRuntimeServiceLive", async () => {
 		const mod = await import("../src/index.js");
-		expect(mod.PluginEnv).toBeDefined();
-	});
-
-	test("exports PipelineRuntimeService and PipelineRuntimeServiceLive", async () => {
-		const mod = await import("../src/index.js");
-		expect(mod.PipelineRuntimeService).toBeDefined();
-		expect(mod.PipelineRuntimeServiceLive).toBeDefined();
+		expect(mod.PluginRuntimeService).toBeDefined();
+		expect(mod.PluginRuntimeServiceLive).toBeDefined();
 	});
 
 	test("exports OtelConfig", async () => {
@@ -118,7 +124,7 @@ describe("Public API exports", () => {
 
 	test("exports pipeline utilities", async () => {
 		const mod = await import("../src/index.js");
-		expect(mod.isPipelineOutput).toBeDefined();
+		expect(mod.isHookOutput).toBeDefined();
 		expect(mod.Pipeline).toBeDefined();
 		expect(mod.TokenMetrics).toBeDefined();
 	});
@@ -165,7 +171,10 @@ describe("testing.ts exports", () => {
 		const mod = await import("../src/testing.js");
 		expect(mod.makeStdinReaderTest).toBeDefined();
 		expect(mod.EnvLoaderTest).toBeDefined();
-		expect(mod.makeEnvPersisterTest).toBeDefined();
+		expect(mod.makeEnvWriterTest).toBeDefined();
+		expect(mod.makeEnvBridgeTest).toBeDefined();
+		expect(mod.makeEnvResolverTest).toBeDefined();
+		expect(mod.makeEnvCoordinatorTest).toBeDefined();
 		expect(mod.makeSessionStoreTest).toBeDefined();
 		expect(mod.makeTelemetryTest).toBeDefined();
 		expect(mod.makeShellExecutorTest).toBeDefined();

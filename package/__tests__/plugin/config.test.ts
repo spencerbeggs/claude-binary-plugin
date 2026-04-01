@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Either, Schema } from "effect";
 import { ClaudePlugin, PluginConfig } from "../../src/plugin/config.js";
-import type { PreToolUsePipelineOutput, SessionStartPipelineOutput } from "../../src/schemas/pipeline-outputs.js";
+import type { PreToolUseOutput, SessionStartOutput } from "../../src/schemas/hook-outputs.js";
 import {
 	PostToolUseOutputSchema,
 	PreToolUseOutputSchema,
 	SessionStartOutputSchema,
 	StopOutputSchema,
-} from "../../src/schemas/pipeline-outputs.js";
+} from "../../src/schemas/hook-outputs.js";
 import { Pipeline } from "../../src/types/pipeline.js";
 
 /** Helper to mimic safeParse using Effect Schema */
@@ -220,7 +220,7 @@ describe("ClaudePlugin (basic)", () => {
 			SessionStart: [
 				{
 					name: "test-context",
-					handler: async (): Promise<SessionStartPipelineOutput> => {
+					handler: async (): Promise<SessionStartOutput> => {
 						return {
 							status: "executed",
 							action: "context",
@@ -248,7 +248,7 @@ describe("ClaudePlugin (basic)", () => {
 				{
 					name: "allowlist",
 					tools: ["Bash"],
-					handler: (): PreToolUsePipelineOutput => ({
+					handler: (): PreToolUseOutput => ({
 						status: "executed",
 						action: "allow",
 						summary: "allowed: allowlist",
@@ -257,7 +257,7 @@ describe("ClaudePlugin (basic)", () => {
 				{
 					name: "security",
 					tools: ["Write", "Edit"],
-					handler: (): PreToolUsePipelineOutput => ({
+					handler: (): PreToolUseOutput => ({
 						status: "executed",
 						action: "ask",
 						summary: "ask: security check",
@@ -286,7 +286,7 @@ describe("ClaudePlugin (basic)", () => {
 			SessionStart: [
 				{
 					name: "typed-hook",
-					handler: (): SessionStartPipelineOutput => {
+					handler: (): SessionStartOutput => {
 						return {
 							status: "executed",
 							action: "context",
@@ -299,7 +299,7 @@ describe("ClaudePlugin (basic)", () => {
 			PreToolUse: [
 				{
 					name: "typed-pretool",
-					handler: (): PreToolUsePipelineOutput => {
+					handler: (): PreToolUseOutput => {
 						return {
 							status: "executed",
 							action: "allow",

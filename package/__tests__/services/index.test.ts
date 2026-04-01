@@ -4,11 +4,11 @@ import { OtelConfigError } from "../../src/errors/OtelConfigError.js";
 import { SidecarError } from "../../src/errors/SidecarError.js";
 import { EnvLoaderLive } from "../../src/layers/EnvLoaderLive.js";
 import { EnvLoaderTest } from "../../src/layers/EnvLoaderTest.js";
-import { EnvPersisterLive } from "../../src/layers/EnvPersisterLive.js";
-import { makeEnvPersisterTest } from "../../src/layers/EnvPersisterTest.js";
+import { EnvWriterLive } from "../../src/layers/EnvWriterLive.js";
+import { makeEnvWriterTest } from "../../src/layers/EnvWriterTest.js";
 import { OtelConfigLive } from "../../src/layers/OtelConfigLive.js";
 import { makeOtelConfigTest } from "../../src/layers/OtelConfigTest.js";
-import { PipelineLive } from "../../src/layers/PipelineLive.js";
+import { PluginLive } from "../../src/layers/PluginLive.js";
 import { SchemaValidatorLive } from "../../src/layers/SchemaValidatorLive.js";
 import { SessionStoreLive } from "../../src/layers/SessionStoreLive.js";
 import { makeSessionStoreTest } from "../../src/layers/SessionStoreTest.js";
@@ -20,7 +20,7 @@ import { makeStdinReaderTest } from "../../src/layers/StdinReaderTest.js";
 import { TelemetryLive, withErrorTelemetry } from "../../src/layers/TelemetryLive.js";
 import { makeTelemetryTest } from "../../src/layers/TelemetryTest.js";
 import { EnvLoader } from "../../src/services/EnvLoader.js";
-import { EnvPersister } from "../../src/services/EnvPersister.js";
+import { EnvWriter } from "../../src/services/EnvWriter.js";
 import { OtelConfig } from "../../src/services/OtelConfig.js";
 import { SchemaValidator } from "../../src/services/SchemaValidator.js";
 import { SessionStore } from "../../src/services/SessionStore.js";
@@ -37,7 +37,7 @@ describe("Service Tags", () => {
 		expect(StdinReader).toBeDefined();
 		expect(SchemaValidator).toBeDefined();
 		expect(EnvLoader).toBeDefined();
-		expect(EnvPersister).toBeDefined();
+		expect(EnvWriter).toBeDefined();
 		expect(SessionStore).toBeDefined();
 		expect(Telemetry).toBeDefined();
 		expect(ShellExecutor).toBeDefined();
@@ -54,15 +54,15 @@ describe("Live Layers", () => {
 		expect(StdinReaderLive).toBeDefined();
 		expect(SchemaValidatorLive).toBeDefined();
 		expect(EnvLoaderLive).toBeDefined();
-		expect(EnvPersisterLive).toBeDefined();
+		expect(EnvWriterLive).toBeDefined();
 		expect(SessionStoreLive).toBeDefined();
 		expect(TelemetryLive).toBeDefined();
 		expect(ShellExecutorLive).toBeDefined();
 		expect(OtelConfigLive).toBeDefined();
 	});
 
-	test("PipelineLive is defined and composed from all services", () => {
-		expect(PipelineLive).toBeDefined();
+	test("PluginLive is defined and composed from all services", () => {
+		expect(PluginLive).toBeDefined();
 	});
 });
 
@@ -188,28 +188,27 @@ describe("EnvLoader", () => {
 });
 
 // =============================================================================
-// EnvPersister
+// EnvWriter
 // =============================================================================
 
-describe("EnvPersister", () => {
+describe("EnvWriter", () => {
 	test("test layer records writes", async () => {
-		const { writes, layer } = makeEnvPersisterTest();
+		const { writes, layer } = makeEnvWriterTest();
 
-		const program = Effect.flatMap(EnvPersister, (p) => p.persist({ FOO: "bar", BAZ: "qux" }, "/tmp/env.sh"));
+		const program = Effect.flatMap(EnvWriter, (w) => w.persist({ FOO: "bar", BAZ: "qux" }));
 		await Effect.runPromise(program.pipe(Effect.provide(layer)));
 
 		expect(writes).toHaveLength(1);
 		expect(writes[0]!.vars).toEqual({ FOO: "bar", BAZ: "qux" });
-		expect(writes[0]!.path).toBe("/tmp/env.sh");
 	});
 
 	test("test layer accumulates multiple writes", async () => {
-		const { writes, layer } = makeEnvPersisterTest();
+		const { writes, layer } = makeEnvWriterTest();
 
 		const program = Effect.gen(function* () {
-			const p = yield* EnvPersister;
-			yield* p.persist({ A: "1" }, "/tmp/a.sh");
-			yield* p.persist({ B: "2" }, "/tmp/b.sh");
+			const w = yield* EnvWriter;
+			yield* w.persist({ A: "1" });
+			yield* w.persist({ B: "2" });
 		});
 		await Effect.runPromise(program.pipe(Effect.provide(layer)));
 
