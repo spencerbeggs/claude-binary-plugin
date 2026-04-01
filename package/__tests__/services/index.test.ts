@@ -179,9 +179,9 @@ describe("EnvLoader", () => {
 	test("test layer methods are no-ops", async () => {
 		const program = Effect.gen(function* () {
 			const loader = yield* EnvLoader;
-			yield* loader.loadUserEnv("/tmp");
-			yield* loader.loadHookFiles("/tmp");
-			yield* loader.loadSessionEnv("TEST");
+			yield* loader.loadUserEnvFiles("/tmp");
+			yield* loader.loadSessionEnvFiles("/tmp");
+			yield* loader.loadFromVarsFile("/tmp/vars.env");
 		});
 		await Effect.runPromise(program.pipe(Effect.provide(EnvLoaderTest)));
 	});

@@ -5,8 +5,8 @@ import type { EnvLoadError } from "../errors/EnvLoadError.js";
 export class EnvLoader extends Context.Tag("EnvLoader")<
 	EnvLoader,
 	{
-		readonly loadUserEnv: (projectRoot: string) => Effect.Effect<void, EnvLoadError>;
-		readonly loadHookFiles: (dir: string) => Effect.Effect<void, EnvLoadError>;
-		readonly loadSessionEnv: (prefix: string) => Effect.Effect<void, EnvLoadError>;
+		readonly loadUserEnvFiles: (projectRoot: string) => Effect.Effect<string[], EnvLoadError>;
+		readonly loadSessionEnvFiles: (sessionEnvDir: string) => Effect.Effect<number, EnvLoadError>;
+		readonly loadFromVarsFile: (filePath: string) => Effect.Effect<void, EnvLoadError>;
 	}
 >() {}
