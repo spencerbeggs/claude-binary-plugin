@@ -58,10 +58,7 @@ export const ClaudeAccountInfoLive = Layer.effect(
 				if (Option.isSome(cached)) {
 					return cached.value;
 				}
-				const info = yield* Effect.try({
-					try: () => readAccountInfo(),
-					catch: () => emptyInfo,
-				});
+				const info = yield* Effect.sync(() => readAccountInfo());
 				yield* Ref.set(cache, Option.some(info));
 				return info;
 			}),

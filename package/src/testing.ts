@@ -16,11 +16,17 @@
  * @packageDocumentation
  */
 
+// New OTEL service test factories
+export { makeClaudeAccountInfoTest } from "./layers/ClaudeAccountInfoTest.js";
 export { makeCommandRunnerTest } from "./layers/CommandRunnerTest.js";
 export { EnvLoaderTest } from "./layers/EnvLoaderTest.js";
 export { makeEnvPersisterTest } from "./layers/EnvPersisterTest.js";
+export { makeGitInfoTest } from "./layers/GitInfoTest.js";
+export { makeMessageRouterTest } from "./layers/MessageRouterTest.js";
 export { makeOtelConfigTest } from "./layers/OtelConfigTest.js";
+export { makePlatformInfoTest } from "./layers/PlatformInfoTest.js";
 export { makePluginEnvTest } from "./layers/PluginEnvTest.js";
+export { makePluginInfoServiceTest } from "./layers/PluginInfoServiceTest.js";
 export { makePluginLoggerTest } from "./layers/PluginLoggerTest.js";
 export { makeSessionStoreTest } from "./layers/SessionStoreTest.js";
 export { makeShellExecutorTest } from "./layers/ShellExecutorTest.js";
