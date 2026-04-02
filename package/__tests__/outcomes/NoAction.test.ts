@@ -12,8 +12,8 @@ describe("NoAction", () => {
 		expect(new NoAction({ summary: "noop" }).toResponse()).toEqual({});
 	});
 
-	test("toTelemetry returns no_action outcome", () => {
-		expect(new NoAction({ summary: "noop" }).toTelemetry().outcome).toBe("no_action");
+	test("toTelemetry returns noAction outcome", () => {
+		expect(new NoAction({ summary: "noop" }).toTelemetry().outcome).toBe("noAction");
 	});
 
 	test("is an Outcome", () => {

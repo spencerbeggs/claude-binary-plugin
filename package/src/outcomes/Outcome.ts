@@ -12,7 +12,7 @@ export type HookOutcomeLabel =
 	| "blocked"
 	| "continued"
 	| "context_added"
-	| "no_action"
+	| "noAction"
 	| "skipped"
 	| "passthrough"
 	| "error";
