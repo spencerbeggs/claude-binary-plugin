@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
+import { isValidOutcomeForHook } from "../../src/hooks/types.js";
 import { AddContext } from "../../src/outcomes/AddContext.js";
 import { Allow } from "../../src/outcomes/Allow.js";
 import { Ask } from "../../src/outcomes/Ask.js";
@@ -9,7 +10,6 @@ import { Deny } from "../../src/outcomes/Deny.js";
 import { Modify } from "../../src/outcomes/Modify.js";
 import { NoAction } from "../../src/outcomes/NoAction.js";
 import { Skip } from "../../src/outcomes/Skip.js";
-import { isValidOutcomeForHook } from "../../src/outcomes/types.js";
 
 describe("outcome type unions", () => {
 	test("PreToolUse accepts Allow, Deny, Ask, Modify, Skip", () => {

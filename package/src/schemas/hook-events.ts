@@ -1,32 +1,30 @@
 import { Schema } from "effect";
+import type { ConfigChangeInput } from "../hooks/ConfigChange.js";
+import type { CwdChangedInput } from "../hooks/CwdChanged.js";
+import type { ElicitationInput } from "../hooks/Elicitation.js";
+import type { ElicitationResultInput } from "../hooks/ElicitationResult.js";
+import type { FileChangedInput } from "../hooks/FileChanged.js";
+import type { InstructionsLoadedInput } from "../hooks/InstructionsLoaded.js";
+import type { NotificationInput } from "../hooks/Notification.js";
+import type { PermissionRequestInput } from "../hooks/PermissionRequest.js";
+import type { PostCompactInput } from "../hooks/PostCompact.js";
+import type { PostToolUseInput } from "../hooks/PostToolUse.js";
+import type { PostToolUseFailureInput } from "../hooks/PostToolUseFailure.js";
+import type { PreCompactInput } from "../hooks/PreCompact.js";
+import type { PreToolUseInput } from "../hooks/PreToolUse.js";
+import type { SessionEndInput } from "../hooks/SessionEnd.js";
+import type { SessionStartInput } from "../hooks/SessionStart.js";
+import type { StopInput } from "../hooks/Stop.js";
+import type { StopFailureInput } from "../hooks/StopFailure.js";
+import type { SubagentStartInput } from "../hooks/SubagentStart.js";
+import type { SubagentStopInput } from "../hooks/SubagentStop.js";
+import type { TaskCompletedInput } from "../hooks/TaskCompleted.js";
+import type { TaskCreatedInput } from "../hooks/TaskCreated.js";
+import type { TeammateIdleInput } from "../hooks/TeammateIdle.js";
+import type { UserPromptSubmitInput } from "../hooks/UserPromptSubmit.js";
+import type { WorktreeCreateInput } from "../hooks/WorktreeCreate.js";
+import type { WorktreeRemoveInput } from "../hooks/WorktreeRemove.js";
 import { SessionIdSchema, ToolUseIdSchema, TranscriptPathSchema } from "./branded.js";
-import type {
-	ConfigChangeInput,
-	CwdChangedInput,
-	ElicitationInput,
-	ElicitationResultInput,
-	FileChangedInput,
-	InstructionsLoadedInput,
-	NotificationInput,
-	PermissionRequestInput,
-	PostCompactInput,
-	PostToolUseFailureInput,
-	PostToolUseInput,
-	PreCompactInput,
-	PreToolUseInput,
-	SessionEndInput,
-	SessionStartInput,
-	StopFailureInput,
-	StopInput,
-	SubagentStartInput,
-	SubagentStopInput,
-	TaskCompletedInput,
-	TaskCreatedInput,
-	TeammateIdleInput,
-	UserPromptSubmitInput,
-	WorktreeCreateInput,
-	WorktreeRemoveInput,
-} from "./hook-inputs.js";
 import {
 	ConfigChangeSourceSchema,
 	ElicitationActionSchema,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import type { HookEventBase } from "../../src/schemas/hook-inputs.js";
+import type { HookEventBase } from "../../src/hooks/shared.js";
 // TODO: This test file needs rewriting - SessionStartEvent was removed with the deprecated events/ module
 // import { SessionStartEvent } from "../../src/events/classes/SessionStartEvent.js";
 import { HookType } from "../../src/schemas/hook-literals.js";

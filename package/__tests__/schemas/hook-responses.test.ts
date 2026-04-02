@@ -1,30 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
-import type {
-	PassthroughOutput,
-	PermissionRequestOutput,
-	PostToolUseOutput,
-	PreToolUseOutput,
-	SessionStartOutput,
-	StopOutput,
-	UserPromptSubmitOutput,
-} from "../../src/schemas/hook-outputs.js";
-import {
-	PassthroughResponse,
-	PermissionRequestResponse,
-	PostToolUseResponse,
-	PreToolUseResponse,
-	SessionStartResponse,
-	StopResponse,
-	UserPromptSubmitResponse,
-	toPassthroughResponse,
-	toPermissionRequestResponse,
-	toPostToolUseResponse,
-	toPreToolUseResponse,
-	toSessionStartResponse,
-	toStopResponse,
-	toUserPromptSubmitResponse,
-} from "../../src/schemas/hook-responses.js";
+import type { PermissionRequestOutput } from "../../src/hooks/PermissionRequest.js";
+import { PermissionRequestResponse, toPermissionRequestResponse } from "../../src/hooks/PermissionRequest.js";
+import type { PostToolUseOutput } from "../../src/hooks/PostToolUse.js";
+import { PostToolUseResponse, toPostToolUseResponse } from "../../src/hooks/PostToolUse.js";
+import type { PreToolUseOutput } from "../../src/hooks/PreToolUse.js";
+import { PreToolUseResponse, toPreToolUseResponse } from "../../src/hooks/PreToolUse.js";
+import type { SessionStartOutput } from "../../src/hooks/SessionStart.js";
+import { SessionStartResponse, toSessionStartResponse } from "../../src/hooks/SessionStart.js";
+import type { StopOutput } from "../../src/hooks/Stop.js";
+import { StopResponse, toStopResponse } from "../../src/hooks/Stop.js";
+import type { PassthroughOutput } from "../../src/hooks/shared.js";
+import { PassthroughResponse, toPassthroughResponse } from "../../src/hooks/shared.js";
+import type { UserPromptSubmitOutput } from "../../src/hooks/UserPromptSubmit.js";
+import { UserPromptSubmitResponse, toUserPromptSubmitResponse } from "../../src/hooks/UserPromptSubmit.js";
 
 // =============================================================================
 // PRETOOLUSE RESPONSE

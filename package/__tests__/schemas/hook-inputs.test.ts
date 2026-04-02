@@ -1,17 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
-import {
-	NotificationInput,
-	PermissionRequestInput,
-	PostToolUseInput,
-	PreCompactInput,
-	PreToolUseInput,
-	SessionEndInput,
-	SessionStartInput,
-	StopInput,
-	SubagentStopInput,
-	UserPromptSubmitInput,
-} from "../../src/schemas/hook-inputs.js";
+import { NotificationInput } from "../../src/hooks/Notification.js";
+import { PermissionRequestInput } from "../../src/hooks/PermissionRequest.js";
+import { PostToolUseInput } from "../../src/hooks/PostToolUse.js";
+import { PreCompactInput } from "../../src/hooks/PreCompact.js";
+import { PreToolUseInput } from "../../src/hooks/PreToolUse.js";
+import { SessionEndInput } from "../../src/hooks/SessionEnd.js";
+import { SessionStartInput } from "../../src/hooks/SessionStart.js";
+import { StopInput } from "../../src/hooks/Stop.js";
+import { SubagentStopInput } from "../../src/hooks/SubagentStop.js";
+import { UserPromptSubmitInput } from "../../src/hooks/UserPromptSubmit.js";
 
 // =============================================================================
 // TEST FIXTURES

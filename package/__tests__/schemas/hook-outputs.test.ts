@@ -1,22 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
-import type {
-	PermissionRequestOutput,
-	PostToolUseOutput,
-	PreToolUseOutput,
-	SessionStartOutput,
-	StopOutput,
-	UserPromptSubmitOutput,
-} from "../../src/schemas/hook-outputs.js";
-import {
-	PassthroughOutputSchema,
-	PermissionRequestOutputSchema,
-	PostToolUseOutputSchema,
-	PreToolUseOutputSchema,
-	SessionStartOutputSchema,
-	StopOutputSchema,
-	UserPromptSubmitOutputSchema,
-} from "../../src/schemas/hook-outputs.js";
+import type { PermissionRequestOutput } from "../../src/hooks/PermissionRequest.js";
+import { PermissionRequestOutputSchema } from "../../src/hooks/PermissionRequest.js";
+import type { PostToolUseOutput } from "../../src/hooks/PostToolUse.js";
+import { PostToolUseOutputSchema } from "../../src/hooks/PostToolUse.js";
+import type { PreToolUseOutput } from "../../src/hooks/PreToolUse.js";
+import { PreToolUseOutputSchema } from "../../src/hooks/PreToolUse.js";
+import type { SessionStartOutput } from "../../src/hooks/SessionStart.js";
+import { SessionStartOutputSchema } from "../../src/hooks/SessionStart.js";
+import type { StopOutput } from "../../src/hooks/Stop.js";
+import { StopOutputSchema } from "../../src/hooks/Stop.js";
+import { PassthroughOutputSchema } from "../../src/hooks/shared.js";
+import type { UserPromptSubmitOutput } from "../../src/hooks/UserPromptSubmit.js";
+import { UserPromptSubmitOutputSchema } from "../../src/hooks/UserPromptSubmit.js";
 import { TokenMetrics, isHookOutput } from "../../src/types/pipeline.js";
 
 // =============================================================================

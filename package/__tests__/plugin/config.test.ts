@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { Either, Schema } from "effect";
+import { PostToolUseOutputSchema } from "../../src/hooks/PostToolUse.js";
+import type { PreToolUseOutput } from "../../src/hooks/PreToolUse.js";
+import { PreToolUseOutputSchema } from "../../src/hooks/PreToolUse.js";
+import type { SessionStartOutput } from "../../src/hooks/SessionStart.js";
+import { SessionStartOutputSchema } from "../../src/hooks/SessionStart.js";
+import { StopOutputSchema } from "../../src/hooks/Stop.js";
 import { ClaudePlugin, PluginConfig } from "../../src/plugin/config.js";
-import type { PreToolUseOutput, SessionStartOutput } from "../../src/schemas/hook-outputs.js";
-import {
-	PostToolUseOutputSchema,
-	PreToolUseOutputSchema,
-	SessionStartOutputSchema,
-	StopOutputSchema,
-} from "../../src/schemas/hook-outputs.js";
 import { Pipeline } from "../../src/types/pipeline.js";
 
 /** Helper to mimic safeParse using Effect Schema */

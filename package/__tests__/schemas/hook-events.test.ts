@@ -1,30 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
-import {
-	HookEventSchemas,
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "../../src/schemas/hook-events.js";
-import {
-	NotificationInput,
-	PermissionRequestInput,
-	PostToolUseInput,
-	PreCompactInput,
-	PreToolUseInput,
-	SessionEndInput,
-	SessionStartInput,
-	StopInput,
-	SubagentStopInput,
-	UserPromptSubmitInput,
-} from "../../src/schemas/hook-inputs.js";
+import { NotificationEvent, NotificationInput } from "../../src/hooks/Notification.js";
+import { PermissionRequestEvent, PermissionRequestInput } from "../../src/hooks/PermissionRequest.js";
+import { PostToolUseEvent, PostToolUseInput } from "../../src/hooks/PostToolUse.js";
+import { PreCompactEvent, PreCompactInput } from "../../src/hooks/PreCompact.js";
+import { PreToolUseEvent, PreToolUseInput } from "../../src/hooks/PreToolUse.js";
+import { SessionEndEvent, SessionEndInput } from "../../src/hooks/SessionEnd.js";
+import { SessionStartEvent, SessionStartInput } from "../../src/hooks/SessionStart.js";
+import { StopEvent, StopInput } from "../../src/hooks/Stop.js";
+import { SubagentStopEvent, SubagentStopInput } from "../../src/hooks/SubagentStop.js";
+import { UserPromptSubmitEvent, UserPromptSubmitInput } from "../../src/hooks/UserPromptSubmit.js";
+import { HookEventSchemas } from "../../src/schemas/hook-events.js";
 
 // =============================================================================
 // TEST FIXTURES
