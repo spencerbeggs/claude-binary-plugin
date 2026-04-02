@@ -1,9 +1,6 @@
-import type { Effect } from "effect";
 import { Schema } from "effect";
-import type { ReadonlyDeep } from "type-fest";
 import type { PluginBuildResult } from "../build/builder.js";
 import type {
-	AnyOutcome,
 	PassthroughOutcome,
 	PermissionRequestOutcome,
 	PostToolUseOutcome,
@@ -24,7 +21,6 @@ import type {
 	SubagentStopInput,
 	UserPromptSubmitInput,
 } from "../schemas/hook-inputs.js";
-import type { ToolName } from "../schemas/hook-literals.js";
 import type {
 	NotificationOutput,
 	PassthroughOutput,
@@ -38,7 +34,73 @@ import type {
 	SubagentStopOutput,
 	UserPromptSubmitOutput,
 } from "../schemas/hook-outputs.js";
-import type { PluginTester } from "../testing/builder.js";
+// Imports from extracted modules — also re-exported below to preserve backward compatibility
+// for any code that imports from `./plugin/config.js`.
+import type {
+	CmdContext,
+	CommandDefinition,
+	CommandDefinitionBase,
+	CommandHandler,
+	CommandHandlerFn,
+	CommandInlineDefinition,
+	CommandOutput,
+	CommandsMap,
+} from "./commands.js";
+import type {
+	HandlerContext,
+	HandlerHookDefinition,
+	HookDefinition,
+	HookDefinitionBase,
+	HookEventOptions,
+	IO,
+	PassthroughHookEntry,
+	PluginHandler,
+	PluginState,
+	ToolFilter,
+} from "./handler.js";
+import type {
+	ExtractCommands,
+	ExtractOptionsSchema,
+	ExtractSetup,
+	ExtractStateSchema,
+	InferPluginCommands,
+	InferPluginOptions,
+	InferPluginState,
+} from "./infer.js";
+import type { BaseState, ExtractSetupReturn, SetupContext, SetupFunction } from "./state.js";
+
+// Re-export all extracted types so that existing imports from `./plugin/config.js` continue to work.
+export type {
+	BaseState,
+	CmdContext,
+	CommandDefinition,
+	CommandDefinitionBase,
+	CommandHandler,
+	CommandHandlerFn,
+	CommandInlineDefinition,
+	CommandOutput,
+	CommandsMap,
+	ExtractCommands,
+	ExtractOptionsSchema,
+	ExtractSetup,
+	ExtractSetupReturn,
+	ExtractStateSchema,
+	HandlerContext,
+	HandlerHookDefinition,
+	HookDefinition,
+	HookDefinitionBase,
+	HookEventOptions,
+	IO,
+	InferPluginCommands,
+	InferPluginOptions,
+	InferPluginState,
+	PassthroughHookEntry,
+	PluginHandler,
+	PluginState,
+	SetupContext,
+	SetupFunction,
+	ToolFilter,
+};
 
 // =============================================================================
 // PLUGIN CONFIG BASE CLASS
@@ -116,124 +178,6 @@ export class ClaudePlugin<TConfig extends abstract new (...args: any[]) => any =
 		return new ClaudePlugin(config, hooks).build(options);
 	}
 }
-
-// =============================================================================
-// I/O TYPES
-// =============================================================================
-
-/**
- * Standard I/O streams used by hook events.
- * @public
- */
-export interface IO {
-	stdin: typeof process.stdin;
-	stdout: typeof process.stdout;
-	stderr: typeof process.stderr;
-	/**
-	 * Pre-loaded input text, bypasses stdin reading.
-	 * Useful for testing without mocking Bun.stdin.
-	 */
-	inputText?: string;
-	/**
-	 * Custom exit function, bypasses process.exit().
-	 * Useful for testing without terminating the process.
-	 */
-	exit?: (code: number) => never;
-}
-
-/**
- * Options for creating a HookEvent.
- * @public
- */
-export interface HookEventOptions<TState = unknown> extends IO {
-	/** Name for the debug logger (e.g., "workflow-context", "code-check") */
-	name?: string;
-	/**
-	 * Plugin name for telemetry and debug logging.
-	 * Passed explicitly from compiled entrypoint to avoid env var cross-contamination.
-	 */
-	pluginName?: string;
-	/**
-	 * Plugin version for telemetry.
-	 * Passed explicitly from compiled entrypoint to avoid env var cross-contamination.
-	 */
-	pluginVersion?: string;
-	/**
-	 * PluginEnv subclass for type-safe state loading.
-	 */
-	stateClass: new () => TState;
-}
-
-// =============================================================================
-// HANDLER TYPES
-// =============================================================================
-
-/**
- * Context provided to pipeline handlers.
- *
- * @typeParam TInput - Hook event input type (e.g., PreToolUseEvent)
- * @typeParam TOptions - Validated options from plugin schema
- * @typeParam TState - Computed variables from setup function
- *
- * @example
- * ```ts
- * const handler: Pipeline["PreToolUse"] = ({ input, options, state }) => {
- *   // input: PreToolUseEvent
- *   // options: { DEBUG: boolean, MODE: string }
- *   // state: { projectDir, pluginDir, packageManager, ... }
- *   return { permissionDecision: "allow" };
- * };
- * ```
- */
-/**
- * Full state passed to handlers: BaseState + computed state from setup().
- * @public
- */
-export type PluginState<TState> = BaseState & TState;
-
-/**
- * Context provided to pipeline handlers.
- *
- * @remarks
- * All properties are deeply readonly to prevent accidental mutations.
- * Handlers should treat their context as immutable and return new
- * output objects rather than modifying input.
- *
- * @typeParam TInput - Hook event input type (e.g., PreToolUseInput)
- * @typeParam TOptions - Validated options from plugin schema
- * @typeParam TState - Computed state from setup function
- *
- * @public
- */
-export interface HandlerContext<TInput, TOptions, TState = Record<string, unknown>> {
-	/** Hook event input from Claude Code (readonly) */
-	input: ReadonlyDeep<TInput>;
-	/** Validated options from plugin schema (readonly) */
-	options: ReadonlyDeep<TOptions>;
-	/** State: base paths + computed state from setup() (readonly) */
-	state: ReadonlyDeep<PluginState<TState>>;
-}
-
-/**
- * Plugin handler: pure transformation function.
- * Returns a validated output, a typed outcome, or throws to indicate error.
- *
- * @typeParam TOutcome - The valid outcome union for this hook type.
- *   Each hook type restricts which outcomes are allowed at compile time.
- *   Extended outcomes (via `Outcome.extend()`) are also accepted since
- *   they structurally extend the base outcome class.
- *
- * @public
- */
-export type PluginHandler<
-	TInput,
-	TOutput,
-	TOptions,
-	TState = Record<string, unknown>,
-	TOutcome extends AnyOutcome = AnyOutcome,
-> = (
-	ctx: HandlerContext<TInput, TOptions, TState>,
-) => TOutput | TOutcome | Promise<TOutput | TOutcome> | Effect.Effect<TOutput | TOutcome>;
 
 // =============================================================================
 // TYPED HANDLER HELPERS
@@ -386,82 +330,6 @@ export type PermissionRequestHandler<TOptions, TState = Record<string, string>> 
 	TState,
 	PermissionRequestOutcome
 >;
-
-// =============================================================================
-// HOOK DEFINITION TYPES
-// =============================================================================
-
-/**
- * Base hook definition with common fields.
- * @public
- */
-export interface HookDefinitionBase {
-	/** Unique name for this hook (used in CLI and telemetry) */
-	name: string;
-	/** Description shown in help text */
-	description?: string;
-}
-
-/**
- * Tool filter for PreToolUse/PostToolUse hooks.
- * @public
- */
-export interface ToolFilter {
-	/** Only run this hook for these tools (fast-path skip for others) */
-	tools?: ToolName[];
-}
-
-/**
- * Pipeline-based hook definition with inline function.
- * @public
- */
-export interface HandlerHookDefinition<
-	TInput,
-	TOutput,
-	TOptions,
-	TState = Record<string, unknown>,
-	TOutcome extends AnyOutcome = AnyOutcome,
-> extends HookDefinitionBase {
-	/** Pure transformation function */
-	handler: PluginHandler<TInput, TOutput, TOptions, TState, TOutcome>;
-}
-
-/**
- * Passthrough hook entry - included directly in hooks.json without compilation.
- * Use this for hooks that don't need to be part of the binary plugin,
- * like bash scripts or external tools.
- *
- * @example
- * ```ts
- * {
- *   matcher: "startup",
- *   hooks: [{ type: "command", command: "bash ./scripts/init.sh" }]
- * }
- * ```
- * @public
- */
-export interface PassthroughHookEntry {
-	/** Optional matcher pattern for tool filtering */
-	matcher?: string | undefined;
-	/** Array of hook commands to execute */
-	hooks: Array<{ type: "command"; command: string }>;
-	/** Mark that this is not a compiled hook */
-	name?: never;
-	handler?: never;
-}
-
-/**
- * Hook definition: either an inline handler function or a passthrough entry.
- * @public
- */
-export type HookDefinition<
-	TInput,
-	TOutput,
-	_TEvent,
-	TOptions,
-	TState = Record<string, unknown>,
-	TOutcome extends AnyOutcome = AnyOutcome,
-> = HandlerHookDefinition<TInput, TOutput, TOptions, TState, TOutcome> | PassthroughHookEntry;
 
 // =============================================================================
 // TYPED HOOK DEFINITIONS PER EVENT TYPE
@@ -621,220 +489,8 @@ export interface HooksMap<TOptions, TState = Record<string, unknown>> {
 }
 
 // =============================================================================
-// COMMAND PIPELINE TYPES
+// PLUGIN CONFIG OPTIONS
 // =============================================================================
-
-/**
- * Command definition with inline handler function.
- *
- * @typeParam TArgs - Effect Schema type for command arguments
- * @typeParam TOptions - Validated options from plugin schema
- * @typeParam TState - Computed state from setup function
- *
- * @example
- * ```ts
- * commands: {
- *   status: {
- *     description: "Show project status",
- *     args: Schema.Struct({}),
- *     handler: async ({ state }) => ({
- *       exitCode: 0,
- *       output: `# Status\n\nProject: ${state.projectDir}`,
- *     }),
- *   },
- * }
- * ```
- * @public
- */
-export interface CommandInlineDefinition<
-	TArgs extends Schema.Schema.Any = Schema.Schema.Any,
-	TOptions = unknown,
-	TState = Record<string, unknown>,
-> {
-	/** Description shown in help text and to LLM */
-	description: string;
-	/** Effect Schema for validating CLI arguments */
-	args?: TArgs;
-	/** Inline handler function */
-	handler: CommandHandler<Schema.Schema.Type<TArgs>, TOptions, TState>;
-}
-
-/**
- * Command definition with an inline handler function.
- *
- * @typeParam TArgs - Effect Schema type for command arguments
- * @typeParam TOptions - Validated options from plugin schema
- * @typeParam TState - Computed state from setup function
- *
- * @example
- * ```ts
- * {
- *   description: "Show status",
- *   args: Schema.Struct({}),
- *   handler: async ({ state }) => ({
- *     exitCode: 0,
- *     output: `Project: ${state.projectDir}`,
- *   }),
- * }
- * ```
- * @public
- */
-export type CommandDefinition<
-	TArgs extends Schema.Schema.Any = Schema.Schema.Any,
-	TOptions = unknown,
-	TState = Record<string, unknown>,
-> = CommandInlineDefinition<TArgs, TOptions, TState>;
-
-/**
- * Context provided to command handlers.
- *
- * @typeParam TArgs - Validated argument type from Effect Schema
- * @typeParam TOptions - Validated options from plugin schema (Layer 2)
- * @typeParam TState - Computed variables from setup function (Layer 3)
- *
- * @example
- * ```ts
- * import type { Commands } from "./plugin.config.js";
- *
- * const handler: Commands["lint"] = async ({ args, options, state }) => {
- *   // args: { path: string, fix: boolean } - validated from CLI
- *   // options: { AUTO_ALLOW_ENABLED: boolean, ... } - from schema
- *   // state: { projectDir, pluginDir, packageManager, ... } - base + computed
- *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
- * };
- * ```
- * @public
- */
-export interface CmdContext<TArgs, TOptions, TState = Record<string, unknown>> {
-	/** Validated command arguments from CLI */
-	args: TArgs;
-	/** Validated options from plugin schema */
-	options: TOptions;
-	/** State: base paths + computed state from setup() */
-	state: PluginState<TState>;
-}
-
-/**
- * Command handler function signature.
- *
- * @typeParam TArgs - Validated argument type from Effect Schema
- * @typeParam TOptions - Validated options from plugin schema
- * @typeParam TState - State from setup function
- * @public
- */
-export type CommandHandler<TArgs, TOptions, TState = Record<string, unknown>> = (
-	ctx: CmdContext<TArgs, TOptions, TState>,
-) => CommandOutput | Promise<CommandOutput>;
-
-/**
- * Command output structure returned by command handlers.
- * Commands output markdown for LLM consumption.
- * @public
- */
-export interface CommandOutput {
-	/** Exit code (0 = success, 1 = issues found, 2 = fatal error) */
-	exitCode: number;
-	/** Markdown output for LLM consumption */
-	output: string;
-	/** Optional structured data for programmatic access */
-	data?: Record<string, unknown>;
-}
-
-/**
- * Base command definition structure (for type constraints).
- * @public
- */
-export interface CommandDefinitionBase {
-	description: string;
-	args?: Schema.Schema.Any;
-	/** Inline handler function */
-	handler: CommandHandlerFn;
-}
-
-/**
- * Generic command handler function type for base constraints.
- * Uses `never` in parameters to allow any specific handler signature via contravariance.
- * @public
- */
-export type CommandHandlerFn = (ctx: never) => CommandOutput | Promise<CommandOutput>;
-
-/**
- * Map of command names to their definitions.
- * @public
- */
-export type CommandsMap = Record<string, CommandDefinitionBase>;
-
-/**
- * Base state values provided to setup and handlers.
- * These are the core paths that the pipeline provides automatically.
- *
- * Persisted as:
- * - `PREFIX_PROJECT_DIR`
- * - `PREFIX_PLUGIN_DIR`
- * - `PREFIX_PLUGIN_ENV_FILE`
- * @public
- */
-export interface BaseState {
-	/** Project directory (from CLAUDE_PROJECT_DIR or cwd) */
-	readonly projectDir: string;
-	/** Plugin root directory (from CLAUDE_PLUGIN_ROOT) */
-	readonly pluginDir: string;
-	/** Path to the session env file (from CLAUDE_ENV_FILE) */
-	readonly pluginEnvFile: string;
-}
-
-/**
- * Context passed to the setup function during SessionStart.
- * @public
- */
-export interface SetupContext<TOptions> {
-	/** Validated options from the schema (with defaults applied) */
-	options: TOptions;
-	/** Current working directory from the session event */
-	cwd: string;
-	/** Session ID from Claude Code */
-	sessionId: string;
-	/** Base state paths (projectDir, pluginDir, pluginEnvFile) */
-	baseState: BaseState;
-}
-
-/**
- * Setup function for computing derived environment variables.
- * Runs during SessionStart after options are validated.
- *
- * @typeParam TOptions - Validated options type from schema
- * @typeParam TState - Return type with specific computed variable names
- * @returns Object with computed values of any type (will be typed through inference)
- *
- * @example
- * ```ts
- * setup: async ({ options, cwd }) => {
- *   const detection = await runDetectionPipeline();
- *   return {
- *     detection,  // Full typed object
- *     sessionInfo: formatSessionInfo(detection),  // Pre-formatted string
- *   };
- * }
- * ```
- * @public
- */
-export type SetupFunction<TOptions, TState = Record<string, unknown>> = (
-	ctx: SetupContext<TOptions>,
-) => Promise<TState> | TState;
-
-/**
- * Helper type to extract the return type of a setup function.
- * Handles both sync and async return types.
- *
- * Uses `infer _TOptions` to match SetupContext with any options type,
- * allowing the pattern to match setup functions regardless of their options type.
- * @public
- */
-export type ExtractSetupReturn<T> = T extends (ctx: SetupContext<infer _TOptions>) => Promise<infer R>
-	? R
-	: T extends (ctx: SetupContext<infer _TOptions>) => infer R
-		? R
-		: Record<string, unknown>;
 
 /**
  * Plugin configuration options.
@@ -1061,75 +717,8 @@ export interface PluginBuildOptions {
 }
 
 // =============================================================================
-// TYPE INFERENCE UTILITIES
+// INFER HANDLERS
 // =============================================================================
-
-/**
- * Extract the options Schema from a PluginConfig subclass with static `options` property.
- * @public
- */
-export type ExtractOptionsSchema<T> = T extends { options: infer S }
-	? S extends Schema.Schema.Any
-		? S
-		: never
-	: never;
-
-/**
- * Extract the state Schema from either:
- * - A PluginConfig subclass with static `state` property (new API)
- * - Falls back to never if no state schema is defined
- * @public
- */
-export type ExtractStateSchema<T> = T extends { state: infer S } ? (S extends Schema.Schema.Any ? S : never) : never;
-
-/**
- * Extract the setup function type from a PluginConfig subclass with static `setup` property.
- * @public
- */
-export type ExtractSetup<T> = T extends { setup: infer F } ? F : undefined;
-
-/**
- * Helper type to extract commands map from a ClaudePlugin or config class.
- * @public
- */
-export type ExtractCommands<T> = T extends { commands: infer C }
-	? C extends Record<string, CommandDefinitionBase>
-		? C
-		: Record<string, CommandDefinitionBase>
-	: Record<string, CommandDefinitionBase>;
-
-/**
- * Extract the inferred Options type from a plugin configuration.
- *
- * @remarks
- * Extracts the TypeScript type from the PluginConfig subclass's static `options` schema.
- *
- * @example
- * ```ts
- * type Options = InferPluginOptions<typeof MyConfig>;
- * ```
- * @public
- */
-export type InferPluginOptions<T> =
-	ExtractOptionsSchema<T> extends Schema.Schema.Any
-		? Schema.Schema.Type<ExtractOptionsSchema<T>>
-		: Record<string, unknown>;
-
-/**
- * Extract the inferred State type from a plugin configuration.
- *
- * @remarks
- * Reads from the PluginConfig subclass's static `state` property.
- * If no state schema is defined, returns `Record<string, unknown>`.
- *
- * @example
- * ```ts
- * type State = InferPluginState<typeof MyConfig>;
- * ```
- * @public
- */
-export type InferPluginState<T> =
-	ExtractStateSchema<T> extends Schema.Schema.Any ? Schema.Schema.Type<ExtractStateSchema<T>> : Record<string, unknown>;
 
 /**
  * Infer all pipeline and handler types from a plugin configuration.
@@ -1236,35 +825,3 @@ export interface InferHandlers<T> {
 	 */
 	PermissionRequest: PermissionRequestHandler<InferPluginOptions<T>, InferPluginState<T>>;
 }
-
-/**
- * Infer command handler types from a plugin configuration.
- *
- * @remarks
- * Returns an interface with typed handlers for each command defined in the plugin.
- * Use this to define command handlers with full type safety for args, options, and state.
- *
- * @example
- * ```ts
- * import { Plugin } from "claude-binary-plugin";
- * import type { InferPluginCommands } from "claude-binary-plugin";
- *
- * class MyPlugin extends Plugin("MY_PLUGIN", { ... }) {}
- * export type Commands = InferPluginCommands<MyPlugin>;
- *
- * // In commands/lint.cmd.ts
- * import type { Commands } from "../plugin.config.js";
- *
- * const handler: Commands["lint"] = async ({ args, options, state }) => {
- *   // args, options, and state are fully typed!
- *   return { exitCode: 0, output: "# Results\n\n✅ Passed" };
- * };
- * export default handler;
- * ```
- * @public
- */
-export type InferPluginCommands<T> = {
-	[K in keyof ExtractCommands<T>]: ExtractCommands<T>[K] extends CommandDefinition<infer TArgs>
-		? CommandHandler<Schema.Schema.Type<TArgs>, InferPluginOptions<T>, InferPluginState<T>>
-		: never;
-};

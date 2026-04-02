@@ -42,7 +42,7 @@
  */
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
-import type { PassthroughHookEntry } from "../plugin/config.js";
+import type { PassthroughHookEntry } from "../plugin/handler.js";
 import type { GenerateProxyScriptOptions } from "./ProxyTemplate.js";
 import { generateProxyScript } from "./ProxyTemplate.js";
 

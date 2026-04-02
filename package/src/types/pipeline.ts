@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import type { HandlerHookDefinition, HookDefinition } from "../plugin/config.js";
+import type { HandlerHookDefinition, HookDefinition } from "../plugin/handler.js";
 import type {
 	ExecutionQuality,
 	HookMetrics,

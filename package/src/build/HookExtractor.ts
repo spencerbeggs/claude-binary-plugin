@@ -8,7 +8,7 @@
  *
  * @internal
  */
-import type { PassthroughHookEntry } from "../plugin/config.js";
+import type { PassthroughHookEntry } from "../plugin/handler.js";
 import type { ExtractableHook, ExtractedPassthroughHooks, HookEntry, HookEventTypeName } from "./builder.js";
 
 /**

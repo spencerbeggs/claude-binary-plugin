@@ -1,7 +1,7 @@
 import { dirname } from "node:path";
 import { Effect, Layer, ParseResult, Schema } from "effect";
 import { CommandParseError } from "../errors/CommandParseError.js";
-import type { BaseState } from "../plugin/config.js";
+import type { BaseState } from "../plugin/state.js";
 import type { CommandOutput } from "../services/CommandRunner.js";
 import { CommandRunner } from "../services/CommandRunner.js";
 import { getByProjectDir, getBySessionId } from "./SessionRegistry.js";

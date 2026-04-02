@@ -4,7 +4,8 @@ import type { ReadonlyDeep } from "type-fest";
 import { PluginRuntimeError } from "../errors/PluginRuntimeError.js";
 import { Outcome } from "../outcomes/Outcome.js";
 import { isValidOutcomeForHook } from "../outcomes/types.js";
-import type { BaseState, PluginHandler, PluginState, SetupFunction } from "../plugin/config.js";
+import type { PluginHandler, PluginState } from "../plugin/handler.js";
+import type { BaseState, SetupFunction } from "../plugin/state.js";
 import {
 	NotificationEvent,
 	PermissionRequestEvent,

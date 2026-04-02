@@ -5,14 +5,9 @@ import type { PartialDeep } from "type-fest";
 import type { ShellResult } from "../build/builder.js";
 import type { OutcomeTelemetry } from "../outcomes/Outcome.js";
 import { Outcome } from "../outcomes/Outcome.js";
-import type {
-	BaseState,
-	CommandDefinition,
-	CommandHandler,
-	CommandOutput,
-	PluginHandler,
-	PluginState,
-} from "../plugin/config.js";
+import type { CommandDefinition, CommandHandler, CommandOutput } from "../plugin/commands.js";
+import type { PluginHandler, PluginState } from "../plugin/handler.js";
+import type { BaseState } from "../plugin/state.js";
 import type { HookAction } from "../schemas/hook-outputs.js";
 import type { AnyHookOutput } from "../types/pipeline.js";
 import { isHookOutput } from "../types/pipeline.js";
