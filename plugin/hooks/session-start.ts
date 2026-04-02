@@ -14,9 +14,9 @@ const handler: Handlers["SessionStart"] = ({ state }) => {
 		ctx.rule("Git is not available — do not attempt git operations");
 	}
 
-	return new AddContext({
-		summary: "injected environment context",
+	return AddContext.make({
 		context: ctx,
+		summary: "injected environment context",
 	});
 };
 

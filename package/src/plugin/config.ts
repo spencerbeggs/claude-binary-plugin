@@ -2,7 +2,16 @@ import type { Effect } from "effect";
 import { Schema } from "effect";
 import type { ReadonlyDeep } from "type-fest";
 import type { PluginBuildResult } from "../build/builder.js";
-import type { AnyOutcome } from "../outcomes/types.js";
+import type {
+	AnyOutcome,
+	PassthroughOutcome,
+	PermissionRequestOutcome,
+	PostToolUseOutcome,
+	PreToolUseOutcome,
+	SessionStartOutcome,
+	StopOutcome,
+	UserPromptSubmitOutcome,
+} from "../outcomes/types.js";
 import type {
 	NotificationInput,
 	PermissionRequestInput,
@@ -207,12 +216,24 @@ export interface HandlerContext<TInput, TOptions, TState = Record<string, unknow
 
 /**
  * Plugin handler: pure transformation function.
- * Returns a validated output or throws to indicate error.
+ * Returns a validated output, a typed outcome, or throws to indicate error.
+ *
+ * @typeParam TOutcome - The valid outcome union for this hook type.
+ *   Each hook type restricts which outcomes are allowed at compile time.
+ *   Extended outcomes (via `Outcome.extend()`) are also accepted since
+ *   they structurally extend the base outcome class.
+ *
  * @public
  */
-export type PluginHandler<TInput, TOutput, TOptions, TState = Record<string, unknown>> = (
+export type PluginHandler<
+	TInput,
+	TOutput,
+	TOptions,
+	TState = Record<string, unknown>,
+	TOutcome extends AnyOutcome = AnyOutcome,
+> = (
 	ctx: HandlerContext<TInput, TOptions, TState>,
-) => TOutput | AnyOutcome | Promise<TOutput | AnyOutcome> | Effect.Effect<TOutput | AnyOutcome>;
+) => TOutput | TOutcome | Promise<TOutput | TOutcome> | Effect.Effect<TOutput | TOutcome>;
 
 // =============================================================================
 // TYPED HANDLER HELPERS
@@ -236,7 +257,8 @@ export type SessionStartHandler<TOptions, TState = Record<string, string>> = Plu
 	SessionStartInput,
 	SessionStartOutput,
 	TOptions,
-	TState
+	TState,
+	SessionStartOutcome
 >;
 
 /**
@@ -247,7 +269,8 @@ export type SessionEndHandler<TOptions, TState = Record<string, string>> = Plugi
 	SessionEndInput,
 	SessionEndOutput,
 	TOptions,
-	TState
+	TState,
+	PassthroughOutcome
 >;
 
 /**
@@ -276,7 +299,8 @@ export type PreToolUseHandler<TOptions, TState = Record<string, string>> = Plugi
 	PreToolUseInput,
 	PreToolUseOutput,
 	TOptions,
-	TState
+	TState,
+	PreToolUseOutcome
 >;
 
 /**
@@ -287,7 +311,8 @@ export type PostToolUseHandler<TOptions, TState = Record<string, string>> = Plug
 	PostToolUseInput,
 	PostToolUseOutput,
 	TOptions,
-	TState
+	TState,
+	PostToolUseOutcome
 >;
 
 /**
@@ -298,7 +323,8 @@ export type StopHandler<TOptions, TState = Record<string, string>> = PluginHandl
 	StopInput,
 	StopOutput,
 	TOptions,
-	TState
+	TState,
+	StopOutcome
 >;
 
 /**
@@ -309,7 +335,8 @@ export type SubagentStopHandler<TOptions, TState = Record<string, string>> = Plu
 	SubagentStopInput,
 	StopOutput,
 	TOptions,
-	TState
+	TState,
+	StopOutcome
 >;
 
 /**
@@ -320,7 +347,8 @@ export type UserPromptSubmitHandler<TOptions, TState = Record<string, string>> =
 	UserPromptSubmitInput,
 	UserPromptSubmitOutput,
 	TOptions,
-	TState
+	TState,
+	UserPromptSubmitOutcome
 >;
 
 /**
@@ -331,7 +359,8 @@ export type PreCompactHandler<TOptions, TState = Record<string, string>> = Plugi
 	PreCompactInput,
 	PassthroughOutput,
 	TOptions,
-	TState
+	TState,
+	PassthroughOutcome
 >;
 
 /**
@@ -342,7 +371,8 @@ export type NotificationHandler<TOptions, TState = Record<string, string>> = Plu
 	NotificationInput,
 	NotificationOutput,
 	TOptions,
-	TState
+	TState,
+	PassthroughOutcome
 >;
 
 /**
@@ -353,7 +383,8 @@ export type PermissionRequestHandler<TOptions, TState = Record<string, string>> 
 	PermissionRequestInput,
 	PermissionRequestOutput,
 	TOptions,
-	TState
+	TState,
+	PermissionRequestOutcome
 >;
 
 // =============================================================================
@@ -384,10 +415,15 @@ export interface ToolFilter {
  * Pipeline-based hook definition with inline function.
  * @public
  */
-export interface HandlerHookDefinition<TInput, TOutput, TOptions, TState = Record<string, unknown>>
-	extends HookDefinitionBase {
+export interface HandlerHookDefinition<
+	TInput,
+	TOutput,
+	TOptions,
+	TState = Record<string, unknown>,
+	TOutcome extends AnyOutcome = AnyOutcome,
+> extends HookDefinitionBase {
 	/** Pure transformation function */
-	handler: PluginHandler<TInput, TOutput, TOptions, TState>;
+	handler: PluginHandler<TInput, TOutput, TOptions, TState, TOutcome>;
 }
 
 /**
@@ -418,9 +454,14 @@ export interface PassthroughHookEntry {
  * Hook definition: either an inline handler function or a passthrough entry.
  * @public
  */
-export type HookDefinition<TInput, TOutput, _TEvent, TOptions, TState = Record<string, unknown>> =
-	| HandlerHookDefinition<TInput, TOutput, TOptions, TState>
-	| PassthroughHookEntry;
+export type HookDefinition<
+	TInput,
+	TOutput,
+	_TEvent,
+	TOptions,
+	TState = Record<string, unknown>,
+	TOutcome extends AnyOutcome = AnyOutcome,
+> = HandlerHookDefinition<TInput, TOutput, TOptions, TState, TOutcome> | PassthroughHookEntry;
 
 // =============================================================================
 // TYPED HOOK DEFINITIONS PER EVENT TYPE
@@ -435,7 +476,8 @@ export type SessionStartHookDefinition<TOptions, TState = Record<string, unknown
 	SessionStartOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	SessionStartOutcome
 >;
 
 /**
@@ -447,7 +489,8 @@ export type SessionEndHookDefinition<TOptions, TState = Record<string, unknown>>
 	SessionEndOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	PassthroughOutcome
 >;
 
 /**
@@ -459,7 +502,8 @@ export type PreToolUseHookDefinition<TOptions, TState = Record<string, unknown>>
 	PreToolUseOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	PreToolUseOutcome
 > &
 	ToolFilter;
 
@@ -472,7 +516,8 @@ export type PostToolUseHookDefinition<TOptions, TState = Record<string, unknown>
 	PostToolUseOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	PostToolUseOutcome
 > &
 	ToolFilter;
 
@@ -485,7 +530,8 @@ export type StopHookDefinition<TOptions, TState = Record<string, unknown>> = Hoo
 	StopOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	StopOutcome
 >;
 
 /**
@@ -497,7 +543,8 @@ export type SubagentStopHookDefinition<TOptions, TState = Record<string, unknown
 	SubagentStopOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	StopOutcome
 >;
 
 /**
@@ -509,7 +556,8 @@ export type UserPromptSubmitHookDefinition<TOptions, TState = Record<string, unk
 	UserPromptSubmitOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	UserPromptSubmitOutcome
 >;
 
 /**
@@ -521,7 +569,8 @@ export type PreCompactHookDefinition<TOptions, TState = Record<string, unknown>>
 	PreCompactOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	PassthroughOutcome
 >;
 
 /**
@@ -533,7 +582,8 @@ export type NotificationHookDefinition<TOptions, TState = Record<string, unknown
 	NotificationOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	PassthroughOutcome
 >;
 
 /**
@@ -545,7 +595,8 @@ export type PermissionRequestHookDefinition<TOptions, TState = Record<string, un
 	PermissionRequestOutput,
 	unknown,
 	TOptions,
-	TState
+	TState,
+	PermissionRequestOutcome
 >;
 
 // =============================================================================
