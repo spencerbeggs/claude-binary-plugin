@@ -32,9 +32,9 @@ src/
     runtime.ts          # CommandArgumentError, EmptyArgs type
   errors/               # Data.TaggedError definitions (one per file)
   layers/               # Service implementations (Live + Test)
-    PipelineRuntime.ts  # Type exports only (HookEventType, IODependencies, PipelineConfig)
-    PipelineRuntimeServiceLive.ts  # PipelineRuntimeService Live layer
-    PipelineLive.ts     # Composed service layer for handler dependencies
+    PluginRuntime.ts    # Type exports only (HookEventTypeName, IODependencies, PluginRunConfig)
+    PluginRuntimeServiceLive.ts  # PluginRuntimeService Live layer
+    PluginLive.ts       # Composed service layer for handler dependencies
     CommandRunnerLive.ts # CommandRunner Live layer (full run + parse)
     PluginLoggerLive.ts # NDJSON file logger
     PluginLoggerTest.ts # In-memory test logger
@@ -67,9 +67,9 @@ src/
     hook-literals.ts    # Literal union schemas (HookType enum, permissions, etc.)
     hook-responses.ts   # Schema.Class response types + toResponse converters
     json.ts             # JSON schema utilities
-    pipeline-outputs.ts # Pipeline output schemas (discriminated on status)
+    hook-outputs.ts     # Hook output schemas (discriminated on status)
   services/             # Effect Context.Tag service interfaces
-    PipelineRuntimeService.ts  # Hook execution service (RunResult, PipelineRunConfig)
+    PluginRuntimeService.ts  # Hook execution service (RunResult, PluginRunConfig)
   testing/              # Test utilities
     builder.ts          # PluginTester fluent API
     mocks.ts            # Mock types and utilities
@@ -169,8 +169,15 @@ await plugin.build({ rootDir: import.meta.dir });
 
 Outcomes are typed return values from hook handlers. Each outcome is a
 `Schema.Class` that extends an abstract `Outcome` base class. Outcomes
-replace the legacy `{ status, action, summary }` pipeline output objects
+replace the legacy `{ status, action, summary }` hook output objects
 with a cleaner, type-safe API.
+
+### Compile-Time Outcome Type Safety
+
+`PluginHandler` has a `TOutcome` generic parameter that constrains which
+outcome types are valid for each hook. Each handler type (e.g.,
+`PreToolUseHandler`, `PostToolUseHandler`) restricts the return type to
+only the outcomes valid for that hook, providing compile-time safety.
 
 ### Outcome Classes
 
@@ -233,14 +240,14 @@ its `context` field. The SDK resolves it to a string at response time.
 
 `isValidOutcomeForHook(hookType, outcome)` validates at runtime that a
 handler returned a valid outcome for its hook type. The mapping is defined
-in `VALID_OUTCOME_TAGS` in `outcomes/types.ts`. `PipelineRuntimeServiceLive`
+in `VALID_OUTCOME_TAGS` in `outcomes/types.ts`. `PluginRuntimeServiceLive`
 calls this before serializing the response; invalid outcomes cause a
-`PipelineError`.
+`PluginRuntimeError`.
 
 ### Backward Compatibility
 
-`PipelineRuntimeServiceLive` checks `Outcome.isOutcome(output)` first
-(new path), then falls back to `isPipelineOutput(output)` (legacy path).
+`PluginRuntimeServiceLive` checks `Outcome.isOutcome(output)` first
+(new path), then falls back to `isHookOutput(output)` (legacy path).
 Both paths work -- existing handlers returning `{ status, action, summary }`
 objects continue to function unchanged.
 
@@ -254,15 +261,18 @@ Service (Context.Tag)     Layer (implementation)
   StdinReader         ->  StdinReaderLive / makeStdinReaderTest
   SchemaValidator     ->  SchemaValidatorLive
   EnvLoader           ->  EnvLoaderLive / EnvLoaderTest
-  EnvPersister        ->  EnvPersisterLive / makeEnvPersisterTest
+  EnvWriter           ->  EnvWriterLive / makeEnvWriterTest
+  EnvBridge           ->  EnvBridgeLive / makeEnvBridgeTest
+  EnvValidator        ->  EnvValidatorLive
+  EnvResolver         ->  EnvResolverLive / makeEnvResolverTest
+  EnvCoordinator      ->  EnvCoordinatorLive / makeEnvCoordinatorTest
   SessionStore        ->  SessionStoreLive / makeSessionStoreTest
   ShellExecutor       ->  ShellExecutorLive / makeShellExecutorTest
   Telemetry           ->  TelemetryLive / makeTelemetryTest
   OtelConfig          ->  OtelConfigLive / makeOtelConfigTest
   SidecarConnection   ->  SidecarConnectionLive / makeSidecarConnectionTest
   CommandRunner       ->  CommandRunnerLive / makeCommandRunnerTest
-  PipelineRuntimeService -> PipelineRuntimeServiceLive
-  PluginEnvService    ->  PluginEnvLive / makePluginEnvTest
+  PluginRuntimeService -> PluginRuntimeServiceLive
   PluginBuilderService -> PluginBuilderLive / makePluginBuilderTest
   PlatformInfo        ->  PlatformInfoLive / makePlatformInfoTest
   PluginInfoService   ->  PluginInfoServiceLive / makePluginInfoServiceTest
@@ -271,18 +281,29 @@ Service (Context.Tag)     Layer (implementation)
   MessageRouter       ->  MessageRouterLive / makeMessageRouterTest
 ```
 
-## PipelineLive (Handler Dependencies Layer)
+## PluginLive (Handler Dependencies Layer)
 
-`PipelineLive` merges all production service layers into a single layer
+`PluginLive` merges all production service layers into a single layer
 that satisfies handler Effect dependencies. It does NOT include the
 runtime services themselves -- those are composed separately.
+
+The EnvCoordinator dependency graph is:
+
+```text
+EnvCoordinator
+  +-- EnvLoader
+  +-- EnvWriter
+  +-- EnvBridge
+  +-- EnvResolver
+  +-- EnvValidator
+```
 
 ```typescript
 const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive), Layer.provide(OtelConfigLive));
 
-export const PipelineLive = Layer.mergeAll(
+export const PluginLive = Layer.mergeAll(
   StdinReaderLive, SchemaValidatorLive, EnvLoaderLive,
-  EnvPersisterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
+  EnvWriterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
   PluginInfoServiceLive, PlatformInfoLive, GitInfoLive, ClaudeAccountInfoLive,
 );
 ```
@@ -295,17 +316,17 @@ results; the entrypoint writes stdout and manages process.exit:
 ```text
 Generated Entrypoint (owns stdout + process.exit)
   +-- Effect.gen + Effect.provide(RuntimeLayer)
-       +-- PipelineRuntimeServiceLive.run() -> RunResult { code, response, telemetry? }
+       +-- PluginRuntimeServiceLive.run() -> RunResult { code, response, telemetry? }
        +-- CommandRunnerLive.run() -> CommandOutput { exitCode, output, data? }
 ```
 
 ```typescript
-const RuntimeLayer = Layer.merge(PipelineRuntimeServiceLive, CommandRunnerLive);
+const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, CommandRunnerLive);
 
 // Hook execution
 const result = await Effect.runPromise(
   Effect.gen(function* () {
-    const runtime = yield* PipelineRuntimeService;
+    const runtime = yield* PluginRuntimeService;
     return yield* runtime.run({ hookType, hookName, handler, ... });
   }).pipe(Effect.provide(RuntimeLayer))
 );
@@ -325,29 +346,29 @@ process.exit(result.exitCode);
 No `process.exit()` anywhere in service code -- the entrypoint is the sole
 owner of process lifecycle.
 
-## PipelineRuntimeService Execution Flow
+## PluginRuntimeService Execution Flow
 
-`PipelineRuntimeServiceLive.run()` executes hook handlers and returns
+`PluginRuntimeServiceLive.run()` executes hook handlers and returns
 `RunResult` instead of writing stdout or calling `process.exit()`:
 
 1. Read stdin (pre-loaded `inputText` or `Bun.stdin.text()`)
 2. JSON parse and Schema decode input via `getHookSchemas()`
 3. Convert decoded input to Event instance via `fromInput()`
 4. Check tool filter (PreToolUse/PostToolUse only)
-5. Load environment via `PluginEnv.forContext()`
+5. Load environment via `EnvCoordinator.forSessionStart()` or `EnvCoordinator.forHook()`
 6. Run `setup()` and persist state if SessionStart
 7. Call handler with `{ input, options, state }`
 8. Handle sync, Promise, or Effect returns from handler
 9. **Check if output is an Outcome** (via `Outcome.isOutcome()`):
-   - Validate via `isValidOutcomeForHook()` -- fail with `PipelineError` if invalid
+   - Validate via `isValidOutcomeForHook()` -- fail with `PluginRuntimeError` if invalid
    - Extract telemetry via `outcome.toTelemetry()`
    - Return `RunResult` with `outcome.toResponse()`
-10. **Else check if output is a legacy PipelineOutput** (via `isPipelineOutput()`):
+10. **Else check if output is a legacy HookOutput** (via `isHookOutput()`):
     - Map status/action to telemetry outcome label
     - Convert via `toResponseForHook()` functions
     - Return `RunResult`
 11. Emit OTEL telemetry throughout
-12. Errors become `PipelineError` with `hookName`, `stage`, `cause`
+12. Errors become `PluginRuntimeError` with `hookName`, `stage`, `cause`
 
 ### CommandRunner Execution Flow
 
@@ -355,8 +376,8 @@ owner of process lifecycle.
 
 1. Parse raw CLI args via `parseRaw()`
 2. Validate args against `argsSchema` (if provided)
-3. Find session env dir via `findSessionEnvDir()`
-4. Load session env files via `PluginEnv.loadAllHookFiles()`
+3. Find session env dir via SessionRegistry directly
+4. Load session env files via `EnvCoordinator.forCommand()`
 5. Create state instance, extract options and persisted state
 6. Call handler with `{ args, options, state }`
 7. Validate output via `validateOutput()`
@@ -386,7 +407,7 @@ All errors use `Data.TaggedError`, one per file in `src/errors/`:
 
 | Error | Tag | Fields |
 | ------- | ----- | -------- |
- | PipelineError | `"PipelineError"` | hookName, stage, cause |
+ | PluginRuntimeError | `"PluginRuntimeError"` | hookName, stage, cause |
 | SchemaValidationError | `"SchemaValidationError"` | message, issues |
 | StdinError | `"StdinError"` | message |
 | EnvLoadError | `"EnvLoadError"` | message |
@@ -399,10 +420,11 @@ All errors use `Data.TaggedError`, one per file in `src/errors/`:
 
 ## State Management
 
-**PluginEnv** (`src/services/PluginEnv.ts`) is the abstract base class for
-plugin environment management. Plugins extend it with their options schema.
-It handles loading env vars from hook `.sh` files, validating options, and
-persisting state via `escapeForBashDoubleQuotes()` into session env files.
+**EnvCoordinator** orchestrates env flows for SessionStart, hook, and command
+contexts. It composes EnvLoader, EnvWriter, EnvBridge, EnvResolver, and
+EnvValidator to handle loading env vars from hook `.sh` files, validating
+options, and persisting state via `escapeForBashDoubleQuotes()` into session
+env files.
 
 **SessionRegistry** (`src/layers/SessionRegistry.ts`) is a facade module
 providing exported functions for SQLite-based session-to-env-dir mapping:

@@ -11,7 +11,7 @@ an `instanceof` check in a single declaration.
 Data flows through four schema layers from Claude Code to response:
 
 ```text
-stdin JSON -> Input Schema.Class -> Event Schema.Class -> Outcome (or PipelineOutput) -> Response -> stdout JSON
+stdin JSON -> Input Schema.Class -> Event Schema.Class -> Outcome (or HookOutput) -> Response -> stdout JSON
 ```
 
 | Layer | Location | Purpose |
@@ -19,11 +19,11 @@ stdin JSON -> Input Schema.Class -> Event Schema.Class -> Outcome (or PipelineOu
  | Input | `schemas/hook-inputs.ts` | Wire format from Claude Code stdin |
 | Event | `schemas/hook-events.ts` | Enriched event with `fromInput()` factory |
 | Outcome | `outcomes/*.ts` | Typed handler return value (new pattern) |
-| PipelineOutput | `schemas/pipeline-outputs.ts` | Legacy handler return (discriminated on `status`) |
+| HookOutput | `schemas/hook-outputs.ts` | Legacy handler return (discriminated on `status`) |
 | Response | `schemas/hook-responses.ts` | Wire format for Claude Code stdout |
 
 Handlers can return either an Outcome class instance (preferred) or a legacy
-PipelineOutput object. `PipelineRuntime` handles both paths.
+HookOutput object. `PluginRuntime` handles both paths.
 
 ## Input Schema Classes (`hook-inputs.ts`)
 
@@ -142,21 +142,21 @@ class OtelConfigData extends Schema.Class<OtelConfigData>("OtelConfigData")({
 }) {}
 ```
 
-## Pipeline Output Schemas (`pipeline-outputs.ts`) [Legacy]
+## Hook Output Schemas (`hook-outputs.ts`) [Legacy]
 
-Pipeline outputs are the legacy return format, discriminated unions on `status`.
+Hook outputs are the legacy return format, discriminated unions on `status`.
 Each hook type has its own output schema constraining valid `action` values.
 
 ### Base Fields
 
 ```typescript
-PipelineOutputBaseSchema = Schema.Struct({
+HookOutputBaseSchema = Schema.Struct({
   status: ExecutionStatusSchema,  // "executed" | "skipped" | "disabled" | "cached" | "error" | "timeout"
   summary: Schema.String,         // Human-readable log message
   action: Schema.optional(HookActionSchema),  // Required when status is "executed"
   validation: Schema.optional(ValidationResultSchema),
   quality: Schema.optional(ExecutionQualitySchema),
-  metrics: Schema.optional(PipelineMetricsSchema),
+  metrics: Schema.optional(HookMetricsSchema),
   userMessage: Schema.optional(Schema.String),
   claudeContext: Schema.optional(Schema.String),
   reason: Schema.optional(Schema.String),
@@ -190,7 +190,7 @@ HookActionSchema = Schema.Literal(
 ## Response Schema Classes (`hook-responses.ts`)
 
 Response classes match Claude Code's expected stdout JSON format. Converter
-functions translate pipeline outputs to responses:
+functions translate hook outputs to responses:
 
 | Function | Maps |
 | ---------- | ------ |
@@ -300,15 +300,15 @@ Plugin("MY_PLUGIN", {
 **Known issue:** Bun's tree-shaker strips prototype methods from compiled
 binaries. See `architecture.md` for details.
 
-## Usage in PipelineRuntime
+## Usage in PluginRuntime
 
-`PipelineRuntime.run()` uses schemas at each stage:
+`PluginRuntime.run()` uses schemas at each stage:
 
 1. **Parse**: `Schema.decodeUnknownSync(InputSchema)(rawJson)` validates stdin
 2. **Convert**: `EventClass.fromInput(decodedInput)` creates typed event
 3. **State decode**: If `stateSchema` is set, decode persisted state through it
-4. **Handler**: Call pipeline handler, receive Outcome or PipelineOutput
+4. **Handler**: Call plugin handler, receive Outcome or HookOutput
 5. **Validate outcome**: If Outcome, `isValidOutcomeForHook()` checks validity
-6. **Validate legacy**: If PipelineOutput, check against hook-specific output schema
+6. **Validate legacy**: If HookOutput, check against hook-specific output schema
 7. **Respond**: Outcome's `toResponse()` or legacy `toResponse()` functions
 8. **Serialize**: Response is JSON-stringified and written to stdout

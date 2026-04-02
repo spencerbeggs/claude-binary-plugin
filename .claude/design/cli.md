@@ -52,8 +52,8 @@ await PluginBuilder.fromConfig(
    source file that imports the PluginConfig class and dispatches based on CLI
    arguments. Reads statics (`PluginConfigClass.options`, `.state`, `.setup`)
    directly from the config class. Handles hook type routing, command routing,
-   and `--sidecar` mode. Passes `stateSchema` and `handlerLayer: PipelineLive`
-   to `PipelineRuntime.run()`.
+   and `--sidecar` mode. Passes `stateSchema` and `handlerLayer: PluginLive`
+   to `PluginRuntime.run()`.
 
 4. **Compile** -- Runs `Bun.build()` to compile the generated entrypoint into a
    single-file executable. Supports cross-compilation via `target` option.
@@ -141,8 +141,8 @@ The generated entrypoint code:
 
 1. Parses CLI args to determine mode (hook, command, or sidecar)
 2. For hooks: reads `--hook-type` and `--hook-name` args, dispatches to
-   `PipelineRuntime.run()` with the correct handler. Passes `stateSchema`
-   (from `pluginConfig.state`) and `handlerLayer` (`PipelineLive`) so the
+   `PluginRuntime.run()` with the correct handler. Passes `stateSchema`
+   (from `pluginConfig.state`) and `handlerLayer` (`PluginLive`) so the
    runtime can decode state and provide services.
 3. For commands: reads `--command` arg, dispatches to `Commands.run()`
 4. For sidecar: calls `Sidecar.main()` to start the OTEL sidecar process

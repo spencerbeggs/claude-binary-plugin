@@ -13,7 +13,7 @@ services, layers, and scoped lifecycle management.
 ```text
 Hook Process (short-lived)          Sidecar Process (long-lived)
 +---------------------------+       +---------------------------+
-| PipelineRuntime           |       | SidecarMain               |
+| PluginRuntime             |       | SidecarMain               |
 |   -> Telemetry service    | IPC   |   -> SidecarTransport     |
 |   -> SidecarConnection ---+------>|   -> OtelProviders        |
 |      (Unix socket client) |       |      (Tracer, Meter, Log) |

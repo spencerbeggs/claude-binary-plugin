@@ -16,8 +16,10 @@ import {
   makeShellExecutorTest,
   makeTelemetryTest,
   makePluginLoggerTest,
-  makeEnvPersisterTest,
-  makePluginEnvTest,
+  makeEnvWriterTest,
+  makeEnvBridgeTest,
+  makeEnvResolverTest,
+  makeEnvCoordinatorTest,
   makeOtelConfigTest,
   makeCommandRunnerTest,
   makeSidecarConnectionTest,
@@ -39,8 +41,10 @@ import {
 | `makeShellExecutorTest(results)` | Pre-configured shell results | Layer providing `ShellExecutor` |
 | `makeTelemetryTest()` | none | Layer providing no-op `Telemetry` |
 | `makePluginLoggerTest()` | none | `{ layer, getLogs(), clear() }` |
-| `makeEnvPersisterTest()` | none | Layer recording persisted vars |
-| `makePluginEnvTest()` | none | Layer providing `PluginEnvService` |
+| `makeEnvWriterTest()` | none | Layer recording persisted vars |
+| `makeEnvBridgeTest()` | none | Layer providing in-memory `EnvBridge` via Ref |
+| `makeEnvResolverTest()` | none | Layer providing in-memory `EnvResolver` |
+| `makeEnvCoordinatorTest()` | none | Layer providing `EnvCoordinator` |
 | `makeOtelConfigTest(overrides?)` | Optional config overrides | Layer providing `OtelConfig` |
 | `makeCommandRunnerTest()` | none | Layer providing `CommandRunner` |
 | `makeSidecarConnectionTest()` | none | Layer providing no-op `SidecarConnection` |
@@ -51,7 +55,7 @@ import {
 | `makeMessageRouterTest()` | none | Layer providing no-op `MessageRouter`, records routed messages |
 | `EnvLoaderTest` | (constant layer) | Layer providing no-op `EnvLoader` |
 
-### Example: Testing a Pipeline Handler
+### Example: Testing a Plugin Handler
 
 ```typescript
 import { describe, test, expect } from "bun:test";
@@ -152,9 +156,9 @@ test("MarkdownContext renders correctly", () => {
 });
 ```
 
-## I/O Injection in PipelineRuntime
+## I/O Injection in PluginRuntime
 
-`PipelineRuntime.run()` accepts an `io` parameter for testing without
+`PluginRuntime.run()` accepts an `io` parameter for testing without
 mocking process globals:
 
 ```typescript
@@ -265,15 +269,14 @@ __tests__/
     HookExtractor.test.ts
     ...
   layers/
-    PipelineRuntime.test.ts
+    PluginRuntime.test.ts
     SessionRegistry.test.ts
     ...
   schemas/
     hook-events.test.ts
-    pipeline-outputs.test.ts
+    hook-outputs.test.ts
     ...
   services/
-    PluginEnv.test.ts
     ...
 ```
 
