@@ -2,54 +2,32 @@ import { dirname } from "node:path";
 import { Effect, Layer, ParseResult, Schema } from "effect";
 import type { ReadonlyDeep } from "type-fest";
 import { PluginRuntimeError } from "../errors/PluginRuntimeError.js";
+import { NotificationEvent, NotificationInput } from "../hooks/Notification.js";
+import type { PermissionRequestOutput } from "../hooks/PermissionRequest.js";
+import {
+	PermissionRequestEvent,
+	PermissionRequestInput,
+	toPermissionRequestResponse,
+} from "../hooks/PermissionRequest.js";
+import type { PostToolUseOutput } from "../hooks/PostToolUse.js";
+import { PostToolUseEvent, PostToolUseInput, toPostToolUseResponse } from "../hooks/PostToolUse.js";
+import { PreCompactEvent, PreCompactInput } from "../hooks/PreCompact.js";
+import type { PreToolUseOutput } from "../hooks/PreToolUse.js";
+import { PreToolUseEvent, PreToolUseInput, toPreToolUseResponse } from "../hooks/PreToolUse.js";
+import { SessionEndEvent, SessionEndInput } from "../hooks/SessionEnd.js";
+import type { SessionStartOutput } from "../hooks/SessionStart.js";
+import { SessionStartEvent, SessionStartInput, toSessionStartResponse } from "../hooks/SessionStart.js";
+import type { StopOutput } from "../hooks/Stop.js";
+import { StopEvent, StopInput, toStopResponse } from "../hooks/Stop.js";
+import { SubagentStopEvent, SubagentStopInput } from "../hooks/SubagentStop.js";
+import type { ExecutionStatus, HookAction, PassthroughOutput } from "../hooks/shared.js";
+import { toPassthroughResponse } from "../hooks/shared.js";
+import { isValidOutcomeForHook } from "../hooks/types.js";
+import type { UserPromptSubmitOutput } from "../hooks/UserPromptSubmit.js";
+import { UserPromptSubmitEvent, UserPromptSubmitInput, toUserPromptSubmitResponse } from "../hooks/UserPromptSubmit.js";
 import { Outcome } from "../outcomes/Outcome.js";
-import { isValidOutcomeForHook } from "../outcomes/types.js";
 import type { PluginHandler, PluginState } from "../plugin/handler.js";
 import type { BaseState, SetupFunction } from "../plugin/state.js";
-import {
-	NotificationEvent,
-	PermissionRequestEvent,
-	PostToolUseEvent,
-	PreCompactEvent,
-	PreToolUseEvent,
-	SessionEndEvent,
-	SessionStartEvent,
-	StopEvent,
-	SubagentStopEvent,
-	UserPromptSubmitEvent,
-} from "../schemas/hook-events.js";
-import {
-	NotificationInput,
-	PermissionRequestInput,
-	PostToolUseInput,
-	PreCompactInput,
-	PreToolUseInput,
-	SessionEndInput,
-	SessionStartInput,
-	StopInput,
-	SubagentStopInput,
-	UserPromptSubmitInput,
-} from "../schemas/hook-inputs.js";
-import type {
-	ExecutionStatus,
-	HookAction,
-	PassthroughOutput,
-	PermissionRequestOutput,
-	PostToolUseOutput,
-	PreToolUseOutput,
-	SessionStartOutput,
-	StopOutput,
-	UserPromptSubmitOutput,
-} from "../schemas/hook-outputs.js";
-import {
-	toPassthroughResponse,
-	toPermissionRequestResponse,
-	toPostToolUseResponse,
-	toPreToolUseResponse,
-	toSessionStartResponse,
-	toStopResponse,
-	toUserPromptSubmitResponse,
-} from "../schemas/hook-responses.js";
 import { EnvBridge } from "../services/EnvBridge.js";
 import { EnvCoordinator } from "../services/EnvCoordinator.js";
 import { EnvLoader } from "../services/EnvLoader.js";

@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { HookPermissionsMode, HookTypeName } from "../schemas/hook-literals.js";
 import { JsonObjectSchema } from "../schemas/json.js";
 
 // =============================================================================
@@ -367,4 +368,30 @@ export class PassthroughResponse extends Schema.Class<PassthroughResponse>("Pass
  */
 export function toPassthroughResponse(_output: PassthroughOutput): PassthroughResponse {
 	return new PassthroughResponse({});
+}
+
+// =============================================================================
+// HOOK EVENT BASE
+// =============================================================================
+
+/**
+ * Base fields present in all hook inputs from Claude Code.
+ * Derived from the Input Schema.Class base fields.
+ * @public
+ */
+export interface HookEventBase {
+	/** Unique identifier for the current session (UUID format) */
+	session_id: string;
+	/** Absolute path to the conversation transcript JSON file (optional) */
+	transcript_path?: string | undefined;
+	/** Current working directory (optional) */
+	cwd?: string | undefined;
+	/** Current permission mode (optional - not present in SessionStart) */
+	permission_mode?: HookPermissionsMode | undefined;
+	/** The type of hook event */
+	hook_event_name: HookTypeName;
+	/** Unique identifier for the subagent (present when hook fires inside a subagent) */
+	agent_id?: string | undefined;
+	/** Agent name (present when session uses --agent or hook fires inside a subagent) */
+	agent_type?: string | undefined;
 }

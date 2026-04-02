@@ -1,8 +1,8 @@
 import { mock, spyOn } from "bun:test";
 import { $ } from "bun";
 import type { ShellExecutor, ShellResult } from "../build/builder.js";
+import type { HookEventBase } from "../hooks/shared.js";
 import type { IO } from "../plugin/handler.js";
-import type { HookEventBase } from "../schemas/hook-inputs.js";
 // =============================================================================
 // MOCK STATE CLASS
 // =============================================================================

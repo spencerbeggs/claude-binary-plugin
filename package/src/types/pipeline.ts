@@ -1,20 +1,16 @@
 import { extname } from "node:path";
+import type { NotificationOutput } from "../hooks/Notification.js";
+import type { PermissionRequestOutput } from "../hooks/PermissionRequest.js";
+import type { PostToolUseOutput } from "../hooks/PostToolUse.js";
+import type { PreCompactOutput } from "../hooks/PreCompact.js";
+import type { PreToolUseOutput } from "../hooks/PreToolUse.js";
+import type { SessionEndOutput } from "../hooks/SessionEnd.js";
+import type { SessionStartOutput } from "../hooks/SessionStart.js";
+import type { StopOutput } from "../hooks/Stop.js";
+import type { SubagentStopOutput } from "../hooks/SubagentStop.js";
+import type { ExecutionQuality, HookMetrics, PassthroughOutput } from "../hooks/shared.js";
+import type { UserPromptSubmitOutput } from "../hooks/UserPromptSubmit.js";
 import type { HandlerHookDefinition, HookDefinition } from "../plugin/handler.js";
-import type {
-	ExecutionQuality,
-	HookMetrics,
-	NotificationOutput,
-	PassthroughOutput,
-	PermissionRequestOutput,
-	PostToolUseOutput,
-	PreCompactOutput,
-	PreToolUseOutput,
-	SessionEndOutput,
-	SessionStartOutput,
-	StopOutput,
-	SubagentStopOutput,
-	UserPromptSubmitOutput,
-} from "../schemas/hook-outputs.js";
 
 // =============================================================================
 // NON-SCHEMA TYPES (from pipeline/types.ts)
