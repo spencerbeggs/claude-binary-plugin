@@ -7,7 +7,9 @@ import type { Deny } from "./Deny.js";
 import type { Modify } from "./Modify.js";
 import type { NoAction } from "./NoAction.js";
 import { Outcome } from "./Outcome.js";
+import type { Retry } from "./Retry.js";
 import type { Skip } from "./Skip.js";
+import type { WatchPaths } from "./WatchPaths.js";
 
 // ─── Per-hook-type outcome unions ────────────────────────────────────
 
@@ -32,8 +34,25 @@ export type PermissionRequestOutcome = Allow | Deny;
 /** Valid outcomes for passthrough hooks (SessionEnd, PreCompact, Notification, etc.). @public */
 export type PassthroughOutcome = NoAction;
 
+/** Valid outcomes for CwdChanged and FileChanged hooks. @public */
+export type WatchPathsOutcome = WatchPaths | NoAction;
+
+/** Valid outcomes for PermissionDenied hooks. @public */
+export type PermissionDeniedOutcome = Retry | NoAction;
+
 /** All possible outcome types. @public */
-export type AnyOutcome = Allow | Deny | Ask | Modify | Block | Continue | AddContext | NoAction | Skip;
+export type AnyOutcome =
+	| Allow
+	| Deny
+	| Ask
+	| Modify
+	| Block
+	| Continue
+	| AddContext
+	| NoAction
+	| Skip
+	| WatchPaths
+	| Retry;
 
 // ─── Hook type → outcome mapping ────────────────────────────────────
 
@@ -53,8 +72,8 @@ export interface HookOutcomeMap {
 	TeammateIdle: StopOutcome;
 	InstructionsLoaded: PassthroughOutcome;
 	ConfigChange: StopOutcome;
-	CwdChanged: PassthroughOutcome;
-	FileChanged: PassthroughOutcome;
+	CwdChanged: WatchPathsOutcome;
+	FileChanged: WatchPathsOutcome;
 	WorktreeCreate: PassthroughOutcome;
 	WorktreeRemove: PassthroughOutcome;
 	UserPromptSubmit: UserPromptSubmitOutcome;
@@ -64,6 +83,7 @@ export interface HookOutcomeMap {
 	ElicitationResult: PassthroughOutcome;
 	Notification: PassthroughOutcome;
 	PermissionRequest: PermissionRequestOutcome;
+	PermissionDenied: PermissionDeniedOutcome;
 }
 
 // ─── Allowed outcome tags per hook type ──────────────────────────────
@@ -83,8 +103,8 @@ const VALID_OUTCOME_TAGS: Record<string, Set<string>> = {
 	TeammateIdle: new Set(["Block", "Continue", "Skip"]),
 	InstructionsLoaded: new Set(["NoAction"]),
 	ConfigChange: new Set(["Block", "Continue", "Skip"]),
-	CwdChanged: new Set(["NoAction"]),
-	FileChanged: new Set(["NoAction"]),
+	CwdChanged: new Set(["WatchPaths", "NoAction"]),
+	FileChanged: new Set(["WatchPaths", "NoAction"]),
 	WorktreeCreate: new Set(["NoAction"]),
 	WorktreeRemove: new Set(["NoAction"]),
 	UserPromptSubmit: new Set(["Block", "Continue", "AddContext", "NoAction", "Skip"]),
@@ -94,6 +114,7 @@ const VALID_OUTCOME_TAGS: Record<string, Set<string>> = {
 	ElicitationResult: new Set(["NoAction"]),
 	Notification: new Set(["NoAction"]),
 	PermissionRequest: new Set(["Allow", "Deny"]),
+	PermissionDenied: new Set(["Retry", "NoAction"]),
 };
 
 /**
