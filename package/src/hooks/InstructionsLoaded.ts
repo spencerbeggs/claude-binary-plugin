@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import type { NoAction } from "../outcomes/NoAction.js";
 import type { HookDefinition, PluginHandler } from "../plugin/handler.js";
-import { SessionIdSchema, TranscriptPathSchema } from "../schemas/branded.js";
+import { NormalizedPathSchema, SessionIdSchema, TranscriptPathSchema, normalizePath } from "../schemas/branded.js";
 import {
 	HookPermissionsModeSchema,
 	InstructionsLoadedReasonSchema,
@@ -58,9 +58,9 @@ export class InstructionsLoadedEvent extends Schema.Class<InstructionsLoadedEven
 	/** Unique identifier for the current session (UUID format) */
 	session_id: SessionIdSchema,
 	/** Absolute path to the conversation transcript JSON file (optional) */
-	transcript_path: Schema.optional(TranscriptPathSchema),
+	transcript_path: Schema.optional(NormalizedPathSchema),
 	/** Current working directory (optional) */
-	cwd: Schema.optional(Schema.String),
+	cwd: Schema.optional(NormalizedPathSchema),
 	/** Current permission mode (optional) */
 	permission_mode: Schema.optional(HookPermissionsModeSchema),
 	/** The type of hook event */
@@ -70,7 +70,7 @@ export class InstructionsLoadedEvent extends Schema.Class<InstructionsLoadedEven
 	/** Agent name (present when session uses --agent or hook fires inside a subagent) */
 	agent_type: Schema.optional(Schema.String),
 	/** Absolute path to the instruction file that was loaded */
-	file_path: Schema.String,
+	file_path: NormalizedPathSchema,
 	/** Scope of the file */
 	memory_type: InstructionsMemoryTypeSchema,
 	/** Why the file was loaded */
@@ -78,12 +78,26 @@ export class InstructionsLoadedEvent extends Schema.Class<InstructionsLoadedEven
 	/** Path glob patterns from the file's paths: frontmatter */
 	globs: Schema.optional(Schema.Array(Schema.String)),
 	/** Path to the file whose access triggered this load */
-	trigger_file_path: Schema.optional(Schema.String),
+	trigger_file_path: Schema.optional(NormalizedPathSchema),
 	/** Path to the parent instruction file that included this one */
-	parent_file_path: Schema.optional(Schema.String),
+	parent_file_path: Schema.optional(NormalizedPathSchema),
 }) {
 	static fromInput(input: InstructionsLoadedInput): InstructionsLoadedEvent {
-		return new InstructionsLoadedEvent({ ...input });
+		return new InstructionsLoadedEvent({
+			session_id: input.session_id,
+			permission_mode: input.permission_mode,
+			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
+			memory_type: input.memory_type,
+			load_reason: input.load_reason,
+			globs: input.globs,
+			cwd: input.cwd ? normalizePath(input.cwd) : undefined,
+			transcript_path: input.transcript_path ? normalizePath(input.transcript_path) : undefined,
+			trigger_file_path: input.trigger_file_path ? normalizePath(input.trigger_file_path) : undefined,
+			parent_file_path: input.parent_file_path ? normalizePath(input.parent_file_path) : undefined,
+			file_path: normalizePath(input.file_path),
+		});
 	}
 }
 

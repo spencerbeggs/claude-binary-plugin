@@ -5,7 +5,13 @@ import type { Deny } from "../outcomes/Deny.js";
 import type { Modify } from "../outcomes/Modify.js";
 import type { Skip } from "../outcomes/Skip.js";
 import type { HookDefinition, PluginHandler, ToolFilter } from "../plugin/handler.js";
-import { SessionIdSchema, ToolUseIdSchema, TranscriptPathSchema } from "../schemas/branded.js";
+import {
+	NormalizedPathSchema,
+	SessionIdSchema,
+	ToolUseIdSchema,
+	TranscriptPathSchema,
+	normalizePath,
+} from "../schemas/branded.js";
 import { HookPermissionsModeSchema } from "../schemas/hook-literals.js";
 import { JsonObjectSchema } from "../schemas/json.js";
 import { ExecutionQualitySchema, HookMetricsSchema, ValidationResultSchema } from "./shared.js";
@@ -63,9 +69,9 @@ export class PreToolUseEvent extends Schema.Class<PreToolUseEvent>("PreToolUseEv
 	/** Unique identifier for the current session (UUID format) */
 	session_id: SessionIdSchema,
 	/** Absolute path to the conversation transcript JSON file (optional) */
-	transcript_path: Schema.optional(TranscriptPathSchema),
+	transcript_path: Schema.optional(NormalizedPathSchema),
 	/** Current working directory (optional) */
-	cwd: Schema.optional(Schema.String),
+	cwd: Schema.optional(NormalizedPathSchema),
 	/** Current permission mode (optional - not present in SessionStart) */
 	permission_mode: Schema.optional(HookPermissionsModeSchema),
 	/** The type of hook event */
@@ -84,8 +90,8 @@ export class PreToolUseEvent extends Schema.Class<PreToolUseEvent>("PreToolUseEv
 	static fromInput(input: PreToolUseInput): PreToolUseEvent {
 		return new PreToolUseEvent({
 			session_id: input.session_id,
-			transcript_path: input.transcript_path,
-			cwd: input.cwd,
+			transcript_path: input.transcript_path ? normalizePath(input.transcript_path) : undefined,
+			cwd: input.cwd ? normalizePath(input.cwd) : undefined,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
 			agent_id: input.agent_id,

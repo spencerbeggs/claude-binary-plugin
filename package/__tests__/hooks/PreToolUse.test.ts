@@ -139,6 +139,31 @@ describe("PreToolUseEvent.fromInput()", () => {
 		expect(event.agent_id).toBeUndefined();
 		expect(event.agent_type).toBeUndefined();
 	});
+
+	test("normalizes path fields in fromInput", () => {
+		const { normalize } = require("node:path");
+		const input = decode(PreToolUseInput, {
+			...validWireInput,
+			cwd: "/some//double/slashes/../resolved",
+			transcript_path: "/tmp/../var/transcript.json",
+		});
+		const event = PreToolUseEvent.fromInput(input);
+		expect(event.cwd).toBe(normalize("/some//double/slashes/../resolved"));
+		expect(event.transcript_path).toBe(normalize("/tmp/../var/transcript.json"));
+	});
+
+	test("handles undefined optional path fields gracefully", () => {
+		const input = decode(PreToolUseInput, {
+			session_id: validSessionId,
+			hook_event_name: "PreToolUse" as const,
+			tool_name: "Read",
+			tool_input: { file_path: "/tmp/foo.txt" },
+			tool_use_id: validToolUseId,
+		});
+		const event = PreToolUseEvent.fromInput(input);
+		expect(event.cwd).toBeUndefined();
+		expect(event.transcript_path).toBeUndefined();
+	});
 });
 
 // =============================================================================

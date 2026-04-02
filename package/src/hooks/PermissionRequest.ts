@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import type { Allow } from "../outcomes/Allow.js";
 import type { Deny } from "../outcomes/Deny.js";
 import type { HookDefinition, PluginHandler } from "../plugin/handler.js";
-import { SessionIdSchema, TranscriptPathSchema } from "../schemas/branded.js";
+import { NormalizedPathSchema, SessionIdSchema, TranscriptPathSchema, normalizePath } from "../schemas/branded.js";
 import { HookPermissionsModeSchema } from "../schemas/hook-literals.js";
 import { JsonObjectSchema } from "../schemas/json.js";
 import { ExecutionQualitySchema, HookMetricsSchema } from "./shared.js";
@@ -50,9 +50,9 @@ export class PermissionRequestEvent extends Schema.Class<PermissionRequestEvent>
 	/** Unique identifier for the current session (UUID format) */
 	session_id: SessionIdSchema,
 	/** Absolute path to the conversation transcript JSON file (optional) */
-	transcript_path: Schema.optional(TranscriptPathSchema),
+	transcript_path: Schema.optional(NormalizedPathSchema),
 	/** Current working directory (optional) */
-	cwd: Schema.optional(Schema.String),
+	cwd: Schema.optional(NormalizedPathSchema),
 	/** Current permission mode (optional) */
 	permission_mode: Schema.optional(HookPermissionsModeSchema),
 	/** The type of hook event */
@@ -71,8 +71,8 @@ export class PermissionRequestEvent extends Schema.Class<PermissionRequestEvent>
 	static fromInput(input: PermissionRequestInput): PermissionRequestEvent {
 		return new PermissionRequestEvent({
 			session_id: input.session_id,
-			transcript_path: input.transcript_path,
-			cwd: input.cwd,
+			transcript_path: input.transcript_path ? normalizePath(input.transcript_path) : undefined,
+			cwd: input.cwd ? normalizePath(input.cwd) : undefined,
 			permission_mode: input.permission_mode,
 			hook_event_name: input.hook_event_name,
 			agent_id: input.agent_id,

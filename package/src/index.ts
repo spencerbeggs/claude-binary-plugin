@@ -188,7 +188,8 @@ export { closeDb, getByProjectDir, getBySessionId, registerSession } from "./lay
 // I/O types (non-serializable, live in plugin/config)
 export type { HookEventOptions, IO } from "./plugin/config.js";
 // Branded types for type-safe identifiers
-export type { SessionId, ToolUseId, TranscriptPath } from "./schemas/branded.js";
+export type { NormalizedPath, SessionId, ToolUseId, TranscriptPath } from "./schemas/branded.js";
+export { NormalizedPathSchema, normalizePath } from "./schemas/branded.js";
 // Hook literal types and enum
 export type {
 	ConfigChangeSource,

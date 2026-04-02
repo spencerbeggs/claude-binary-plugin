@@ -5,7 +5,13 @@ import type { Continue } from "../outcomes/Continue.js";
 import type { NoAction } from "../outcomes/NoAction.js";
 import type { Skip } from "../outcomes/Skip.js";
 import type { HookDefinition, PluginHandler } from "../plugin/handler.js";
-import { SessionIdSchema, ToolUseIdSchema, TranscriptPathSchema } from "../schemas/branded.js";
+import {
+	NormalizedPathSchema,
+	SessionIdSchema,
+	ToolUseIdSchema,
+	TranscriptPathSchema,
+	normalizePath,
+} from "../schemas/branded.js";
 import { HookPermissionsModeSchema } from "../schemas/hook-literals.js";
 import { JsonObjectSchema } from "../schemas/json.js";
 import { ExecutionQualitySchema, HookMetricsSchema, ValidationResultSchema } from "./shared.js";
@@ -57,9 +63,9 @@ export class PostToolUseFailureEvent extends Schema.Class<PostToolUseFailureEven
 	/** Unique identifier for the current session (UUID format) */
 	session_id: SessionIdSchema,
 	/** Absolute path to the conversation transcript JSON file (optional) */
-	transcript_path: Schema.optional(TranscriptPathSchema),
+	transcript_path: Schema.optional(NormalizedPathSchema),
 	/** Current working directory (optional) */
-	cwd: Schema.optional(Schema.String),
+	cwd: Schema.optional(NormalizedPathSchema),
 	/** Current permission mode (optional) */
 	permission_mode: Schema.optional(HookPermissionsModeSchema),
 	/** The type of hook event */
@@ -80,7 +86,20 @@ export class PostToolUseFailureEvent extends Schema.Class<PostToolUseFailureEven
 	is_interrupt: Schema.optional(Schema.Boolean),
 }) {
 	static fromInput(input: PostToolUseFailureInput): PostToolUseFailureEvent {
-		return new PostToolUseFailureEvent({ ...input });
+		return new PostToolUseFailureEvent({
+			session_id: input.session_id,
+			permission_mode: input.permission_mode,
+			hook_event_name: input.hook_event_name,
+			agent_id: input.agent_id,
+			agent_type: input.agent_type,
+			tool_name: input.tool_name,
+			tool_input: input.tool_input,
+			tool_use_id: input.tool_use_id,
+			error: input.error,
+			is_interrupt: input.is_interrupt,
+			cwd: input.cwd ? normalizePath(input.cwd) : undefined,
+			transcript_path: input.transcript_path ? normalizePath(input.transcript_path) : undefined,
+		});
 	}
 }
 

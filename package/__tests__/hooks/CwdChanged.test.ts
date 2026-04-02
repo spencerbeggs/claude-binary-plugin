@@ -79,6 +79,28 @@ describe("CwdChangedEvent.fromInput()", () => {
 		expect(event.old_cwd).toBe("/home/user/project");
 		expect(event.new_cwd).toBe("/home/user/other");
 	});
+
+	test("normalizes old_cwd and new_cwd path fields in fromInput", () => {
+		const { normalize } = require("node:path");
+		const input = decode(CwdChangedInput, {
+			...validWireInput,
+			old_cwd: "/home/user//project/../other",
+			new_cwd: "/home/user/./workspace",
+		});
+		const event = CwdChangedEvent.fromInput(input);
+		expect(event.old_cwd).toBe(normalize("/home/user//project/../other"));
+		expect(event.new_cwd).toBe(normalize("/home/user/./workspace"));
+	});
+
+	test("normalizes optional cwd field in fromInput", () => {
+		const { normalize } = require("node:path");
+		const input = decode(CwdChangedInput, {
+			...validWireInput,
+			cwd: "/current//working/../dir",
+		});
+		const event = CwdChangedEvent.fromInput(input);
+		expect(event.cwd).toBe(normalize("/current//working/../dir"));
+	});
 });
 
 // =============================================================================
