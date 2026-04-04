@@ -66,17 +66,17 @@ const doConnect = (
 					},
 					error: () => {
 						// Mark disconnected on error — will set ref to null via background fiber
-						Effect.runSync(Ref.set(socketRef, null));
+						Effect.runFork(Ref.set(socketRef, null));
 					},
 					close: () => {
-						Effect.runSync(Ref.set(socketRef, null));
+						Effect.runFork(Ref.set(socketRef, null));
 					},
 					open: () => {
 						// Connection established
 					},
 				},
 			});
-			Effect.runSync(Ref.set(socketRef, socket));
+			Effect.runFork(Ref.set(socketRef, socket));
 			return true;
 		},
 		catch: (err) =>
@@ -206,9 +206,14 @@ export const SidecarConnectionLive: Layer.Layer<SidecarConnection, never, OtelCo
 			for (let i = 0; i < size; i++) {
 				const msg = yield* Queue.poll(queue);
 				if (msg._tag === "Some") {
-					try {
-						socket.write(serialize(msg.value));
-					} catch {
+					const writeResult = yield* Effect.try({
+						try: () => {
+							socket.write(serialize(msg.value));
+							return true;
+						},
+						catch: () => false,
+					});
+					if (!writeResult) {
 						yield* Ref.set(socketRef, null);
 						return false;
 					}
@@ -223,13 +228,16 @@ export const SidecarConnectionLive: Layer.Layer<SidecarConnection, never, OtelCo
 
 				if (socket) {
 					// Try to write directly
-					try {
-						socket.write(serialize(message));
-						return;
-					} catch {
-						// Socket error, fall through to queue
-						yield* Ref.set(socketRef, null);
-					}
+					const writeResult = yield* Effect.try({
+						try: () => {
+							socket.write(serialize(message));
+							return true;
+						},
+						catch: () => false,
+					});
+					if (writeResult) return;
+					// Socket error, fall through to queue
+					yield* Ref.set(socketRef, null);
 				}
 
 				// Queue the message
