@@ -43,8 +43,7 @@
 		"@opentelemetry/sdk-metrics": "^2.5.1",
 		"@opentelemetry/sdk-trace-base": "^2.5.1",
 		"@opentelemetry/sdk-trace-node": "^2.5.1",
-		"@opentelemetry/semantic-conventions": "^1.38.0",
-		"type-fest": "5.4.4"
+		"@opentelemetry/semantic-conventions": "^1.38.0"
 	},
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.57.8",

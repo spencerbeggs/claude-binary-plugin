@@ -1,7 +1,7 @@
 import type { Effect } from "effect";
-import type { ReadonlyDeep } from "type-fest";
 import type { AnyOutcome } from "../hooks/types.js";
 import type { ToolName } from "../schemas/hook-literals.js";
+import type { ReadonlyDeep } from "../types/common.js";
 import type { BaseState } from "./state.js";
 
 // =============================================================================

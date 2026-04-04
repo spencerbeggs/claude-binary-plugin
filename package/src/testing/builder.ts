@@ -1,7 +1,6 @@
 import { mock, spyOn } from "bun:test";
 import { rmSync } from "node:fs";
 import { Effect, Schema } from "effect";
-import type { PartialDeep } from "type-fest";
 import type { ShellResult } from "../build/builder.js";
 import type { HookAction } from "../hooks/shared.js";
 import type { OutcomeTelemetry } from "../outcomes/Outcome.js";
@@ -9,6 +8,7 @@ import { Outcome } from "../outcomes/Outcome.js";
 import type { CommandDefinition, CommandHandler, CommandOutput } from "../plugin/commands.js";
 import type { PluginHandler, PluginState } from "../plugin/handler.js";
 import type { BaseState } from "../plugin/state.js";
+import type { PartialDeep } from "../types/common.js";
 import type { AnyHookOutput } from "../types/pipeline.js";
 import { isHookOutput } from "../types/pipeline.js";
 import type { BufferShellResult } from "./mocks.js";

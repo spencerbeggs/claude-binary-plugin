@@ -1,72 +1,87 @@
-// Re-export core JSON types from type-fest
-export type {
-	/**
-	 * Matches a JSON array.
-	 *
-	 * @remarks
-	 * A JSON array contains only `JsonValue` elements.
-	 */
-	JsonArray,
-	/**
-	 * Matches a JSON object.
-	 *
-	 * @remarks
-	 * A JSON object is a plain object with string keys and `JsonValue` values.
-	 * This is more precise than `Record<string, unknown>` because it guarantees
-	 * all values are JSON-serializable.
-	 *
-	 * Use this for:
-	 * - `tool_input` in PreToolUse events
-	 * - `tool_response` in PostToolUse events
-	 * - Plugin state that gets serialized
-	 */
-	JsonObject,
-	/**
-	 * Matches any valid JSON primitive value.
-	 *
-	 * @remarks
-	 * JSON primitives are: `string`, `number`, `boolean`, `null`.
-	 * Note that `undefined` is NOT a valid JSON primitive.
-	 */
-	JsonPrimitive,
-	/**
-	 * Matches any valid JSON value.
-	 *
-	 * @remarks
-	 * This is the union of all possible JSON types:
-	 * - Primitives: `string`, `number`, `boolean`, `null`
-	 * - Objects: `{ [key: string]: JsonValue }`
-	 * - Arrays: `JsonValue[]`
-	 *
-	 * Use this when you need to accept any JSON value.
-	 */
-	JsonValue,
-	/**
-	 * Check if a type is JSON-serializable.
-	 *
-	 * @remarks
-	 * `Jsonifiable` matches values that can be safely passed to `JSON.stringify`.
-	 * Unlike `JsonValue`, this includes types that serialize to JSON but aren't
-	 * themselves JSON (like `Date` objects).
-	 */
-	Jsonifiable,
-	/**
-	 * Make a type JSON-serializable.
-	 *
-	 * @remarks
-	 * `Jsonify<T>` transforms a type to represent what it would look like after
-	 * `JSON.parse(JSON.stringify(value))`. This handles:
-	 *
-	 * - `Date` → `string` (ISO format)
-	 * - `undefined` → removed from objects, `null` in arrays
-	 * - `Map`/`Set` → `{}`
-	 * - Functions → removed
-	 * - `BigInt` → throws (not JSON-serializable)
-	 *
-	 * Use this when you need to type the result of JSON round-tripping.
-	 */
-	Jsonify,
-} from "type-fest";
+/**
+ * Matches any valid JSON primitive value.
+ * @public
+ */
+export type JsonPrimitive = string | number | boolean | null;
+
+/**
+ * Matches any valid JSON value.
+ * @public
+ */
+export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+
+/**
+ * Matches a JSON object.
+ *
+ * @remarks
+ * A JSON object is a plain object with string keys and `JsonValue` values.
+ * This is more precise than `Record<string, unknown>` because it guarantees
+ * all values are JSON-serializable.
+ *
+ * Use this for:
+ * - `tool_input` in PreToolUse events
+ * - `tool_response` in PostToolUse events
+ * - Plugin state that gets serialized
+ *
+ * @public
+ */
+// biome-ignore lint/style/useConsistentTypeDefinitions: must be a type alias to support intersection in JsonObjectWith<K>
+export type JsonObject = { [key: string]: JsonValue };
+
+/**
+ * Matches a JSON array.
+ *
+ * @remarks
+ * A JSON array contains only `JsonValue` elements.
+ *
+ * @public
+ */
+export type JsonArray = readonly JsonValue[];
+
+/**
+ * Check if a type is JSON-serializable.
+ *
+ * @remarks
+ * `Jsonifiable` matches values that can be safely passed to `JSON.stringify`.
+ * Unlike `JsonValue`, this includes types that serialize to JSON but aren't
+ * themselves JSON (like `Date` objects).
+ *
+ * @public
+ */
+export type Jsonifiable = JsonPrimitive | JsonifiableObject | JsonifiableArray | { toJSON(): Jsonifiable };
+
+interface JsonifiableObject {
+	[key: string]: Jsonifiable;
+}
+
+interface JsonifiableArray extends ReadonlyArray<Jsonifiable> {}
+
+/**
+ * Make a type JSON-serializable.
+ *
+ * @remarks
+ * `Jsonify<T>` transforms a type to represent what it would look like after
+ * `JSON.parse(JSON.stringify(value))`. This handles:
+ *
+ * - `Date` → `string` (ISO format)
+ * - `undefined` → removed from objects, `null` in arrays
+ * - `Map`/`Set` → `{}`
+ * - Functions → removed
+ * - `BigInt` → throws (not JSON-serializable)
+ *
+ * Use this when you need to type the result of JSON round-tripping.
+ *
+ * @public
+ */
+export type Jsonify<T> = T extends JsonPrimitive
+	? T
+	: T extends { toJSON(): infer R }
+		? Jsonify<R>
+		: T extends readonly (infer U)[]
+			? Jsonify<U>[]
+			: T extends Record<string, unknown>
+				? { [K in keyof T as T[K] extends (...args: never) => unknown ? never : K]: Jsonify<T[K]> }
+				: never;
 
 /**
  * Type-safe JSON parsing with schema validation.
@@ -108,8 +123,8 @@ export type ParsedJson<T> = T extends object ? { [K in keyof T]: ParsedJson<T[K]
  * @public
  */
 export type JsonObjectWith<K extends string> = {
-	[P in K]: import("type-fest").JsonValue;
-} & import("type-fest").JsonObject;
+	[P in K]: JsonValue;
+} & JsonObject;
 
 /**
  * Attributes for OTEL telemetry (subset of JSON).

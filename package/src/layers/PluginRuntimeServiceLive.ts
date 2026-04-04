@@ -1,6 +1,5 @@
 import { dirname } from "node:path";
 import { Effect, Layer, ParseResult, Schema } from "effect";
-import type { ReadonlyDeep } from "type-fest";
 import { PluginRuntimeError } from "../errors/PluginRuntimeError.js";
 import { NotificationEvent, NotificationInput } from "../hooks/Notification.js";
 import type { PermissionRequestOutput } from "../hooks/PermissionRequest.js";
@@ -36,6 +35,7 @@ import type { PluginRunConfig, RunResult } from "../services/PluginRuntimeServic
 import { PluginRuntimeService } from "../services/PluginRuntimeService.js";
 import type { Telemetry } from "../services/Telemetry.js";
 import { HookExecutionData } from "../services/Telemetry.js";
+import type { ReadonlyDeep } from "../types/common.js";
 import type { AnyHookOutput } from "../types/pipeline.js";
 import { TokenMetrics, isHookOutput } from "../types/pipeline.js";
 import { makePluginLoggerLive } from "./PluginLoggerLive.js";

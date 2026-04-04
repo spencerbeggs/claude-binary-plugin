@@ -210,8 +210,8 @@ export type {
 } from "./schemas/hook-literals.js";
 export { HookType } from "./schemas/hook-literals.js";
 export type { SessionRecord } from "./services/SessionStore.js";
-// Type utilities re-exported from type-fest for user convenience
-export type { PartialDeep, ReadonlyDeep, RequiredDeep, Tagged, WritableDeep } from "./types/common.js";
+// Type utilities
+export type { PartialDeep, ReadonlyDeep } from "./types/common.js";
 // JSON type utilities (re-exported from type-fest)
 export type {
 	JsonArray,
