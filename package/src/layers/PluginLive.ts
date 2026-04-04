@@ -1,6 +1,7 @@
 import { BunFileSystem } from "@effect/platform-bun";
 import { Layer, pipe } from "effect";
 import { ClaudeAccountInfoLive } from "./ClaudeAccountInfoLive.js";
+import { CommandRunnerLive } from "./CommandRunnerLive.js";
 import { EnvBridgeLive } from "./EnvBridgeLive.js";
 import { EnvCoordinatorLive } from "./EnvCoordinatorLive.js";
 import { EnvFileParserLive } from "./EnvFileParserLive.js";
@@ -37,6 +38,8 @@ const SessionStoreWithFs = pipe(SessionStoreLive, Layer.provide(BunFileSystem.la
 // Compose the env service dependency graph
 const EnvInfra = Layer.mergeAll(EnvFileParserLive, EnvBridgeLive, BunFileSystem.layer);
 
+const EnvResolverWithDeps = pipe(EnvResolverLive, Layer.provide(SessionStoreWithFs));
+
 const EnvServices = pipe(
 	EnvCoordinatorLive,
 	Layer.provide(
@@ -44,10 +47,16 @@ const EnvServices = pipe(
 			pipe(EnvLoaderLive, Layer.provide(EnvInfra)),
 			pipe(EnvValidatorLive, Layer.provide(EnvBridgeLive)),
 			pipe(EnvWriterLive, Layer.provide(EnvInfra)),
-			pipe(EnvResolverLive, Layer.provide(SessionStoreWithFs)),
+			EnvResolverWithDeps,
 			EnvBridgeLive,
 		),
 	),
+);
+
+// CommandRunner needs EnvBridge, EnvResolver, and FileSystem
+const CommandRunnerWithDeps = pipe(
+	CommandRunnerLive,
+	Layer.provide(Layer.mergeAll(EnvBridgeLive, EnvResolverWithDeps, BunFileSystem.layer)),
 );
 
 export const PluginLive = Layer.mergeAll(
@@ -58,6 +67,7 @@ export const PluginLive = Layer.mergeAll(
 	OtelClientLive,
 	ShellExecutorLive,
 	PluginInfoServiceLive,
+	CommandRunnerWithDeps,
 	pipe(GitInfoLive, Layer.provide(ShellExecutorLive)),
 	pipe(ClaudeAccountInfoLive, Layer.provide(BunFileSystem.layer)),
 );

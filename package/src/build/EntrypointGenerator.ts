@@ -95,15 +95,13 @@ export function generatePipelinePluginEntrypoint(options: GeneratePluginEntrypoi
 	// Generate imports section
 	const hasPipelineCmds = pipelineCommands.length > 0;
 	const commandRunnerImports = hasPipelineCmds
-		? `import { CommandRunner, CommandRunnerLive } from "claude-binary-plugin";
+		? `import { CommandRunner } from "claude-binary-plugin";
 import type { CommandOutput } from "claude-binary-plugin";`
 		: "";
 	const schemaImport = hasPipelineCmds
 		? `import { Effect, Layer, Schema } from "effect";`
 		: `import { Effect, Layer } from "effect";`;
-	const runtimeLayerLine = hasPipelineCmds
-		? `const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, CommandRunnerLive);`
-		: `const RuntimeLayer = PluginRuntimeServiceLive;`;
+	const runtimeLayerLine = `const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, PluginLive);`;
 
 	return `#!/usr/bin/env bun
 /**
