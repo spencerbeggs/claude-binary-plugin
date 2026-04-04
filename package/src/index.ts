@@ -182,9 +182,6 @@ export { WorktreeCreateInput } from "./hooks/WorktreeCreate.js";
 export { WorktreeRemoveInput } from "./hooks/WorktreeRemove.js";
 // Effect Logger layers
 export { makePluginLoggerLive, resolveLogLevel } from "./layers/PluginLoggerLive.js";
-export type { SessionRegistration } from "./layers/SessionRegistry.js";
-// Session registry for persistent session lookups
-export { closeDb, getByProjectDir, getBySessionId, registerSession } from "./layers/SessionRegistry.js";
 // I/O types (non-serializable, live in plugin/config)
 export type { HookEventOptions, IO } from "./plugin/config.js";
 // Branded types for type-safe identifiers
@@ -209,7 +206,7 @@ export type {
 	ToolName,
 } from "./schemas/hook-literals.js";
 export { HookType } from "./schemas/hook-literals.js";
-export type { SessionRecord } from "./services/SessionStore.js";
+export type { SessionRecord, SessionRegistration } from "./services/SessionStore.js";
 // Type utilities
 export type { PartialDeep, ReadonlyDeep } from "./types/common.js";
 // JSON type utilities (re-exported from type-fest)

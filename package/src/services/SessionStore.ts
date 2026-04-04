@@ -1,7 +1,24 @@
 import type { Effect } from "effect";
 import { Context } from "effect";
 import type { SessionLookupError } from "../errors/SessionLookupError.js";
-import type { SessionRegistration } from "../layers/SessionRegistry.js";
+
+/**
+ * Session registration parameters for storing session-to-env-dir mappings.
+ *
+ * @remarks
+ * These parameters are provided during `SessionStart` when the plugin
+ * registers a session with the registry. All paths should be absolute.
+ *
+ * @public
+ */
+export interface SessionRegistration {
+	/** Session ID from Claude Code (UUID format) */
+	sessionId: string;
+	/** Absolute path to the project directory (user's working directory) */
+	projectDir: string;
+	/** Absolute path to the session-env directory where hook-*.sh files are stored */
+	sessionEnvDir: string;
+}
 
 /**
  * Session record as stored in the SQLite database.
@@ -14,8 +31,6 @@ export interface SessionRecord {
 	created_at: number;
 	updated_at: number;
 }
-
-export type { SessionRegistration };
 
 /**
  * Effect service for session-to-env-dir mappings.

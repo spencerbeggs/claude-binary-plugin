@@ -1,7 +1,6 @@
 import { Effect, Layer } from "effect";
 import { SessionLookupError } from "../errors/SessionLookupError.js";
-import type { SessionRegistration } from "../layers/SessionRegistry.js";
-import type { SessionRecord } from "../services/SessionStore.js";
+import type { SessionRecord, SessionRegistration } from "../services/SessionStore.js";
 import { SessionStore } from "../services/SessionStore.js";
 
 export const makeSessionStoreTest = () => {

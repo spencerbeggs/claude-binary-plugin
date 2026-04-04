@@ -1,10 +1,9 @@
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { FileSystem } from "@effect/platform";
 import { Effect, Layer } from "effect";
 import { SessionLookupError } from "../errors/SessionLookupError.js";
-import type { SessionRegistration } from "../layers/SessionRegistry.js";
-import type { SessionRecord } from "../services/SessionStore.js";
+import type { SessionRecord, SessionRegistration } from "../services/SessionStore.js";
 import { SessionStore } from "../services/SessionStore.js";
 
 function getDbPath(): string {
@@ -30,15 +29,17 @@ function initDb(db: Database): void {
 	db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions(updated_at)`);
 }
 
-export const SessionStoreLive: Layer.Layer<SessionStore> = Layer.scoped(
+export const SessionStoreLive: Layer.Layer<SessionStore, never, FileSystem.FileSystem> = Layer.scoped(
 	SessionStore,
 	Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem;
 		const db = yield* Effect.acquireRelease(
-			Effect.sync(() => {
+			Effect.gen(function* () {
 				const dbPath = getDbPath();
 				const dbDir = dirname(dbPath);
-				if (!existsSync(dbDir)) {
-					mkdirSync(dbDir, { recursive: true });
+				const dirExists = yield* Effect.orDie(fs.exists(dbDir));
+				if (!dirExists) {
+					yield* Effect.orDie(fs.makeDirectory(dbDir, { recursive: true }));
 				}
 				const database = new Database(dbPath);
 				initDb(database);

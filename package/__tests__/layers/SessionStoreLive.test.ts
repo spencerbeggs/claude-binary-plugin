@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { Effect } from "effect";
+import { BunFileSystem } from "@effect/platform-bun";
+import { Effect, Layer, pipe } from "effect";
 import { SessionStoreLive } from "../../src/layers/SessionStoreLive.js";
 import { SessionStore } from "../../src/services/SessionStore.js";
 
@@ -14,8 +15,10 @@ function cleanDb() {
 	}
 }
 
+const SessionStoreLiveWithFs = pipe(SessionStoreLive, Layer.provide(BunFileSystem.layer));
+
 const runScoped = <A>(effect: Effect.Effect<A, unknown, SessionStore>) =>
-	Effect.runPromise(Effect.scoped(Effect.provide(effect, SessionStoreLive)));
+	Effect.runPromise(Effect.scoped(Effect.provide(effect, SessionStoreLiveWithFs)));
 
 describe("SessionStoreLive", () => {
 	afterEach(() => {
@@ -45,7 +48,7 @@ describe("SessionStoreLive", () => {
 						const store = yield* SessionStore;
 						return yield* Effect.either(store.lookup("nonexistent"));
 					}),
-					SessionStoreLive,
+					SessionStoreLiveWithFs,
 				),
 			),
 		);
@@ -80,7 +83,7 @@ describe("SessionStoreLive", () => {
 						const store = yield* SessionStore;
 						return yield* Effect.either(store.lookupByProject("/unknown"));
 					}),
-					SessionStoreLive,
+					SessionStoreLiveWithFs,
 				),
 			),
 		);

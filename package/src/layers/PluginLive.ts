@@ -31,6 +31,9 @@ const OtelClientLive = pipe(
 	Layer.provide(PlatformInfoWithDeps),
 );
 
+// SessionStore needs FileSystem
+const SessionStoreWithFs = pipe(SessionStoreLive, Layer.provide(BunFileSystem.layer));
+
 // Compose the env service dependency graph
 const EnvInfra = Layer.mergeAll(EnvFileParserLive, EnvBridgeLive, BunFileSystem.layer);
 
@@ -41,7 +44,7 @@ const EnvServices = pipe(
 			pipe(EnvLoaderLive, Layer.provide(EnvInfra)),
 			pipe(EnvValidatorLive, Layer.provide(EnvBridgeLive)),
 			pipe(EnvWriterLive, Layer.provide(EnvInfra)),
-			EnvResolverLive,
+			pipe(EnvResolverLive, Layer.provide(SessionStoreWithFs)),
 			EnvBridgeLive,
 		),
 	),
@@ -51,7 +54,7 @@ export const PluginLive = Layer.mergeAll(
 	StdinReaderLive,
 	SchemaValidatorLive,
 	EnvServices,
-	SessionStoreLive,
+	SessionStoreWithFs,
 	OtelClientLive,
 	ShellExecutorLive,
 	PluginInfoServiceLive,

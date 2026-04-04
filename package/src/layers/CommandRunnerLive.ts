@@ -4,7 +4,15 @@ import { CommandParseError } from "../errors/CommandParseError.js";
 import type { BaseState } from "../plugin/state.js";
 import type { CommandOutput } from "../services/CommandRunner.js";
 import { CommandRunner } from "../services/CommandRunner.js";
-import { getByProjectDir, getBySessionId } from "./SessionRegistry.js";
+
+// TODO(Task 6): Replace with EnvResolver service
+// These stubs maintain existing behavior until CommandRunnerLive is fully Effect-ified
+function getBySessionId(_sessionId: string | undefined): string | undefined {
+	return undefined;
+}
+function getByProjectDir(_projectDir: string): string | undefined {
+	return undefined;
+}
 
 /**
  * Parse a string value from CLI args, handling booleans and numbers.
