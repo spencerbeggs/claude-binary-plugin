@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { Effect } from "effect";
+import { BunFileSystem } from "@effect/platform-bun";
+import { Effect, Layer, pipe } from "effect";
 import { ClaudeAccountInfoLive } from "../../src/layers/ClaudeAccountInfoLive.js";
 import { makeClaudeAccountInfoTest } from "../../src/layers/ClaudeAccountInfoTest.js";
 import { ClaudeAccountInfo } from "../../src/services/ClaudeAccountInfo.js";
+
+const ClaudeAccountInfoWithFs = pipe(ClaudeAccountInfoLive, Layer.provide(BunFileSystem.layer));
 
 describe("ClaudeAccountInfo service", () => {
 	describe("detect", () => {
@@ -12,7 +15,7 @@ describe("ClaudeAccountInfo service", () => {
 				return yield* service.detect;
 			});
 
-			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoLive));
+			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoWithFs));
 
 			expect(result).toHaveProperty("accountUuid");
 			expect(result).toHaveProperty("organizationUuid");
@@ -28,7 +31,7 @@ describe("ClaudeAccountInfo service", () => {
 				return yield* service.detect;
 			});
 
-			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoLive));
+			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoWithFs));
 
 			expect(result.accountUuid === null || typeof result.accountUuid === "string").toBe(true);
 		});
@@ -39,7 +42,7 @@ describe("ClaudeAccountInfo service", () => {
 				return yield* service.detect;
 			});
 
-			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoLive));
+			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoWithFs));
 
 			expect(result.organizationUuid === null || typeof result.organizationUuid === "string").toBe(true);
 		});
@@ -50,7 +53,7 @@ describe("ClaudeAccountInfo service", () => {
 				return yield* service.detect;
 			});
 
-			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoLive));
+			const result = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoWithFs));
 
 			expect(typeof result.isValid).toBe("boolean");
 		});
@@ -63,7 +66,7 @@ describe("ClaudeAccountInfo service", () => {
 				return { first, second };
 			});
 
-			const { first, second } = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoLive));
+			const { first, second } = await Effect.runPromise(Effect.provide(program, ClaudeAccountInfoWithFs));
 
 			expect(first).toBe(second);
 		});

@@ -19,11 +19,16 @@ import { SidecarConnectionLive } from "./SidecarConnectionLive.js";
 import { StdinReaderLive } from "./StdinReaderLive.js";
 import { TelemetryLive } from "./TelemetryLive.js";
 
+const PlatformInfoWithDeps = pipe(
+	PlatformInfoLive,
+	Layer.provide(Layer.mergeAll(ShellExecutorLive, BunFileSystem.layer)),
+);
+
 const OtelClientLive = pipe(
 	TelemetryLive,
 	Layer.provide(SidecarConnectionLive),
 	Layer.provide(OtelConfigLive),
-	Layer.provide(PlatformInfoLive),
+	Layer.provide(PlatformInfoWithDeps),
 );
 
 // Compose the env service dependency graph
@@ -51,5 +56,5 @@ export const PluginLive = Layer.mergeAll(
 	ShellExecutorLive,
 	PluginInfoServiceLive,
 	pipe(GitInfoLive, Layer.provide(ShellExecutorLive)),
-	ClaudeAccountInfoLive,
+	pipe(ClaudeAccountInfoLive, Layer.provide(BunFileSystem.layer)),
 );
