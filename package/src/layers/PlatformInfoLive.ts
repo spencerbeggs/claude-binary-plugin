@@ -1,8 +1,9 @@
-import { existsSync } from "node:fs";
 import { platform } from "node:os";
+import { FileSystem } from "@effect/platform";
 import { Effect, Layer, Option, Ref } from "effect";
 import type { PlatformType } from "../services/PlatformInfo.js";
 import { MAX_SOCKET_PATH_LENGTH, PlatformInfo } from "../services/PlatformInfo.js";
+import { ShellExecutor } from "../services/ShellExecutor.js";
 
 const TERMINAL_TYPE_MAP: Record<string, string> = {
 	iTerm: "iTerm",
@@ -28,13 +29,15 @@ function detectTerminalType(): string {
 	return "unknown";
 }
 
-export const PlatformInfoLive = Layer.effect(
+export const PlatformInfoLive: Layer.Layer<PlatformInfo, never, ShellExecutor | FileSystem.FileSystem> = Layer.effect(
 	PlatformInfo,
 	Effect.gen(function* () {
 		const currentPlatform = platform() as PlatformType;
 		const isSupported = currentPlatform === "darwin" || currentPlatform === "linux";
 		const terminalType = detectTerminalType();
 		const claudeVersionCache = yield* Ref.make<Option.Option<string>>(Option.none());
+		const fs = yield* FileSystem.FileSystem;
+		const shell = yield* ShellExecutor;
 
 		const getSocketPath = (sessionEnvDir: string): string => `${sessionEnvDir}/otel.sock`;
 
@@ -50,28 +53,19 @@ export const PlatformInfoLive = Layer.effect(
 			return `${prefix}${truncatedId}${suffix}`;
 		};
 
-		const socketExists = (path: string): Effect.Effect<boolean> => Effect.sync(() => existsSync(path));
+		const socketExists = (path: string): Effect.Effect<boolean> =>
+			fs.exists(path).pipe(Effect.catchAll(() => Effect.succeed(false)));
 
 		const claudeVersion: Effect.Effect<string> = Effect.gen(function* () {
 			const cached = yield* Ref.get(claudeVersionCache);
-			if (Option.isSome(cached)) {
-				return cached.value;
-			}
-			const version = yield* Effect.sync(() => {
-				try {
-					const result = Bun.spawnSync(["claude", "--version"]);
-					if (result.exitCode === 0) {
-						const output = result.stdout.toString().trim();
-						const match = output.match(/\d+\.\d+\.\d+/);
-						if (match) {
-							return match[0];
-						}
-					}
-				} catch {
-					// Command failed or not found
-				}
-				return "unknown";
-			});
+			if (Option.isSome(cached)) return cached.value;
+			const version = yield* shell.exec("claude --version").pipe(
+				Effect.map((result) => {
+					const match = result.stdout.match(/\d+\.\d+\.\d+/);
+					return match ? match[0] : "unknown";
+				}),
+				Effect.catchAll(() => Effect.succeed("unknown")),
+			);
 			yield* Ref.set(claudeVersionCache, Option.some(version));
 			return version;
 		});

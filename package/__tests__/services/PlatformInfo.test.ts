@@ -1,11 +1,18 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { unlinkSync, writeFileSync } from "node:fs";
 import { platform, tmpdir } from "node:os";
 import { join } from "node:path";
-import { Effect } from "effect";
+import { BunFileSystem } from "@effect/platform-bun";
+import { Effect, Layer, pipe } from "effect";
 import { PlatformInfoLive } from "../../src/layers/PlatformInfoLive.js";
 import { makePlatformInfoTest } from "../../src/layers/PlatformInfoTest.js";
+import { ShellExecutorLive } from "../../src/layers/ShellExecutorLive.js";
 import { MAX_SOCKET_PATH_LENGTH, PlatformInfo } from "../../src/services/PlatformInfo.js";
+
+const PlatformInfoWithDeps = pipe(
+	PlatformInfoLive,
+	Layer.provide(Layer.mergeAll(ShellExecutorLive, BunFileSystem.layer)),
+);
 
 // =============================================================================
 // PlatformInfo Live Layer
@@ -14,13 +21,13 @@ import { MAX_SOCKET_PATH_LENGTH, PlatformInfo } from "../../src/services/Platfor
 describe("PlatformInfo (Live)", () => {
 	test("platform matches os.platform()", async () => {
 		const program = Effect.map(PlatformInfo, (p) => p.platform);
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(result).toBe(platform());
 	});
 
 	test("isSupported is true on darwin/linux", async () => {
 		const program = Effect.map(PlatformInfo, (p) => p.isSupported);
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		const currentPlatform = platform();
 		const expectedSupported = currentPlatform === "darwin" || currentPlatform === "linux";
 		expect(result).toBe(expectedSupported);
@@ -28,13 +35,13 @@ describe("PlatformInfo (Live)", () => {
 
 	test("getSocketPath returns {dir}/otel.sock", async () => {
 		const program = Effect.map(PlatformInfo, (p) => p.getSocketPath("/tmp/sessions/abc"));
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(result).toBe("/tmp/sessions/abc/otel.sock");
 	});
 
 	test("getSocketPathWithFallback returns preferred path when short enough", async () => {
 		const program = Effect.map(PlatformInfo, (p) => p.getSocketPathWithFallback("/tmp/sessions/abc", "session-123"));
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(result).toBe("/tmp/sessions/abc/otel.sock");
 	});
 
@@ -43,7 +50,7 @@ describe("PlatformInfo (Live)", () => {
 		const sessionId = "550e8400-e29b-41d4-a716-446655440000";
 
 		const program = Effect.map(PlatformInfo, (p) => p.getSocketPathWithFallback(longDir, sessionId));
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 
 		expect(result.length).toBeLessThanOrEqual(MAX_SOCKET_PATH_LENGTH);
 		expect(result).toMatch(/^\/tmp\/claude-otel-.+\.sock$/);
@@ -51,7 +58,7 @@ describe("PlatformInfo (Live)", () => {
 
 	test("socketExists returns false for nonexistent path", async () => {
 		const program = Effect.flatMap(PlatformInfo, (p) => p.socketExists("/tmp/nonexistent-otel-test-file-12345.sock"));
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(result).toBe(false);
 	});
 
@@ -60,7 +67,7 @@ describe("PlatformInfo (Live)", () => {
 		writeFileSync(tmpFile, "");
 		try {
 			const program = Effect.flatMap(PlatformInfo, (p) => p.socketExists(tmpFile));
-			const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+			const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 			expect(result).toBe(true);
 		} finally {
 			unlinkSync(tmpFile);
@@ -69,7 +76,7 @@ describe("PlatformInfo (Live)", () => {
 
 	test("claudeVersion returns a string", async () => {
 		const program = Effect.flatMap(PlatformInfo, (p) => p.claudeVersion);
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(typeof result).toBe("string");
 		expect(result.length).toBeGreaterThan(0);
 	});
@@ -81,13 +88,13 @@ describe("PlatformInfo (Live)", () => {
 			const v2 = yield* p.claudeVersion;
 			return { v1, v2 };
 		});
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(result.v1).toBe(result.v2);
 	});
 
 	test("terminalType returns a string", async () => {
 		const program = Effect.map(PlatformInfo, (p) => p.terminalType);
-		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoLive)));
+		const result = await Effect.runPromise(program.pipe(Effect.provide(PlatformInfoWithDeps)));
 		expect(typeof result).toBe("string");
 	});
 });
