@@ -16,18 +16,25 @@ stdin JSON -> Input Schema.Class -> Event Schema.Class -> Outcome (or HookOutput
 
 | Layer | Location | Purpose |
 | ------- | ---------- | --------- |
- | Input | `schemas/hook-inputs.ts` | Wire format from Claude Code stdin |
-| Event | `schemas/hook-events.ts` | Enriched event with `fromInput()` factory |
+| Input | `hooks/{HookType}.ts` | Wire format from Claude Code stdin (per-hook module) |
+| Event | `hooks/{HookType}.ts` | Enriched event with `fromInput()` factory, uses NormalizedPath |
 | Outcome | `outcomes/*.ts` | Typed handler return value (new pattern) |
-| HookOutput | `schemas/hook-outputs.ts` | Legacy handler return (discriminated on `status`) |
-| Response | `schemas/hook-responses.ts` | Wire format for Claude Code stdout |
+| HookOutput | `hooks/{HookType}.ts` / `hooks/shared.ts` | Legacy handler return (discriminated on `status`) |
+| Response | `hooks/{HookType}.ts` | Wire format for Claude Code stdout (per-hook module) |
+
+All four layers are co-located in each per-hook module (`src/hooks/{HookType}.ts`).
+Shared output infrastructure lives in `hooks/shared.ts`. The `schemas/hook-events.ts`
+file still provides the `HookEventSchemas` discriminated union registry that
+aggregates all Event classes.
 
 Handlers can return either an Outcome class instance (preferred) or a legacy
 HookOutput object. `PluginRuntime` handles both paths.
 
-## Input Schema Classes (`hook-inputs.ts`)
+## Input Schema Classes (per-hook modules)
 
-Each hook type has an Input class that matches Claude Code's JSON wire format.
+Each hook type has an Input class that matches Claude Code's JSON wire format,
+defined in its per-hook module (`src/hooks/{HookType}.ts`). Previously these
+were in a monolithic `schemas/hook-inputs.ts` (now deleted).
 All share `HookInputBaseFields`:
 
 ```typescript
@@ -42,7 +49,7 @@ const HookInputBaseFields = {
 };
 ```
 
-### All 25 Input Classes
+### All 26 Input Classes
 
 | Input Class | Hook-Specific Fields |
 | ------------- | -------------------- |
@@ -50,6 +57,7 @@ const HookInputBaseFields = {
 | `PostToolUseInput` | `tool_name`, `tool_input`, `tool_response`, `tool_use_id` |
 | `PostToolUseFailureInput` | `tool_name`, `tool_input`, `tool_use_id`, `error` |
 | `PermissionRequestInput` | `tool_name`, `tool_input`, `permission_suggestions` |
+| `PermissionDeniedInput` | `tool_name`, `tool_input`, `tool_use_id`, `deny_reason` |
 | `NotificationInput` | `message`, `notification_type` |
 | `UserPromptSubmitInput` | `prompt` |
 | `StopInput` | `stop_hook_active`, `last_assistant_message` |
@@ -72,13 +80,18 @@ const HookInputBaseFields = {
 | `SessionStartInput` | `source`, `model` |
 | `SessionEndInput` | `reason` |
 
-## Event Schema Classes (`hook-events.ts`)
+## Event Schema Classes (per-hook modules + `hook-events.ts` registry)
 
-Event classes mirror Input classes but add a `fromInput()` static factory.
-The `HookEventSchemas` class provides a unified API with parse methods and
-annotation-based metadata (description, capabilities).
+Event classes are defined in each per-hook module (`src/hooks/{HookType}.ts`)
+and mirror Input classes but add a `fromInput()` static factory. The
+`fromInput()` method normalizes raw string paths from the Input wire format
+into `NormalizedPath` branded types using `normalizePath()`.
+
+The `HookEventSchemas` class in `schemas/hook-events.ts` still provides a
+unified discriminated union and parse methods with annotation-based metadata.
 
 ```typescript
+// In src/hooks/PreToolUse.ts:
 class PreToolUseEvent extends Schema.Class<PreToolUseEvent>("PreToolUseEvent")({
   ...HookEventBaseSchema.fields,
   hook_event_name: Schema.Literal("PreToolUse"),
@@ -123,6 +136,8 @@ extending the abstract `Outcome` base. See `architecture.md` for full details.
 | `AddContext` | `{ additionalContext }` | `"context_added"` |
 | `NoAction` | `{}` | `"no_action"` |
 | `Skip` | `{}` | `"skipped"` |
+| `Retry` | `{ hookSpecificOutput: { retry: true } }` | `"retried"` |
+| `WatchPaths` | `{ watchPaths: [...] }` | `"watch_paths"` |
 
 ## OtelConfigData Schema
 
@@ -142,10 +157,12 @@ class OtelConfigData extends Schema.Class<OtelConfigData>("OtelConfigData")({
 }) {}
 ```
 
-## Hook Output Schemas (`hook-outputs.ts`) [Legacy]
+## Hook Output Schemas (per-hook modules + `hooks/shared.ts`) [Legacy]
 
 Hook outputs are the legacy return format, discriminated unions on `status`.
 Each hook type has its own output schema constraining valid `action` values.
+These are now co-located in per-hook modules; shared base schemas live in
+`hooks/shared.ts`. The former monolithic `schemas/hook-outputs.ts` has been deleted.
 
 ### Base Fields
 
@@ -187,10 +204,12 @@ HookActionSchema = Schema.Literal(
 );
 ```
 
-## Response Schema Classes (`hook-responses.ts`)
+## Response Schema Classes (per-hook modules)
 
-Response classes match Claude Code's expected stdout JSON format. Converter
-functions translate hook outputs to responses:
+Response classes match Claude Code's expected stdout JSON format, now
+co-located in each per-hook module. The former monolithic
+`schemas/hook-responses.ts` has been deleted. Converter functions translate
+hook outputs to responses:
 
 | Function | Maps |
 | ---------- | ------ |
@@ -207,7 +226,7 @@ outcome instance, bypassing these converter functions.
 
 ## Branded Types (`branded.ts`)
 
-Three branded types ensure type safety for identifiers:
+Four branded types ensure type safety for identifiers and paths:
 
 ```typescript
 const SessionIdSchema = Schema.UUID.pipe(Schema.brand("SessionId"));
@@ -218,13 +237,22 @@ type ToolUseId = Branded<string, "ToolUseId">;
 
 const TranscriptPathSchema = Schema.String.pipe(Schema.brand("TranscriptPath"));
 type TranscriptPath = Branded<string, "TranscriptPath">;
+
+const NormalizedPathSchema = Schema.String.pipe(Schema.brand("NormalizedPath"));
+type NormalizedPath = Branded<string, "NormalizedPath">;
 ```
+
+`NormalizedPath` is used by all Event classes for path fields (e.g., `cwd`,
+`file_path`, `worktree_path`). The `normalizePath(p: string)` helper runs
+`path.normalize()` for cross-platform path safety. Input classes use raw
+strings (wire format); Event classes use NormalizedPath (normalized via
+`fromInput()`).
 
 ## Literal Schemas (`hook-literals.ts`)
 
 Shared literal union schemas extracted to prevent circular imports:
 
-- `HookTypeSchema` -- All 25 hook type names (see HookType enum below)
+- `HookTypeSchema` -- All 26 hook type names (see HookType enum below)
 - `HookPermissionsModeSchema` -- `"default" | "plan" | "acceptEdits" | "auto" | "dontAsk" | "bypassPermissions"`
 - `PreToolUseDecisionSchema` -- `"allow" | "deny" | "ask"`
 - `PermissionRequestBehaviorSchema` -- `"allow" | "deny"`
@@ -244,7 +272,7 @@ Shared literal union schemas extracted to prevent circular imports:
 ```typescript
 enum HookType {
   PreToolUse, PostToolUse, PostToolUseFailure,
-  PermissionRequest, Notification, UserPromptSubmit,
+  PermissionRequest, PermissionDenied, Notification, UserPromptSubmit,
   Stop, StopFailure, SubagentStart, SubagentStop,
   TaskCreated, TaskCompleted, TeammateIdle,
   InstructionsLoaded, ConfigChange, CwdChanged, FileChanged,

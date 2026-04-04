@@ -31,6 +31,13 @@ src/
   commands/             # Command system runtime
     runtime.ts          # CommandArgumentError, EmptyArgs type
   errors/               # Data.TaggedError definitions (one per file)
+  hooks/                # Per-hook modules (26 files + shared + types)
+    PreToolUse.ts       # Input, Event, Output, Response, Handler, HookDef, Outcome union
+    PostToolUse.ts      # Same co-located pattern for each hook
+    PermissionDenied.ts # New hook type (26th) — Retry | NoAction outcomes
+    ... (24 more)       # One file per hook type
+    shared.ts           # Shared infrastructure: metadata, output schemas, passthrough patterns
+    types.ts            # HooksMap, InferHandlers, HookOutcomeMap, ALL_VALID_OUTCOME_TAGS, isValidOutcomeForHook
   layers/               # Service implementations (Live + Test)
     PluginRuntime.ts    # Type exports only (HookEventTypeName, IODependencies, PluginRunConfig)
     PluginRuntimeServiceLive.ts  # PluginRuntimeService Live layer
@@ -54,20 +61,22 @@ src/
     Block.ts            # PostToolUse/Stop: halt continuation
     Continue.ts         # PostToolUse/Stop: allow continuation
     AddContext.ts       # SessionStart/PostToolUse: inject additionalContext
-    NoAction.ts         # Passthrough: no-op response
+    NoAction.ts         # Passthrough: no-op response (with .implicit() static factory)
     Skip.ts             # Any actionable hook: skip without acting
+    Retry.ts            # PermissionDenied: retry the denied action
+    WatchPaths.ts       # CwdChanged/FileChanged: specify paths to watch
     ContextBuilder.ts   # MarkdownContext, XmlContext for composing context
-    types.ts            # HookOutcomeMap, isValidOutcomeForHook(), outcome unions
-  plugin/               # Plugin configuration and orchestration
-    config.ts           # PluginConfig Schema.Class, ClaudePlugin orchestrator, InferHandlers
-  schemas/              # Effect Schema definitions
-    branded.ts          # Branded types (SessionId, ToolUseId, TranscriptPath)
-    hook-events.ts      # Schema.Class event types + HookEventSchemas class
-    hook-inputs.ts      # Schema.Class input types (wire format from stdin)
+  plugin/               # Plugin configuration and orchestration (decomposed)
+    config.ts           # PluginConfig Schema.Class, ClaudePlugin orchestrator, re-exports
+    handler.ts          # PluginHandler, HookDefinition, ToolFilter types
+    commands.ts         # Command system types and definitions
+    infer.ts            # InferHandlers, InferPluginOptions, InferPluginState, etc.
+    state.ts            # State management types and utilities
+  schemas/              # Effect Schema definitions (reduced after hooks refactor)
+    branded.ts          # Branded types (SessionId, ToolUseId, TranscriptPath, NormalizedPath)
+    hook-events.ts      # HookEventSchemas union registry (still provides discriminated union)
     hook-literals.ts    # Literal union schemas (HookType enum, permissions, etc.)
-    hook-responses.ts   # Schema.Class response types + toResponse converters
     json.ts             # JSON schema utilities
-    hook-outputs.ts     # Hook output schemas (discriminated on status)
   services/             # Effect Context.Tag service interfaces
     PluginRuntimeService.ts  # Hook execution service (RunResult, PluginRunConfig)
   testing/              # Test utilities
@@ -154,16 +163,20 @@ await plugin.build({ rootDir: import.meta.dir });
 
 ### Key Classes and Types
 
-| Type | Purpose |
-| --------- | ------- |
-| `PluginConfig` | Schema.Class base for config subclasses |
-| `ClaudePlugin<TConfig>` | Runtime orchestrator (config + hooks) |
-| `InferHandlers<T>` | Extract typed handler signatures from config statics |
-| `InferPluginOptions<T>` | Extract options type from config statics |
-| `InferPluginState<T>` | Extract state type from config statics |
-| `InferPluginCommands<T>` | Extract command handler types |
-| `ExtractOptionsSchema<T>` | Read `options` static property |
-| `ExtractStateSchema<T>` | Read `state` static property |
+| Type | Location | Purpose |
+| --------- | -------- | ------- |
+| `PluginConfig` | `plugin/config.ts` | Schema.Class base for config subclasses |
+| `ClaudePlugin<TConfig>` | `plugin/config.ts` | Runtime orchestrator (config + hooks) |
+| `InferHandlers<T>` | `hooks/types.ts` | Extract typed handler signatures from config statics |
+| `InferPluginOptions<T>` | `plugin/infer.ts` | Extract options type from config statics |
+| `InferPluginState<T>` | `plugin/infer.ts` | Extract state type from config statics |
+| `InferPluginCommands<T>` | `plugin/infer.ts` | Extract command handler types |
+| `ExtractOptionsSchema<T>` | `plugin/infer.ts` | Read `options` static property |
+| `ExtractStateSchema<T>` | `plugin/infer.ts` | Read `state` static property |
+| `PluginHandler<O,S,T>` | `plugin/handler.ts` | Base handler function type with outcome constraint |
+| `HookDefinition<O,S,T>` | `plugin/handler.ts` | Hook definition (name + handler + tools) |
+| `HooksMap<TConfig>` | `hooks/types.ts` | Maps hook names to definition arrays |
+| `HookOutcomeMap` | `hooks/types.ts` | Maps hook names to valid outcome unions |
 
 ## Outcomes System
 
@@ -192,6 +205,8 @@ only the outcomes valid for that hook, providing compile-time safety.
 | `AddContext` | SessionStart, PostToolUse, UserPromptSubmit | `{ additionalContext }` |
 | `NoAction` | Any (passthrough) | `{}` |
 | `Skip` | Any actionable hook | `{}` |
+| `Retry` | PermissionDenied | `{ hookSpecificOutput: { retry: true } }` |
+| `WatchPaths` | CwdChanged, FileChanged | `{ watchPaths: [...] }` |
 
 ### Outcome Architecture
 
@@ -204,6 +219,10 @@ Each outcome class:
 - Extends `Outcome` via `Object.setPrototypeOf` (not class inheritance,
   because `Schema.Class` controls the prototype chain)
 - Supports extension via `Schema.Class.extend()` for custom telemetry fields
+
+`NoAction` also provides a static `NoAction.implicit()` factory that creates
+an instance marked as implicit (for distinguishing missing handler returns
+from explicit no-op returns in OTEL telemetry).
 
 ### Extending Outcomes
 
@@ -240,9 +259,9 @@ its `context` field. The SDK resolves it to a string at response time.
 
 `isValidOutcomeForHook(hookType, outcome)` validates at runtime that a
 handler returned a valid outcome for its hook type. The mapping is defined
-in `VALID_OUTCOME_TAGS` in `outcomes/types.ts`. `PluginRuntimeServiceLive`
-calls this before serializing the response; invalid outcomes cause a
-`PluginRuntimeError`.
+in `ALL_VALID_OUTCOME_TAGS` in `hooks/types.ts` (composed from per-hook
+`VALID_OUTCOME_TAGS` exports). `PluginRuntimeServiceLive` calls this before
+serializing the response; invalid outcomes cause a `PluginRuntimeError`.
 
 ### Backward Compatibility
 
@@ -437,10 +456,12 @@ their session's env directory.
 - `src/index.ts` -- All public SDK exports (services, layers, schemas, types, errors, outcomes)
 - `src/testing.ts` -- Test factory functions only (imported as `claude-binary-plugin/testing`)
 
-## Hook Types (25 Total)
+## Hook Types (26 Total)
 
-Claude Code supports 25 hook event types. The SDK provides Input, Event,
-and Output schemas for all of them.
+Claude Code supports 26 hook event types. Each hook is defined in its own
+module under `src/hooks/{HookType}.ts`, co-locating Input schema, Event
+class, Output schema, Response schema, Handler type, Hook definition type,
+and Outcome union. All 26 hooks have fully typed handlers.
 
 ### Original 10
 
@@ -448,27 +469,52 @@ and Output schemas for all of them.
 `UserPromptSubmit`, `Stop`, `SubagentStop`, `PreCompact`, `SessionStart`,
 `SessionEnd`
 
-### Added 15
+### Added 16
 
 `PostToolUseFailure`, `StopFailure`, `SubagentStart`, `TaskCreated`,
 `TaskCompleted`, `TeammateIdle`, `InstructionsLoaded`, `ConfigChange`,
 `CwdChanged`, `FileChanged`, `WorktreeCreate`, `WorktreeRemove`,
-`PostCompact`, `Elicitation`, `ElicitationResult`
+`PostCompact`, `Elicitation`, `ElicitationResult`, `PermissionDenied`
+
+### Per-Hook Module Structure
+
+Each `src/hooks/{HookType}.ts` file exports:
+
+- `{HookType}Input` -- Schema.Class for wire format from stdin
+- `{HookType}Event` -- Schema.Class with `fromInput()` factory (uses NormalizedPath for paths)
+- `{HookType}OutputSchema` -- Hook output schema (discriminated on status)
+- `{HookType}ResponseSchema` -- Response schema for stdout
+- `{HookType}Handler` -- Typed handler function signature
+- `{HookType}HookDefinition` -- Hook definition type for ClaudePlugin
+- `{HookType}Outcome` -- Union of valid outcome types for this hook
+- `VALID_OUTCOME_TAGS` -- Runtime array of valid outcome tag strings
+
+Shared infrastructure lives in `src/hooks/shared.ts` (metadata schemas,
+output base schemas, passthrough patterns). Composed types live in
+`src/hooks/types.ts` (HooksMap, InferHandlers, HookOutcomeMap).
 
 See `schema.md` for field details on each type.
 
 ## Handler Type Aliases
 
-All handler type aliases use the `*Handler` suffix (renamed from the
-previous `*Pipeline` names):
+All 26 hook types have handler type aliases exported from their per-hook
+modules (e.g., `PreToolUseHandler` from `src/hooks/PreToolUse.ts`). Each
+handler type is generic over `TOptions` and `TState` and constrains the
+return type to only the valid outcomes for that hook.
 
-- `SessionStartHandler`, `SessionEndHandler`
-- `PreToolUseHandler`, `PostToolUseHandler`
-- `StopHandler`, `SubagentStopHandler`
-- `UserPromptSubmitHandler`, `PreCompactHandler`
-- `NotificationHandler`, `PermissionRequestHandler`
-- `InferHandlers` (was `InferPluginPipeline`)
-- `HandlerHookDefinition` (was `PipelineHookDefinition`)
+Key composed types from `src/hooks/types.ts`:
+
+- `HooksMap<TConfig>` -- Maps hook event names to arrays of hook definitions
+- `InferHandlers<TConfig>` -- Maps hook event names to typed handler functions
+- `HookOutcomeMap` -- Maps hook event names to their valid outcome unions
+- `ALL_VALID_OUTCOME_TAGS` -- Runtime record of valid outcome tag strings per hook
+- `isValidOutcomeForHook()` -- Runtime validation of handler returns
+
+Handler and hook definition types from `src/plugin/handler.ts`:
+
+- `PluginHandler<TOptions, TState, TOutcome>` -- Base handler function type
+- `HookDefinition<TOptions, TState, TOutcome>` -- Hook definition with name, handler, tools
+- `ToolFilter` -- Tool name filter for PreToolUse/PostToolUse hooks
 
 ## Bun Tree-Shaking (SOLVED)
 

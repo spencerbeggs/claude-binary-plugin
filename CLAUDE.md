@@ -94,7 +94,7 @@ claude --plugin-dir ./plugin
 
 - Services use `Context.Tag` in `src/services/`, implementations in `src/layers/`
 - Errors use `Data.TaggedError`, one per file in `src/errors/`
-- Hook event types use `Schema.Class` (type + schema + instanceof)
+- Hook modules in `src/hooks/` — one file per hook type with event, input, output, response
 - Pipeline outputs use `Schema.Union` discriminated on `status`
 - No barrel files — import directly from source files
 - Two entry points: `src/index.ts` (public), `src/testing.ts` (test utils)
@@ -170,7 +170,11 @@ Handlers return `Outcome` class instances instead of raw objects:
 - **Stop**: `Block`, `Continue`, `Skip`
 - **UserPromptSubmit**: `Block`, `Continue`, `AddContext`, `NoAction`, `Skip`
 - **PermissionRequest**: `Allow`, `Deny`
+- **PermissionDenied**: `Retry`, `NoAction`
+- **FileChanged / CwdChanged**: `WatchPaths`, `NoAction`
 - **Passthrough hooks**: `NoAction`
+
+Use `NoAction.implicit()` for handlers that return without an explicit outcome.
 
 Extend outcomes with domain fields:
 
@@ -186,10 +190,10 @@ Use `ContextBuilder`, `MarkdownContext`, `XmlContext` for composing `additionalC
 - `InferHandlers<typeof MyConfig>` — infer typed handler signatures from config statics
 - `InferPluginOptions<T>`, `InferPluginState<T>` — extract types from statics
 
-## Hook Types (25 total)
+## Hook Types (26 total)
 
-PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, Notification,
-UserPromptSubmit, Stop, StopFailure, SubagentStart, SubagentStop,
+PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, PermissionDenied,
+Notification, UserPromptSubmit, Stop, StopFailure, SubagentStart, SubagentStop,
 TaskCreated, TaskCompleted, TeammateIdle, InstructionsLoaded, ConfigChange,
 CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, PreCompact,
 PostCompact, Elicitation, ElicitationResult, SessionStart, SessionEnd
@@ -203,16 +207,19 @@ import {
 
   // Outcomes
   Allow, Deny, Ask, Modify, Block, Continue,
-  AddContext, NoAction, Skip, Outcome,
+  AddContext, NoAction, Skip, Retry, WatchPaths, Outcome,
   ContextBuilder, MarkdownContext, XmlContext,
 
   // Schema.Class event types (type + schema)
-  PreToolUseEvent, PostToolUseEvent, SessionStartEvent,
-  // ... all 25 hook event types
+  PreToolUseEvent, PostToolUseEvent, PermissionDeniedEvent, SessionStartEvent,
+  // ... all 26 hook event types
 
   // Schema.Class input types
-  PreToolUseInput, PostToolUseInput, SessionStartInput,
-  // ... all 25 hook input types
+  PreToolUseInput, PostToolUseInput, PermissionDeniedInput, SessionStartInput,
+  // ... all 26 hook input types
+
+  // Branded types
+  NormalizedPath,
 
   // Services
   StdinReader, EnvLoader, SchemaValidatorService,
@@ -251,19 +258,24 @@ Load these files as needed for deeper context:
 
 | File | Purpose |
 | ---- | ------- |
-| `src/plugin/config.ts` | `PluginConfig` Schema.Class, `ClaudePlugin` orchestrator, `InferHandlers` |
+| `src/plugin/config.ts` | `PluginConfig` Schema.Class, `ClaudePlugin` orchestrator |
+| `src/plugin/handler.ts` | Handler type definitions and registration |
+| `src/plugin/commands.ts` | Command registration types |
+| `src/plugin/infer.ts` | `InferHandlers`, `InferPluginOptions`, `InferPluginState` |
+| `src/plugin/state.ts` | State management types |
+| `src/hooks/` | 26 per-hook modules (event, input, output, response per hook) |
+| `src/hooks/shared.ts` | Shared schemas and utilities across hooks |
+| `src/hooks/types.ts` | Hook type definitions and type maps |
 | `src/layers/PipelineRuntime.ts` | `PipelineRuntime.run()` |
 | `src/layers/PipelineLive.ts` | Composed service layer |
-| `src/schemas/hook-events.ts` | Schema.Class event definitions |
-| `src/schemas/hook-inputs.ts` | Schema.Class input definitions |
-| `src/schemas/pipeline-outputs.ts` | Output schemas per hook type |
-| `src/schemas/hook-responses.ts` | Response schemas (outcome to JSON) |
-| `src/outcomes/` | Outcome classes (Allow, Deny, etc.) |
+| `src/schemas/hook-events.ts` | Re-exports of event types from hook modules |
+| `src/schemas/hook-literals.ts` | Hook type enums and literals |
+| `src/schemas/branded.ts` | `NormalizedPath` and other branded types |
+| `src/outcomes/` | Outcome classes (Allow, Deny, Retry, WatchPaths, etc.) |
 | `src/services/PluginEnv.ts` | `PluginEnv` base class |
-| `src/layers/SessionRegistry.ts` | SQLite session lookup (facade functions: getBySessionId, getByProjectDir, registerSession, closeDb) |
+| `src/layers/SessionRegistry.ts` | SQLite session lookup (facade functions) |
 | `src/build/builder.ts` | `PluginBuilder` class |
 | `src/types/tool-inputs.ts` | Typed tool inputs |
-| `src/schemas/hook-literals.ts` | Hook type enums and literals |
 
 ## Known Issues
 

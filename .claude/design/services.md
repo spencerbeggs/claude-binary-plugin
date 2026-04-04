@@ -434,11 +434,14 @@ Provides handler dependencies (services that handlers may require via
 ## Outcomes Subsystem
 
 The outcomes system (`src/outcomes/`) is not an Effect service but a core
-subsystem that interacts with services:
+subsystem that interacts with services. It now includes 11 outcome classes
+(9 original + `Retry` and `WatchPaths`):
 
 - **Telemetry integration**: Each outcome's `toTelemetry()` provides structured
   data for the `Telemetry` service's `emitHookExecution()` call. Extended
   outcomes automatically expose domain-specific fields as OTEL metrics.
+  `NoAction.implicit()` creates instances distinguishable from explicit no-ops
+  in telemetry.
 
 - **ContextBuilder OTEL metrics**: `MarkdownContext` and `XmlContext` track
   section/rule/tag counts via their `.metrics` getter, which are included
@@ -446,9 +449,15 @@ subsystem that interacts with services:
 
 - **PluginRuntimeServiceLive interaction**: The Live layer checks
   `Outcome.isOutcome(output)` before the legacy `isHookOutput()` path.
-  It calls `isValidOutcomeForHook()` for runtime validation, then
-  `outcome.toResponse()` for serialization and `outcome.toTelemetry()` for
-  the telemetry service.
+  It calls `isValidOutcomeForHook()` (from `hooks/types.ts`) for runtime
+  validation, then `outcome.toResponse()` for serialization and
+  `outcome.toTelemetry()` for the telemetry service.
+
+- **Per-hook outcome unions**: Each per-hook module (`src/hooks/{HookType}.ts`)
+  exports a `{HookType}Outcome` type alias that is the union of valid outcomes
+  for that hook, plus a `VALID_OUTCOME_TAGS` array for runtime validation.
+  These are composed into `HookOutcomeMap` and `ALL_VALID_OUTCOME_TAGS` in
+  `hooks/types.ts`.
 
 See `architecture.md` for full outcome class details and the hook-to-outcome
 mapping table.
