@@ -13,10 +13,13 @@
  * the scope closes and all layer finalizers run (transport shutdown,
  * provider flush+shutdown, log file close).
  */
+import { BunFileSystem } from "@effect/platform-bun";
 import { Duration, Effect, Layer, Ref, Schedule } from "effect";
 import { GitInfoLive } from "../layers/GitInfoLive.js";
 import { MessageRouterLive } from "../layers/MessageRouterLive.js";
+import { OtelConfigLive } from "../layers/OtelConfigLive.js";
 import { OtelProvidersLive } from "../layers/OtelProvidersLive.js";
+import { PlatformInfoLive } from "../layers/PlatformInfoLive.js";
 import { ShellExecutorLive } from "../layers/ShellExecutorLive.js";
 import { makeSidecarTransportLive } from "../layers/SidecarTransportLive.js";
 
@@ -82,12 +85,20 @@ export const makeSidecarProgram = () =>
 			Schedule.spaced(Duration.seconds(5)),
 		);
 
+		// Compose supporting layers with their own dependencies
+		const PlatformInfoWithDeps = PlatformInfoLive.pipe(
+			Layer.provide(Layer.merge(ShellExecutorLive, BunFileSystem.layer)),
+		);
+		const OtelConfigWithDeps = OtelConfigLive.pipe(Layer.provide(PlatformInfoWithDeps));
+
 		// Build the sidecar layer stack
 		const SidecarLive = makeSidecarTransportLive(lastActivity).pipe(
 			Layer.provide(OtelProvidersLive),
 			Layer.provide(MessageRouterLive),
 			Layer.provide(GitInfoLive),
 			Layer.provide(ShellExecutorLive),
+			Layer.provide(OtelConfigWithDeps),
+			Layer.provide(BunFileSystem.layer),
 		);
 
 		// Race idle checker against signal handler

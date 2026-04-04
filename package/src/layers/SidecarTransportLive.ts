@@ -1,8 +1,11 @@
+import { unlinkSync } from "node:fs";
+import { FileSystem } from "@effect/platform";
 import type { Socket, SocketHandler } from "bun";
 import { Effect, Layer, Ref } from "effect";
 import { OTEL_SCOPE } from "../otel/message-builders.js";
 import type { OtelProtocolConfig, SidecarProtocolMessage, SidecarResponse } from "../otel/protocol.js";
 import { MessageRouter } from "../services/MessageRouter.js";
+import { OtelConfig } from "../services/OtelConfig.js";
 import type { ResourceConfig } from "../services/OtelProviders.js";
 import { OtelProviders } from "../services/OtelProviders.js";
 import { SidecarTransport } from "../services/SidecarTransport.js";
@@ -110,18 +113,20 @@ const routeMessage = (
  * The server is torn down automatically when the scope closes (via Effect finalizer).
  *
  * @param lastActivity - Shared Ref for idle timeout coordination
- * @returns A Layer providing SidecarTransport, requiring OtelProviders
+ * @returns A Layer providing SidecarTransport, requiring OtelProviders, MessageRouter, OtelConfig, and FileSystem
  *
  * @public
  */
 export const makeSidecarTransportLive = (
 	lastActivity: Ref.Ref<number>,
-): Layer.Layer<SidecarTransport, never, OtelProviders | MessageRouter> =>
+): Layer.Layer<SidecarTransport, never, OtelProviders | MessageRouter | OtelConfig | FileSystem.FileSystem> =>
 	Layer.scoped(
 		SidecarTransport,
 		Effect.gen(function* () {
 			const providers = yield* OtelProviders;
 			const router = yield* MessageRouter;
+			const config = yield* OtelConfig;
+			const fs = yield* FileSystem.FileSystem;
 
 			// Session config storage (per-session OTEL config)
 			const sessionConfigs = new Map<string, OtelProtocolConfig>();
@@ -129,28 +134,22 @@ export const makeSidecarTransportLive = (
 			// Track connected clients for cleanup
 			const clients = new Set<Socket<ClientData>>();
 
-			// Socket path from env or default
-			const socketPath = process.env.OTEL_SIDECAR_SOCKET ?? DEFAULT_SOCKET_PATH;
+			// Socket path from OtelConfig or default
+			const socketPath = config.socketPath ?? DEFAULT_SOCKET_PATH;
 
 			// Remove stale socket file
-			yield* Effect.sync(() => {
-				try {
-					Bun.spawnSync(["rm", "-f", socketPath]);
-				} catch {
-					// Ignore — file may not exist
-				}
-			});
+			yield* fs.remove(socketPath).pipe(Effect.catchAll(() => Effect.void));
 
 			// Create the socket handler
 			const socketHandler: SocketHandler<ClientData> = {
 				open: (socket) => {
 					socket.data = { buffer: "" };
 					clients.add(socket);
-					Ref.set(lastActivity, Date.now()).pipe(Effect.runSync);
+					Ref.set(lastActivity, Date.now()).pipe(Effect.runFork);
 				},
 
 				data: (socket, raw) => {
-					Ref.set(lastActivity, Date.now()).pipe(Effect.runSync);
+					Ref.set(lastActivity, Date.now()).pipe(Effect.runFork);
 
 					socket.data.buffer += typeof raw === "string" ? raw : new TextDecoder().decode(raw);
 
@@ -171,7 +170,7 @@ export const makeSidecarTransportLive = (
 							continue;
 						}
 
-						// Route message — run the Effect synchronously for fire-and-forget,
+						// Route message — run the Effect asynchronously for fire-and-forget,
 						// or capture response for request/reply messages.
 						const effect = routeMessage(message, providers, sessionConfigs, router).pipe(
 							Effect.tap((result) =>
@@ -227,7 +226,7 @@ export const makeSidecarTransportLive = (
 					clients.clear();
 					server.stop();
 					try {
-						Bun.spawnSync(["rm", "-f", socketPath]);
+						unlinkSync(socketPath);
 					} catch {
 						// Ignore cleanup errors
 					}
