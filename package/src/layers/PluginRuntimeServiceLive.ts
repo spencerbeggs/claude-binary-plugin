@@ -111,15 +111,6 @@ function getHookSchemas(
 }
 
 /**
- * Check if CLAUDE_DEBUG is enabled.
- * @internal
- */
-function isDebugEnabled(): boolean {
-	const val = Bun.env.CLAUDE_DEBUG;
-	return val === "1" || val === "true";
-}
-
-/**
  * Map pipeline status and action to HookOutcome for telemetry.
  * @internal
  */
@@ -723,16 +714,10 @@ function extractPersistedStateEffect<TState>(
 	bridgeService: EnvBridge["Type"],
 ): Effect.Effect<TState, never> {
 	return Effect.gen(function* () {
-		const debugLog = (msg: string) => {
-			if (isDebugEnabled()) {
-				console.error(`[extractPersistedState] ${msg}`);
-			}
-		};
-
-		debugLog(`prefix=${prefix}`);
+		yield* Effect.logDebug(`[extractPersistedState] prefix=${prefix}`);
 
 		if (!prefix) {
-			debugLog("No prefix available");
+			yield* Effect.logDebug("[extractPersistedState] No prefix available");
 			return {} as TState;
 		}
 
@@ -740,33 +725,46 @@ function extractPersistedStateEffect<TState>(
 		const envVars = yield* bridgeService.read([stateEnvKey]);
 		const stateJson = envVars[stateEnvKey];
 
-		debugLog(`Looking for ${stateEnvKey}, found=${stateJson ? "yes" : "no"}`);
+		yield* Effect.logDebug(`[extractPersistedState] Looking for ${stateEnvKey}, found=${stateJson ? "yes" : "no"}`);
 
 		if (!stateJson) {
 			// Log prefixed vars for debugging
 			const allVars = yield* bridgeService.readAll();
 			const prefixedVars = Object.keys(allVars).filter((k) => k.startsWith(prefix));
-			debugLog(`Found ${prefixedVars.length} vars with prefix ${prefix}: ${prefixedVars.join(", ")}`);
+			yield* Effect.logDebug(
+				`[extractPersistedState] Found ${prefixedVars.length} vars with prefix ${prefix}: ${prefixedVars.join(", ")}`,
+			);
 			return {} as TState;
 		}
 
-		try {
-			const jsonStr = Buffer.from(stateJson, "base64").toString("utf8");
-			const rawState = JSON.parse(jsonStr);
+		const parseResult = yield* Effect.try({
+			try: () => {
+				const jsonStr = Buffer.from(stateJson, "base64").toString("utf8");
+				return JSON.parse(jsonStr);
+			},
+			catch: (e) => e,
+		}).pipe(Effect.option);
 
-			if (stateSchema) {
-				const decoded = Schema.decodeUnknownSync(stateSchema)(rawState);
-				debugLog(`Decoded state via schema with keys: ${Object.keys(decoded as object).join(", ")}`);
-				return decoded as TState;
-			}
-
-			const keys = Object.keys(rawState);
-			debugLog(`Successfully parsed state with ${keys.length} keys: ${keys.join(", ")}`);
-			return (typeof rawState === "object" && rawState !== null ? rawState : {}) as TState;
-		} catch (e) {
-			debugLog(`Failed to parse ${stateEnvKey}: ${e}`);
+		if (parseResult._tag === "None") {
+			yield* Effect.logDebug(`[extractPersistedState] Failed to parse ${stateEnvKey}`);
 			return {} as TState;
 		}
+
+		const rawState = parseResult.value;
+
+		if (stateSchema) {
+			const decoded = Schema.decodeUnknownSync(stateSchema)(rawState);
+			yield* Effect.logDebug(
+				`[extractPersistedState] Decoded state via schema with keys: ${Object.keys(decoded as object).join(", ")}`,
+			);
+			return decoded as TState;
+		}
+
+		const keys = Object.keys(rawState);
+		yield* Effect.logDebug(
+			`[extractPersistedState] Successfully parsed state with ${keys.length} keys: ${keys.join(", ")}`,
+		);
+		return (typeof rawState === "object" && rawState !== null ? rawState : {}) as TState;
 	});
 }
 
@@ -818,16 +816,21 @@ function persistSessionEnvEffect(options: PersistOptions): Effect.Effect<void, n
 				}
 			}
 
-			try {
-				const validatedOptions = Schema.decodeUnknownSync(optionsSchema)(envInput);
+			const validationResult = yield* Effect.try({
+				try: () => Schema.decodeUnknownSync(optionsSchema)(envInput),
+				catch: (error) => error,
+			}).pipe(Effect.option);
+
+			if (validationResult._tag === "Some") {
+				const validatedOptions = validationResult.value;
 				if (typeof validatedOptions === "object" && validatedOptions !== null) {
 					for (const [key, value] of Object.entries(validatedOptions)) {
 						const stringValue = typeof value === "string" ? value : JSON.stringify(value);
 						vars[`${prefix}_${key}`] = stringValue;
 					}
 				}
-			} catch (error) {
-				console.error(`[${prefix}] Options validation failed:`, error);
+			} else {
+				yield* Effect.logError(`[${prefix}] Options validation failed`);
 			}
 		}
 
