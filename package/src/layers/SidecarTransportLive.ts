@@ -1,4 +1,3 @@
-import { unlinkSync } from "node:fs";
 import { FileSystem } from "@effect/platform";
 import type { Socket, SocketHandler } from "bun";
 import { Effect, Layer, Ref } from "effect";
@@ -219,17 +218,13 @@ export const makeSidecarTransportLive = (
 
 			// Register finalizer: close clients, stop server, remove socket file
 			yield* Effect.addFinalizer(() =>
-				Effect.sync(() => {
+				Effect.gen(function* () {
 					for (const client of clients) {
 						client.end();
 					}
 					clients.clear();
 					server.stop();
-					try {
-						unlinkSync(socketPath);
-					} catch {
-						// Ignore cleanup errors
-					}
+					yield* fs.remove(socketPath).pipe(Effect.catchAll(() => Effect.void));
 				}),
 			);
 

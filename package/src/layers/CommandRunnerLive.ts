@@ -275,13 +275,7 @@ export const CommandRunnerLive: Layer.Layer<CommandRunner, never, EnvResolver | 
 						const prefix = options.prefix ?? "";
 						const allEnv = yield* envBridge.readAll();
 						const validatedOptions = options.optionsSchema
-							? Schema.decodeUnknownSync(options.optionsSchema)(
-									Object.fromEntries(
-										Object.keys((options.optionsSchema as { fields?: Record<string, unknown> }).fields ?? {}).map(
-											(k) => [k, allEnv[k]],
-										),
-									),
-								)
+							? Schema.decodeUnknownSync(options.optionsSchema)(allEnv)
 							: {};
 						const baseState = yield* createBaseState(prefix).pipe(Effect.provideService(EnvBridge, envBridge));
 						const persistedState = yield* extractPersistedState(prefix).pipe(

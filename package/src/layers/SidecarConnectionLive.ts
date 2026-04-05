@@ -105,8 +105,8 @@ const spawnAndConnect = (
 		if (!pluginName) return false;
 
 		const binaryPath = `${pluginRoot}/${pluginName}.plugin`;
-		const { existsSync } = yield* Effect.promise(() => import("node:fs").then((m) => m));
-		if (!existsSync(binaryPath)) return false;
+		const exists = yield* Effect.promise(() => Bun.file(binaryPath).exists());
+		if (!exists) return false;
 
 		// Spawn sidecar
 		yield* Effect.tryPromise({
