@@ -232,9 +232,6 @@ import {
   // Errors
   PipelineError, SchemaValidationError,
 
-  // State management
-  PluginEnv,
-
   // OTEL
   OtelConfig,
 } from "claude-binary-plugin";
@@ -272,8 +269,7 @@ Load these files as needed for deeper context:
 | `src/schemas/hook-literals.ts` | Hook type enums and literals |
 | `src/schemas/branded.ts` | `NormalizedPath` and other branded types |
 | `src/outcomes/` | Outcome classes (Allow, Deny, Retry, WatchPaths, etc.) |
-| `src/services/PluginEnv.ts` | `PluginEnv` base class |
-| `src/layers/SessionRegistry.ts` | SQLite session lookup (facade functions) |
+| `src/services/SessionStore.ts` | `SessionStore` service, `SessionRegistration` type |
 | `src/build/builder.ts` | `PluginBuilder` class |
 | `src/types/tool-inputs.ts` | Typed tool inputs |
 

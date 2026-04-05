@@ -104,7 +104,7 @@ class EnvValidator extends Context.Tag("EnvValidator")<EnvValidator, {
 
 ### EnvResolver
 
-SessionRegistry lookup wrapper. Resolves session env directories.
+SessionStore service wrapper. Resolves session env directories.
 
 ```typescript
 class EnvResolver extends Context.Tag("EnvResolver")<EnvResolver, {
@@ -114,7 +114,9 @@ class EnvResolver extends Context.Tag("EnvResolver")<EnvResolver, {
 }>() {}
 ```
 
-- **Live** (`EnvResolverLive`): Delegates to SessionRegistry facade functions
+- **Live** (`EnvResolverLive`): Delegates to `SessionStore` service
+  (previously called SessionRegistry facade functions directly).
+  Layer type: `Layer.Layer<EnvResolver, never, SessionStore>`
 - **Test** (`makeEnvResolverTest()`): In-memory session map
 
 ### EnvCoordinator
@@ -154,8 +156,12 @@ class SessionStore extends Context.Tag("SessionStore")<SessionStore, {
 ```
 
 - **Live** (`SessionStoreLive`): Uses `Layer.scoped` with `acquireRelease` for
-  SQLite DB lifecycle. Delegates to `SessionRegistry` facade functions.
+  SQLite DB lifecycle. Depends on `@effect/platform FileSystem` (replaces
+  `existsSync`/`mkdirSync`). The old `SessionRegistry` facade module has been
+  deleted; all SQLite logic lives in this layer.
+  Layer type: `Layer.Layer<SessionStore, never, FileSystem.FileSystem>`
 - **Test** (`makeSessionStoreTest()`): In-memory `Map<string, string>`
+- **Types**: `SessionRegistration` (moved here from deleted SessionRegistry)
 
 ### ShellExecutor
 
@@ -235,7 +241,9 @@ class SidecarConnection extends Context.Tag("SidecarConnection")<SidecarConnecti
 ```
 
 - **Live** (`SidecarConnectionLive`): Scoped layer with socket lifecycle, sliding
-  queue (1024 messages), auto-reconnect, and sidecar spawning. No-op when OTEL disabled.
+  queue (1024 messages), auto-reconnect, and sidecar spawning. No-op when OTEL
+  disabled. `Effect.runSync` in socket callbacks replaced with `Effect.runFork`;
+  try/catch around socket.write replaced with `Effect.try()`.
 - **Test** (`makeSidecarConnectionTest()`): No-op implementation
 
 ### PluginRuntimeService
@@ -273,7 +281,8 @@ class PluginRuntimeService extends Context.Tag("PluginRuntimeService")<PluginRun
 - **Live** (`PluginRuntimeServiceLive`): Full hook execution lifecycle --
   reads stdin, decodes schemas, loads state, invokes handler, validates
   Outcome, emits telemetry, returns `RunResult`. Uses `Layer.succeed`
-  (no service dependencies of its own).
+  (no service dependencies of its own). `console.error` replaced with
+  `Effect.logDebug`/`Effect.logError`; try/catch replaced with `Effect.try()`.
 - **Test**: Not yet provided -- use `Effect.succeed` with mock `RunResult`
 
 Note: `PluginRunConfig` uses `prefix?: string` instead of `stateClass`.
@@ -299,8 +308,11 @@ class CommandRunner extends Context.Tag("CommandRunner")<CommandRunner, {
 ```
 
 - **Live** (`CommandRunnerLive`): Full command lifecycle -- parses args,
-  finds session env via SessionRegistry directly, loads state, invokes handler,
-  validates output
+  finds session env via `EnvResolver` service, loads state via `EnvBridge`,
+  reads files via `FileSystem`. No longer imports SessionRegistry, accesses
+  `Bun.env`, or uses `Bun.file`/`Bun.Glob` directly. Now part of `PluginLive`
+  layer composition (was standalone in RuntimeLayer).
+  Layer type: `Layer.Layer<CommandRunner, never, EnvBridge | EnvResolver | FileSystem.FileSystem>`
 - **Test** (`makeCommandRunnerTest()`): Returns pre-configured command outputs
 
 ### PluginBuilderService
@@ -331,7 +343,10 @@ class PlatformInfo extends Context.Tag("PlatformInfo")<PlatformInfo, {
 ```
 
 - **Live** (`PlatformInfoLive`): Reads from `process.platform` and `process.arch`,
-  resolves socket paths via XDG/temp directories
+  resolves socket paths via XDG/temp directories. Depends on `ShellExecutor`
+  (replaces `Bun.spawnSync` for version detection) and `FileSystem` (replaces
+  `existsSync` for socket check).
+  Layer type: `Layer.Layer<PlatformInfo, never, ShellExecutor | FileSystem.FileSystem>`
 - **Test** (`makePlatformInfoTest(overrides?)`): Returns platform info with provided overrides
 
 ### PluginInfoService
@@ -360,7 +375,9 @@ class ClaudeAccountInfo extends Context.Tag("ClaudeAccountInfo")<ClaudeAccountIn
 }>() {}
 ```
 
-- **Live** (`ClaudeAccountInfoLive`): Reads from environment variables
+- **Live** (`ClaudeAccountInfoLive`): Reads Claude config file via
+  `@effect/platform FileSystem` (replaces `readFileSync`).
+  Layer type: `Layer.Layer<ClaudeAccountInfo, never, FileSystem.FileSystem>`
 - **Test** (`makeClaudeAccountInfoTest(overrides?)`): Returns mock account info
 
 ### GitInfo
@@ -417,19 +434,32 @@ sidecar process. Uses `PlatformLogger.toFile` with `BunFileSystem`.
 ## PluginLive (Composed Layer)
 
 ```typescript
-const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive), Layer.provide(OtelConfigLive));
+const PlatformInfoWithDeps = pipe(PlatformInfoLive,
+  Layer.provide(Layer.mergeAll(ShellExecutorLive, BunFileSystem.layer)));
+
+const OtelClientLive = pipe(TelemetryLive,
+  Layer.provide(SidecarConnectionLive),
+  Layer.provide(OtelConfigLive),
+  Layer.provide(PlatformInfoWithDeps));
+
+const SessionStoreWithFs = pipe(SessionStoreLive, Layer.provide(BunFileSystem.layer));
+const EnvResolverWithDeps = pipe(EnvResolverLive, Layer.provide(SessionStoreWithFs));
+const CommandRunnerWithDeps = pipe(CommandRunnerLive,
+  Layer.provide(Layer.mergeAll(EnvBridgeLive, EnvResolverWithDeps, BunFileSystem.layer)));
 
 export const PluginLive = Layer.mergeAll(
-  StdinReaderLive, SchemaValidatorLive, EnvLoaderLive,
-  EnvWriterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
-  PluginInfoServiceLive, PlatformInfoLive, GitInfoLive, ClaudeAccountInfoLive,
+  StdinReaderLive, SchemaValidatorLive,
+  EnvServices, SessionStoreWithFs, OtelClientLive, ShellExecutorLive,
+  PluginInfoServiceLive, CommandRunnerWithDeps,
+  pipe(GitInfoLive, Layer.provide(ShellExecutorLive)),
+  pipe(ClaudeAccountInfoLive, Layer.provide(BunFileSystem.layer)),
 );
 ```
 
 Provides handler dependencies (services that handlers may require via
-`handlerLayer`). The runtime services (`PluginRuntimeServiceLive`,
-`CommandRunnerLive`) are composed separately in the generated entrypoint's
-`RuntimeLayer`.
+`handlerLayer`). `CommandRunnerLive` is now part of `PluginLive` (was
+composed separately in `RuntimeLayer`). Only `PluginRuntimeServiceLive`
+is composed separately in the generated entrypoint.
 
 ## Outcomes Subsystem
 

@@ -42,10 +42,10 @@ src/
     PluginRuntime.ts    # Type exports only (HookEventTypeName, IODependencies, PluginRunConfig)
     PluginRuntimeServiceLive.ts  # PluginRuntimeService Live layer
     PluginLive.ts       # Composed service layer for handler dependencies
-    CommandRunnerLive.ts # CommandRunner Live layer (full run + parse)
+    CommandRunnerLive.ts # CommandRunner Live layer (depends on EnvResolver, EnvBridge, FileSystem)
     PluginLoggerLive.ts # NDJSON file logger
     PluginLoggerTest.ts # In-memory test logger
-    SessionRegistry.ts  # SQLite session-to-env-dir mapping (facade module with exported functions)
+    # SessionRegistry.ts -- DELETED (facade functions removed; SessionStore service is sole interface)
     SidecarConnectionLive.ts  # Unix socket IPC to OTEL sidecar
     SidecarLoggerLive.ts      # Sidecar process file logger
     SidecarTransportLive.ts   # Sidecar Unix socket server
@@ -83,8 +83,8 @@ src/
     builder.ts          # PluginTester fluent API
     mocks.ts            # Mock types and utilities
   types/                # TypeScript type definitions
-    common.ts           # Re-exported type-fest utilities
-    json.ts             # JSON type definitions
+    common.ts           # ReadonlyDeep, PartialDeep utility types (local, no type-fest)
+    json.ts             # JSON type definitions (JsonValue, JsonObject, Jsonify, etc. -- local)
     pipeline.ts         # Pipeline utilities, TokenMetrics
     plugin-state.ts     # Validation error types
     tool-inputs.ts      # Typed tool input interfaces
@@ -300,30 +300,58 @@ Service (Context.Tag)     Layer (implementation)
   MessageRouter       ->  MessageRouterLive / makeMessageRouterTest
 ```
 
-## PluginLive (Handler Dependencies Layer)
+## PluginLive (Composed Layer)
 
 `PluginLive` merges all production service layers into a single layer
-that satisfies handler Effect dependencies. It does NOT include the
-runtime services themselves -- those are composed separately.
+that satisfies handler Effect dependencies. Unlike previous versions,
+`CommandRunnerLive` is now included in `PluginLive` (was standalone).
 
-The EnvCoordinator dependency graph is:
+### Dependency Graph
 
 ```text
+PlatformInfoLive
+  +-- ShellExecutorLive       (version detection)
+  +-- BunFileSystem.layer     (socket check)
+
+ClaudeAccountInfoLive
+  +-- BunFileSystem.layer     (reads config file)
+
+SessionStoreLive
+  +-- BunFileSystem.layer     (directory creation)
+
+EnvResolverLive
+  +-- SessionStoreLive (+ FileSystem)
+
 EnvCoordinator
-  +-- EnvLoader
-  +-- EnvWriter
-  +-- EnvBridge
-  +-- EnvResolver
-  +-- EnvValidator
+  +-- EnvLoaderLive (+ EnvFileParser, EnvBridge, FileSystem)
+  +-- EnvWriterLive (+ EnvFileParser, EnvBridge, FileSystem)
+  +-- EnvValidatorLive (+ EnvBridge)
+  +-- EnvResolverLive (+ SessionStore)
+  +-- EnvBridgeLive
+
+CommandRunnerLive
+  +-- EnvBridgeLive
+  +-- EnvResolverLive (+ SessionStore)
+  +-- BunFileSystem.layer
+
+OtelClientLive
+  +-- TelemetryLive
+  +-- SidecarConnectionLive
+  +-- OtelConfigLive
+  +-- PlatformInfoLive (+ ShellExecutor, FileSystem)
 ```
 
 ```typescript
-const OtelClientLive = pipe(TelemetryLive, Layer.provide(SidecarConnectionLive), Layer.provide(OtelConfigLive));
-
 export const PluginLive = Layer.mergeAll(
-  StdinReaderLive, SchemaValidatorLive, EnvLoaderLive,
-  EnvWriterLive, SessionStoreLive, OtelClientLive, ShellExecutorLive,
-  PluginInfoServiceLive, PlatformInfoLive, GitInfoLive, ClaudeAccountInfoLive,
+  StdinReaderLive, SchemaValidatorLive,
+  EnvServices,           // EnvCoordinator + all env infra
+  SessionStoreWithFs,    // SessionStore + FileSystem
+  OtelClientLive,        // Telemetry + Sidecar + OtelConfig + PlatformInfo
+  ShellExecutorLive,
+  PluginInfoServiceLive,
+  CommandRunnerWithDeps,  // CommandRunner + EnvBridge + EnvResolver + FileSystem
+  GitInfoLive,           // + ShellExecutor
+  ClaudeAccountInfoLive, // + FileSystem
 );
 ```
 
@@ -340,7 +368,7 @@ Generated Entrypoint (owns stdout + process.exit)
 ```
 
 ```typescript
-const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, CommandRunnerLive);
+const RuntimeLayer = Layer.merge(PluginRuntimeServiceLive, PluginLive);
 
 // Hook execution
 const result = await Effect.runPromise(
@@ -351,7 +379,7 @@ const result = await Effect.runPromise(
 );
 process.stdout.write(JSON.stringify(result.response));
 
-// Command execution
+// Command execution (CommandRunner is now part of PluginLive)
 const result = await Effect.runPromise(
   Effect.gen(function* () {
     const runner = yield* CommandRunner;
@@ -395,7 +423,7 @@ owner of process lifecycle.
 
 1. Parse raw CLI args via `parseRaw()`
 2. Validate args against `argsSchema` (if provided)
-3. Find session env dir via SessionRegistry directly
+3. Find session env dir via `EnvResolver` service (backed by `SessionStore`)
 4. Load session env files via `EnvCoordinator.forCommand()`
 5. Create state instance, extract options and persisted state
 6. Call handler with `{ args, options, state }`
@@ -445,11 +473,12 @@ EnvValidator to handle loading env vars from hook `.sh` files, validating
 options, and persisting state via `escapeForBashDoubleQuotes()` into session
 env files.
 
-**SessionRegistry** (`src/layers/SessionRegistry.ts`) is a facade module
-providing exported functions for SQLite-based session-to-env-dir mapping:
-`getBySessionId`, `getByProjectDir`, `registerSession`, `closeDb`. It stores
-`session_id -> session_env_dir` pairs so non-SessionStart hooks can find
-their session's env directory.
+**SessionStore** (`src/services/SessionStore.ts`) is the Effect service for
+SQLite-based session-to-env-dir mapping. `SessionStoreLive` uses
+`Layer.scoped` with `acquireRelease` for DB lifecycle and depends on
+`@effect/platform FileSystem` (no `existsSync`/`mkdirSync`). The old
+`SessionRegistry` facade module has been deleted; all session access goes
+through the `SessionStore` service.
 
 ## Two Entry Points
 
