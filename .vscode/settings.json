@@ -28,13 +28,10 @@
 		"editor.formatOnSave": true,
 		"editor.formatOnPaste": true
 	},
-	"files.associations": {
-		"*.sh": "shellscript",
-		"*.zsh": "shellscript",
-		"*.bash": "shellscript",
-		"*.cmd": "shellscript",
-		"*.hook": "shellscript",
-		"bun.lock": "plaintext"
+	"[mdx]": {
+		"editor.defaultFormatter": "unifiedjs.vscode-mdx",
+		"editor.formatOnSave": true,
+		"editor.formatOnPaste": true
 	},
 	"eslint.enable": false,
 	"explorer.sortOrder": "foldersNestsFiles",
@@ -44,9 +41,7 @@
 		"**/.coverage": true,
 		"**/.rslib": true,
 		"**/.turbo": false,
-		"**/.vitest": true,
-		"**/*.hook": false,
-		"**/*.cmd": false,
+		"**/.vitest": false,
 		"**/*.tsbuildinfo": true,
 		"**/dist": false,
 		"**/node_modules": false
@@ -61,21 +56,15 @@
 	"json.schemas": [
 		{
 			"fileMatch": ["**/_meta.json"],
-			"url": "./node_modules/@rspress/core/meta-json-schema.json"
-			// or "url": "https://unpkg.com/@rspress/core@2.0.0-beta.21/meta-json-schema.json"
+			"url": "./website/node_modules/@rspress/core/meta-json-schema.json"
 		},
 		{
 			"fileMatch": ["**/_nav.json"],
-			"url": "./node_modules/@rspress/core/nav-json-schema.json"
-			// or "url": "https://unpkg.com/@rspress/core@2.0.0-beta.22/nav-json-schema.json"
+			"url": "./website/node_modules/@rspress/core/nav-json-schema.json"
 		},
 		{
-			"fileMatch": ["**/.github/workflows/*.yml", "**/.github/workflows/*.yaml"],
-			"url": "https://json.schemastore.org/github-workflow.json"
-		},
-		{
-			"filesMatch": ["**/.github/actions/**/action.yml", "**/.github/actions/**/action.yaml"],
-			"url": "https://www.schemastore.org/github-action.json"
+			"fileMatch": [".claude/design/design.config.json"],
+			"url": ".claude/skills/design-config/json-schemas/current.json"
 		}
 	],
 	"markdownlint.configFile": "./lib/configs/.markdownlint-cli2.jsonc",
@@ -88,12 +77,12 @@
 		"**/.turbo": true,
 		"**/.vitest": true,
 		"**/*.tsbuildinfo": true,
-		"**/*.hook": true,
-		"**/*.cmd": true,
 		"**/dist": true,
 		"**/node_modules": true,
-		"pnpm-lock.yaml": true,
-		"**/bun.lock": true
+		"**/.claude/plans": true,
+		"**/.claude/design": true,
+		"website/docs/en/*/api": true,
+		"pnpm-lock.yaml": true
 	},
 	"formattingToggle.affects": [
 		"editor.formatOnSave",
@@ -120,7 +109,10 @@
 		"editor.defaultFormatter": "redhat.vscode-yaml"
 	},
 	"[markdown]": {
-		"editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+		"editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+		"editor.formatOnSave": true,
+		"editor.formatOnPaste": true
 	},
-	"markdown.styles": [".vscode/static/github-markdown.css"]
+	"markdown.styles": [".vscode/static/github-markdown.css"],
+	"vitest.disableWorkspaceWarning": true
 }
