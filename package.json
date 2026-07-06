@@ -7,7 +7,6 @@
 		"build": "turbo run build:dev build:prod --log-order=grouped --log-prefix=none",
 		"ci:build": "CI=\"true\" turbo run build",
 		"ci:test": "turbo run test",
-		"ci:version": "changeset version && biome format --write",
 		"lint": "biome check --max-diagnostics=none",
 		"lint:fix": "biome check --write --max-diagnostics=none",
 		"lint:fix:unsafe": "biome check --write --unsafe --max-diagnostics=none",
