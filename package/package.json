@@ -30,7 +30,7 @@
 		"build:dev": "bun run bun.config.ts --env-mode dev",
 		"build:npm": "bun run bun.config.ts --env-mode npm",
 		"test": "NODE_ENV=test bun test",
-		"typecheck": "tsgo --noEmit"
+		"typecheck": "tsc"
 	},
 	"dependencies": {
 		"@opentelemetry/api": "^1.9.0",

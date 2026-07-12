@@ -16,7 +16,7 @@
 		"prepare": "husky",
 		"test": "turbo run test",
 		"typecheck": "turbo run types:check",
-		"types:check": "tsgo --noEmit"
+		"types:check": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@savvy-web/silk": "^1.2.0"

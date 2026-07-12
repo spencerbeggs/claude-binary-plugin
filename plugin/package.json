@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build:prod": "bun run plugin.build.ts",
-		"types:check": "tsgo --noEmit"
+		"types:check": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@effect/platform": "^0.96.0",
