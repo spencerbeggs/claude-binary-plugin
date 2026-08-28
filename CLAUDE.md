@@ -7,9 +7,14 @@ with code in this repository.
 
 `claude-binary-plugin` is a TypeScript SDK for building Claude Code plugins
 that compile to single-file Bun executables. It provides a declarative
-pipeline system for defining hooks and commands with Zod-validated
-inputs/outputs, OpenTelemetry observability, and type-safe state
-management.
+handler system for defining hooks and commands with Effect Schema-validated
+inputs/outputs, Effect services with layers for testability, OpenTelemetry
+observability, and type-safe state management.
+
+This is a Bun workspace monorepo with two packages:
+
+- `package/` — the `claude-binary-plugin` SDK (source, tests, build)
+- `plugin/` — a test plugin that dogfoods the SDK
 
 ## Release Status
 
@@ -17,7 +22,6 @@ management.
 
 - **Feature complete** - Core functionality is implemented and stable
 - **API refinement phase** - Focusing on API ergonomics and consistency
-- **Documentation focus** - Improving docs to help users understand usage
 - **Not yet public** - No external users or published packages
 - **No backward compatibility concerns** - Make clean API changes freely
   without deprecation warnings or migration guides
@@ -30,38 +34,44 @@ shims. Remove old code entirely rather than maintaining aliases.
 Load these docs on-demand when working on the relevant subsystem.
 Do NOT load unless the task specifically requires the details within.
 
-- `.claude/design/architecture.md` - System architecture, data flow, build
-  system, command runtime, OTEL sidecar spawning and handshake
-- `.claude/design/cli.md` - CLI binary usage, zero-config builds
-- `.claude/design/scaffold.md` - Scaffold templates, interactive flow
-- `.claude/design/schema.md` - OTEL telemetry schema, event types, metrics
-- `.claude/design/testing.md` - Testing utilities and fluent API
-- `docs/README.md` - User-facing SDK documentation and guides.
-  Load when writing or reviewing end-user documentation.
+- `.claude/design/architecture.md` - System architecture, directory structure,
+  service/layer pattern, handler execution flow, build system
+- `.claude/design/services.md` - All 18 Effect services, their interfaces,
+  Live/Test layers, PipelineLive, LoggerLive
+- `.claude/design/schema.md` - Effect Schema usage, Schema.Class pattern,
+  hook event schemas, pipeline output schemas, branded types
+- `.claude/design/testing.md` - Layer-based testing, test factories,
+  PluginTester fluent API, test file organization
+- `.claude/design/cli.md` - CLI build command, artifact generation
+- `.claude/design/otel.md` - OTEL telemetry, sidecar architecture, IPC
+  protocol (~95% Effect-native)
 
 ## Development Commands
 
 ```bash
-# Install dependencies
+# Install all workspace dependencies
 bun install
 
-# Scaffold a new plugin project
-claude-binary-plugin init [directory]
+# Run SDK tests
+cd package && bun test
 
-# Run tests (LLM-formatted output)
-bun run test:ai
-
-# Run tests (verbose)
+# Run all tests via turbo
 bun run test
 
-# Type check
+# Type check all workspaces
 bun run typecheck
 
 # Lint and format
 bun run lint:fix
 
-# Build (compiles the package)
-bun run build
+# Build SDK (compiles the package)
+cd package && bun run build
+
+# Build test plugin
+cd plugin && bun run build
+
+# Test plugin live
+claude --plugin-dir ./plugin
 ```
 
 ## Code Conventions
@@ -71,7 +81,7 @@ bun run build
 - Use `bun` instead of `node` for all runtime operations
 - Use `Bun.file()` for file I/O, `Bun.$` for shell commands
 - Use `bun:test` for testing, not jest or vitest
-- Bun auto-loads `.env` files - don't use dotenv
+- Bun auto-loads `.env` files — don't use dotenv
 
 ### TypeScript
 
@@ -80,48 +90,163 @@ bun run build
 - Type-only imports must use `import type`
 - Uses `tsgo` (native TypeScript) for type checking
 
+### Effect Patterns
+
+- Services use `Context.Tag` in `src/services/`, implementations in `src/layers/`
+- Errors use `Data.TaggedError`, one per file in `src/errors/`
+- Hook modules in `src/hooks/` — one file per hook type with event, input, output, response
+- Pipeline outputs use `Schema.Union` discriminated on `status`
+- No barrel files — import directly from source files
+- Two entry points: `src/index.ts` (public), `src/testing.ts` (test utils)
+- Test layers replace global mocking (no `Bun.env` mutation, no `process.exit` mocking)
+
 ### Testing
 
-- Use `plugin.test()` fluent API for hook and command tests
-- Always call `ctx.dispose()` in `afterEach` to prevent test pollution
-- Use `mockBunShell()` + `withShell()`/`withShellMatching()` for shell mocks
-- See `.claude/design/testing.md` for full PluginTester API
+- All tests in `__tests__/` mirroring `src/` structure
+- Use test layer factories for service mocking
+- `ClaudePlugin.test()` provides fluent PluginTester API
+- Always call `tester.dispose()` in `afterEach`
 
-### Type Safety Utilities
+## Plugin Definition API
 
-The SDK uses `type-fest` for enhanced type safety. See `.claude/design/architecture.md`
-for detailed examples.
+Plugins use a three-file pattern: config, hooks, build.
 
-- **JSON Types** - `JsonObject`, `JsonValue` for tool inputs/outputs
-- **Branded Types** - `SessionId`, `ToolUseId`, `TranscriptPath`, `HookName`
-- **Immutable Context** - Handler params use `ReadonlyDeep<T>`
+### Config (`plugin.config.ts`)
+
+```typescript
+import { PluginConfig } from "claude-binary-plugin";
+import type { InferHandlers } from "claude-binary-plugin";
+import { Schema } from "effect";
+
+class MyConfig extends PluginConfig.extend<MyConfig>("MyConfig")({
+  prefix: Schema.Literal("MY_PLUGIN"),
+}) {
+  static readonly options = Schema.Struct({ TIMEOUT_MS: Schema.Number });
+  static readonly state = MyState;
+  static readonly setup = async ({ cwd }) => new MyState({ ... });
+}
+export type Handlers = InferHandlers<typeof MyConfig>;
+export default MyConfig;
+```
+
+### Hooks (`hooks/*.ts`)
+
+```typescript
+import type { Handlers } from "../plugin.config.js";
+const handler: Handlers["PreToolUse"] = ({ input, options, state }) => { ... };
+export default handler;
+```
+
+### Build (`plugin.build.ts`)
+
+```typescript
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+
+const plugin = new ClaudePlugin(MyConfig, {
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
+});
+await plugin.build({ rootDir: import.meta.dir });
+```
+
+State can be a `Schema.Class` with methods:
+
+```typescript
+class MyState extends Schema.Class<MyState>("MyState")({
+  git: Schema.Boolean,
+}) {
+  canUseGit() { return this.git; }
+}
+```
+
+### Outcomes System
+
+Handlers return `Outcome` class instances instead of raw objects:
+
+- **PreToolUse**: `Allow`, `Deny`, `Ask`, `Modify`, `Skip`
+- **PostToolUse**: `Block`, `Continue`, `AddContext`, `NoAction`, `Skip`
+- **SessionStart**: `AddContext`, `NoAction`
+- **Stop**: `Block`, `Continue`, `Skip`
+- **UserPromptSubmit**: `Block`, `Continue`, `AddContext`, `NoAction`, `Skip`
+- **PermissionRequest**: `Allow`, `Deny`
+- **PermissionDenied**: `Retry`, `NoAction`
+- **FileChanged / CwdChanged**: `WatchPaths`, `NoAction`
+- **Passthrough hooks**: `NoAction`
+
+Use `NoAction.implicit()` for handlers that return without an explicit outcome.
+
+Extend outcomes with domain fields:
+
+```typescript
+class LintDeny extends Deny.extend<LintDeny>("LintDeny")({ ... }) {}
+```
+
+Use `ContextBuilder`, `MarkdownContext`, `XmlContext` for composing `additionalContext`.
+
+### Handler Types
+
+- `SessionStartHandler`, `PreToolUseHandler`, `PostToolUseHandler`, etc.
+- `InferHandlers<typeof MyConfig>` — infer typed handler signatures from config statics
+- `InferPluginOptions<T>`, `InferPluginState<T>` — extract types from statics
+
+## Hook Types (26 total)
+
+PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, PermissionDenied,
+Notification, UserPromptSubmit, Stop, StopFailure, SubagentStart, SubagentStop,
+TaskCreated, TaskCompleted, TeammateIdle, InstructionsLoaded, ConfigChange,
+CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, PreCompact,
+PostCompact, Elicitation, ElicitationResult, SessionStart, SessionEnd
 
 ## Key Exports
-
-All exports are from the main entry point:
 
 ```typescript
 import {
   // Plugin definition
-  ClaudeBinaryPlugin,
-  Pipeline,
-  PipelineRuntime,
+  PluginConfig, ClaudePlugin,
 
-  // State management
-  PluginEnv,
-  SessionRegistry,
+  // Outcomes
+  Allow, Deny, Ask, Modify, Block, Continue,
+  AddContext, NoAction, Skip, Retry, WatchPaths, Outcome,
+  ContextBuilder, MarkdownContext, XmlContext,
 
-  // Testing
-  PluginTester,
-  TestFixtures,
-  MockState,
+  // Schema.Class event types (type + schema)
+  PreToolUseEvent, PostToolUseEvent, PermissionDeniedEvent, SessionStartEvent,
+  // ... all 26 hook event types
+
+  // Schema.Class input types
+  PreToolUseInput, PostToolUseInput, PermissionDeniedInput, SessionStartInput,
+  // ... all 26 hook input types
+
+  // Branded types
+  NormalizedPath,
+
+  // Services
+  StdinReader, EnvLoader, SchemaValidatorService,
+  PlatformInfo, PluginInfoService, ClaudeAccountInfo,
+  GitInfo, MessageRouter,
+
+  // Layers
+  PipelineLive,
+
+  // Errors
+  PipelineError, SchemaValidationError,
 
   // OTEL
   OtelConfig,
-  TelemetryEmitter,
-  TelemetryMetrics,
-  TelemetrySpan,
 } from "claude-binary-plugin";
+
+// Test utilities (separate entry point)
+import {
+  makeStdinReaderTest,
+  makeTelemetryTest,
+  makeShellExecutorTest,
+  makePlatformInfoTest,
+  makePluginInfoServiceTest,
+  makeClaudeAccountInfoTest,
+  makeGitInfoTest,
+  makeMessageRouterTest,
+} from "claude-binary-plugin/testing";
 ```
 
 ## Core Source Files
@@ -130,39 +255,29 @@ Load these files as needed for deeper context:
 
 | File | Purpose |
 | ---- | ------- |
-| `src/pipeline/config.ts` | `ClaudeBinaryPlugin.create()` factory |
-| `src/pipeline/classes/PipelineRuntime.ts` | `PipelineRuntime.run()` |
-| `src/pipeline/classes/Pipeline.ts` | `Pipeline` utilities |
-| `src/pipeline/types.ts` | Output schemas per hook type |
+| `src/plugin/config.ts` | `PluginConfig` Schema.Class, `ClaudePlugin` orchestrator |
+| `src/plugin/handler.ts` | Handler type definitions and registration |
+| `src/plugin/commands.ts` | Command registration types |
+| `src/plugin/infer.ts` | `InferHandlers`, `InferPluginOptions`, `InferPluginState` |
+| `src/plugin/state.ts` | State management types |
+| `src/hooks/` | 26 per-hook modules (event, input, output, response per hook) |
+| `src/hooks/shared.ts` | Shared schemas and utilities across hooks |
+| `src/hooks/types.ts` | Hook type definitions and type maps |
+| `src/layers/PipelineRuntime.ts` | `PipelineRuntime.run()` |
+| `src/layers/PipelineLive.ts` | Composed service layer |
+| `src/schemas/hook-events.ts` | Re-exports of event types from hook modules |
+| `src/schemas/hook-literals.ts` | Hook type enums and literals |
+| `src/schemas/branded.ts` | `NormalizedPath` and other branded types |
+| `src/outcomes/` | Outcome classes (Allow, Deny, Retry, WatchPaths, etc.) |
+| `src/services/SessionStore.ts` | `SessionStore` service, `SessionRegistration` type |
 | `src/build/builder.ts` | `PluginBuilder` class |
-| `src/state/classes/PluginEnv.ts` | `PluginEnv` base class |
-| `src/state/classes/SessionRegistry.ts` | SQLite session lookup |
-| `src/commands/runtime.ts` | `Commands` class |
-| `src/core/schemas.ts` | Input Zod schemas |
-| `src/core/tool-inputs.ts` | Typed tool inputs |
-| `src/testing/builder.ts` | `PluginTester` class |
-| `src/testing/mocks.ts` | `TestFixtures`, `MockState` |
-| `src/cli/init/index.ts` | `init` command definition |
-| `src/cli/init/ink/App.tsx` | Interactive Ink wizard |
-| `src/cli/init/scaffold.ts` | Template engine |
-| `src/cli/init/detect-defaults.ts` | Git/GitHub default detection |
+| `src/types/tool-inputs.ts` | Typed tool inputs |
 
-### OTEL Classes
+## Known Issues
 
-Located in `src/otel/classes/` unless noted:
-
-| Class | Purpose |
-| ----- | ------- |
-| `OtelConfig` | Configuration, `isEnabled()` |
-| `TelemetryEmitter` | Event emission |
-| `TelemetryMetrics` | Metric recording |
-| `TelemetrySpan` | Span instrumentation |
-| `Platform` | Platform detection |
-| `GitInfo` | Git repo detection |
-| `PluginInfo` | Plugin metadata |
-| `SidecarLauncher` | Sidecar spawning |
-| `SidecarClientPool` | Client lifecycle |
-| `SidecarClient` | IPC client (`src/otel/classes/SidecarClient.ts`) |
+- **Bun tree-shaking (SOLVED)**: State Schema.Class methods previously got
+  stripped from compiled binaries. Solved by `PluginConfig.extend()` with
+  `static readonly` properties — statics survive `bun build --compile`.
 
 ## Environment Variables
 
@@ -170,7 +285,7 @@ Located in `src/otel/classes/` unless noted:
 
 - `CLAUDE_PLUGIN_ROOT` - Plugin directory path
 - `CLAUDE_PROJECT_DIR` - User's project directory
-- `CLAUDE_ENV_FILE` - Session env file path (for persisted vars)
+- `CLAUDE_ENV_FILE` - Session env file path
 - `CLAUDE_SESSION_ID` - Session UUID
 
 ### OTEL Configuration

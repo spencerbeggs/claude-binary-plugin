@@ -2,45 +2,16 @@
 	"$schema": "https://turborepo.com/schema.v2.json",
 	"globalPassThroughEnv": ["HOME", "XDG_CONFIG_HOME"],
 	"tasks": {
-		"build": {
-			"cache": true,
-			"outputs": ["dist/**"]
-		},
-		"build:dev": {
-			"dependsOn": ["types:check"],
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"$TURBO_ROOT$/package.json",
-				"$TURBO_ROOT$/bun.lock",
-				"$TURBO_ROOT$/tsconfig.json",
-				"*.ts",
-				"src/**/*"
-			],
-			"outputs": ["dist/dev/**"]
-		},
-		"build:npm": {
-			"dependsOn": ["types:check"],
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"$TURBO_ROOT$/package.json",
-				"$TURBO_ROOT$/bun.lock",
-				"$TURBO_ROOT$/tsconfig.json",
-				"*.ts",
-				"src/**/*"
-			],
-			"outputs": ["dist/npm/**"]
-		},
 		"test": {
 			"cache": false,
 			"dependsOn": ["typecheck"]
 		},
-		"types:check": {
+		"typecheck": {
 			"cache": true,
 			"inputs": [
 				"$TURBO_DEFAULT$",
-				"$TURBO_ROOT$/package.json",
 				"$TURBO_ROOT$/bun.lock",
-				"$TURBO_ROOT$/tsconfig.json",
+				"tsconfig.json",
 				"*.ts",
 				"*.mts",
 				"*.cts",

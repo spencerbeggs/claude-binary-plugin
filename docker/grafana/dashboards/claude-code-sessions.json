@@ -1,0 +1,557 @@
+{
+	"timezone": "browser",
+	"editable": true,
+	"graphTooltip": 1,
+	"fiscalYearStartMonth": 0,
+	"schemaVersion": 41,
+	"templating": {
+		"list": [
+			{
+				"type": "query",
+				"name": "session_id",
+				"skipUrlSync": false,
+				"multi": false,
+				"allowCustomValue": true,
+				"includeAll": false,
+				"auto": false,
+				"auto_min": "10s",
+				"auto_count": 30,
+				"label": "Session ID",
+				"description": "Select a session from the dropdown",
+				"datasource": {
+					"type": "loki",
+					"uid": "loki"
+				},
+				"query": "label_values({service_name=\"claude-code\"}, session_id)",
+				"refresh": 2,
+				"sort": 2
+			},
+			{
+				"type": "custom",
+				"name": "terminal_type",
+				"skipUrlSync": false,
+				"multi": true,
+				"allowCustomValue": true,
+				"includeAll": true,
+				"auto": false,
+				"auto_min": "10s",
+				"auto_count": 30,
+				"label": "Terminal",
+				"query": "WezTerm,VSCode,Cursor,Terminal,iTerm2,Ghostty,Alacritty,Kitty",
+				"allValue": ".*",
+				"current": {
+					"text": "All",
+					"value": "$__all",
+					"selected": true
+				}
+			},
+			{
+				"type": "custom",
+				"name": "model",
+				"skipUrlSync": false,
+				"multi": true,
+				"allowCustomValue": true,
+				"includeAll": true,
+				"auto": false,
+				"auto_min": "10s",
+				"auto_count": 30,
+				"label": "Model",
+				"query": "claude-opus-4-5-20251101,claude-sonnet-4-20250514,claude-haiku-4-5-20251001",
+				"allValue": ".*",
+				"current": {
+					"text": "All",
+					"value": "$__all",
+					"selected": true
+				}
+			}
+		]
+	},
+	"annotations": {},
+	"title": "Claude Code Sessions",
+	"uid": "claude-code-sessions",
+	"description": "Examine individual Claude Code sessions with logs and metrics",
+	"tags": ["claude", "logs", "sessions"],
+	"time": {
+		"from": "now-1h",
+		"to": "now"
+	},
+	"refresh": "30s",
+	"panels": [
+		{
+			"type": "row",
+			"collapsed": true,
+			"id": 0,
+			"panels": [
+				{
+					"type": "logs",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "Tool Activity",
+					"description": "Tool decisions and results for the selected session",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 16,
+						"w": 24,
+						"x": 0,
+						"y": 1
+					},
+					"options": {
+						"showLabels": false,
+						"showCommonLabels": false,
+						"showTime": true,
+						"showLogContextToggle": false,
+						"wrapLogMessage": true,
+						"prettifyLogMessage": false,
+						"enableLogDetails": true,
+						"sortOrder": "Descending",
+						"dedupStrategy": "none",
+						"enableInfiniteScrolling": true
+					},
+					"targets": [
+						{
+							"expr": "{service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" | event_name!=\"api_request\" | line_format \"{{ if eq .event_name \\\"tool_result\\\" }}✓ {{.tool_name}} ({{.duration_ms}}ms) {{ regexReplaceAll `.*\\\"description\\\":\\\"([^\\\"]+)\\\".*` .tool_parameters `$1` }}{{ else if eq .event_name \\\"tool_decision\\\" }}⚡ {{.tool_name}} [{{.decision}}]{{ else }}{{__line__}}{{ end }}\"",
+							"refId": "A",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					]
+				}
+			],
+			"title": "Tool Activity",
+			"gridPos": {
+				"x": 0,
+				"y": 0,
+				"h": 1,
+				"w": 24
+			}
+		},
+		{
+			"type": "row",
+			"collapsed": true,
+			"id": 0,
+			"panels": [
+				{
+					"type": "timeseries",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "Total Events",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 4,
+						"w": 8,
+						"x": 0,
+						"y": 18
+					},
+					"fieldConfig": {
+						"defaults": {
+							"custom": {
+								"drawStyle": "line",
+								"fillOpacity": 0,
+								"showPoints": "never"
+							}
+						},
+						"overrides": []
+					},
+					"options": {
+						"legend": {
+							"displayMode": "hidden",
+							"placement": "bottom",
+							"showLegend": false,
+							"calcs": []
+						},
+						"tooltip": {
+							"mode": "single",
+							"sort": "asc"
+						}
+					},
+					"targets": [
+						{
+							"expr": "count_over_time({service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" [1m])",
+							"refId": "A",
+							"legendFormat": "Events",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					]
+				},
+				{
+					"type": "timeseries",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "Total Cost (USD)",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 4,
+						"w": 8,
+						"x": 8,
+						"y": 18
+					},
+					"fieldConfig": {
+						"defaults": {
+							"custom": {
+								"drawStyle": "line",
+								"fillOpacity": 10,
+								"showPoints": "never"
+							}
+						},
+						"overrides": []
+					},
+					"options": {
+						"legend": {
+							"displayMode": "hidden",
+							"placement": "bottom",
+							"showLegend": false,
+							"calcs": []
+						},
+						"tooltip": {
+							"mode": "single",
+							"sort": "asc"
+						}
+					},
+					"targets": [
+						{
+							"expr": "sum_over_time({service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" | event_name=\"api_request\" | unwrap cost_usd [1m])",
+							"refId": "A",
+							"legendFormat": "Cost",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					]
+				},
+				{
+					"type": "timeseries",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "Tools Used",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 4,
+						"w": 8,
+						"x": 16,
+						"y": 18
+					},
+					"fieldConfig": {
+						"defaults": {
+							"custom": {
+								"drawStyle": "line",
+								"fillOpacity": 0,
+								"showPoints": "never"
+							}
+						},
+						"overrides": []
+					},
+					"options": {
+						"legend": {
+							"displayMode": "hidden",
+							"placement": "bottom",
+							"showLegend": false,
+							"calcs": []
+						},
+						"tooltip": {
+							"mode": "single",
+							"sort": "asc"
+						}
+					},
+					"targets": [
+						{
+							"expr": "count_over_time({service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" | event_name=\"tool_result\" [1m])",
+							"refId": "A",
+							"legendFormat": "Tools",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					]
+				},
+				{
+					"type": "timeseries",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "Event Timeline",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 8,
+						"w": 24,
+						"x": 0,
+						"y": 22
+					},
+					"fieldConfig": {
+						"defaults": {
+							"custom": {
+								"drawStyle": "line",
+								"fillOpacity": 25,
+								"showPoints": "never",
+								"stacking": {
+									"mode": "normal",
+									"group": "A"
+								}
+							}
+						},
+						"overrides": []
+					},
+					"options": {
+						"legend": {
+							"displayMode": "table",
+							"placement": "right",
+							"showLegend": true,
+							"calcs": ["sum", "last"]
+						},
+						"tooltip": {
+							"mode": "multi",
+							"sort": "desc"
+						}
+					},
+					"targets": [
+						{
+							"expr": "sum by (event_name) (count_over_time({service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" [1m]))",
+							"refId": "A",
+							"legendFormat": "{{event_name}}",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					]
+				},
+				{
+					"type": "timeseries",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "Tool Usage Breakdown",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 8,
+						"w": 24,
+						"x": 0,
+						"y": 30
+					},
+					"fieldConfig": {
+						"defaults": {
+							"custom": {
+								"drawStyle": "line",
+								"fillOpacity": 25,
+								"showPoints": "never",
+								"stacking": {
+									"mode": "normal",
+									"group": "A"
+								}
+							}
+						},
+						"overrides": []
+					},
+					"options": {
+						"legend": {
+							"displayMode": "table",
+							"placement": "right",
+							"showLegend": true,
+							"calcs": ["sum", "last"]
+						},
+						"tooltip": {
+							"mode": "multi",
+							"sort": "desc"
+						}
+					},
+					"targets": [
+						{
+							"expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" | event_name=\"tool_result\" [1m]))",
+							"refId": "A",
+							"legendFormat": "{{tool_name}}",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					]
+				}
+			],
+			"title": "Session Overview",
+			"gridPos": {
+				"h": 1,
+				"w": 24,
+				"x": 0,
+				"y": 17
+			}
+		},
+		{
+			"type": "row",
+			"collapsed": true,
+			"id": 0,
+			"panels": [
+				{
+					"type": "table",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "API Requests",
+					"description": "API requests with token usage and costs",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 10,
+						"w": 24,
+						"x": 0,
+						"y": 39
+					},
+					"options": {
+						"frameIndex": 0,
+						"showHeader": true,
+						"showTypeIcons": false,
+						"footer": {
+							"show": false,
+							"reducer": ["sum"],
+							"enablePagination": true,
+							"countRows": true
+						},
+						"cellHeight": "sm",
+						"sortBy": [
+							{
+								"displayName": "Time",
+								"desc": true
+							}
+						]
+					},
+					"targets": [
+						{
+							"expr": "{service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\" | event_name=\"api_request\" | line_format \"{{.model}} | Cache: {{.cache_creation_tokens}}/{{.cache_read_tokens}} | In: {{.input_tokens}} | Out: {{.output_tokens}} | Cost: ${{.cost_usd}} | Duration: {{.duration_ms}}ms\"",
+							"refId": "A",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"id": "organize",
+							"options": {
+								"excludeByName": {
+									"labels": true,
+									"tsNs": true,
+									"labelTypes": true,
+									"id": true,
+									"Repository": true,
+									"Commit": true,
+									"PR": true
+								},
+								"renameByName": {
+									"Line": "Request Details"
+								}
+							}
+						}
+					]
+				}
+			],
+			"title": "API Requests",
+			"gridPos": {
+				"h": 1,
+				"w": 24,
+				"x": 0,
+				"y": 38
+			}
+		},
+		{
+			"type": "row",
+			"collapsed": true,
+			"id": 0,
+			"panels": [
+				{
+					"type": "table",
+					"transparent": false,
+					"repeatDirection": "h",
+					"title": "All Events",
+					"description": "All session events with details",
+					"datasource": {
+						"type": "loki",
+						"uid": "loki"
+					},
+					"gridPos": {
+						"h": 12,
+						"w": 24,
+						"x": 0,
+						"y": 50
+					},
+					"options": {
+						"frameIndex": 0,
+						"showHeader": true,
+						"showTypeIcons": false,
+						"footer": {
+							"show": false,
+							"reducer": ["count"],
+							"enablePagination": true,
+							"countRows": true
+						},
+						"cellHeight": "sm",
+						"sortBy": [
+							{
+								"displayName": "Time",
+								"desc": true
+							}
+						]
+					},
+					"targets": [
+						{
+							"expr": "{service_name=\"claude-code\", session_id=\"$session_id\"} | terminal_type=~\"$terminal_type\" | model=~\"$model\"",
+							"refId": "A",
+							"datasource": {
+								"type": "loki",
+								"uid": "loki"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"id": "organize",
+							"options": {
+								"excludeByName": {
+									"labels": true,
+									"tsNs": true,
+									"labelTypes": true,
+									"id": true,
+									"Repository": true,
+									"Commit": true,
+									"PR": true
+								},
+								"renameByName": {
+									"Line": "Event"
+								}
+							}
+						}
+					]
+				}
+			],
+			"title": "All Events",
+			"gridPos": {
+				"h": 1,
+				"w": 24,
+				"x": 0,
+				"y": 49
+			}
+		}
+	]
+}

@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"outDir": "./dist",
+		"rootDir": ".",
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ESNext"
+	},
+	"include": ["*.ts", "hooks/**/*.ts"],
+	"types": ["bun"]
+}
