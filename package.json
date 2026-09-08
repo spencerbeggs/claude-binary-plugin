@@ -20,7 +20,7 @@
 		"types:check": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@savvy-web/silk": "^3.11.1"
+		"@savvy-web/silk": "^3.14.0"
 	},
 	"packageManager": "bun@1.3.14",
 	"engines": {
