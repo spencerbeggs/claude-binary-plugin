@@ -1,374 +1,342 @@
----
-status: current
-module: claude-binary-plugin
-category: observability
-created: 2026-01-22
-updated: 2026-02-10
-last-synced: 2026-02-10
-completeness: 95
-related:
-  - .claude/design/architecture.md
-  - .claude/design/testing.md
-dependencies: []
----
-
-# OTEL Schema Documentation
-
-This document describes the OpenTelemetry schema used by the
-`claude-binary-plugin` SDK for hook telemetry.
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Scope and Service](#scope-and-service)
-3. [Event Types](#event-types)
-4. [Attributes](#attributes)
-5. [Metrics](#metrics)
-6. [Hook Outcome Model](#hook-outcome-model)
-7. [Configuration](#configuration)
-
----
+# Schema
 
 ## Overview
 
-The SDK emits telemetry aligned with Anthropic's Claude Code native
-telemetry schema. Events use the `claude_code.hook.*` naming pattern
-and are distinguished from Anthropic's native events by scope name.
+Effect Schema is the single source of truth for all data types in the SDK.
+The `Schema.Class` pattern provides a TypeScript type, a runtime schema, and
+an `instanceof` check in a single declaration.
 
-Key design principles:
+## Four-Layer Pipeline
 
-- **Anthropic alignment** - Attribute names use dot notation matching
-  Claude Code's native schema (e.g., `session.id`, `tool.name`)
-- **Scope separation** - Our scope (`systems.savvyweb.claude_code.events`)
-  distinguishes from Anthropic's (`com.anthropic.claude_code.events`)
-- **Fire-and-forget** - Telemetry never blocks hook execution
-- **Semantic outcomes** - Hook results are classified for easy filtering
-- **Class-based API** - All telemetry accessed via static class methods
+Data flows through four schema layers from Claude Code to response:
 
-### Telemetry Classes
+```text
+stdin JSON -> Input Schema.Class -> Event Schema.Class -> Outcome (or HookOutput) -> Response -> stdout JSON
+```
 
-The SDK provides three primary classes for telemetry emission:
+| Layer | Location | Purpose |
+| ------- | ---------- | --------- |
+| Input | `hooks/{HookType}.ts` | Wire format from Claude Code stdin (per-hook module) |
+| Event | `hooks/{HookType}.ts` | Enriched event with `fromInput()` factory, uses NormalizedPath |
+| Outcome | `outcomes/*.ts` | Typed handler return value (new pattern) |
+| HookOutput | `hooks/{HookType}.ts` / `hooks/shared.ts` | Legacy handler return (discriminated on `status`) |
+| Response | `hooks/{HookType}.ts` | Wire format for Claude Code stdout (per-hook module) |
+
+All four layers are co-located in each per-hook module (`src/hooks/{HookType}.ts`).
+Shared output infrastructure lives in `hooks/shared.ts`. The `schemas/hook-events.ts`
+file still provides the `HookEventSchemas` discriminated union registry that
+aggregates all Event classes.
+
+Handlers can return either an Outcome class instance (preferred) or a legacy
+HookOutput object. `PluginRuntime` handles both paths.
+
+## Input Schema Classes (per-hook modules)
+
+Each hook type has an Input class that matches Claude Code's JSON wire format,
+defined in its per-hook module (`src/hooks/{HookType}.ts`). Previously these
+were in a monolithic `schemas/hook-inputs.ts` (now deleted).
+All share `HookInputBaseFields`:
 
 ```typescript
-import {
-  TelemetryEmitter,
-  TelemetryMetrics,
-  TelemetrySpan,
-  OtelConfig,
-} from "claude-binary-plugin";
+const HookInputBaseFields = {
+  session_id: SessionIdSchema,           // UUID, branded
+  transcript_path: Schema.optional(TranscriptPathSchema),
+  cwd: Schema.optional(Schema.String),
+  permission_mode: Schema.optional(HookPermissionsModeSchema),
+  hook_event_name: HookTypeSchema,       // Overridden per class with literal
+  agent_id: Schema.optional(Schema.String),
+  agent_type: Schema.optional(Schema.String),
+};
+```
 
-// Check if telemetry is enabled
-if (OtelConfig.isEnabled()) {
-  // Emit events
-  TelemetryEmitter.emitHookExecution(event, "pre-bash", { ... });
+### All 26 Input Classes
 
-  // Record metrics
-  TelemetryMetrics.recordCounter(event, "files.processed", 5);
+| Input Class | Hook-Specific Fields |
+| ------------- | -------------------- |
+| `PreToolUseInput` | `tool_name`, `tool_input`, `tool_use_id` |
+| `PostToolUseInput` | `tool_name`, `tool_input`, `tool_response`, `tool_use_id` |
+| `PostToolUseFailureInput` | `tool_name`, `tool_input`, `tool_use_id`, `error` |
+| `PermissionRequestInput` | `tool_name`, `tool_input`, `permission_suggestions` |
+| `PermissionDeniedInput` | `tool_name`, `tool_input`, `tool_use_id`, `deny_reason` |
+| `NotificationInput` | `message`, `notification_type` |
+| `UserPromptSubmitInput` | `prompt` |
+| `StopInput` | `stop_hook_active`, `last_assistant_message` |
+| `StopFailureInput` | `error_type`, `error_message`, `last_assistant_message` |
+| `SubagentStartInput` | _(base fields only)_ |
+| `SubagentStopInput` | `stop_hook_active`, `last_assistant_message` |
+| `TaskCreatedInput` | `task_id`, `task_name`, `description`, `parent_task_id` |
+| `TaskCompletedInput` | `task_id`, `task_name`, `status`, `result`, `error` |
+| `TeammateIdleInput` | _(base fields only)_ |
+| `InstructionsLoadedInput` | `reason`, `files`, `memory_type`, `paths` |
+| `ConfigChangeInput` | `source`, `changed_keys` |
+| `CwdChangedInput` | `old_cwd`, `new_cwd` |
+| `FileChangedInput` | `file_path`, `event_type` |
+| `WorktreeCreateInput` | `worktree_path` |
+| `WorktreeRemoveInput` | `worktree_path` |
+| `PreCompactInput` | `trigger`, `custom_instructions` |
+| `PostCompactInput` | `compacted_tokens`, `remaining_tokens` |
+| `ElicitationInput` | `action`, `elicitation_id`, `values`, `schema` |
+| `ElicitationResultInput` | `action`, `elicitation_id`, `values` |
+| `SessionStartInput` | `source`, `model` |
+| `SessionEndInput` | `reason` |
 
-  // Instrument with spans
-  await TelemetrySpan.withHookSpan(event, "validate", async () => { ... });
+## Event Schema Classes (per-hook modules + `hook-events.ts` registry)
+
+Event classes are defined in each per-hook module (`src/hooks/{HookType}.ts`)
+and mirror Input classes but add a `fromInput()` static factory. The
+`fromInput()` method normalizes raw string paths from the Input wire format
+into `NormalizedPath` branded types using `normalizePath()`.
+
+The `HookEventSchemas` class in `schemas/hook-events.ts` still provides a
+unified discriminated union and parse methods with annotation-based metadata.
+
+```typescript
+// In src/hooks/PreToolUse.ts:
+class PreToolUseEvent extends Schema.Class<PreToolUseEvent>("PreToolUseEvent")({
+  ...HookEventBaseSchema.fields,
+  hook_event_name: Schema.Literal("PreToolUse"),
+  tool_name: Schema.String,
+  tool_input: JsonObjectSchema,
+  tool_use_id: ToolUseIdSchema,
+}) {
+  static fromInput(input: typeof PreToolUseInput.Type): PreToolUseEvent { ... }
 }
 ```
 
-| Class | Purpose |
-| ----- | ------- |
-| `TelemetryEmitter` | Emit events (`emitHookExecution`, etc.) |
-| `TelemetryMetrics` | Record metrics (counters, histograms, gauges) |
-| `TelemetrySpan` | Span instrumentation for tracing |
-| `OtelConfig` | Configuration and `isEnabled()` check |
-
----
-
-## Scope and Service
-
-| Field | Value |
-| ----- | ----- |
-| Scope Name | `systems.savvyweb.claude_code.events` |
-| Service Name | `claude-code` |
-| Service Namespace | `claude-code` |
-
-The scope name allows queries to filter between:
-
-- `scope_name = "com.anthropic.claude_code.events"` - Native Claude Code
-- `scope_name = "systems.savvyweb.claude_code.events"` - Plugin hooks
-
----
-
-## Event Types
-
-| Event Name | Description |
-| ---------- | ----------- |
-| `claude_code.hook.execution` | Hook execution completed |
-| `claude_code.hook.validation_error` | Schema validation failed |
-| `claude_code.hook.env_error` | Environment validation failed |
-| `claude_code.hook.fatal_error` | Uncaught exception |
-
-### claude_code.hook.execution
-
-Primary event emitted when a hook completes. Contains timing, decision,
-and outcome data.
-
-**Required Attributes:**
-
-| Attribute | Type | Description |
-| --------- | ---- | ----------- |
-| `session.id` | string | Claude Code session UUID |
-| `event.name` | string | `"claude_code.hook.execution"` |
-| `event.timestamp` | string | ISO 8601 timestamp |
-| `hook.name` | string | Custom hook name (e.g., "pre-bash") |
-| `hook.type` | string | Hook event type (PreToolUse, etc.) |
-| `hook.duration_ms` | number | Execution time in milliseconds |
-| `source` | string | Always `"hook"` |
-| `plugin.name` | string | Plugin name |
-| `plugin.version` | string | Plugin version |
-
-**Optional Attributes:**
-
-| Attribute | Type | Description |
-| --------- | ---- | ----------- |
-| `app.version` | string | Claude Code binary version |
-| `terminal.type` | string | Terminal type (iTerm, vscode, etc.) |
-| `hook.outcome` | string | Semantic outcome (see below) |
-| `tool.name` | string | Tool name (for tool hooks) |
-| `tool.use_id` | string | Tool use ID for correlation |
-| `permission.decision` | string | `"allow"`, `"deny"`, `"ask"` |
-| `decision.source` | string | Who made the decision |
-| `permission.decision_reason` | string | Reason shown to Claude |
-| `tool.input_modified` | boolean | Whether input was modified |
-| `hook.decision` | string | `"block"` for blocking hooks |
-| `reason` | string | Block reason |
-| `response.has_context` | boolean | Whether context was added |
-| `error` | string | Error message if failed |
-| `metrics.*` | number | Operational metrics |
-| `context.*` | any | Hook-specific context |
-
-### claude_code.hook.validation_error
-
-Emitted when Claude Code sends malformed event data that fails Zod
-schema validation.
-
-| Attribute | Type | Description |
-| --------- | ---- | ----------- |
-| `session.id` | string | Session UUID |
-| `hook.name` | string | Hook that received the error |
-| `validation.path` | string | Field path that failed |
-| `validation.issue_count` | number | Number of issues |
-| `error` | string | Formatted error message |
-
-### claude_code.hook.env_error
-
-Emitted when plugin environment variables fail validation.
-
-| Attribute | Type | Description |
-| --------- | ---- | ----------- |
-| `session.id` | string | Session UUID |
-| `hook.name` | string | Hook that received the error |
-| `env.class` | string | Env class name |
-| `validation.path` | string | Field path that failed |
-| `validation.issue_count` | number | Number of issues |
-| `error` | string | Formatted error message |
-
-### claude_code.hook.fatal_error
-
-Emitted when an uncaught exception or unhandled rejection occurs.
-
-| Attribute | Type | Description |
-| --------- | ---- | ----------- |
-| `session.id` | string | Session UUID |
-| `hook.name` | string | Hook that crashed |
-| `error.type` | string | Exception type |
-| `error` | string | Error message |
-| `error.is_validation` | boolean | Whether it was a validation error |
-
----
-
-## Attributes
-
-### Standard Attributes (Anthropic-Aligned)
-
-| Attribute | Description |
-| --------- | ----------- |
-| `session.id` | Claude Code session UUID |
-| `app.version` | Claude Code binary version |
-| `terminal.type` | Terminal type (iTerm, vscode, cursor, tmux) |
-| `organization.id` | Organization UUID (when authenticated) |
-| `user.account_uuid` | User account UUID (when authenticated) |
-| `event.name` | Event name |
-| `event.timestamp` | ISO 8601 timestamp |
-| `source` | Telemetry source (always "hook") |
-| `model` | Model being used |
-| `error` | Error message |
-
-### Hook Attributes
-
-| Attribute | Description |
-| --------- | ----------- |
-| `hook.name` | Custom hook identifier (e.g., "pre-bash") |
-| `hook.type` | Hook event type (PreToolUse, SessionStart, etc.) |
-| `hook.outcome` | Semantic outcome (see Outcome Model) |
-| `hook.decision` | Decision value (allow, deny, block) |
-| `hook.duration_ms` | Execution duration in milliseconds |
-
-### Tool Attributes
-
-| Attribute | Description |
-| --------- | ----------- |
-| `tool.name` | Tool name (Bash, Edit, Write, etc.) |
-| `tool.use_id` | Tool use ID for correlation |
-| `tool.input_hash` | Hash of tool input (for deduplication) |
-| `tool.input_modified` | Whether input was modified by hook |
-
-### Permission Attributes
-
-| Attribute | Description |
-| --------- | ----------- |
-| `permission.decision` | `"allow"`, `"deny"`, `"ask"` |
-| `permission.decision_reason` | Reason shown to Claude |
-| `decision.source` | Who made the decision (see below) |
-
-**Decision Source Values:**
-
-| Value | Description |
-| ----- | ----------- |
-| `config` | Decision from configuration (e.g., allowlist) |
-| `user_permanent` | User chose "always allow/deny" |
-| `user_temporary` | User chose "allow/deny this time" |
-| `hook` | Hook made the decision programmatically |
-| `user_abort` | User aborted the operation |
-| `user_reject` | User rejected the permission request |
-
-### Plugin Attributes
-
-| Attribute | Description |
-| --------- | ----------- |
-| `plugin.name` | Plugin name (e.g., "workflow") |
-| `plugin.version` | Plugin version from package.json |
-| `plugin.marketplace` | Marketplace name (optional) |
-| `plugin.marketplace.version` | Marketplace version |
-| `plugin.hook.handler` | Hook handler file path |
-| `plugin.command` | Command name (for command hooks) |
-
-### Git Attributes
-
-| Attribute | Description |
-| --------- | ----------- |
-| `git.branch` | Current git branch |
-| `git.provider` | Git provider (github, gitlab, bitbucket) |
-| `git.owner` | Repository owner/organization |
-| `git.repo` | Repository name |
-
-### Sidecar Attributes
-
-| Attribute | Description |
-| --------- | ----------- |
-| `sidecar.pid` | Sidecar process ID |
-| `sidecar.socket.path` | Unix socket path |
-| `sidecar.uptime_ms` | Sidecar uptime |
-| `sidecar.message.count` | Messages processed |
-
----
-
-## Metrics
-
-All metrics use the `claude_code.hook.*` prefix.
-
-| Metric Name | Type | Description |
-| ----------- | ---- | ----------- |
-| `claude_code.hook.count` | Counter | Hook invocations |
-| `claude_code.hook.duration_ms` | Histogram | Hook execution duration |
-| `claude_code.hook.tool_use.count` | Counter | Tool uses processed |
-| `claude_code.hook.tool_denied.count` | Counter | Denied tool uses |
-| `claude_code.hook.session.active` | Gauge | Active sessions |
-| `claude_code.hook.session.start.count` | Counter | Sessions started |
-| `claude_code.hook.session.end.count` | Counter | Sessions ended |
-| `claude_code.hook.sidecar.ipc.messages.sent` | Counter | IPC messages |
-| `claude_code.hook.sidecar.ipc.errors` | Counter | IPC errors |
-| `claude_code.hook.sidecar.ipc.latency_ms` | Histogram | IPC latency |
-
-### Metric Dimensions
-
-**Hook Count:**
-
-- `hook.name` - Custom hook name
-- `hook.decision` - Decision made
-- `tool.name` - Tool name (if applicable)
-
-**Hook Duration:**
-
-- `hook.name` - Custom hook name
-- `tool.name` - Tool name (if applicable)
-
----
-
-## Hook Outcome Model
-
-Outcomes classify what the hook decided to do, enabling easy filtering
-and analysis of hook behavior patterns.
-
-| Outcome | Description |
-| ------- | ----------- |
-| `skipped` | Hook didn't apply (wrong tool, disabled) |
-| `allowed` | PreToolUse: explicitly allowed |
-| `denied` | PreToolUse: explicitly denied |
-| `modified` | Tool input was modified |
-| `blocked` | PostToolUse/Stop: blocked continuation |
-| `context_added` | Added context for Claude |
-| `passthrough` | Analyzed but took no action |
-| `error` | Hook failed with error |
-
-### Outcome Mapping
-
-| Hook Response | Outcome |
-| ------------- | ------- |
-| `permissionDecision: "allow"` | `allowed` |
-| `permissionDecision: "deny"` | `denied` |
-| `permissionDecision: "ask"` | `passthrough` |
-| `updatedInput: {...}` | `modified` |
-| `additionalContext: "..."` | `context_added` |
-| `decision: "block"` | `blocked` |
-| (no fields set) | `passthrough` |
-| (hook disabled for tool) | `skipped` |
-| (exception thrown) | `error` |
-
-### Examples
-
-| Scenario | Outcome |
-| -------- | ------- |
-| Lint hook on non-JS file | `skipped` |
-| Security hook auto-allows git | `allowed` |
-| Security hook blocks rm -rf | `denied` |
-| Hook modifies command timeout | `modified` |
-| PostToolUse adds docs context | `context_added` |
-| Stop hook prevents completion | `blocked` |
-| Lint hook runs, no errors | `passthrough` |
-| Hook defers to user (ask) | `passthrough` |
-| Hook throws exception | `error` |
-
----
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint URL | `http://localhost:4318` |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | Protocol (http/grpc) | `http` |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Auth headers | - |
-| `OTEL_SERVICE_NAME` | Service name override | `claude-code` |
-| `OTEL_INCLUDE_SESSION_ID` | Include session.id | `true` |
-
-### Sidecar Configuration
-
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `OTEL_SIDECAR_SOCKET` | Unix socket path | Auto-generated |
-| `OTEL_SIDECAR_SESSION_ID` | Session ID | From hook |
-| `OTEL_SIDECAR_IDLE_TIMEOUT_MS` | Idle timeout | `300000` (5 min) |
-
----
-
-## References
-
-- [Claude Code Monitoring](https://docs.anthropic.com/en/docs/claude-code/monitoring)
-- [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/concepts/semantic-conventions/)
+The discriminated union `HookEventSchema = Schema.Union(PreToolUseEvent, ...)` enables
+parsing any hook event. Effect Schema auto-detects the discriminator from the
+`hook_event_name` literal fields.
+
+### Schema Metadata
+
+Custom annotations store description and capabilities per event type:
+
+```typescript
+const PreToolUseEventAnnotated = PreToolUseEvent.annotations({
+  [DescriptionAnnotation]: "Fired after Claude creates tool parameters but before the tool executes.",
+  [CapabilitiesAnnotation]: ["allow", "deny", "modify"],
+});
+```
+
+Retrieved via `HookEventSchemas.getMetadata(schema)` or `getSchemaMetadata(schema)`.
+
+## Outcome Schema Classes (`outcomes/*.ts`)
+
+Outcomes are the preferred return type for hook handlers. Each is a `Schema.Class`
+extending the abstract `Outcome` base. See `architecture.md` for full details.
+
+| Outcome | Wire Response | Telemetry Label |
+| ------- | ------------- | --------------- |
+| `Allow` | `{ permissionDecision: "allow" }` | `"allowed"` |
+| `Deny` | `{ permissionDecision: "deny", reason }` | `"denied"` |
+| `Ask` | `{ permissionDecision: "ask", message }` | `"asked"` |
+| `Modify` | `{ permissionDecision: "allow", updatedInput }` | `"modified"` |
+| `Block` | `{ decision: "block", reason }` | `"blocked"` |
+| `Continue` | `{}` | `"continued"` |
+| `AddContext` | `{ additionalContext }` | `"context_added"` |
+| `NoAction` | `{}` | `"no_action"` |
+| `Skip` | `{}` | `"skipped"` |
+| `Retry` | `{ hookSpecificOutput: { retry: true } }` | `"retried"` |
+| `WatchPaths` | `{ watchPaths: [...] }` | `"watch_paths"` |
+
+## OtelConfigData Schema
+
+```typescript
+class OtelConfigData extends Schema.Class<OtelConfigData>("OtelConfigData")({
+  enabled: Schema.Boolean,
+  endpoint: Schema.optional(Schema.String),
+  protocol: Schema.optional(Schema.Literal("http", "grpc")),
+  serviceName: Schema.optional(Schema.String),
+  headers: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  socketPath: Schema.optional(Schema.String),
+  tracesExporter: Schema.optional(Schema.String),
+  metricsExporter: Schema.optional(Schema.String),
+  logsExporter: Schema.optional(Schema.String),
+  resourceAttributes: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  deploymentEnv: Schema.optional(Schema.String),
+}) {}
+```
+
+## Hook Output Schemas (per-hook modules + `hooks/shared.ts`) [Legacy]
+
+Hook outputs are the legacy return format, discriminated unions on `status`.
+Each hook type has its own output schema constraining valid `action` values.
+These are now co-located in per-hook modules; shared base schemas live in
+`hooks/shared.ts`. The former monolithic `schemas/hook-outputs.ts` has been deleted.
+
+### Base Fields
+
+```typescript
+HookOutputBaseSchema = Schema.Struct({
+  status: ExecutionStatusSchema,  // "executed" | "skipped" | "disabled" | "cached" | "error" | "timeout"
+  summary: Schema.String,         // Human-readable log message
+  action: Schema.optional(HookActionSchema),  // Required when status is "executed"
+  validation: Schema.optional(ValidationResultSchema),
+  quality: Schema.optional(ExecutionQualitySchema),
+  metrics: Schema.optional(HookMetricsSchema),
+  userMessage: Schema.optional(Schema.String),
+  claudeContext: Schema.optional(Schema.String),
+  reason: Schema.optional(Schema.String),
+  updatedInput: Schema.optional(JsonObjectSchema),
+});
+```
+
+### Hook-Specific Output Schemas
+
+| Schema | Valid Actions |
+| -------- | ------------- |
+ | `PreToolUseOutputSchema` | allow, deny, ask, modify |
+| `PostToolUseOutputSchema` | block, continue, context, none |
+| `SessionStartOutputSchema` | context, none |
+| `StopOutputSchema` / `SubagentStopOutputSchema` | block, continue |
+| `UserPromptSubmitOutputSchema` | block, continue, context, none |
+| `PermissionRequestOutputSchema` | allow, deny |
+| `PassthroughOutputSchema` | none (SessionEnd, PreCompact, Notification, etc.) |
+
+### HookAction Values
+
+```typescript
+HookActionSchema = Schema.Literal(
+  "allow", "deny", "ask",       // Permission decisions
+  "block", "continue",          // Continuation control
+  "modify", "context",          // Content changes
+  "none",                       // No-op
+);
+```
+
+## Response Schema Classes (per-hook modules)
+
+Response classes match Claude Code's expected stdout JSON format, now
+co-located in each per-hook module. The former monolithic
+`schemas/hook-responses.ts` has been deleted. Converter functions translate
+hook outputs to responses:
+
+| Function | Maps |
+| ---------- | ------ |
+ | `toPreToolUseResponse()` | `action` -> `permissionDecision` |
+| `toPostToolUseResponse()` | `claudeContext` -> `additionalContext`, `action:"block"` -> `decision:"block"` |
+| `toSessionStartResponse()` | `claudeContext` -> `additionalContext` |
+| `toStopResponse()` | `action:"block"` -> `decision:"block"` |
+| `toUserPromptSubmitResponse()` | `claudeContext` -> `additionalContext`, `action:"block"` -> `decision:"block"` |
+| `toPermissionRequestResponse()` | `action` -> `behavior` |
+| `toPassthroughResponse()` | Always returns `{}` |
+
+Note: When outcomes are used, `toResponse()` is called directly on the
+outcome instance, bypassing these converter functions.
+
+## Branded Types (`branded.ts`)
+
+Four branded types ensure type safety for identifiers and paths:
+
+```typescript
+const SessionIdSchema = Schema.UUID.pipe(Schema.brand("SessionId"));
+type SessionId = Branded<string, "SessionId">;
+
+const ToolUseIdSchema = Schema.String.pipe(Schema.brand("ToolUseId"));
+type ToolUseId = Branded<string, "ToolUseId">;
+
+const TranscriptPathSchema = Schema.String.pipe(Schema.brand("TranscriptPath"));
+type TranscriptPath = Branded<string, "TranscriptPath">;
+
+const NormalizedPathSchema = Schema.String.pipe(Schema.brand("NormalizedPath"));
+type NormalizedPath = Branded<string, "NormalizedPath">;
+```
+
+`NormalizedPath` is used by all Event classes for path fields (e.g., `cwd`,
+`file_path`, `worktree_path`). The `normalizePath(p: string)` helper runs
+`path.normalize()` for cross-platform path safety. Input classes use raw
+strings (wire format); Event classes use NormalizedPath (normalized via
+`fromInput()`).
+
+## Literal Schemas (`hook-literals.ts`)
+
+Shared literal union schemas extracted to prevent circular imports:
+
+- `HookTypeSchema` -- All 26 hook type names (see HookType enum below)
+- `HookPermissionsModeSchema` -- `"default" | "plan" | "acceptEdits" | "auto" | "dontAsk" | "bypassPermissions"`
+- `PreToolUseDecisionSchema` -- `"allow" | "deny" | "ask"`
+- `PermissionRequestBehaviorSchema` -- `"allow" | "deny"`
+- `SessionStartSourceSchema` -- `"startup" | "resume" | "clear" | "compact"`
+- `SessionEndReasonSchema` -- `"clear" | "resume" | "logout" | "prompt_input_exit" | "bypass_permissions_disabled" | "other"`
+- `PreCompactTriggerSchema` -- `"manual" | "auto"`
+- `StopFailureErrorSchema` -- `"rate_limit" | "authentication_failed" | "billing_error" | "invalid_request" | "server_error" | "max_output_tokens" | "unknown"`
+- `InstructionsLoadedReasonSchema` -- `"session_start" | "nested_traversal" | "path_glob_match" | "include" | "compact"`
+- `InstructionsMemoryTypeSchema` -- `"User" | "Project" | "Local" | "Managed"`
+- `ConfigChangeSourceSchema` -- `"user_settings" | "project_settings" | "local_settings" | "policy_settings" | "skills"`
+- `FileChangeEventSchema` -- `"change" | "add" | "unlink"`
+- `NotificationTypeSchema` -- `"permission_prompt" | "idle_prompt" | "auth_success" | "elicitation_dialog"`
+- `ElicitationActionSchema` -- `"accept" | "decline" | "cancel"`
+
+### HookType Enum
+
+```typescript
+enum HookType {
+  PreToolUse, PostToolUse, PostToolUseFailure,
+  PermissionRequest, PermissionDenied, Notification, UserPromptSubmit,
+  Stop, StopFailure, SubagentStart, SubagentStop,
+  TaskCreated, TaskCompleted, TeammateIdle,
+  InstructionsLoaded, ConfigChange, CwdChanged, FileChanged,
+  WorktreeCreate, WorktreeRemove,
+  PreCompact, PostCompact,
+  Elicitation, ElicitationResult,
+  SessionStart, SessionEnd,
+}
+```
+
+### ToolName Type
+
+Known tool names plus extensibility for custom/MCP tools:
+
+```typescript
+type ToolName =
+  | "Task" | "Bash" | "Glob" | "Grep" | "Read"
+  | "Edit" | "Write" | "WebFetch" | "WebSearch"
+  | "NotebookEdit" | "TodoRead" | "TodoWrite"
+  | (string & {});  // Allow custom/MCP tool names
+```
+
+## State as Schema.Class
+
+Plugin state can be declared as a `Schema.Class`, enabling typed serialization
+and prototype method preservation across hook invocations.
+
+```typescript
+class MyState extends Schema.Class<MyState>("MyState")({
+  git: Schema.Boolean,
+  packageManager: Schema.Literal("npm", "bun"),
+}) {
+  getPmExec() { return this.packageManager === "bun" ? "bunx" : "npx"; }
+}
+
+// In plugin definition:
+Plugin("MY_PLUGIN", {
+  options: Schema.Struct({ ... }),
+  state: MyState,
+  setup: async () => new MyState({ git: true, packageManager: "bun" }),
+  hooks: { ... },
+});
+```
+
+**Encoding/decoding flow:**
+
+1. SessionStart: `setup()` returns a `MyState` instance
+2. SDK encodes via `Schema.encodeUnknownSync(MyState)` before persisting
+3. Subsequent hooks: SDK decodes via `Schema.decodeUnknownSync(MyState)`
+4. Prototype restored via `Object.assign(Object.create(MyState.prototype), decoded, baseState)`
+5. Handlers receive a fully typed state with working methods
+
+**Known issue:** Bun's tree-shaker strips prototype methods from compiled
+binaries. See `architecture.md` for details.
+
+## Usage in PluginRuntime
+
+`PluginRuntime.run()` uses schemas at each stage:
+
+1. **Parse**: `Schema.decodeUnknownSync(InputSchema)(rawJson)` validates stdin
+2. **Convert**: `EventClass.fromInput(decodedInput)` creates typed event
+3. **State decode**: If `stateSchema` is set, decode persisted state through it
+4. **Handler**: Call plugin handler, receive Outcome or HookOutput
+5. **Validate outcome**: If Outcome, `isValidOutcomeForHook()` checks validity
+6. **Validate legacy**: If HookOutput, check against hook-specific output schema
+7. **Respond**: Outcome's `toResponse()` or legacy `toResponse()` functions
+8. **Serialize**: Response is JSON-stringified and written to stdout

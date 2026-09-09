@@ -1,16 +1,26 @@
-[test]
-coverage = true
-coverageSkipTestFiles = true  # default false
-# To require 90% line-level and function-level coverage
-coverageThreshold = { lines = 0.8, functions = 0.8, statements= 0.8, perFile = true }
-coveragePathIgnorePatterns = [
-	"src/otel/classes/Sidecar.ts",
-	"src/otel/sidecar/classes/SidecarServer.ts",
-	"src/otel/sidecar/classes/SidecarProviders.ts",
-	"src/cli/index.ts",
-	"src/cli/init/scaffold.ts",
-	"src/cli/init/index.ts",
-	"src/cli/init/detect-defaults.ts",
-	"src/testing/builder.ts",
+[install]
+publicHoistPattern = [
+	"@changesets/cli",
+	"@commitlint/cli",
+	"@commitlint/config-conventional",
+	"@commitlint/cz-commitlint",
+	"@rslib/core",
+	"@savvy-web/cli",
+	"@savvy-web/mcp",
+	"@types/bun",
+	"@types/node",
+	"@types/react",
+	"@types/react-dom",
+	"@typescript/native-preview",
+	"@vitest/coverage-v8",
+	"commitizen",
+	"husky",
+	"lint-staged",
+	"markdownlint-cli2",
+	"markdownlint-cli2-formatter-codequality",
+	"tsx",
+	"turbo",
+	"typescript",
+	"vitest",
+	"vitest-agent-reporter"
 ]
-coverageReporter  = ["text", "lcov"]

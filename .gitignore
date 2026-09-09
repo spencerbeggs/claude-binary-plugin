@@ -44,3 +44,10 @@ CLAUDE.local.md
 .playwright-mcp
 .bun-builder
 .mcp.json
+
+# Plugin build artifacts
+plugin/*.plugin
+plugin/.plugin-entrypoint.ts
+plugin/hooks/hooks.json
+plugin/scripts/
+docs/superpowers

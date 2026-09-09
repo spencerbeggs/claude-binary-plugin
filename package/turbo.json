@@ -1,0 +1,23 @@
+{
+	"extends": ["//"],
+	"tasks": {
+		"build:dev": {
+			"cache": true,
+			"dependsOn": ["types:check"],
+			"outputLogs": "errors-only",
+			"outputs": ["*.plugin"]
+		},
+		"build:prod": {
+			"cache": true,
+			"dependsOn": ["types:check"],
+			"outputLogs": "errors-only",
+			"outputs": ["*.plugin"]
+		},
+		"types:check": {
+			"cache": true,
+			"dependsOn": ["^build:dev"],
+			"outputLogs": "errors-only",
+			"outputs": ["dist/.tsbuildinfo.lib"]
+		}
+	}
+}

@@ -19,7 +19,7 @@ Commands are defined in the `commands` field of your plugin configuration alongs
 ```typescript
 // plugin.config.ts
 import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-import type { InferPluginCommands, InferPluginPipeline } from "claude-binary-plugin";
+import type { InferPluginCommands, InferHandlers } from "claude-binary-plugin";
 import { z } from "zod";
 
 const plugin = ClaudeBinaryPlugin.create({
@@ -57,7 +57,7 @@ const plugin = ClaudeBinaryPlugin.create({
   },
 });
 
-export type Pipeline = InferPluginPipeline<typeof plugin>;
+export type Pipeline = InferHandlers<typeof plugin>;
 export type Commands = InferPluginCommands<typeof plugin>;
 
 export default plugin;

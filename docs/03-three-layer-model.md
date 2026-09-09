@@ -242,7 +242,7 @@ ClaudeBinaryPlugin.create({
 })
         |
         v
-InferPluginPipeline<typeof plugin>
+InferHandlers<typeof plugin>
         |
         +---> Pipeline["SessionStart"]  = ({ input, options, state }) => ...
         +---> Pipeline["PreToolUse"]    = ({ input, options, state }) => ...
@@ -258,7 +258,7 @@ You never need to write the types manually. Export `Pipeline` and `Commands` fro
 
 ```typescript
 // plugin.config.ts
-export type Pipeline = InferPluginPipeline<typeof plugin>;
+export type Pipeline = InferHandlers<typeof plugin>;
 export type Commands = InferPluginCommands<typeof plugin>;
 
 // hooks/security.hook.ts

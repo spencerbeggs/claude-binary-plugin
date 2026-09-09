@@ -1,3 +1,4 @@
 {
-	"extends": ["@savvy-web/bun-builder/tsconfig/ecma/lib.json"]
+	"files": [],
+	"references": [{ "path": "package" }]
 }

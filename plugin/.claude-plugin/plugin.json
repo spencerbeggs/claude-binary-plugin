@@ -1,0 +1,5 @@
+{
+	"name": "test-plugin",
+	"version": "0.0.1",
+	"description": "Test plugin for dogfooding claude-binary-plugin SDK"
+}

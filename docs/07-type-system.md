@@ -13,7 +13,7 @@ The SDK's type system starts with `ClaudeBinaryPlugin.create()` and flows throug
 
 ```typescript
 import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-import type { InferPluginPipeline, InferPluginCommands } from "claude-binary-plugin";
+import type { InferHandlers, InferPluginCommands } from "claude-binary-plugin";
 import { z } from "zod";
 
 const plugin = ClaudeBinaryPlugin.create({
@@ -46,16 +46,16 @@ const plugin = ClaudeBinaryPlugin.create({
 });
 
 // Extract handler types from the plugin instance
-export type Pipeline = InferPluginPipeline<typeof plugin>;
+export type Pipeline = InferHandlers<typeof plugin>;
 export type Commands = InferPluginCommands<typeof plugin>;
 export default plugin;
 ```
 
 ## Inference Utility Types
 
-### InferPluginPipeline
+### InferHandlers
 
-`InferPluginPipeline<typeof plugin>` maps each hook type to its fully-typed handler signature. Use it in handler files to get autocomplete for `input`, `options`, and `state`.
+`InferHandlers<typeof plugin>` maps each hook type to its fully-typed handler signature. Use it in handler files to get autocomplete for `input`, `options`, and `state`.
 
 ```typescript
 // hooks/security.hook.ts

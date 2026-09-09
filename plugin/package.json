@@ -1,0 +1,22 @@
+{
+	"name": "test-plugin",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build:prod": "bun run plugin.build.ts",
+		"types:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@effect/platform": "^0.96.0",
+		"@effect/platform-bun": "^0.89.0",
+		"claude-binary-plugin": "workspace:*",
+		"effect": "^3.21.0"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.9",
+		"@types/node": "^20.11.0",
+		"@typescript/native-preview": "^7.0.0-dev.20260331.1",
+		"typescript": "^5.9.3"
+	}
+}

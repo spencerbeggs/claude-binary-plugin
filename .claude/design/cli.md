@@ -1,351 +1,148 @@
----
-status: current
-module: claude-binary-plugin
-category: documentation
-created: 2026-01-22
-updated: 2026-02-10
-last-synced: 2026-02-10
-completeness: 95
-related:
-  - .claude/design/architecture.md
-  - .claude/design/testing.md
-dependencies: []
----
-
-# CLI
-
-The `claude-binary-plugin` package includes a CLI binary for building
-plugins with zero configuration.
+# Build System
 
 ## Overview
 
-The CLI provides a zero-configuration build tool for compiling Claude Code
-plugins into single-file Bun executables. It handles entrypoint generation,
-bundling, bytecode compilation, and manifest generation automatically.
+The SDK's build system compiles plugin configurations into single-file Bun
+executables with accompanying `hooks.json` manifests. The CLI was removed;
+the build is now purely programmatic via `PluginBuilder`.
 
-## Installation
+## Entry Point
 
-The CLI is available after installing the package:
-
-```bash
-bun add claude-binary-plugin
-```
-
-## Commands
-
-### build
-
-```bash
-claude-binary-plugin build [plugin-config-path] [options]
-```
-
-#### Default Behavior
-
-When run without arguments, the CLI looks for `plugin.config.ts` in
-the current directory:
-
-```bash
-claude-binary-plugin build
-```
-
-This is equivalent to:
-
-```bash
-claude-binary-plugin build plugin.config.ts
-```
-
-#### Custom Config Path
-
-Specify a custom config file path:
-
-```bash
-claude-binary-plugin build ./src/my-plugin.config.ts
-```
-
-#### Build Options
-
-| Option | Description |
-| ------ | ----------- |
-| `--no-persist` | Don't persist to local Claude Code plugins cache |
-| `--no-bytecode` | Don't compile to bytecode (faster builds) |
-| `--bundle` | Bundle to JS instead of compiling to binary |
-| `--quiet` | Suppress all non-error output; skip proxy/hooks.json generation |
-| `--help` | Show help information |
-| `--version` | Show CLI version |
-
-### init
-
-```bash
-claude-binary-plugin init [directory] [options]
-```
-
-Scaffolds a new plugin project with all files, configuration, and
-boilerplate needed to build and distribute a Claude Code plugin.
-
-#### Modes
-
-**Interactive (default)** - When invoked without flags (or with only
-a target directory), the command launches an interactive wizard using
-React Ink (`@inkjs/ui`) that walks through project configuration
-step-by-step.
-
-**Programmatic** - All options can be passed as CLI flags. When all
-required options are provided, the wizard is bypassed entirely. Use
-`--yes` to accept defaults for any unspecified options.
-
-#### Arguments
-
-| Argument | Description | Default |
-| -------- | ----------- | ------- |
-| `directory` | Target directory | Current directory name |
-
-#### Options
-
-| Option | Type | Description |
-| ------ | ---- | ----------- |
-| `--name` | `string` | Project name (kebab-case) |
-| `--type` | `string` | `plugin` or `marketplace` |
-| `--prefix` | `string` | Env var prefix (SCREAMING_SNAKE) |
-| `--description` | `string` | Plugin description |
-| `--hooks` | `string[]` | Hook types to include |
-| `--skip-commands` | `boolean` | Skip example command generation |
-| `--otel` | `boolean` | Include OTEL telemetry setup |
-| `--skip-lint-staged` | `boolean` | Skip @savvy-web/lint-staged |
-| `--skip-commitlint` | `boolean` | Skip @savvy-web/commitlint |
-| `--skip-changesets` | `boolean` | Skip @savvy-web/changesets |
-| `--skip-git` | `boolean` | Skip git repository initialization |
-| `--skip-install` | `boolean` | Skip `bun install` after scaffold |
-| `--yes`/`-y` | `boolean` | Accept all defaults |
-
-**Defaults:** `--hooks` defaults to `SessionStart,PreToolUse`.
-Commands, git, and install are included by default (use `--skip-*`
-flags to disable). `--otel` defaults to `false`. `--name` derives
-from directory.
-
-#### Init Exit Codes
-
-| Code | Meaning |
-| ---- | ------- |
-| 0 | Scaffold completed successfully |
-| 1 | Scaffold failed (invalid options, write error) |
-
-#### Examples
-
-```bash
-# Interactive wizard
-claude-binary-plugin init my-plugin
-
-# Quick scaffold with defaults
-claude-binary-plugin init my-plugin --yes
-
-# Full programmatic scaffold
-claude-binary-plugin init my-plugin \
-  --type=plugin \
-  --prefix=MY_PLUGIN \
-  --hooks=SessionStart,PreToolUse,PostToolUse \
-  --otel
-
-# Marketplace scaffold
-claude-binary-plugin init my-marketplace \
-  --type=marketplace
-```
-
-See `scaffold.md` for detailed template contents, interactive flow,
-and implementation architecture.
-
-## Plugin Config File
-
-The config file must export a default `ClaudeBinaryPlugin.create()` result:
+`ClaudePlugin.build()` is the recommended build API. Create a `ClaudePlugin`
+instance with a config class and hooks map, then call `.build()`:
 
 ```typescript
-// plugin.config.ts
-import { ClaudeBinaryPlugin } from "claude-binary-plugin";
-import { z } from "zod";
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
 
-const plugin = ClaudeBinaryPlugin.create({
-  prefix: "MY_PLUGIN",
-  options: z.object({
-    TIMEOUT_MS: z.coerce.number().default(30000),
-  }),
-  hooks: {
-    SessionStart: [{
-      name: "context",
-      pipeline: "./hooks/context.hook.ts",
-    }],
-  },
+const plugin = new ClaudePlugin(MyConfig, {
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
 });
 
-export default plugin;
+await plugin.build({
+  rootDir: import.meta.dir,
+  compile: true,
+  minify: true,
+});
 ```
 
-## Build Output
+Or use `PluginBuilder` directly:
 
-The CLI produces:
+```typescript
+import { PluginBuilder } from "claude-binary-plugin";
 
-1. **Plugin binary** - Single-file Bun executable (e.g., `my-plugin.plugin`)
-2. **Proxy script** - Bash wrapper for just-in-time compilation
-   (`scripts/setup-proxy.sh`)
-3. **hooks.json** - Manifest file for Claude Code hook discovery
-4. **Generated entrypoint** - Temporary `.plugin-entrypoint.ts` (cleaned
-   up after build)
-
-Output location is determined by:
-
-- Plugin name from `.claude-plugin/plugin.json` manifest
-- Falls back to prefix-derived name if no manifest exists
-
-### Post-Compilation Steps
-
-After the binary is compiled, the build command performs two additional
-steps (unless `--quiet` is set):
-
-1. **Generate proxy script** - Creates `scripts/setup-proxy.sh`, a bash
-   script that wraps SessionStart hooks with just-in-time compilation
-   support. This enables cross-platform distribution by building the
-   binary on the target machine if it does not exist.
-
-2. **Generate hooks.json** - Creates the hook manifest with SessionStart
-   hooks routed through the proxy script and all other hooks pointing
-   directly at the compiled binary. This ensures the proxy triggers
-   on-demand builds while non-SessionStart hooks have zero overhead.
-
-If no SessionStart hooks are defined in the plugin configuration, the
-build emits a warning since the proxy will never trigger.
-
-### Build Options Explained
-
-**`--no-persist`** - Skips copying the built binary to the local
-Claude Code plugins cache. Useful for CI builds or when deploying
-to a custom location.
-
-**`--no-bytecode`** - Disables bytecode compilation, producing a
-larger but faster-to-build binary. Useful during development
-iteration.
-
-**`--bundle`** - Outputs bundled JavaScript instead of a compiled
-Bun executable. Useful for debugging the generated code.
-
-**`--quiet`** - Suppresses all non-error output and skips proxy
-script and hooks.json generation. This flag is used internally by
-the proxy script during on-demand builds to prevent
-self-modification of the running proxy (see architecture.md for
-details).
-
-## Exit Codes
-
-| Code | Meaning |
-| ---- | ------- |
-| 0 | Build completed successfully |
-| 1 | Build failed (config, compilation error) |
-
-The CLI uses `@effect/cli` for command parsing. Invalid arguments or
-`--help`/`--version` flags are handled automatically by the framework.
-
-## Troubleshooting
-
-### Plugin file not found
-
-```text
-Error: Plugin file not found: /path/to/plugin.config.ts
+await PluginBuilder.fromConfig(
+  { config: MyConfig, hooks: { PreToolUse: [...] } },
+  { rootDir: import.meta.dir },
+);
 ```
 
-The CLI resolves the config path relative to `process.cwd()`. Ensure
-you are running the command from the correct directory, or provide an
-explicit path.
+## Build Pipeline Steps
 
-### Invalid plugin definition
+1. **Extract hooks** (`HookExtractor`) -- Iterates plugin config's `hooks` map,
+   separating handler hooks (have `name` + `handler` function reference) from
+   passthrough hooks (raw `hooks.json` entries forwarded directly).
 
-```text
-Plugin file must export a default ClaudeBinaryPlugin.create() result
+2. **Extract commands** (`CommandExtractor`) -- Iterates plugin config's `commands`
+   map, extracting command name, description, handler function reference, and
+   args schema presence.
+
+3. **Generate entrypoint** (`EntrypointGenerator`) -- Generates a TypeScript
+   source file that imports the PluginConfig class and dispatches based on CLI
+   arguments. Reads statics (`PluginConfigClass.options`, `.state`, `.setup`)
+   directly from the config class. Handles hook type routing, command routing,
+   and `--sidecar` mode. Passes `stateSchema` and `handlerLayer: PluginLive`
+   to `PluginRuntime.run()`.
+
+4. **Compile** -- Runs `Bun.build()` to compile the generated entrypoint into a
+   single-file executable. Supports cross-compilation via `target` option.
+
+5. **Generate hooks.json** (`ManifestGenerator`) -- Creates the `hooks.json`
+   manifest that Claude Code reads. Maps hook event types to command strings
+   using `${CLAUDE_PLUGIN_ROOT}` for portable paths. Merges passthrough entries.
+
+6. **Generate proxy** (`ProxyTemplate`) -- Creates a shell proxy script for
+   just-in-time compilation. The proxy checks for the binary, runs
+   `bun install` + build if missing, then execs to the binary.
+
+## Build Options
+
+```typescript
+interface PluginBuildOptions {
+  rootDir?: string;       // Plugin root directory
+  configPath?: string;    // Path to plugin config file
+  plugin?: string;        // Path to plugin.json manifest
+  marketplace?: string;   // Marketplace manifest path
+  outputName?: string;    // Output binary name
+  compile?: boolean;      // Whether to compile (default: true)
+  minify?: boolean;       // Minify output
+  sourcemap?: boolean;    // Include source maps
+  bytecode?: boolean;     // Emit bytecode
+  target?: string;        // Cross-compilation target
+  clean?: boolean;        // Clean output directory first
+  persistLocal?: boolean; // Write local config
+  external?: string[];    // External packages
+}
 ```
 
-The config file must have a default export created by
-`ClaudeBinaryPlugin.create()`. Verify:
+## Build Artifacts
 
-- The file exports a `default` (not a named export)
-- The export is the result of `ClaudeBinaryPlugin.create()`, not the
-  config object itself
+| Artifact | Description |
+| ---------- | ------------- |
+ | `{name}.plugin` | Compiled Bun single-file executable |
+| `hooks.json` | Hook manifest for Claude Code |
+| `setup-proxy.sh` | Shell proxy for JIT compilation |
+| `sidecar.js` | OTEL sidecar script (if telemetry enabled) |
 
-### Build compilation errors
+## Module Decomposition
 
-Compilation errors from `Bun.build()` are printed to stderr. Common
-causes include:
+The build system is decomposed into focused modules:
 
-- Missing dependencies (run `bun install`)
-- TypeScript errors in hook handler files
-- Circular imports in the plugin code
+| Module | File | Purpose |
+| -------- | ------ | --------- |
+ | `PluginBuilder` | `build/builder.ts` | Public facade (static class) |
+| `HookExtractor` | `build/HookExtractor.ts` | Extract handler and passthrough hook entries |
+| `CommandExtractor` | `build/CommandExtractor.ts` | Extract command entries |
+| `EntrypointGenerator` | `build/EntrypointGenerator.ts` | Generate TypeScript entrypoint source |
+| `ManifestGenerator` | `build/ManifestGenerator.ts` | Generate hooks.json content |
+| `ProxyTemplate` | `build/ProxyTemplate.ts` | Generate setup proxy shell script |
 
-## Distribution Workflow
+## Consumer Pattern
 
-The build command supports a cross-platform distribution workflow where
-source code is committed to a repository and the binary is built on
-each target machine at first use.
+Plugins define a build script (e.g., `plugin/plugin.build.ts`) that wires
+handlers to config and builds. All handlers are direct function references:
 
-### Recommended .gitignore
+```typescript
+import { ClaudePlugin } from "claude-binary-plugin";
+import MyConfig from "./plugin.config.js";
+import guardHandler from "./hooks/guard.js";
+import initHandler from "./hooks/session-start.js";
 
-```text
-# Plugin binary (platform-specific, built on each machine)
-*.plugin
+const plugin = new ClaudePlugin(MyConfig, {
+  SessionStart: [{ name: "init", handler: initHandler }],
+  PreToolUse: [{ name: "guard", handler: guardHandler }],
+});
 
-# Dependencies (installed on each machine)
-node_modules/
-
-# Build artifacts
-.plugin-entrypoint.ts
-.build-lock/
+await plugin.build({ rootDir: import.meta.dir });
 ```
 
-### What to Commit
+Run with `bun run build:prod` (configured in the plugin's `package.json`).
 
-```text
-plugin.config.ts          # Plugin definition
-hooks/hooks.json          # Hook manifest (with proxy routing)
-scripts/setup-proxy.sh    # Proxy script for on-demand builds
-bun.lock                  # Lockfile for reproducible installs
-src/                      # Source code
-```
+## Effect Service
 
-### How It Works
+`PluginBuilderService` wraps the build system as an Effect service for use
+in Effect programs. `PluginBuilderLive` delegates to `PluginBuilder` static
+methods; `makePluginBuilderTest()` provides mock build results for testing.
 
-1. Run `claude-binary-plugin build` on the development machine
-2. The binary, proxy script, and hooks.json are all generated
-3. Commit everything except the binary and node_modules
-4. On a new machine, Claude Code fires SessionStart
-5. hooks.json routes SessionStart through the proxy script
-6. The proxy detects the missing binary and runs the build
-7. Subsequent hooks run directly against the compiled binary
+## Generated Entrypoint Structure
 
-See `architecture.md` for detailed proxy script behavior including
-lock management, error handling, and the self-modification protection
-mechanism.
+The generated entrypoint code:
 
-## Planned Features
-
-Before 1.0.0 release:
-
-- **Template customization** - User-defined template overrides in
-  `~/.claude/templates/`
-
-## Implementation
-
-The CLI is implemented in `src/cli/index.ts` using `@effect/cli` for
-argument parsing. The `build` subcommand delegates to `PluginBuilder`
-in `src/build/builder.ts`. The `init` subcommand is implemented in
-`src/cli/init/`:
-
-| File | Purpose |
-| ---- | ------- |
-| `src/cli/init/index.ts` | Command definition (`@effect/cli`) |
-| `src/cli/init/ink/` | Interactive wizard (React Ink) |
-| `src/cli/init/scaffold.ts` | Template engine (file generation) |
-| `src/cli/init/templates/` | Template generators per project type |
-| `src/cli/init/detect-defaults.ts` | Git/GitHub default detection |
-
-The package version is resolved via `src/cli/macros.ts`, which imports
-`package.json` at bundle time.
-
-## Related Documentation
-
-- `architecture.md` - Build system internals
-- `scaffold.md` - Scaffold templates and interactive flow
-- `testing.md` - Testing utilities
+1. Parses CLI args to determine mode (hook, command, or sidecar)
+2. For hooks: reads `--hook-type` and `--hook-name` args, dispatches to
+   `PluginRuntime.run()` with the correct handler. Passes `stateSchema`
+   (from `pluginConfig.state`) and `handlerLayer` (`PluginLive`) so the
+   runtime can decode state and provide services.
+3. For commands: reads `--command` arg, dispatches to `Commands.run()`
+4. For sidecar: calls `Sidecar.main()` to start the OTEL sidecar process

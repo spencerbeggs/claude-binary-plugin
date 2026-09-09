@@ -1,0 +1,143 @@
+# =============================================================================
+# OpenTelemetry Collector - Local Development Configuration
+# =============================================================================
+# Simplified version of savvy-web/monitor otel-config.yaml.
+# gRPC (4317): Bearer token auth with x-api-key (for Claude Code CLI)
+# HTTP (4318): No auth (for plugin sidecar, internal use)
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      # gRPC endpoint - requires x-api-key auth (matches production behavior)
+      # Claude Code CLI sends telemetry here with OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      grpc:
+        endpoint: 0.0.0.0:4317
+        auth:
+          authenticator: bearertokenauth
+
+      # HTTP endpoint - no auth (plugin sidecar connects here)
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "*"
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 500
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  resourcedetection:
+    detectors:
+      - env
+      - system
+    timeout: 2s
+    override: false
+
+  resource:
+    attributes:
+      - key: service.namespace
+        value: claude-code-local
+        action: upsert
+      - key: deployment.environment
+        value: development
+        action: upsert
+
+  # Promote session.id from log attributes to resource attributes for Loki
+  # label indexing. Same transform as production.
+  transform/claude-code:
+    log_statements:
+      - context: log
+        conditions:
+          - resource.attributes["service.name"] == "claude-code"
+        statements:
+          - set(resource.attributes["session.id"], log.attributes["session.id"])
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 500
+
+  # Uncomment for debugging raw telemetry
+  # debug:
+  #   verbosity: detailed
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # Bearer token auth - validates x-api-key header on gRPC
+  # Matches production otel-collector behavior (savvy-web/monitor)
+  bearertokenauth:
+    header: x-api-key
+    scheme: ""
+    token: "local-dev-key"
+
+service:
+  extensions:
+    - health_check
+    - bearertokenauth
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: basic
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+
+  pipelines:
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resourcedetection
+        - resource
+        - batch
+      exporters:
+        - prometheus
+
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resourcedetection
+        - resource
+        - transform/claude-code
+        - batch
+      exporters:
+        - otlphttp/loki
+
+    # Traces pipeline - ready for when traces are enabled
+    # traces:
+    #   receivers:
+    #     - otlp
+    #   processors:
+    #     - memory_limiter
+    #     - resourcedetection
+    #     - resource
+    #     - batch
+    #   exporters:
+    #     - debug
